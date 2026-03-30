@@ -115,13 +115,24 @@ Pure, stateless functions. Each helper receives raw touch/event data and returns
 | `is_swipe(touch, min_distance)` | Directional movement past a distance threshold; returns direction enum |
 | `is_pinch(touches)` | Two-finger spread or squeeze; returns scale delta |
 | `is_double_tap(touch)` | Two taps in quick succession (uses Kivy's built-in `is_double_tap`) |
-| `is_hover(motion_event)` | Mouse pointer movement with no button pressed — **desktop only** |
+| `is_hover(motion_event)` | Pointer/finger dwelling over a target with no active press; behaviour varies by platform (see below) |
+
+### Hover — Universal Behaviour
+Hover is supported on **all platforms** but is expressed differently per input device:
+
+| Platform | Hover source | Kivy event |
+|---|---|---|
+| Android / iOS | Finger held still over a target (no movement, no lift) | `on_touch_move` with near-zero delta |
+| Desktop (mouse) | Mouse pointer over a target with no button pressed | `on_mouse_pos` |
+| Desktop (touch/stylus) | Same as mobile — stationary contact | `on_touch_move` with near-zero delta |
+
+`is_hover` normalises these into a single boolean result so callers need no platform checks.
+`input_service` tracks the last pointer position and emits a `"hover"` named event at a throttled rate (defined by `HOVER_THROTTLE_MS` in `constants.py`).
 
 ### Rules
 - **`input_service` is the only place** that binds to raw Kivy touch/keyboard events
 - Components and screens **never** bind `on_touch_down` directly for game actions — they subscribe to named events from `input_service`
-- Hover interactions are **desktop-only enhancements** — no game mechanic may require hover to function
-- All timing thresholds (long-press duration, double-tap window, swipe distance) are constants defined in `app/core/constants.py`
+- All timing thresholds (long-press duration, double-tap window, swipe distance, hover throttle) are constants defined in `app/core/constants.py`
 
 ---
 
@@ -131,7 +142,6 @@ Pure, stateless functions. Each helper receives raw touch/event data and returns
 - **Minimum touch target**: 48dp × 48dp
 - **Design for portrait at 360×640dp first**, then scale up and handle landscape
 - **Asset optimization**: compressed PNGs, compressed audio — keep APK size minimal
-- **Hover is a desktop-only enhancement** — no core mechanic may depend on it
 
 ---
 
