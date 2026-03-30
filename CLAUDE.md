@@ -48,9 +48,11 @@ Genesis/
 │   │   └── ...
 │   ├── services/            # APIs, persistence, audio, analytics, etc.
 │   │   ├── __init__.py
+│   │   ├── input_service.py # Global input handler — single source of truth for input events
 │   │   └── ...
 │   └── utils/               # Pure helper functions, no side effects
 │       ├── __init__.py
+│       ├── input_helpers.py # Stateless helpers: gesture detection, hold timing, swipe math
 │       └── ...
 ├── assets/
 │   ├── images/
@@ -86,9 +88,40 @@ Each layer may only import from layers to its left.
 ### services/
 - Accessed as module-level singletons or via a simple `ServiceLocator`
 - Examples: `audio_service.py`, `save_service.py`, `analytics_service.py`
+- `input_service.py` is the **single global input handler** — all raw Kivy touch/keyboard events are funnelled here first
 
 ### utils/
 - Pure functions only — no state, no side effects, no Kivy imports
+- `input_helpers.py` provides stateless gesture utilities consumed by `input_service`
+
+---
+
+## Input Handling
+
+### Global Input Service (`app/services/input_service.py`)
+- Single module-level singleton — instantiated once in `main.py`
+- Binds to Kivy's `Window` for keyboard events and wraps `on_touch_*` for touch events
+- Translates raw Kivy events into named game-level actions (e.g. `"confirm"`, `"attack"`, `"drag"`)
+- Dispatches named Kivy events that components and screens subscribe to — no direct calls into game objects
+- Holds the minimal state required for gesture recognition (touch start position, timestamp); all detection logic lives in `input_helpers.py`
+
+### Input Helpers (`app/utils/input_helpers.py`)
+Pure, stateless functions. Each helper receives raw touch/event data and returns a result; no side effects.
+
+| Helper | What it detects |
+|---|---|
+| `is_tap(touch)` | Quick press-and-release within a small movement radius |
+| `is_long_press(touch, duration)` | Touch held beyond a configurable threshold (default 500 ms) |
+| `is_swipe(touch, min_distance)` | Directional movement past a distance threshold; returns direction enum |
+| `is_pinch(touches)` | Two-finger spread or squeeze; returns scale delta |
+| `is_double_tap(touch)` | Two taps in quick succession (uses Kivy's built-in `is_double_tap`) |
+| `is_hover(motion_event)` | Mouse pointer movement with no button pressed — **desktop only** |
+
+### Rules
+- **`input_service` is the only place** that binds to raw Kivy touch/keyboard events
+- Components and screens **never** bind `on_touch_down` directly for game actions — they subscribe to named events from `input_service`
+- Hover interactions are **desktop-only enhancements** — no game mechanic may require hover to function
+- All timing thresholds (long-press duration, double-tap window, swipe distance) are constants defined in `app/core/constants.py`
 
 ---
 
@@ -98,7 +131,7 @@ Each layer may only import from layers to its left.
 - **Minimum touch target**: 48dp × 48dp
 - **Design for portrait at 360×640dp first**, then scale up and handle landscape
 - **Asset optimization**: compressed PNGs, compressed audio — keep APK size minimal
-- **No hover-dependent interactions** — assume touch only
+- **Hover is a desktop-only enhancement** — no core mechanic may depend on it
 
 ---
 
