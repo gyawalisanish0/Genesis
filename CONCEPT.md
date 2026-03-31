@@ -49,8 +49,19 @@ Progression is split into two distinct layers — **temporary** (resets at the e
 
 | System | Description |
 |---|---|
-| **Skill Path** | A skill build assembled or evolved during a battle or campaign — how it is constructed mid-run is TBD |
-| **Level Up** | Characters gain XP and level up during a battle or campaign, boosting stats and unlocking skills for the duration; all levels reset to default when the run ends |
+| **Skill Path** | Character-defined distribution of skill points awarded on level up — determines how many points the player receives and how they can be allocated across skills |
+| **Level Up** | Characters gain XP and level up during a battle or campaign, boosting stats and awarding skill points; all levels reset to default when the run ends |
+
+#### Skill Leveling — MOBA-Style
+Each skill has its own temporary level that grows during the battle:
+
+- Every skill defines its own **max level**, **per-level upgrades**, and **effects at each level** — fully specified on the skill itself
+- On unit level up, the player receives **skill points** as defined by the character's Skill Path
+- Skill points are spent to level up individual skills — the player chooses which skills to prioritise
+- A skill cannot exceed its defined max level
+- All skill levels reset to default at the end of the battle or campaign
+
+This creates MOBA-style in-battle decision making: do you level a skill early for a power spike, or spread points for flexibility?
 
 Temporary progression creates meaningful in-run decision-making and power fantasy without permanently distorting character balance. Every run starts from the same baseline.
 
@@ -273,16 +284,54 @@ HP and AP are universal. Secondary resource and status slots are present only wh
 
 ---
 
+## Combat Actions
+
+Every unit in battle has access to the following actions on their turn:
+
+| Action | Description |
+|---|---|
+| **Basic Attack** | A default attack available to all units — no AP cost, fixed TU cost, base output defined by the unit; rolls the full dice resolution table (Boosted / Success / Tumbling / Guard Up / Evasion) |
+| **Active Skill 1–4** | The unit's equipped active skills — each has its own TU cost, AP cost, base value, base chance, effect type, and tags |
+| **Skip / End Turn** | Pass the turn — advances the unit's Tick marker by a fixed amount without spending AP |
+| **In-Game Options** | Context-dependent actions available depending on mode or battle state (e.g. surrender, inspect, use item) |
+
+### Skill Loadout
+- Each unit equips **up to 4 active skills** before entering battle
+- Each unit has **one unique passive** — always active, occupies no slot, cannot be swapped
+- The passive is intrinsic to the character and defines part of their identity within the Tick framework
+
+---
+
 ## Skill Design
 
 Skills in Genesis are **self-defining** — there are no locked categories or types imposed by the system. Each skill declares its own:
 
 - **TU cost** — how far the unit's marker advances after use
 - **AP cost** — what it costs to execute
-- **Base value** — an integer output value, or `null` if the skill has no numeric output (e.g. pure Tick manipulation or utility effects)
+- **Base value** — an integer representing a **percentage of the relevant character stat** used as the skill's output. `null` if the skill has no numeric output (e.g. pure Tick manipulation or utility effects)
+  - Example: base value `20` on a Strength-80 character = `80 × 0.20 = 16` output
+  - The skill's module class **auto-detects the relevant stat** from the skill's own definition — no manual stat lookup required by the caller
+  - Which stat is used (Strength, Power, Endurance, etc.) is declared on the skill itself
 - **Base chance** — a multiplier from `0.01` to `1.50` applied against the user's Precision stat to calculate the skill's final hit chance
 - **Effect type** — what the base value does: `damage`, `heal`, or any other combat factor defined on the skill itself
 - **Tags** — 1 to 4 tags that describe the skill's nature (see below)
+- **Max level** — the highest level this skill can reach during a battle; defined on the skill
+- **Level upgrades** — the effects and stat changes unlocked at each level; fully defined on the skill
+
+### Output Formula
+
+```
+Raw Output = Relevant Stat × (Base Value / 100)
+```
+
+**Example**: Strength 80, Base Value 20 → `80 × 0.20 = 16`
+
+- The **relevant stat** is declared on the skill itself and auto-detected by the skill's module class
+- Common mappings (defined per skill, not enforced by the framework):
+  - Physical skills → Strength
+  - Energy skills → Power
+  - Defensive / healing skills → Endurance or Resistance
+- Raw output is then modified by the dice resolution result (Boosted 1.5×, Success 1.0×, Tumbling 0.5×, etc.)
 
 ### Hit Chance Formula
 
@@ -295,9 +344,16 @@ Final Chance (%) = Precision × Base Chance
 - Base chance `1.0` means the skill hits exactly as often as the character's raw Precision
 - Base chance `> 1.0` (up to `1.5`) means the skill is more accurate than the character's baseline — reliable, consistent skills
 - Base chance `< 1.0` means the skill trades accuracy for other properties — power, utility, or Tick cost savings
-- Final chance feeds into the dice resolution roll — how exactly it interacts with the 5-outcome table is defined below
 
-> **Open**: Does final chance act as a pre-roll gate (fail = auto-miss before the table), or does it shift outcome probabilities within the table?
+Final chance acts as a **probability shift** on the dice resolution table — it does not gate the roll. Every action always produces an outcome; final chance adjusts how likely favourable outcomes are:
+
+| Final Chance | Effect on Table |
+|---|---|
+| 100% | Base probabilities (Boosted 15% / Success 45% / Tumbling 10% / Guard Up 20% / Evasion 10%) |
+| > 100% | Positive outcomes (Boosted, Success) gain probability mass; negative outcomes (Tumbling, Evasion) shrink |
+| < 100% | Negative outcomes grow; positive outcomes shrink |
+
+The exact redistribution formula is to be finalised during prototyping — the principle is that no roll ever produces nothing, and Precision always matters.
 
 ### Skill Tags
 
@@ -319,9 +375,36 @@ This open design means skills can be as simple or complex as their character dem
 
 ---
 
-## Win Conditions
+## Win Conditions & Loss State
 
-Win conditions are **mode-dependent** — no single rule applies across all modes. Each mode defines its own victory and defeat states.
+Both victory and defeat are **mode-dependent** — no single rule applies across all modes. Each mode defines its own win and loss states independently.
+
+---
+
+## Game Modes
+
+Four game modes are planned, each with its own ruleset, roster behaviour, and win/loss conditions:
+
+| Mode | Description |
+|---|---|
+| **Story / Campaign** | Fixed encounters with set enemies; narrative-driven progression through multiversal arcs |
+| **Endless / Roguelite** | Procedural runs with escalating difficulty; temporary progression grows during the run; permanent progression advances on loss |
+| **PvP** | Player vs Player — Tick mastery and roster knowledge tested against other players |
+| **Event / Challenge** | Time-limited modes with unique rules, modifiers, or win conditions; rewards exclusive currency or cosmetics |
+
+---
+
+## Status Effects
+
+Status effects follow the same open design as skills — **there are no locked status effect types**. Each skill defines the status effects it applies as part of its effect definition. Any condition, periodic effect, or state modifier is valid as long as it is fully specified on the skill.
+
+Common patterns (not exhaustive):
+- Periodic damage or healing on Tick intervals
+- Stat modifications (temporary Strength, Resistance, Speed changes)
+- Tick manipulation conditions (slowed, hastened)
+- Shields, guards, or damage absorption states
+
+---
 
 ---
 
@@ -335,21 +418,23 @@ Win conditions are **mode-dependent** — no single rule applies across all mode
 - [x] Resources → AP per-unit; regenerates on Tick rhythm; skills cost both AP and Ticks
 - [x] Enemy Tick manipulation → confirmed; skills can delay enemies or haste allies on the stream
 - [x] Progression → two layers: temporary (Skill Path + Level Up, resets per battle/campaign) and permanent (User Level cosmetic prestige, Game Currency, per-character Mastery Road web)
-- [ ] How does the temporary Skill Path work mid-run? (milestone picks, branching tree, pre-set path?)
+- [x] Skill Path → MOBA-style skill leveling; unit level up awards skill points (defined by character's Skill Path); points spent to level individual skills; each skill defines its own max level and per-level upgrades; all resets on battle end
 - [x] Multiverse role → Multiversal Mix; any character adapted into the framework; roster has infinite range
 - [x] Character stats → Strength, Endurance, Power, Resistance, Speed, Precision
 - [x] Classes → Warrior, Caster, Ranger, Hunter, Enchanter, Guardian
 - [x] Rarity → 7 tiers: Normal → Advance → Super → Epic → Master → Legend → OMEGA
 - [ ] What does "power" look like visually on the Tick stream?
 - [x] Speed → starting Tick formula: `class_min + randint(0, round((class_max - class_min) × (1 - Speed/100)))`; class ranges defined per class
-- [ ] Does final chance act as a pre-roll gate (fail = miss before the dice table) or shift probabilities within the table?
+- [x] Final chance → probability shift on the dice table; no pre-roll gate; every action always produces an outcome; exact redistribution formula TBD during prototyping
 - [x] AP regen rate → character-defined; unique per unit, baked into their design
 - [x] Skill types → no locked categories; each skill is self-defining (TU cost + AP cost + base value + base chance + effect type + 1–4 tags)
+- [x] Combat actions → Basic Attack, 4 active skill slots, unique passive (always active), Skip/End Turn, in-game options
 - [x] Precision → multiplied by skill base chance (0.01–1.50) to produce final hit chance %
 - [x] Unit anatomy → HP and AP universal; secondary resource and status slots situational per character/mode
 - [x] Win condition → mode-dependent
+- [x] Loss state → mode-dependent
+- [x] Game modes → Story/Campaign, Endless/Roguelite, PvP, Event/Challenge
+- [x] Status effects → skill-defined; no locked types; any condition valid if specified on the skill
 - [ ] Is there a narrative layer, or is progression purely systemic?
-- [ ] What happens when the player loses a combat?
-- [ ] Multiplayer / social, or single-player only?
 - [ ] Monetisation model (if any)?
 - [ ] Dice variance — pure RNG or some mitigation system?
