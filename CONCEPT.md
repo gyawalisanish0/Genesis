@@ -57,6 +57,22 @@ The Timeline is the central mechanic of all combat in Genesis.
 - This makes every decision a trade-off between **power now** vs **speed later**
 - Players can read the full Timeline at all times, enabling forward planning and counter-play
 - **Timeline manipulation is skill-only** — no passive stat affects marker distance; all timeline interaction comes from deliberate skill choices
+- **Timeline cost is fixed** — dice rolls never affect when a unit acts next; the two systems are fully independent
+
+---
+
+## Skill Resolution (Dice System)
+
+When a unit acts, the outcome is resolved through a dice roll. The two systems — Timeline and Dice — are intentionally separate:
+
+- **Timeline** = deterministic strategic layer; players always know the turn order in advance
+- **Dice** = probabilistic resolution layer; players never know exactly what will happen when they act
+
+### Resolution Rules
+- Every skill triggers a dice roll on use
+- The roll determines **full resolution**: both whether the skill lands (hit / miss / crit) and the magnitude of the effect (damage, healing, buff strength)
+- Dice are **pure RNG** — no player resource or stat modifies the roll before or after it happens
+- This creates a tension between perfect planning (Timeline) and unpredictable outcomes (Dice)
 
 ---
 
@@ -91,7 +107,8 @@ Unit availability is mode-driven — no single rule applies across all game mode
 ## Open Questions
 
 - [x] What is the micro-loop? → Timeline-based turn-order combat
-- [x] Timeline manipulation → skill-only; no passive stat influence
+- [x] Timeline manipulation → skill-only; no passive stat influence; cost is always fixed
+- [x] Skill resolution → dice roll for full resolution (hit/miss/crit + magnitude); pure RNG; dice never affect the timeline
 - [x] Roster source → mix of pre-built, in-combat draft, and mode-assigned depending on mode
 - [ ] What does "power" look like visually? (number, character, timeline position?)
 - [ ] Can skills affect *enemy* timeline markers? (delay, pull-forward)
