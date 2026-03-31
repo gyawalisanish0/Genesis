@@ -308,12 +308,30 @@ Skills in Genesis are **self-defining** — there are no locked categories or ty
 
 - **TU cost** — how far the unit's marker advances after use
 - **AP cost** — what it costs to execute
-- **Base value** — an integer output value, or `null` if the skill has no numeric output (e.g. pure Tick manipulation or utility effects)
+- **Base value** — an integer representing a **percentage of the relevant character stat** used as the skill's output. `null` if the skill has no numeric output (e.g. pure Tick manipulation or utility effects)
+  - Example: base value `20` on a Strength-80 character = `80 × 0.20 = 16` output
+  - The skill's module class **auto-detects the relevant stat** from the skill's own definition — no manual stat lookup required by the caller
+  - Which stat is used (Strength, Power, Endurance, etc.) is declared on the skill itself
 - **Base chance** — a multiplier from `0.01` to `1.50` applied against the user's Precision stat to calculate the skill's final hit chance
 - **Effect type** — what the base value does: `damage`, `heal`, or any other combat factor defined on the skill itself
 - **Tags** — 1 to 4 tags that describe the skill's nature (see below)
 - **Max level** — the highest level this skill can reach during a battle; defined on the skill
 - **Level upgrades** — the effects and stat changes unlocked at each level; fully defined on the skill
+
+### Output Formula
+
+```
+Raw Output = Relevant Stat × (Base Value / 100)
+```
+
+**Example**: Strength 80, Base Value 20 → `80 × 0.20 = 16`
+
+- The **relevant stat** is declared on the skill itself and auto-detected by the skill's module class
+- Common mappings (defined per skill, not enforced by the framework):
+  - Physical skills → Strength
+  - Energy skills → Power
+  - Defensive / healing skills → Endurance or Resistance
+- Raw output is then modified by the dice resolution result (Boosted 1.5×, Success 1.0×, Tumbling 0.5×, etc.)
 
 ### Hit Chance Formula
 
@@ -326,7 +344,6 @@ Final Chance (%) = Precision × Base Chance
 - Base chance `1.0` means the skill hits exactly as often as the character's raw Precision
 - Base chance `> 1.0` (up to `1.5`) means the skill is more accurate than the character's baseline — reliable, consistent skills
 - Base chance `< 1.0` means the skill trades accuracy for other properties — power, utility, or Tick cost savings
-- Final chance feeds into the dice resolution roll — how exactly it interacts with the 5-outcome table is defined below
 
 > **Open**: Does final chance act as a pre-roll gate (fail = auto-miss before the table), or does it shift outcome probabilities within the table?
 
