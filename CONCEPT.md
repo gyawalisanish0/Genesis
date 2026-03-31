@@ -73,13 +73,14 @@ Temporary progression creates meaningful in-run decision-making and power fantas
 |---|---|
 | **User Level** | Account-wide prestige indicator — cosmetic only; carries no gameplay stat bonuses or content locks |
 | **Game Currency** | Earned through play and retained across sessions; spent on permanent unlocks, Mastery Road nodes, or cosmetics |
-| **Mastery Road** | A per-character web of mastery nodes — players unlock passives, stat boosts, and skills permanently for that character over time |
+| **Mastery Road** | A per-character web of cosmetic nodes unlocked through character-specific quests — no gameplay power, purely visual rewards |
 
 #### Mastery Road
 - Each character has their own independent mastery web
-- Nodes are unlocked using Game Currency or dedicated Mastery XP earned in battle
-- Unlockable content includes passive bonuses, stat increases, additional skills, and cosmetic rewards
+- Nodes are unlocked by completing **character-specific quests** — not by grinding currency or XP
+- **Purely cosmetic** — no stat increases, no passive bonuses, no gameplay advantage; rewards are skins, effects, titles, and visual flair
 - The web is permanent — progress is never lost between sessions
+- This keeps progression tied to achievement and mastery, not time investment
 
 ---
 
@@ -417,7 +418,7 @@ Common patterns (not exhaustive):
 - [x] Roster source → mix of pre-built, in-combat draft, and mode-assigned depending on mode
 - [x] Resources → AP per-unit; regenerates on Tick rhythm; skills cost both AP and Ticks
 - [x] Enemy Tick manipulation → confirmed; skills can delay enemies or haste allies on the stream
-- [x] Progression → two layers: temporary (Skill Path + Level Up, resets per battle/campaign) and permanent (User Level cosmetic prestige, Game Currency, per-character Mastery Road web)
+- [x] Progression → two layers: temporary (Skill Path + Level Up, resets per battle/campaign) and permanent (User Level cosmetic prestige, Game Currency, per-character Mastery Road — quest-based, purely cosmetic)
 - [x] Skill Path → MOBA-style skill leveling; unit level up awards skill points (defined by character's Skill Path); points spent to level individual skills; each skill defines its own max level and per-level upgrades; all resets on battle end
 - [x] Multiverse role → Multiversal Mix; any character adapted into the framework; roster has infinite range
 - [x] Character stats → Strength, Endurance, Power, Resistance, Speed, Precision
