@@ -383,14 +383,17 @@ Items are split into two strictly separate tiers with different scopes and purpo
 ### Campaign Items
 - **Scope**: Mission or campaign-specific — available only within the run or mission they belong to
 - Earned, found, or awarded during a campaign encounter
+- **Item-defined type** — no fixed form; each item declares its own behaviour (consumable, temporary gear, passive buff, or anything else)
 - Fit within the **temporary progression layer** — reset when the campaign or mission ends
 - Defined in `assets/data/items/campaign/` — scoped to their campaign
 
 ### Genesis Items
 - **Scope**: Global — available across all modes and sessions
 - Two subtypes:
-  - **Equipment** — equippable gear that modifies unit stats, TU costs, AP pools, or output
-  - **Relics** — passive artefacts with unique effects that persist through a fight
+  - **Equipment** — gear equipped in pre-battle slots; modifies stats, TU costs, AP pools, or output for the fight
+  - **Relics** — artefacts equipped in pre-battle slots; effects are fully self-defined per relic (Tick modifiers, dice-conditional triggers, stat scaling, or any combination)
+- **Equipment slots are unit-defined** — each unit declares its own slot configuration as part of its design; no universal slot count enforced
+- **All items are self-defining** — effect type, magnitude, and conditions are declared on the item itself, not by a shared type system
 - **Strictly balance-maintained** — every Genesis Item is centrally designed and reviewed; no procedural generation; the full item pool is a curated, closed set
 - Defined in `assets/data/items/genesis/` — globally accessible
 
@@ -459,7 +462,7 @@ Common patterns (not exhaustive):
 - [x] Loss state → mode-dependent
 - [x] Game modes → Story/Campaign, Endless/Roguelite, PvP, Event/Challenge
 - [x] Status effects → skill-defined; no locked types; any condition valid if specified on the skill
-- [x] Items → two tiers: Campaign Items (mission/campaign scoped, temporary) and Genesis Items (global Equipment + Relics, strictly balance-maintained)
+- [x] Items → two tiers: Campaign Items (mission-scoped, temporary, item-defined type) and Genesis Items (global Equipment + Relics, pre-battle slots, unit-defined slot config, self-defining effects, strictly balance-maintained)
 - [x] Data architecture → JSON definitions for all game content; one file per entity; loaded by data_service
 - [ ] Is there a narrative layer, or is progression purely systemic?
 - [ ] Monetisation model (if any)?
