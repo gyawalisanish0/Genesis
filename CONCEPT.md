@@ -279,7 +279,7 @@ Every unit in battle has access to the following actions on their turn:
 
 | Action | Description |
 |---|---|
-| **Basic Attack** | A default attack available to all units — no AP cost, fixed TU cost, base output defined by the unit |
+| **Basic Attack** | A default attack available to all units — no AP cost, fixed TU cost, base output defined by the unit; rolls the full dice resolution table (Boosted / Success / Tumbling / Guard Up / Evasion) |
 | **Active Skill 1–4** | The unit's equipped active skills — each has its own TU cost, AP cost, base value, base chance, effect type, and tags |
 | **Skip / End Turn** | Pass the turn — advances the unit's Tick marker by a fixed amount without spending AP |
 | **In-Game Options** | Context-dependent actions available depending on mode or battle state (e.g. surrender, inspect, use item) |
