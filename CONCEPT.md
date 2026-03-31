@@ -319,9 +319,36 @@ This open design means skills can be as simple or complex as their character dem
 
 ---
 
-## Win Conditions
+## Win Conditions & Loss State
 
-Win conditions are **mode-dependent** — no single rule applies across all modes. Each mode defines its own victory and defeat states.
+Both victory and defeat are **mode-dependent** — no single rule applies across all modes. Each mode defines its own win and loss states independently.
+
+---
+
+## Game Modes
+
+Four game modes are planned, each with its own ruleset, roster behaviour, and win/loss conditions:
+
+| Mode | Description |
+|---|---|
+| **Story / Campaign** | Fixed encounters with set enemies; narrative-driven progression through multiversal arcs |
+| **Endless / Roguelite** | Procedural runs with escalating difficulty; temporary progression grows during the run; permanent progression advances on loss |
+| **PvP** | Player vs Player — Tick mastery and roster knowledge tested against other players |
+| **Event / Challenge** | Time-limited modes with unique rules, modifiers, or win conditions; rewards exclusive currency or cosmetics |
+
+---
+
+## Status Effects
+
+Status effects follow the same open design as skills — **there are no locked status effect types**. Each skill defines the status effects it applies as part of its effect definition. Any condition, periodic effect, or state modifier is valid as long as it is fully specified on the skill.
+
+Common patterns (not exhaustive):
+- Periodic damage or healing on Tick intervals
+- Stat modifications (temporary Strength, Resistance, Speed changes)
+- Tick manipulation conditions (slowed, hastened)
+- Shields, guards, or damage absorption states
+
+---
 
 ---
 
@@ -348,8 +375,9 @@ Win conditions are **mode-dependent** — no single rule applies across all mode
 - [x] Precision → multiplied by skill base chance (0.01–1.50) to produce final hit chance %
 - [x] Unit anatomy → HP and AP universal; secondary resource and status slots situational per character/mode
 - [x] Win condition → mode-dependent
+- [x] Loss state → mode-dependent
+- [x] Game modes → Story/Campaign, Endless/Roguelite, PvP, Event/Challenge
+- [x] Status effects → skill-defined; no locked types; any condition valid if specified on the skill
 - [ ] Is there a narrative layer, or is progression purely systemic?
-- [ ] What happens when the player loses a combat?
-- [ ] Multiplayer / social, or single-player only?
 - [ ] Monetisation model (if any)?
 - [ ] Dice variance — pure RNG or some mitigation system?
