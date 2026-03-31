@@ -22,6 +22,8 @@ Genesis is a game project built with Python + Kivy.
 | UI Framework | Kivy (KivyMD optional for Material widgets) |
 | Packaging | Buildozer (Android/iOS) |
 | State | Lightweight observable pattern — no heavy frameworks |
+| Data | JSON files — all game content definitions (characters, skills, items, quests) |
+| Low-level Android | pyjnius — Python-Java bridge for Android APIs not exposed by Kivy |
 | Testing | pytest + pytest-kivy |
 
 ---
@@ -58,7 +60,13 @@ Genesis/
 │   ├── images/
 │   ├── fonts/
 │   ├── audio/
-│   └── kv/                  # .kv layout files — mirror app/ structure
+│   ├── kv/                  # .kv layout files — mirror app/ structure
+│   └── data/                # JSON definition files — all game content
+│       ├── characters/      # One JSON per character
+│       ├── skills/          # One JSON per skill
+│       ├── items/           # Equipment and relic definitions
+│       ├── quests/          # Mastery Road quest definitions
+│       └── modes/           # Game mode configurations
 └── tests/
     └── ...
 ```
@@ -135,6 +143,42 @@ Hover is supported on **all platforms** but is expressed differently per input d
 - **`input_service` is the only place** that binds to raw Kivy touch/keyboard events
 - Components and screens **never** bind `on_touch_down` directly for game actions — they subscribe to named events from `input_service`
 - All timing thresholds (long-press duration, double-tap window, swipe distance, hover throttle) are constants defined in `app/core/constants.py`
+
+---
+
+## Data Architecture
+
+### JSON Definition Files
+All game content — characters, skills, items, quests, modes — is defined in JSON files under `assets/data/`. No game content is hardcoded in Python.
+
+- **One file per entity** — one JSON per character, one per skill, one per item
+- **Loaded by `data_service.py`** — a singleton service in `app/services/` that reads, validates, and caches all definitions at startup
+- **`core/` never reads files directly** — it receives parsed Python objects from `data_service`; file I/O never touches the game logic layer
+- **Schema is strict** — every JSON file must conform to its defined schema; unknown fields are rejected at load time
+
+### JSON Schema Conventions
+```
+assets/data/characters/warrior_001.json
+assets/data/skills/slash_001.json
+assets/data/items/relic_001.json
+assets/data/quests/mastery_warrior_001.json
+assets/data/modes/story.json
+```
+
+Each file includes a `type` field identifying its schema so the loader knows how to parse it.
+
+### pyjnius — Low-Level Android Access
+`pyjnius` is the Python-Java bridge for Android APIs not exposed by Kivy.
+
+- **Used only in `services/`** — never in `core/`, `utils/`, `components/`, or `screens/`
+- **Wrapped in a service** (e.g. `android_service.py`) — the rest of the app never calls pyjnius directly
+- **Always guarded by platform check** — pyjnius imports must be conditional so the app still runs on desktop for development:
+  ```python
+  from kivy.utils import platform
+  if platform == 'android':
+      from jnius import autoclass
+  ```
+- Use cases: vibration, Android notifications, device sensors, native file pickers
 
 ---
 

@@ -73,13 +73,14 @@ Temporary progression creates meaningful in-run decision-making and power fantas
 |---|---|
 | **User Level** | Account-wide prestige indicator — cosmetic only; carries no gameplay stat bonuses or content locks |
 | **Game Currency** | Earned through play and retained across sessions; spent on permanent unlocks, Mastery Road nodes, or cosmetics |
-| **Mastery Road** | A per-character web of mastery nodes — players unlock passives, stat boosts, and skills permanently for that character over time |
+| **Mastery Road** | A per-character web of cosmetic nodes unlocked through character-specific quests — no gameplay power, purely visual rewards |
 
 #### Mastery Road
 - Each character has their own independent mastery web
-- Nodes are unlocked using Game Currency or dedicated Mastery XP earned in battle
-- Unlockable content includes passive bonuses, stat increases, additional skills, and cosmetic rewards
+- Nodes are unlocked by completing **character-specific quests** — not by grinding currency or XP
+- **Purely cosmetic** — no stat increases, no passive bonuses, no gameplay advantage; rewards are skins, effects, titles, and visual flair
 - The web is permanent — progress is never lost between sessions
+- This keeps progression tied to achievement and mastery, not time investment
 
 ---
 
@@ -375,6 +376,29 @@ This open design means skills can be as simple or complex as their character dem
 
 ---
 
+## Items System
+
+Items are split into two strictly separate tiers with different scopes and purposes.
+
+### Campaign Items
+- **Scope**: Mission or campaign-specific — available only within the run or mission they belong to
+- Earned, found, or awarded during a campaign encounter
+- Fit within the **temporary progression layer** — reset when the campaign or mission ends
+- Defined in `assets/data/items/campaign/` — scoped to their campaign
+
+### Genesis Items
+- **Scope**: Global — available across all modes and sessions
+- Two subtypes:
+  - **Equipment** — equippable gear that modifies unit stats, TU costs, AP pools, or output
+  - **Relics** — passive artefacts with unique effects that persist through a fight
+- **Strictly balance-maintained** — every Genesis Item is centrally designed and reviewed; no procedural generation; the full item pool is a curated, closed set
+- Defined in `assets/data/items/genesis/` — globally accessible
+
+### Balance Rule
+Genesis Items are the only persistent power-affecting items in the game. Because they cross all modes and sessions, every item in this pool is held to strict balance standards. No Genesis Item is added without evaluating its impact on the Tick system, AP economy, and dice outcomes.
+
+---
+
 ## Win Conditions & Loss State
 
 Both victory and defeat are **mode-dependent** — no single rule applies across all modes. Each mode defines its own win and loss states independently.
@@ -417,7 +441,7 @@ Common patterns (not exhaustive):
 - [x] Roster source → mix of pre-built, in-combat draft, and mode-assigned depending on mode
 - [x] Resources → AP per-unit; regenerates on Tick rhythm; skills cost both AP and Ticks
 - [x] Enemy Tick manipulation → confirmed; skills can delay enemies or haste allies on the stream
-- [x] Progression → two layers: temporary (Skill Path + Level Up, resets per battle/campaign) and permanent (User Level cosmetic prestige, Game Currency, per-character Mastery Road web)
+- [x] Progression → two layers: temporary (Skill Path + Level Up, resets per battle/campaign) and permanent (User Level cosmetic prestige, Game Currency, per-character Mastery Road — quest-based, purely cosmetic)
 - [x] Skill Path → MOBA-style skill leveling; unit level up awards skill points (defined by character's Skill Path); points spent to level individual skills; each skill defines its own max level and per-level upgrades; all resets on battle end
 - [x] Multiverse role → Multiversal Mix; any character adapted into the framework; roster has infinite range
 - [x] Character stats → Strength, Endurance, Power, Resistance, Speed, Precision
@@ -435,6 +459,8 @@ Common patterns (not exhaustive):
 - [x] Loss state → mode-dependent
 - [x] Game modes → Story/Campaign, Endless/Roguelite, PvP, Event/Challenge
 - [x] Status effects → skill-defined; no locked types; any condition valid if specified on the skill
+- [x] Items → two tiers: Campaign Items (mission/campaign scoped, temporary) and Genesis Items (global Equipment + Relics, strictly balance-maintained)
+- [x] Data architecture → JSON definitions for all game content; one file per entity; loaded by data_service
 - [ ] Is there a narrative layer, or is progression purely systemic?
 - [ ] Monetisation model (if any)?
 - [ ] Dice variance — pure RNG or some mitigation system?
