@@ -49,8 +49,19 @@ Progression is split into two distinct layers — **temporary** (resets at the e
 
 | System | Description |
 |---|---|
-| **Skill Path** | A skill build assembled or evolved during a battle or campaign — how it is constructed mid-run is TBD |
-| **Level Up** | Characters gain XP and level up during a battle or campaign, boosting stats and unlocking skills for the duration; all levels reset to default when the run ends |
+| **Skill Path** | Character-defined distribution of skill points awarded on level up — determines how many points the player receives and how they can be allocated across skills |
+| **Level Up** | Characters gain XP and level up during a battle or campaign, boosting stats and awarding skill points; all levels reset to default when the run ends |
+
+#### Skill Leveling — MOBA-Style
+Each skill has its own temporary level that grows during the battle:
+
+- Every skill defines its own **max level**, **per-level upgrades**, and **effects at each level** — fully specified on the skill itself
+- On unit level up, the player receives **skill points** as defined by the character's Skill Path
+- Skill points are spent to level up individual skills — the player chooses which skills to prioritise
+- A skill cannot exceed its defined max level
+- All skill levels reset to default at the end of the battle or campaign
+
+This creates MOBA-style in-battle decision making: do you level a skill early for a power spike, or spread points for flexibility?
 
 Temporary progression creates meaningful in-run decision-making and power fantasy without permanently distorting character balance. Every run starts from the same baseline.
 
@@ -301,6 +312,8 @@ Skills in Genesis are **self-defining** — there are no locked categories or ty
 - **Base chance** — a multiplier from `0.01` to `1.50` applied against the user's Precision stat to calculate the skill's final hit chance
 - **Effect type** — what the base value does: `damage`, `heal`, or any other combat factor defined on the skill itself
 - **Tags** — 1 to 4 tags that describe the skill's nature (see below)
+- **Max level** — the highest level this skill can reach during a battle; defined on the skill
+- **Level upgrades** — the effects and stat changes unlocked at each level; fully defined on the skill
 
 ### Hit Chance Formula
 
@@ -380,7 +393,7 @@ Common patterns (not exhaustive):
 - [x] Resources → AP per-unit; regenerates on Tick rhythm; skills cost both AP and Ticks
 - [x] Enemy Tick manipulation → confirmed; skills can delay enemies or haste allies on the stream
 - [x] Progression → two layers: temporary (Skill Path + Level Up, resets per battle/campaign) and permanent (User Level cosmetic prestige, Game Currency, per-character Mastery Road web)
-- [ ] How does the temporary Skill Path work mid-run? (milestone picks, branching tree, pre-set path?)
+- [x] Skill Path → MOBA-style skill leveling; unit level up awards skill points (defined by character's Skill Path); points spent to level individual skills; each skill defines its own max level and per-level upgrades; all resets on battle end
 - [x] Multiverse role → Multiversal Mix; any character adapted into the framework; roster has infinite range
 - [x] Character stats → Strength, Endurance, Power, Resistance, Speed, Precision
 - [x] Classes → Warrior, Caster, Ranger, Hunter, Enchanter, Guardian
