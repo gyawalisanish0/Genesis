@@ -10,7 +10,7 @@ Genesis is a game project built with Python + Kivy.
 
 - **Target platforms**: Android and iOS first; desktop is secondary
 - **UI paradigm**: Mobile-first, touch-native
-- **Philosophy**: Modular, scalable, human-readable code above all else
+- **Philosophy**: Modular, robust, human-readable code above all else — prefer smaller focused modules over large monolithic files
 
 ---
 
@@ -50,7 +50,7 @@ Genesis/
 │   │   ├── __init__.py
 │   │   ├── input_service.py # Global input handler — single source of truth for input events
 │   │   └── ...
-│   └── utils/               # Pure helper functions, no side effects
+│   └── utils/               # Helper functions and classes — stateless preferred, no Kivy imports
 │       ├── __init__.py
 │       ├── input_helpers.py # Stateless helpers: gesture detection, hold timing, swipe math
 │       └── ...
@@ -91,8 +91,10 @@ Each layer may only import from layers to its left.
 - `input_service.py` is the **single global input handler** — all raw Kivy touch/keyboard events are funnelled here first
 
 ### utils/
-- Pure functions only — no state, no side effects, no Kivy imports
+- Helper functions and helper classes — no Kivy imports
+- Stateless pure functions are preferred; stateful helper classes are allowed when logic is complex enough to warrant it
 - `input_helpers.py` provides stateless gesture utilities consumed by `input_service`
+- Each helper module has a single clear responsibility — split by domain, not by file size
 
 ---
 
@@ -145,6 +147,72 @@ Hover is supported on **all platforms** but is expressed differently per input d
 
 ---
 
+## Modular Design Rules
+
+Genesis is a complex system — combat, ticks, dice, progression, and UI all interact. Modularity is the primary defence against unmaintainable code.
+
+### Universal rule — applies to every layer, every file
+**Any code that becomes large or messy must be broken into helper classes or submodules.** This is not optional and has no exceptions — it applies equally to `core/`, `services/`, `components/`, `screens/`, and `utils/`.
+
+### When to create a helper class or module
+- A function exceeds ~30 lines and has clearly separable concerns
+- A module is growing beyond ~150 lines
+- A concept appears in more than one place and could be encapsulated
+- A data structure and the logic that operates on it naturally belong together
+- Code is becoming hard to read or follow — **this alone is sufficient reason to extract a helper**
+- **When in doubt, split it out** — a well-named helper class is always clearer than a large monolithic function
+
+### Helper class rules
+- One responsibility per class — name it after what it does (`TickCalculator`, `DiceResolver`, `HitChanceEvaluator`)
+- Helper classes live in the same layer as the code that needs them — a `core/` helper stays in `core/`, a `components/` helper stays in `components/`
+- Helper classes in `core/` and `utils/` must not import Kivy
+- Helper classes in `components/`, `services/`, or `screens/` may import Kivy where necessary
+- Layer ordering still applies — helpers cannot import from layers to their right
+- Prefer composition over inheritance — small focused helpers composed together beat deep class hierarchies
+
+### Naming convention — helper classes
+When a class is split into helpers, each helper inherits the parent class name with a numeric suffix:
+
+```
+DiceResolver      →  DiceResolver1, DiceResolver2, ...
+TickCalculator    →  TickCalculator1, TickCalculator2, ...
+```
+
+The parent class remains the public interface — it composes the numbered helpers internally.
+
+### Subfolder convention
+When a domain grows large enough to warrant multiple helpers, group them into a subfolder named after the domain. Every subfolder requires an `__init__.py` that exposes only the public interface:
+
+```
+app/core/
+├── combat/
+│   ├── __init__.py          # exposes: DiceResolver, TickCalculator
+│   ├── dice_resolver.py     # class DiceResolver
+│   ├── dice_resolver_1.py   # class DiceResolver1
+│   ├── dice_resolver_2.py   # class DiceResolver2
+│   ├── tick_calculator.py   # class TickCalculator
+│   └── tick_calculator_1.py # class TickCalculator1
+├── characters/
+│   ├── __init__.py
+│   ├── stat_block.py
+│   └── stat_block_1.py
+└── ...
+```
+
+The same subfolder pattern applies in every layer — `services/`, `components/`, `screens/`, `utils/`.
+
+### File size guidelines
+
+| Layer | Soft limit | Action when exceeded |
+|---|---|---|
+| Any module | 150 lines | Consider splitting into focused submodules |
+| Any function / method | 30 lines | Extract sub-responsibilities into helper methods or classes |
+| Any class | 100 lines | Extract grouped behaviour into a dedicated helper class |
+
+These are guides, not hard rules — split when it improves clarity, not just to hit a number.
+
+---
+
 ## Code Readability Rules
 
 - **One function, one responsibility** — aim for ≤30 lines per function
@@ -152,7 +220,7 @@ Hover is supported on **all platforms** but is expressed differently per input d
 - **Descriptive names**: `player_health` not `ph`, `on_attack_pressed` not `oap`
 - **Layout lives in `.kv`** — do not set `size_hint`, `pos_hint`, `padding`, or colors in Python unless dynamically required
 - **Comments explain *why*, not *what*** — the code explains what; comments explain intent and non-obvious decisions
-- **No speculative abstractions** — only abstract when a pattern appears three or more times
+- **Prefer explicit over clever** — readable code beats concise code that requires thought to parse
 
 ---
 
@@ -176,6 +244,9 @@ Hover is supported on **all platforms** but is expressed differently per input d
 - Import Kivy inside `core/`
 - Hardcode pixel values
 - Put layout properties in Python when they belong in `.kv`
-- Create helpers or abstractions for one-time use
+- Write a function or class that does more than one thing — split it instead
+- Leave any code large or messy when a helper class would make it clean — this applies everywhere, no exceptions
+- Leave a module growing beyond ~150 lines without evaluating whether to split it
+- Create deeply nested logic that could be flattened with a helper class
 - Add error handling for scenarios that cannot happen
 - Introduce features beyond what was explicitly requested

@@ -34,18 +34,41 @@ Genesis is a combat framework built on a continuous, infinite Timeline — where
 ## Core Loop
 
 - **Micro loop** (each action): Read the live Tick stream, choose an action — every skill has a Tick cost that determines when that unit next acts and how fast resources regenerate; spend Ticks for power or preserve them for tempo
-- **Macro loop** (session): Win combat encounters, earn resources, unlock upgrades
-- **Meta loop** (long-term): Persistent power progression, expand roster, unlock new game modes and multiversal arcs
+- **Macro loop** (session): Win combat encounters, earn Game Currency, advance the temporary Skill Path and Level Up system
+- **Meta loop** (long-term): Invest Currency into Mastery Roads, grow User Level prestige, expand roster
 
 ---
 
 ## Progression System
 
-- **Three axes of growth** — units advance through a combination of:
-  - **Levels** — stats increase, new skills unlock as a unit gains XP
-  - **Equipment / Relics** — equippable items that modify Tick costs, dice weights, AP pools, or output values
-  - **Skill Trees** — branching upgrades that deepen a unit's abilities and specialisation
-- No wasted progress — losses feed the meta loop forward
+Progression is split into two distinct layers — **temporary** (resets at the end of a battle or campaign) and **permanent** (persists across all sessions).
+
+---
+
+### Temporary Progression *(resets on battle / campaign end)*
+
+| System | Description |
+|---|---|
+| **Skill Path** | A skill build assembled or evolved during a battle or campaign — how it is constructed mid-run is TBD |
+| **Level Up** | Characters gain XP and level up during a battle or campaign, boosting stats and unlocking skills for the duration; all levels reset to default when the run ends |
+
+Temporary progression creates meaningful in-run decision-making and power fantasy without permanently distorting character balance. Every run starts from the same baseline.
+
+---
+
+### Permanent Progression *(persists forever)*
+
+| System | Description |
+|---|---|
+| **User Level** | Account-wide prestige indicator — cosmetic only; carries no gameplay stat bonuses or content locks |
+| **Game Currency** | Earned through play and retained across sessions; spent on permanent unlocks, Mastery Road nodes, or cosmetics |
+| **Mastery Road** | A per-character web of mastery nodes — players unlock passives, stat boosts, and skills permanently for that character over time |
+
+#### Mastery Road
+- Each character has their own independent mastery web
+- Nodes are unlocked using Game Currency or dedicated Mastery XP earned in battle
+- Unlockable content includes passive bonuses, stat increases, additional skills, and cosmetic rewards
+- The web is permanent — progress is never lost between sessions
 
 ---
 
@@ -180,23 +203,42 @@ Every character has six core stats that define their identity and combat behavio
 | **Endurance** | Governs HP pool and physical durability |
 | **Power** | Governs magical / ability-based skill output |
 | **Resistance** | Governs damage mitigation and defensive capacity |
-| **Speed** | Influences TU-related behaviour — initiative and action tempo |
+| **Speed** | Determines starting Tick position — higher Speed biases toward the class minimum (acts sooner) |
 | **Precision** | Accuracy stat — multiplied by a skill's base chance to determine the final hit chance percentage |
 
-> **Open**: Exact formulas for how Speed maps to TU costs/initiative and how Precision interacts with the dice resolution table are TBD.
+### Starting Tick Formula
+
+Each character's position on the Tick stream at combat start is calculated as:
+
+```
+speed_factor  = 1 - (Speed / 100)
+max_offset    = (class_max - class_min) × speed_factor
+starting_tick = class_min + randint(0, round(max_offset))
+```
+
+Speed does not guarantee a fixed position — it **compresses the ceiling** of the random roll toward the class minimum:
+
+| Speed | Effective roll range |
+|---|---|
+| 100 | Always `class_min` — fastest possible for class |
+| 75 | `class_min` to `class_min + 25%` of range |
+| 50 | `class_min` to `class_min + 50%` of range |
+| 0 | Full `[class_min, class_max]` — no bias |
 
 ### Classes
 
-Six classes define a character's combat role and skill archetype:
+Six classes define a character's combat role, skill archetype, and Tick range:
 
-| Class | Role |
-|---|---|
-| **Warrior** | Frontline melee — high Strength and Endurance |
-| **Caster** | Ability-driven — high Power; skill-heavy AP usage |
-| **Ranger** | Ranged precision — high Precision; consistent output |
-| **Hunter** | Mobile and fast — high Speed; exploits Tick advantages |
-| **Enchanter** | Support and control — buffs, debuffs, Tick manipulation |
-| **Guardian** | Defensive anchor — high Resistance and Endurance; absorbs pressure |
+| Class | Tick Range | Role |
+|---|---|---|
+| **Hunter** | 1 – 6 | Mobile and fast — high Speed; exploits Tick advantages |
+| **Ranger** | 3 – 9 | Ranged precision — high Precision; consistent output |
+| **Caster** | 5 – 12 | Ability-driven — high Power; skill-heavy AP usage |
+| **Warrior** | 6 – 14 | Frontline melee — high Strength and Endurance |
+| **Enchanter** | 7 – 15 | Support and control — buffs, debuffs, Tick manipulation |
+| **Guardian** | 10 – 20 | Defensive anchor — high Resistance and Endurance; absorbs pressure |
+
+> **Note**: Class Tick ranges are working values — to be confirmed during prototyping.
 
 ### Rarity
 
@@ -292,13 +334,14 @@ Win conditions are **mode-dependent** — no single rule applies across all mode
 - [x] Roster source → mix of pre-built, in-combat draft, and mode-assigned depending on mode
 - [x] Resources → AP per-unit; regenerates on Tick rhythm; skills cost both AP and Ticks
 - [x] Enemy Tick manipulation → confirmed; skills can delay enemies or haste allies on the stream
-- [x] Progression → combination of levels, equipment/relics, and skill trees
+- [x] Progression → two layers: temporary (Skill Path + Level Up, resets per battle/campaign) and permanent (User Level cosmetic prestige, Game Currency, per-character Mastery Road web)
+- [ ] How does the temporary Skill Path work mid-run? (milestone picks, branching tree, pre-set path?)
 - [x] Multiverse role → Multiversal Mix; any character adapted into the framework; roster has infinite range
 - [x] Character stats → Strength, Endurance, Power, Resistance, Speed, Precision
 - [x] Classes → Warrior, Caster, Ranger, Hunter, Enchanter, Guardian
 - [x] Rarity → 7 tiers: Normal → Advance → Super → Epic → Master → Legend → OMEGA
 - [ ] What does "power" look like visually on the Tick stream?
-- [ ] How does Speed map to TU costs / initiative exactly?
+- [x] Speed → starting Tick formula: `class_min + randint(0, round((class_max - class_min) × (1 - Speed/100)))`; class ranges defined per class
 - [ ] Does final chance act as a pre-roll gate (fail = miss before the dice table) or shift probabilities within the table?
 - [x] AP regen rate → character-defined; unique per unit, baked into their design
 - [x] Skill types → no locked categories; each skill is self-defining (TU cost + AP cost + base value + base chance + effect type + 1–4 tags)
