@@ -345,7 +345,15 @@ Final Chance (%) = Precision × Base Chance
 - Base chance `> 1.0` (up to `1.5`) means the skill is more accurate than the character's baseline — reliable, consistent skills
 - Base chance `< 1.0` means the skill trades accuracy for other properties — power, utility, or Tick cost savings
 
-> **Open**: Does final chance act as a pre-roll gate (fail = auto-miss before the table), or does it shift outcome probabilities within the table?
+Final chance acts as a **probability shift** on the dice resolution table — it does not gate the roll. Every action always produces an outcome; final chance adjusts how likely favourable outcomes are:
+
+| Final Chance | Effect on Table |
+|---|---|
+| 100% | Base probabilities (Boosted 15% / Success 45% / Tumbling 10% / Guard Up 20% / Evasion 10%) |
+| > 100% | Positive outcomes (Boosted, Success) gain probability mass; negative outcomes (Tumbling, Evasion) shrink |
+| < 100% | Negative outcomes grow; positive outcomes shrink |
+
+The exact redistribution formula is to be finalised during prototyping — the principle is that no roll ever produces nothing, and Precision always matters.
 
 ### Skill Tags
 
@@ -417,7 +425,7 @@ Common patterns (not exhaustive):
 - [x] Rarity → 7 tiers: Normal → Advance → Super → Epic → Master → Legend → OMEGA
 - [ ] What does "power" look like visually on the Tick stream?
 - [x] Speed → starting Tick formula: `class_min + randint(0, round((class_max - class_min) × (1 - Speed/100)))`; class ranges defined per class
-- [ ] Does final chance act as a pre-roll gate (fail = miss before the dice table) or shift probabilities within the table?
+- [x] Final chance → probability shift on the dice table; no pre-roll gate; every action always produces an outcome; exact redistribution formula TBD during prototyping
 - [x] AP regen rate → character-defined; unique per unit, baked into their design
 - [x] Skill types → no locked categories; each skill is self-defining (TU cost + AP cost + base value + base chance + effect type + 1–4 tags)
 - [x] Combat actions → Basic Attack, 4 active skill slots, unique passive (always active), Skip/End Turn, in-game options
