@@ -64,7 +64,7 @@ Genesis replaces traditional turn-based conventions with a **continuous, infinit
 - When a unit's Tick marker is reached, the player chooses an action
 - The chosen action advances the unit's marker by its Tick cost — lighter actions keep the unit mobile; heavier actions hit harder but create a longer wait
 - This makes every decision a trade-off between **power now** vs **tempo later**
-- **Tick cost is fixed per action** — dice rolls never affect when a unit acts next
+- **Tick cost is fixed per action** — with one exception: a **Tumbling** dice result pushes the acting unit's marker forward an additional 1–5 Ticks as a tempo penalty
 
 ### What Makes It Different
 | Traditional Turn-Based | Genesis Tick System |
@@ -78,18 +78,38 @@ Genesis replaces traditional turn-based conventions with a **continuous, infinit
 
 ## Skill Resolution (Dice System)
 
-When a unit acts, the outcome is resolved through a dice roll. The two systems are intentionally independent:
+Every action triggers a single dice roll. The roll determines the full outcome — both the nature of the result and its magnitude.
 
-- **Tick System** = deterministic strategic layer; the stream is always visible and fully plannable
-- **Dice** = probabilistic resolution layer; what happens when you act is never guaranteed
+### Resolution Table
 
-### Resolution Rules
-- Every skill triggers a dice roll on execution
-- The roll determines **full resolution**: whether the skill lands (hit / miss / crit) and the magnitude of the effect (damage, healing, buff strength)
-- Dice are **pure RNG** — no stat or resource modifies the roll
-- This creates a core tension: perfect Tick planning vs unpredictable outcomes
+| Outcome | Probability | Effect |
+|---|---|---|
+| **Boosted** | 15% | 1.5× output |
+| **Success** | 45% | 1.0× output |
+| **Tumbling** | 10% | 0.5× output + source delayed 1–5 Ticks (random) |
+| **Guard Up** | 20% | Target gains 10% of output as mitigation |
+| **Evasion** | 10% | No effect → 15% Counter chance (↓5% per recursion, min 1%) |
 
-> **Open design note**: Pure RNG with no player agency is the riskiest part of this system. Worth prototyping whether some form of variance mitigation (rerolls, build-based probability shifts) improves feel without undermining the framework.
+### Outcome Notes
+
+**Boosted** — a critical hit; straightforward 50% output bonus.
+
+**Success** — baseline; the skill lands at full intended output.
+
+**Tumbling** — the skill partially lands but the attacker loses footing. Output is halved *and* the source unit's Tick marker is pushed forward by 1–5 Ticks (rolled randomly). This is the **primary bridge between the Dice and Tick systems** — a bad roll doesn't just reduce damage, it disrupts the attacker's tempo.
+
+**Guard Up** — the action lands but inadvertently fortifies the target. 10% of the output converts into mitigation for the target rather than being a miss. The attacker still acts; the target becomes slightly harder to hurt.
+
+**Evasion** — the action fails entirely. The target then has a **15% chance to counter**. If that counter rolls Evasion, the next counter chance drops to 10%, then 5%, then floors at 1% per further recursion. Counters are full actions — they roll the resolution table independently and can themselves result in any outcome including Tumbling or further Evasion.
+
+### System Relationship
+
+| Layer | Nature | Tick Interaction |
+|---|---|---|
+| Tick System | Deterministic | Always visible; fully plannable |
+| Dice | Probabilistic | Independent — *except* Tumbling, which delays the source |
+
+The Tumbling outcome is the only case where a dice result modifies the Tick stream.
 
 ---
 
@@ -126,7 +146,7 @@ Unit availability is mode-driven — no single rule applies across all game mode
 - [x] Core loop → continuous Tick stream (Tick 0 → ∞), no rounds
 - [x] TU = Tick = initiative + action cost + resource regen rhythm
 - [x] Timeline manipulation → skill-only; Tick cost is always fixed
-- [x] Skill resolution → dice roll for full resolution (hit/miss/crit + magnitude); pure RNG; dice never affect Tick cost
+- [x] Skill resolution → 5-outcome dice table (Boosted 15% / Success 45% / Tumbling 10% / Guard Up 20% / Evasion 10%); pure RNG; Tumbling is the one outcome that delays the source on the Tick stream
 - [x] Roster source → mix of pre-built, in-combat draft, and mode-assigned depending on mode
 - [ ] What does "power" look like visually on the Tick stream?
 - [ ] Can skills affect *enemy* Tick markers? (delay, interrupt, pull-forward)
