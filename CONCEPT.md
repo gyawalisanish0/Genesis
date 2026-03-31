@@ -14,6 +14,7 @@ Genesis is a turn-based combat game set across a fractured multiverse — where 
 - Every skill choice is a double decision: *what you do* and *when you act again*
 - Watching power compound: small early timeline advantages snowball into overwhelming control
 - A roster that shifts by mode — mastery is never static, always contextual
+- Adapting to whatever units you're given and finding the optimal Timeline line-up with them
 
 ---
 
@@ -55,6 +56,7 @@ The Timeline is the central mechanic of all combat in Genesis.
 - The **action or skill chosen determines how far the unit's marker advances** after acting — lighter skills advance the marker less (act sooner again); heavier skills push the marker further (longer wait)
 - This makes every decision a trade-off between **power now** vs **speed later**
 - Players can read the full Timeline at all times, enabling forward planning and counter-play
+- **Timeline manipulation is skill-only** — no passive stat affects marker distance; all timeline interaction comes from deliberate skill choices
 
 ---
 
@@ -75,13 +77,26 @@ The Timeline is the central mechanic of all combat in Genesis.
 
 ---
 
+## Roster System
+
+Unit availability is mode-driven — no single rule applies across all game modes:
+
+- Some modes let the player **pre-build a squad** before entering combat
+- Some modes use an **in-combat draft** — units are picked or discovered mid-fight
+- Some modes **assign the roster** — the mode dictates which units are available
+- Mastery means adapting to whatever configuration the mode demands
+
+---
+
 ## Open Questions
 
 - [x] What is the micro-loop? → Timeline-based turn-order combat
-- [ ] What does "power" look like visually? (number, character, timeline slots?)
+- [x] Timeline manipulation → skill-only; no passive stat influence
+- [x] Roster source → mix of pre-built, in-combat draft, and mode-assigned depending on mode
+- [ ] What does "power" look like visually? (number, character, timeline position?)
+- [ ] Can skills affect *enemy* timeline markers? (delay, pull-forward)
+- [ ] How does the multiversal setting factor into gameplay? (factions, zones, or pure flavour)
 - [ ] Is there a narrative layer, or is progression purely systemic?
 - [ ] Multiplayer / social, or single-player only?
+- [ ] What happens when the player loses a combat?
 - [ ] Monetisation model (if any)?
-- [ ] Can players manipulate *enemy* timeline positions, or only their own?
-- [ ] Are there skills that affect other units' timeline markers (speed debuffs, delay abilities)?
-- [ ] What determines which units/characters are available per game mode?
