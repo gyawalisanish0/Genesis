@@ -168,6 +168,54 @@ Unit availability is mode-driven — no single rule applies across all game mode
 
 ---
 
+## Character System
+
+### Stats
+
+Every character has six core stats that define their identity and combat behaviour:
+
+| Stat | Role |
+|---|---|
+| **Strength** | Governs physical skill output |
+| **Endurance** | Governs HP pool and physical durability |
+| **Power** | Governs magical / ability-based skill output |
+| **Resistance** | Governs damage mitigation and defensive capacity |
+| **Speed** | Influences TU-related behaviour — initiative and action tempo |
+| **Precision** | Influences accuracy and dice-related outcomes |
+
+> **Open**: Exact formulas for how Speed maps to TU costs/initiative and how Precision interacts with the dice resolution table are TBD.
+
+### Classes
+
+Six classes define a character's combat role and skill archetype:
+
+| Class | Role |
+|---|---|
+| **Warrior** | Frontline melee — high Strength and Endurance |
+| **Caster** | Ability-driven — high Power; skill-heavy AP usage |
+| **Ranger** | Ranged precision — high Precision; consistent output |
+| **Hunter** | Mobile and fast — high Speed; exploits Tick advantages |
+| **Enchanter** | Support and control — buffs, debuffs, Tick manipulation |
+| **Guardian** | Defensive anchor — high Resistance and Endurance; absorbs pressure |
+
+### Rarity
+
+Seven rarity tiers define a character's overall power ceiling and design complexity:
+
+| Tier | Rarity |
+|---|---|
+| 1 | Normal |
+| 2 | Advance |
+| 3 | Super |
+| 4 | Epic |
+| 5 | Master |
+| 6 | Legend |
+| 7 | OMEGA |
+
+Higher rarity characters have higher stat ceilings, deeper skill sets, and greater mechanical complexity. OMEGA tier represents the apex — characters with unique framework-level effects.
+
+---
+
 ## Unit Anatomy
 
 A unit's stat profile is **dynamic and situational** — not every unit carries every resource. The possible stats are:
@@ -212,7 +260,12 @@ Win conditions are **mode-dependent** — no single rule applies across all mode
 - [x] Enemy Tick manipulation → confirmed; skills can delay enemies or haste allies on the stream
 - [x] Progression → combination of levels, equipment/relics, and skill trees
 - [x] Multiverse role → Multiversal Mix; any character adapted into the framework; roster has infinite range
+- [x] Character stats → Strength, Endurance, Power, Resistance, Speed, Precision
+- [x] Classes → Warrior, Caster, Ranger, Hunter, Enchanter, Guardian
+- [x] Rarity → 7 tiers: Normal → Advance → Super → Epic → Master → Legend → OMEGA
 - [ ] What does "power" look like visually on the Tick stream?
+- [ ] How does Speed map to TU costs / initiative exactly?
+- [ ] How does Precision interact with the dice resolution table?
 - [x] AP regen rate → character-defined; unique per unit, baked into their design
 - [x] Skill types → no locked categories; each skill is self-defining (TU cost + AP cost + effect)
 - [x] Unit anatomy → HP and AP universal; secondary resource and status slots situational per character/mode
