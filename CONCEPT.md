@@ -55,6 +55,7 @@ Each unit has its own **AP pool** — the resource spent to execute skills.
 
 - AP is **per-unit** — pools are independent; one unit's spending never affects another's
 - AP regenerates on the **Tick rhythm** — units accumulate AP as Ticks pass, creating a natural cadence of when powerful skills become available
+- **AP regen rate is character-defined** — each unit has a unique regen value baked into their design; it is a core part of their identity, not a shared stat
 - Skill cost has two dimensions: **Tick cost** (when you act next) and **AP cost** (whether you can act at all)
 - Managing both simultaneously is the core skill expression of Genesis
 
@@ -178,7 +179,7 @@ Unit availability is mode-driven — no single rule applies across all game mode
 - [x] Progression → combination of levels, equipment/relics, and skill trees
 - [x] Multiverse role → Multiversal Mix; any character adapted into the framework; roster has infinite range
 - [ ] What does "power" look like visually on the Tick stream?
-- [ ] AP regen rate — is it flat per Tick, or does it scale with unit speed/stats?
+- [x] AP regen rate → character-defined; unique per unit, baked into their design
 - [ ] Are Tick manipulation skills a dedicated skill type, or can any skill have Tick effects?
 - [ ] Is there a narrative layer, or is progression purely systemic?
 - [ ] What happens when the player loses a combat?
