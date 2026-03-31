@@ -1,0 +1,11 @@
+{
+  "type": "mode",
+  "id": "story",
+  "name": "Story Mode",
+  "description": "Follow the Genesis narrative through a series of escalating battles.",
+  "settings": {
+    "enemy_ai": "story",
+    "respawn": false,
+    "time_limit_ticks": null
+  }
+}

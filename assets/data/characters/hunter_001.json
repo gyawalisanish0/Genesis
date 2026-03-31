@@ -1,0 +1,20 @@
+{
+  "type": "character",
+  "id": "hunter_001",
+  "name": "Swift Veil",
+  "class_name": "Hunter",
+  "rarity": 2,
+  "stats": {
+    "strength": 55,
+    "endurance": 35,
+    "power": 30,
+    "resistance": 30,
+    "speed": 90,
+    "precision": 80
+  },
+  "max_hp": 800,
+  "max_ap": 100.0,
+  "ap_regen_rate": 12.0,
+  "passive": null,
+  "skill_path": "hunter_path"
+}

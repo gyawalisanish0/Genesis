@@ -1,0 +1,18 @@
+{
+  "type": "skill",
+  "id": "slash_001",
+  "name": "Slash",
+  "tu_cost": 8,
+  "ap_cost": 20.0,
+  "base_chance": 1.0,
+  "base_value": 80,
+  "stat_key": "strength",
+  "max_level": 5,
+  "tags": ["physical", "melee"],
+  "level_upgrades": [
+    {"level": 2, "base_value": 90},
+    {"level": 3, "base_value": 100},
+    {"level": 4, "base_value": 115},
+    {"level": 5, "base_value": 130}
+  ]
+}
