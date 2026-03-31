@@ -496,4 +496,26 @@ Genesis has a rich and complex lore — to be developed in a dedicated design ph
 - [x] Items → two tiers: Campaign Items (mission-scoped, temporary, item-defined type) and Genesis Items (global Equipment + Relics, pre-battle slots, unit-defined slot config, self-defining effects, strictly balance-maintained)
 - [x] Data architecture → JSON definitions for all game content; one file per entity; loaded by data_service
 - [x] Dice variance → pure RNG base; alteration only through skills or items that explicitly define it in their own definition
-- [ ] Monetisation model (if any)?
+- [x] Monetisation → Ads (Google AdSense primary network) + IAP; no gameplay power sold; IAP limited to cosmetics, currency, and character unlocks
+
+---
+
+## Monetisation
+
+Genesis monetises through two channels — both strictly non-pay-to-win.
+
+### Ads
+- **Primary network**: Google AdSense
+- Ad placements are between sessions or on opt-in reward screens — never interrupting active combat
+- Players can opt into rewarded ads for bonus Game Currency
+
+### In-App Purchases (IAP)
+- **Game Currency** — purchase currency to spend on cosmetics and Mastery Road progression faster
+- **Character unlocks** — acquire specific characters directly
+- **Cosmetic bundles** — skins, effects, titles
+- **Ad removal** — one-time purchase to remove non-rewarded ads
+
+### Non-Negotiable Rule
+**No IAP gives gameplay power.** No stat boosts, no Genesis Items, no skill advantages purchasable. Every player competes on equal mechanical footing — victory is earned through Tick mastery, not spending.
+
+> **Note**: Google AdSense mobile integration on Android will be handled via pyjnius or the AdMob SDK through Buildozer — implementation detail to be resolved during the services layer build.
