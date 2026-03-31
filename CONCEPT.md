@@ -162,6 +162,16 @@ Every action triggers a single dice roll. The roll determines the full outcome �
 
 The Tumbling outcome is the only case where a dice result modifies the Tick stream.
 
+### Dice Alteration
+The base dice roll is pure RNG — no system-level mitigation exists. However, **any skill or item can alter the dice roll if its definition allows it**:
+
+- A passive might shift outcome probabilities (e.g. +10% Boosted chance)
+- An active skill might guarantee the next roll is Success
+- A relic might trigger a reroll on Tumbling
+- A Campaign Item might suppress Evasion for one turn
+
+Dice alteration is declared on the skill or item itself — the framework provides the hook, the content provides the effect. This keeps the base system clean while giving designers full control through the item and skill layers.
+
 ---
 
 ## Visual Style
@@ -485,5 +495,5 @@ Genesis has a rich and complex lore — to be developed in a dedicated design ph
 - [x] Narrative → complex lore planned; dedicated design phase after combat prototype; deferred
 - [x] Items → two tiers: Campaign Items (mission-scoped, temporary, item-defined type) and Genesis Items (global Equipment + Relics, pre-battle slots, unit-defined slot config, self-defining effects, strictly balance-maintained)
 - [x] Data architecture → JSON definitions for all game content; one file per entity; loaded by data_service
+- [x] Dice variance → pure RNG base; alteration only through skills or items that explicitly define it in their own definition
 - [ ] Monetisation model (if any)?
-- [ ] Dice variance — pure RNG or some mitigation system?
