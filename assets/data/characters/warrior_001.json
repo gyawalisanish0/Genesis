@@ -1,0 +1,20 @@
+{
+  "type": "character",
+  "id": "warrior_001",
+  "name": "Iron Warden",
+  "class_name": "Warrior",
+  "rarity": 3,
+  "stats": {
+    "strength": 75,
+    "endurance": 60,
+    "power": 20,
+    "resistance": 45,
+    "speed": 40,
+    "precision": 55
+  },
+  "max_hp": 1200,
+  "max_ap": 100.0,
+  "ap_regen_rate": 8.0,
+  "passive": null,
+  "skill_path": "warrior_path"
+}
