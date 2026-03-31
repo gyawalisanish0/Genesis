@@ -56,7 +56,8 @@ Each unit has its own **AP pool** — the resource spent to execute skills.
 - AP is **per-unit** — pools are independent; one unit's spending never affects another's
 - AP regenerates on the **Tick rhythm** — units accumulate AP as Ticks pass, creating a natural cadence of when powerful skills become available
 - **AP regen rate is character-defined** — each unit has a unique regen value baked into their design; it is a core part of their identity, not a shared stat
-- Skill cost has two dimensions: **Tick cost** (when you act next) and **AP cost** (whether you can act at all)
+- **Every skill defines its own TU and AP cost** — both values are fixed properties of the skill itself, not derived from unit stats
+- Skill cost has two dimensions: **TU cost** (how far the unit's marker advances on the stream) and **AP cost** (whether you can afford to use it at all)
 - Managing both simultaneously is the core skill expression of Genesis
 
 ---
@@ -76,7 +77,7 @@ Genesis replaces traditional turn-based conventions with a **continuous, infinit
 
 ### Action Economy
 - When a unit's Tick marker is reached, the player chooses an action
-- The chosen action advances the unit's marker by its Tick cost — lighter actions keep the unit mobile; heavier actions hit harder but create a longer wait
+- The chosen skill advances the unit's marker by that skill's **TU cost** — a fixed value defined on the skill itself; lighter skills keep the unit mobile, heavier skills hit harder but create a longer wait
 - This makes every decision a trade-off between **power now** vs **tempo later**
 - **Tick cost is fixed per action** — with one exception: a **Tumbling** dice result pushes the acting unit's marker forward an additional 1–5 Ticks as a tempo penalty
 - **Tick manipulation skills exist** — certain skills can directly push enemy markers forward (delay) or pull ally markers backward (haste), making the stream an active battleground, not just a read-out
