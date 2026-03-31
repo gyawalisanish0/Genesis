@@ -181,7 +181,7 @@ Every character has six core stats that define their identity and combat behavio
 | **Power** | Governs magical / ability-based skill output |
 | **Resistance** | Governs damage mitigation and defensive capacity |
 | **Speed** | Influences TU-related behaviour — initiative and action tempo |
-| **Precision** | Influences accuracy and dice-related outcomes |
+| **Precision** | Accuracy stat — multiplied by a skill's base chance to determine the final hit chance percentage |
 
 > **Open**: Exact formulas for how Speed maps to TU costs/initiative and how Precision interacts with the dice resolution table are TBD.
 
@@ -238,8 +238,24 @@ Skills in Genesis are **self-defining** — there are no locked categories or ty
 - **TU cost** — how far the unit's marker advances after use
 - **AP cost** — what it costs to execute
 - **Base value** — an integer output value, or `null` if the skill has no numeric output (e.g. pure Tick manipulation or utility effects)
+- **Base chance** — a multiplier from `0.01` to `1.50` applied against the user's Precision stat to calculate the skill's final hit chance
 - **Effect type** — what the base value does: `damage`, `heal`, or any other combat factor defined on the skill itself
 - **Tags** — 1 to 4 tags that describe the skill's nature (see below)
+
+### Hit Chance Formula
+
+```
+Final Chance (%) = Precision × Base Chance
+```
+
+**Example**: Precision 95 × Base Chance 0.75 = **71.25% hit chance**
+
+- Base chance `1.0` means the skill hits exactly as often as the character's raw Precision
+- Base chance `> 1.0` (up to `1.5`) means the skill is more accurate than the character's baseline — reliable, consistent skills
+- Base chance `< 1.0` means the skill trades accuracy for other properties — power, utility, or Tick cost savings
+- Final chance feeds into the dice resolution roll — how exactly it interacts with the 5-outcome table is defined below
+
+> **Open**: Does final chance act as a pre-roll gate (fail = auto-miss before the table), or does it shift outcome probabilities within the table?
 
 ### Skill Tags
 
@@ -283,9 +299,10 @@ Win conditions are **mode-dependent** — no single rule applies across all mode
 - [x] Rarity → 7 tiers: Normal → Advance → Super → Epic → Master → Legend → OMEGA
 - [ ] What does "power" look like visually on the Tick stream?
 - [ ] How does Speed map to TU costs / initiative exactly?
-- [ ] How does Precision interact with the dice resolution table?
+- [ ] Does final chance act as a pre-roll gate (fail = miss before the dice table) or shift probabilities within the table?
 - [x] AP regen rate → character-defined; unique per unit, baked into their design
-- [x] Skill types → no locked categories; each skill is self-defining (TU cost + AP cost + base value + effect type + 1–4 tags)
+- [x] Skill types → no locked categories; each skill is self-defining (TU cost + AP cost + base value + base chance + effect type + 1–4 tags)
+- [x] Precision → multiplied by skill base chance (0.01–1.50) to produce final hit chance %
 - [x] Unit anatomy → HP and AP universal; secondary resource and status slots situational per character/mode
 - [x] Win condition → mode-dependent
 - [ ] Is there a narrative layer, or is progression purely systemic?
