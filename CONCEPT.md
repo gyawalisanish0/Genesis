@@ -34,18 +34,41 @@ Genesis is a combat framework built on a continuous, infinite Timeline — where
 ## Core Loop
 
 - **Micro loop** (each action): Read the live Tick stream, choose an action — every skill has a Tick cost that determines when that unit next acts and how fast resources regenerate; spend Ticks for power or preserve them for tempo
-- **Macro loop** (session): Win combat encounters, earn resources, unlock upgrades
-- **Meta loop** (long-term): Persistent power progression, expand roster, unlock new game modes and multiversal arcs
+- **Macro loop** (session): Win combat encounters, earn Game Currency, advance the temporary Skill Path and Level Up system
+- **Meta loop** (long-term): Invest Currency into Mastery Roads, grow User Level prestige, expand roster
 
 ---
 
 ## Progression System
 
-- **Three axes of growth** — units advance through a combination of:
-  - **Levels** — stats increase, new skills unlock as a unit gains XP
-  - **Equipment / Relics** — equippable items that modify Tick costs, dice weights, AP pools, or output values
-  - **Skill Trees** — branching upgrades that deepen a unit's abilities and specialisation
-- No wasted progress — losses feed the meta loop forward
+Progression is split into two distinct layers — **temporary** (resets at the end of a battle or campaign) and **permanent** (persists across all sessions).
+
+---
+
+### Temporary Progression *(resets on battle / campaign end)*
+
+| System | Description |
+|---|---|
+| **Skill Path** | A skill build assembled or evolved during a battle or campaign — how it is constructed mid-run is TBD |
+| **Level Up** | Characters gain XP and level up during a battle or campaign, boosting stats and unlocking skills for the duration; all levels reset to default when the run ends |
+
+Temporary progression creates meaningful in-run decision-making and power fantasy without permanently distorting character balance. Every run starts from the same baseline.
+
+---
+
+### Permanent Progression *(persists forever)*
+
+| System | Description |
+|---|---|
+| **User Level** | Account-wide prestige indicator — cosmetic only; carries no gameplay stat bonuses or content locks |
+| **Game Currency** | Earned through play and retained across sessions; spent on permanent unlocks, Mastery Road nodes, or cosmetics |
+| **Mastery Road** | A per-character web of mastery nodes — players unlock passives, stat boosts, and skills permanently for that character over time |
+
+#### Mastery Road
+- Each character has their own independent mastery web
+- Nodes are unlocked using Game Currency or dedicated Mastery XP earned in battle
+- Unlockable content includes passive bonuses, stat increases, additional skills, and cosmetic rewards
+- The web is permanent — progress is never lost between sessions
 
 ---
 
@@ -311,7 +334,8 @@ Win conditions are **mode-dependent** — no single rule applies across all mode
 - [x] Roster source → mix of pre-built, in-combat draft, and mode-assigned depending on mode
 - [x] Resources → AP per-unit; regenerates on Tick rhythm; skills cost both AP and Ticks
 - [x] Enemy Tick manipulation → confirmed; skills can delay enemies or haste allies on the stream
-- [x] Progression → combination of levels, equipment/relics, and skill trees
+- [x] Progression → two layers: temporary (Skill Path + Level Up, resets per battle/campaign) and permanent (User Level cosmetic prestige, Game Currency, per-character Mastery Road web)
+- [ ] How does the temporary Skill Path work mid-run? (milestone picks, branching tree, pre-set path?)
 - [x] Multiverse role → Multiversal Mix; any character adapted into the framework; roster has infinite range
 - [x] Character stats → Strength, Endurance, Power, Resistance, Speed, Precision
 - [x] Classes → Warrior, Caster, Ranger, Hunter, Enchanter, Guardian
