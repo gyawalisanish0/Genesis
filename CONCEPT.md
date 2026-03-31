@@ -273,6 +273,24 @@ HP and AP are universal. Secondary resource and status slots are present only wh
 
 ---
 
+## Combat Actions
+
+Every unit in battle has access to the following actions on their turn:
+
+| Action | Description |
+|---|---|
+| **Basic Attack** | A default attack available to all units — no AP cost, fixed TU cost, base output defined by the unit |
+| **Active Skill 1–4** | The unit's equipped active skills — each has its own TU cost, AP cost, base value, base chance, effect type, and tags |
+| **Skip / End Turn** | Pass the turn — advances the unit's Tick marker by a fixed amount without spending AP |
+| **In-Game Options** | Context-dependent actions available depending on mode or battle state (e.g. surrender, inspect, use item) |
+
+### Skill Loadout
+- Each unit equips **up to 4 active skills** before entering battle
+- Each unit has **one unique passive** — always active, occupies no slot, cannot be swapped
+- The passive is intrinsic to the character and defines part of their identity within the Tick framework
+
+---
+
 ## Skill Design
 
 Skills in Genesis are **self-defining** — there are no locked categories or types imposed by the system. Each skill declares its own:
@@ -372,6 +390,7 @@ Common patterns (not exhaustive):
 - [ ] Does final chance act as a pre-roll gate (fail = miss before the dice table) or shift probabilities within the table?
 - [x] AP regen rate → character-defined; unique per unit, baked into their design
 - [x] Skill types → no locked categories; each skill is self-defining (TU cost + AP cost + base value + base chance + effect type + 1–4 tags)
+- [x] Combat actions → Basic Attack, 4 active skill slots, unique passive (always active), Skip/End Turn, in-game options
 - [x] Precision → multiplied by skill base chance (0.01–1.50) to produce final hit chance %
 - [x] Unit anatomy → HP and AP universal; secondary resource and status slots situational per character/mode
 - [x] Win condition → mode-dependent
