@@ -170,6 +170,37 @@ Genesis is a complex system — combat, ticks, dice, progression, and UI all int
 - Layer ordering still applies — helpers cannot import from layers to their right
 - Prefer composition over inheritance — small focused helpers composed together beat deep class hierarchies
 
+### Naming convention — helper classes
+When a class is split into helpers, each helper inherits the parent class name with a numeric suffix:
+
+```
+DiceResolver      →  DiceResolver1, DiceResolver2, ...
+TickCalculator    →  TickCalculator1, TickCalculator2, ...
+```
+
+The parent class remains the public interface — it composes the numbered helpers internally.
+
+### Subfolder convention
+When a domain grows large enough to warrant multiple helpers, group them into a subfolder named after the domain. Every subfolder requires an `__init__.py` that exposes only the public interface:
+
+```
+app/core/
+├── combat/
+│   ├── __init__.py          # exposes: DiceResolver, TickCalculator
+│   ├── dice_resolver.py     # class DiceResolver
+│   ├── dice_resolver_1.py   # class DiceResolver1
+│   ├── dice_resolver_2.py   # class DiceResolver2
+│   ├── tick_calculator.py   # class TickCalculator
+│   └── tick_calculator_1.py # class TickCalculator1
+├── characters/
+│   ├── __init__.py
+│   ├── stat_block.py
+│   └── stat_block_1.py
+└── ...
+```
+
+The same subfolder pattern applies in every layer — `services/`, `components/`, `screens/`, `utils/`.
+
 ### File size guidelines
 
 | Layer | Soft limit | Action when exceeded |
