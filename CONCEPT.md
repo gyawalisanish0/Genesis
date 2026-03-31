@@ -162,6 +162,16 @@ Every action triggers a single dice roll. The roll determines the full outcome �
 
 The Tumbling outcome is the only case where a dice result modifies the Tick stream.
 
+### Dice Alteration
+The base dice roll is pure RNG — no system-level mitigation exists. However, **any skill or item can alter the dice roll if its definition allows it**:
+
+- A passive might shift outcome probabilities (e.g. +10% Boosted chance)
+- An active skill might guarantee the next roll is Success
+- A relic might trigger a reroll on Tumbling
+- A Campaign Item might suppress Evasion for one turn
+
+Dice alteration is declared on the skill or item itself — the framework provides the hook, the content provides the effect. This keeps the base system clean while giving designers full control through the item and skill layers.
+
 ---
 
 ## Visual Style
@@ -383,14 +393,17 @@ Items are split into two strictly separate tiers with different scopes and purpo
 ### Campaign Items
 - **Scope**: Mission or campaign-specific — available only within the run or mission they belong to
 - Earned, found, or awarded during a campaign encounter
+- **Item-defined type** — no fixed form; each item declares its own behaviour (consumable, temporary gear, passive buff, or anything else)
 - Fit within the **temporary progression layer** — reset when the campaign or mission ends
 - Defined in `assets/data/items/campaign/` — scoped to their campaign
 
 ### Genesis Items
 - **Scope**: Global — available across all modes and sessions
 - Two subtypes:
-  - **Equipment** — equippable gear that modifies unit stats, TU costs, AP pools, or output
-  - **Relics** — passive artefacts with unique effects that persist through a fight
+  - **Equipment** — gear equipped in pre-battle slots; modifies stats, TU costs, AP pools, or output for the fight
+  - **Relics** — artefacts equipped in pre-battle slots; effects are fully self-defined per relic (Tick modifiers, dice-conditional triggers, stat scaling, or any combination)
+- **Equipment slots are unit-defined** — each unit declares its own slot configuration as part of its design; no universal slot count enforced
+- **All items are self-defining** — effect type, magnitude, and conditions are declared on the item itself, not by a shared type system
 - **Strictly balance-maintained** — every Genesis Item is centrally designed and reviewed; no procedural generation; the full item pool is a curated, closed set
 - Defined in `assets/data/items/genesis/` — globally accessible
 
@@ -413,7 +426,7 @@ Four game modes are planned, each with its own ruleset, roster behaviour, and wi
 |---|---|
 | **Story / Campaign** | Fixed encounters with set enemies; narrative-driven progression through multiversal arcs |
 | **Endless / Roguelite** | Procedural runs with escalating difficulty; temporary progression grows during the run; permanent progression advances on loss |
-| **PvP** | Player vs Player — Tick mastery and roster knowledge tested against other players |
+| **PvP** | Async turn-by-turn — players submit decisions alternately; the Tick stream resolves each exchange sequentially without requiring both players online simultaneously |
 | **Event / Challenge** | Time-limited modes with unique rules, modifiers, or win conditions; rewards exclusive currency or cosmetics |
 
 ---
@@ -429,6 +442,24 @@ Common patterns (not exhaustive):
 - Shields, guards, or damage absorption states
 
 ---
+
+## Enemy AI
+
+Enemies are **Tick-aware** — they evaluate the full Tick stream before making decisions, just as a skilled player would.
+
+- Enemies read all unit positions on the stream before choosing an action
+- AI factors in AP availability, skill TU costs, and the positioning of both allied and enemy markers
+- This means enemies can delay attacks to act before a player unit, prioritise targets who are far back on the stream, or use Tick manipulation skills strategically
+- AI difficulty can be tuned by adjusting how many moves ahead the enemy evaluates — higher difficulty = deeper lookahead
+
+---
+
+## Lore & Narrative
+
+Genesis has a rich and complex lore — to be developed in a dedicated design phase. Placeholder for now.
+
+- The narrative layer will be documented separately once the combat framework is prototyped
+- Story / Campaign mode is the primary vehicle for lore delivery
 
 ---
 
@@ -457,10 +488,34 @@ Common patterns (not exhaustive):
 - [x] Unit anatomy → HP and AP universal; secondary resource and status slots situational per character/mode
 - [x] Win condition → mode-dependent
 - [x] Loss state → mode-dependent
-- [x] Game modes → Story/Campaign, Endless/Roguelite, PvP, Event/Challenge
+- [x] Game modes → Story/Campaign, Endless/Roguelite, PvP (async turn-by-turn), Event/Challenge
 - [x] Status effects → skill-defined; no locked types; any condition valid if specified on the skill
-- [x] Items → two tiers: Campaign Items (mission/campaign scoped, temporary) and Genesis Items (global Equipment + Relics, strictly balance-maintained)
+- [x] Enemy AI → Tick-aware; evaluates full stream before acting; difficulty tuned by lookahead depth
+- [x] PvP → async turn-by-turn; no simultaneous online session required
+- [x] Narrative → complex lore planned; dedicated design phase after combat prototype; deferred
+- [x] Items → two tiers: Campaign Items (mission-scoped, temporary, item-defined type) and Genesis Items (global Equipment + Relics, pre-battle slots, unit-defined slot config, self-defining effects, strictly balance-maintained)
 - [x] Data architecture → JSON definitions for all game content; one file per entity; loaded by data_service
-- [ ] Is there a narrative layer, or is progression purely systemic?
-- [ ] Monetisation model (if any)?
-- [ ] Dice variance — pure RNG or some mitigation system?
+- [x] Dice variance → pure RNG base; alteration only through skills or items that explicitly define it in their own definition
+- [x] Monetisation → Ads (Google AdSense primary network) + IAP; no gameplay power sold; IAP limited to cosmetics, currency, and character unlocks
+
+---
+
+## Monetisation
+
+Genesis monetises through two channels — both strictly non-pay-to-win.
+
+### Ads
+- **Primary network**: Google AdSense
+- Ad placements are between sessions or on opt-in reward screens — never interrupting active combat
+- Players can opt into rewarded ads for bonus Game Currency
+
+### In-App Purchases (IAP)
+- **Game Currency** — purchase currency to spend on cosmetics and Mastery Road progression faster
+- **Character unlocks** — acquire specific characters directly
+- **Cosmetic bundles** — skins, effects, titles
+- **Ad removal** — one-time purchase to remove non-rewarded ads
+
+### Non-Negotiable Rule
+**No IAP gives gameplay power.** No stat boosts, no Genesis Items, no skill advantages purchasable. Every player competes on equal mechanical footing — victory is earned through Tick mastery, not spending.
+
+> **Note**: Google AdSense mobile integration on Android will be handled via pyjnius or the AdMob SDK through Buildozer — implementation detail to be resolved during the services layer build.
