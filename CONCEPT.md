@@ -416,7 +416,7 @@ Four game modes are planned, each with its own ruleset, roster behaviour, and wi
 |---|---|
 | **Story / Campaign** | Fixed encounters with set enemies; narrative-driven progression through multiversal arcs |
 | **Endless / Roguelite** | Procedural runs with escalating difficulty; temporary progression grows during the run; permanent progression advances on loss |
-| **PvP** | Player vs Player — Tick mastery and roster knowledge tested against other players |
+| **PvP** | Async turn-by-turn — players submit decisions alternately; the Tick stream resolves each exchange sequentially without requiring both players online simultaneously |
 | **Event / Challenge** | Time-limited modes with unique rules, modifiers, or win conditions; rewards exclusive currency or cosmetics |
 
 ---
@@ -432,6 +432,24 @@ Common patterns (not exhaustive):
 - Shields, guards, or damage absorption states
 
 ---
+
+## Enemy AI
+
+Enemies are **Tick-aware** — they evaluate the full Tick stream before making decisions, just as a skilled player would.
+
+- Enemies read all unit positions on the stream before choosing an action
+- AI factors in AP availability, skill TU costs, and the positioning of both allied and enemy markers
+- This means enemies can delay attacks to act before a player unit, prioritise targets who are far back on the stream, or use Tick manipulation skills strategically
+- AI difficulty can be tuned by adjusting how many moves ahead the enemy evaluates — higher difficulty = deeper lookahead
+
+---
+
+## Lore & Narrative
+
+Genesis has a rich and complex lore — to be developed in a dedicated design phase. Placeholder for now.
+
+- The narrative layer will be documented separately once the combat framework is prototyped
+- Story / Campaign mode is the primary vehicle for lore delivery
 
 ---
 
@@ -460,10 +478,12 @@ Common patterns (not exhaustive):
 - [x] Unit anatomy → HP and AP universal; secondary resource and status slots situational per character/mode
 - [x] Win condition → mode-dependent
 - [x] Loss state → mode-dependent
-- [x] Game modes → Story/Campaign, Endless/Roguelite, PvP, Event/Challenge
+- [x] Game modes → Story/Campaign, Endless/Roguelite, PvP (async turn-by-turn), Event/Challenge
 - [x] Status effects → skill-defined; no locked types; any condition valid if specified on the skill
+- [x] Enemy AI → Tick-aware; evaluates full stream before acting; difficulty tuned by lookahead depth
+- [x] PvP → async turn-by-turn; no simultaneous online session required
+- [x] Narrative → complex lore planned; dedicated design phase after combat prototype; deferred
 - [x] Items → two tiers: Campaign Items (mission-scoped, temporary, item-defined type) and Genesis Items (global Equipment + Relics, pre-battle slots, unit-defined slot config, self-defining effects, strictly balance-maintained)
 - [x] Data architecture → JSON definitions for all game content; one file per entity; loaded by data_service
-- [ ] Is there a narrative layer, or is progression purely systemic?
 - [ ] Monetisation model (if any)?
 - [ ] Dice variance — pure RNG or some mitigation system?
