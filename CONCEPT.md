@@ -41,9 +41,22 @@ Genesis is a combat framework built on a continuous, infinite Timeline — where
 
 ## Progression System
 
-- Power is earned through Tick mastery and expressed through deeper timeline control
-- Multiple axes: unit stats, abilities, Tick cost modifiers, roster depth
+- **Three axes of growth** — units advance through a combination of:
+  - **Levels** — stats increase, new skills unlock as a unit gains XP
+  - **Equipment / Relics** — equippable items that modify Tick costs, dice weights, AP pools, or output values
+  - **Skill Trees** — branching upgrades that deepen a unit's abilities and specialisation
 - No wasted progress — losses feed the meta loop forward
+
+---
+
+## Action Points (AP)
+
+Each unit has its own **AP pool** — the resource spent to execute skills.
+
+- AP is **per-unit** — pools are independent; one unit's spending never affects another's
+- AP regenerates on the **Tick rhythm** — units accumulate AP as Ticks pass, creating a natural cadence of when powerful skills become available
+- Skill cost has two dimensions: **Tick cost** (when you act next) and **AP cost** (whether you can act at all)
+- Managing both simultaneously is the core skill expression of Genesis
 
 ---
 
@@ -65,6 +78,7 @@ Genesis replaces traditional turn-based conventions with a **continuous, infinit
 - The chosen action advances the unit's marker by its Tick cost — lighter actions keep the unit mobile; heavier actions hit harder but create a longer wait
 - This makes every decision a trade-off between **power now** vs **tempo later**
 - **Tick cost is fixed per action** — with one exception: a **Tumbling** dice result pushes the acting unit's marker forward an additional 1–5 Ticks as a tempo penalty
+- **Tick manipulation skills exist** — certain skills can directly push enemy markers forward (delay) or pull ally markers backward (haste), making the stream an active battleground, not just a read-out
 
 ### What Makes It Different
 | Traditional Turn-Based | Genesis Tick System |
@@ -130,6 +144,17 @@ The Tumbling outcome is the only case where a dice result modifies the Tick stre
 
 ---
 
+## Multiversal Mix
+
+Genesis does not take place *inside* any single universe — it draws characters *from* all of them.
+
+- Any character from any universe, fiction, mythology, or setting can be **adapted into Genesis**
+- Adaptation means translating a character's identity into Tick costs, AP pools, skill sets, and dice tendencies — the framework absorbs them, not the other way around
+- No universe is mechanically privileged; a character's power comes from their design within the Tick system, not their source material
+- This gives the roster infinite creative range while keeping the combat framework consistent
+
+---
+
 ## Roster System
 
 Unit availability is mode-driven — no single rule applies across all game modes:
@@ -148,10 +173,13 @@ Unit availability is mode-driven — no single rule applies across all game mode
 - [x] Timeline manipulation → skill-only; Tick cost is always fixed
 - [x] Skill resolution → 5-outcome dice table (Boosted 15% / Success 45% / Tumbling 10% / Guard Up 20% / Evasion 10%); pure RNG; Tumbling is the one outcome that delays the source on the Tick stream
 - [x] Roster source → mix of pre-built, in-combat draft, and mode-assigned depending on mode
+- [x] Resources → AP per-unit; regenerates on Tick rhythm; skills cost both AP and Ticks
+- [x] Enemy Tick manipulation → confirmed; skills can delay enemies or haste allies on the stream
+- [x] Progression → combination of levels, equipment/relics, and skill trees
+- [x] Multiverse role → Multiversal Mix; any character adapted into the framework; roster has infinite range
 - [ ] What does "power" look like visually on the Tick stream?
-- [ ] Can skills affect *enemy* Tick markers? (delay, interrupt, pull-forward)
-- [ ] Resource types — what do they do, how do Tick-based regen intervals work?
-- [ ] How does the multiversal setting factor into gameplay? (factions, zones, or pure flavour)
+- [ ] AP regen rate — is it flat per Tick, or does it scale with unit speed/stats?
+- [ ] Are Tick manipulation skills a dedicated skill type, or can any skill have Tick effects?
 - [ ] Is there a narrative layer, or is progression purely systemic?
 - [ ] What happens when the player loses a combat?
 - [ ] Multiplayer / social, or single-player only?
