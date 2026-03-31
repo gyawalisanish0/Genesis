@@ -168,6 +168,39 @@ Unit availability is mode-driven — no single rule applies across all game mode
 
 ---
 
+## Unit Anatomy
+
+A unit's stat profile is **dynamic and situational** — not every unit carries every resource. The possible stats are:
+
+| Stat | Description |
+|---|---|
+| **HP** | Health pool — reaches zero, unit is eliminated |
+| **AP** | Action Points — spent to use skills; regenerates at the unit's defined regen rate on the Tick rhythm |
+| **Secondary Resource** | Optional third resource unique to the unit or mode (e.g. rage, shield charge, mana) — defined per character |
+| **Status Slots** | Tracks active buffs, debuffs, and conditions applied to the unit |
+
+HP and AP are universal. Secondary resource and status slots are present only where a unit's design or the mode calls for them.
+
+---
+
+## Skill Design
+
+Skills in Genesis are **self-defining** — there are no locked categories or types imposed by the system. Each skill declares its own:
+
+- **TU cost** — how far the unit's marker advances after use
+- **AP cost** — what it costs to execute
+- **Effect** — entirely defined by the skill itself; can be damage, healing, a Tick manipulation, a status application, a conditional trigger, or any combination
+
+This open design means skills can be as simple or complex as their character demands, without the framework constraining what a skill is allowed to do.
+
+---
+
+## Win Conditions
+
+Win conditions are **mode-dependent** — no single rule applies across all modes. Each mode defines its own victory and defeat states.
+
+---
+
 ## Open Questions
 
 - [x] Core loop → continuous Tick stream (Tick 0 → ∞), no rounds
@@ -181,7 +214,9 @@ Unit availability is mode-driven — no single rule applies across all game mode
 - [x] Multiverse role → Multiversal Mix; any character adapted into the framework; roster has infinite range
 - [ ] What does "power" look like visually on the Tick stream?
 - [x] AP regen rate → character-defined; unique per unit, baked into their design
-- [ ] Are Tick manipulation skills a dedicated skill type, or can any skill have Tick effects?
+- [x] Skill types → no locked categories; each skill is self-defining (TU cost + AP cost + effect)
+- [x] Unit anatomy → HP and AP universal; secondary resource and status slots situational per character/mode
+- [x] Win condition → mode-dependent
 - [ ] Is there a narrative layer, or is progression purely systemic?
 - [ ] What happens when the player loses a combat?
 - [ ] Multiplayer / social, or single-player only?
