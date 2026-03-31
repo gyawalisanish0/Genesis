@@ -237,7 +237,25 @@ Skills in Genesis are **self-defining** — there are no locked categories or ty
 
 - **TU cost** — how far the unit's marker advances after use
 - **AP cost** — what it costs to execute
-- **Effect** — entirely defined by the skill itself; can be damage, healing, a Tick manipulation, a status application, a conditional trigger, or any combination
+- **Base value** — an integer output value, or `null` if the skill has no numeric output (e.g. pure Tick manipulation or utility effects)
+- **Effect type** — what the base value does: `damage`, `heal`, or any other combat factor defined on the skill itself
+- **Tags** — 1 to 4 tags that describe the skill's nature (see below)
+
+### Skill Tags
+
+Each skill carries between one and four tags that classify its behaviour and enable interactions with other systems (buffs, resistances, class synergies, etc.):
+
+| Tag | Description |
+|---|---|
+| **Physical** | Output is physical in nature — interacts with Strength and Resistance |
+| **Energy** | Output is energy-based — interacts with Power and Resistance |
+| **Melee** | Requires proximity — close-range targeting |
+| **Ranged** | Operates at distance — ranged targeting |
+| **Utility** | No direct combat output — positioning, Tick effects, resource manipulation |
+| **Unique** | Singular mechanic specific to the character — not shared by any other skill |
+| **Special** | Enhanced or signature skill — above baseline power or complexity |
+| **Awakened** | Unlocked at high rarity or a power threshold — represents a character's full potential |
+| **Misc** | Catch-all for effects that don't fit other tags |
 
 This open design means skills can be as simple or complex as their character demands, without the framework constraining what a skill is allowed to do.
 
@@ -267,7 +285,7 @@ Win conditions are **mode-dependent** — no single rule applies across all mode
 - [ ] How does Speed map to TU costs / initiative exactly?
 - [ ] How does Precision interact with the dice resolution table?
 - [x] AP regen rate → character-defined; unique per unit, baked into their design
-- [x] Skill types → no locked categories; each skill is self-defining (TU cost + AP cost + effect)
+- [x] Skill types → no locked categories; each skill is self-defining (TU cost + AP cost + base value + effect type + 1–4 tags)
 - [x] Unit anatomy → HP and AP universal; secondary resource and status slots situational per character/mode
 - [x] Win condition → mode-dependent
 - [ ] Is there a narrative layer, or is progression purely systemic?
