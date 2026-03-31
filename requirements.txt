@@ -1,0 +1,5 @@
+kivy>=2.3.0
+kivymd>=1.2.0
+pytest>=8.0.0
+pytest-kivy>=0.1.0
+pyjnius>=1.6.0
