@@ -151,18 +151,23 @@ Hover is supported on **all platforms** but is expressed differently per input d
 
 Genesis is a complex system — combat, ticks, dice, progression, and UI all interact. Modularity is the primary defence against unmaintainable code.
 
+### Universal rule — applies to every layer, every file
+**Any code that becomes large or messy must be broken into helper classes or submodules.** This is not optional and has no exceptions — it applies equally to `core/`, `services/`, `components/`, `screens/`, and `utils/`.
+
 ### When to create a helper class or module
 - A function exceeds ~30 lines and has clearly separable concerns
 - A module is growing beyond ~150 lines
 - A concept appears in more than one place and could be encapsulated
 - A data structure and the logic that operates on it naturally belong together
+- Code is becoming hard to read or follow — **this alone is sufficient reason to extract a helper**
 - **When in doubt, split it out** — a well-named helper class is always clearer than a large monolithic function
 
 ### Helper class rules
 - One responsibility per class — name it after what it does (`TickCalculator`, `DiceResolver`, `HitChanceEvaluator`)
-- Helper classes in `utils/` must not import Kivy
-- Helper classes in `core/` must not import Kivy
-- Helper classes in `components/` or `services/` may import Kivy where necessary
+- Helper classes live in the same layer as the code that needs them — a `core/` helper stays in `core/`, a `components/` helper stays in `components/`
+- Helper classes in `core/` and `utils/` must not import Kivy
+- Helper classes in `components/`, `services/`, or `screens/` may import Kivy where necessary
+- Layer ordering still applies — helpers cannot import from layers to their right
 - Prefer composition over inheritance — small focused helpers composed together beat deep class hierarchies
 
 ### File size guidelines
@@ -209,6 +214,7 @@ These are guides, not hard rules — split when it improves clarity, not just to
 - Hardcode pixel values
 - Put layout properties in Python when they belong in `.kv`
 - Write a function or class that does more than one thing — split it instead
+- Leave any code large or messy when a helper class would make it clean — this applies everywhere, no exceptions
 - Leave a module growing beyond ~150 lines without evaluating whether to split it
 - Create deeply nested logic that could be flattened with a helper class
 - Add error handling for scenarios that cannot happen
