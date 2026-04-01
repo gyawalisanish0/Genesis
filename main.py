@@ -11,14 +11,19 @@ Config.set('graphics', 'height', '640')
 
 from kivy.app import App
 
-import app.services.input_service as input_service_module
+import app.services.display_service as display_service_module
+import app.services.input_service   as input_service_module
 
 
 class GenesisApp(App):
     def build(self):
-        # Initialise the global input handler — must happen after the Window
-        # exists (i.e. inside build, not at module level).
+        # 1. Display first — sets immersive mode and reads safe-area insets.
+        #    Must precede input_service so Window is fully configured.
+        display_service_module.init()
+
+        # 2. Input service — binds to Window touch/keyboard events.
         input_service_module.init()
+
         # Screens and navigation will be wired here in Phase 2
 
 
