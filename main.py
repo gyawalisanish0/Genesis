@@ -2,6 +2,13 @@
 Entry point — launches the Kivy application.
 No game logic lives here.
 """
+# Config.set MUST come before any kivy.core.window or App import.
+# 'auto' enables full-screen on mobile; on desktop it opens a normal window.
+from kivy.config import Config
+Config.set('graphics', 'fullscreen', 'auto')
+Config.set('graphics', 'width', '360')
+Config.set('graphics', 'height', '640')
+
 from kivy.app import App
 
 import app.services.input_service as input_service_module
