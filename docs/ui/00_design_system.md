@@ -5,35 +5,66 @@ Shared design language referenced by every screen doc. All values are
 
 ---
 
-## Canvas & Safe Zone
+## Canvas & Full-Screen Target
 
-```
-┌──────────────────────────────────────────┐
-│  STATUS BAR              24dp            │  ← system UI (transparent overlay)
-├──────────────────────────────────────────┤
-│                                          │
-│                                          │
-│         SAFE CONTENT ZONE                │  568dp tall
-│              360 × 568 dp               │
-│                                          │
-│                                          │
-├──────────────────────────────────────────┤
-│  GESTURE / NAV BAR       48dp            │  ← system UI (transparent overlay)
-└──────────────────────────────────────────┘
-         360dp wide × 640dp tall
-```
+Genesis runs **full-bleed immersive** on every screen — no system chrome is
+ever visible. The physical target is 1080 × 1920 px portrait (Full HD).
+
+### Resolution Reference
 
 | Property | Value |
 |---|---|
-| Canvas | 360 × 640 dp |
-| Safe zone | 360 × 568 dp |
-| Status bar inset | 24 dp top |
-| Nav bar inset | 48 dp bottom |
-| Side padding (global) | 16 dp |
-| Content width | 328 dp |
+| Physical target | 1080 × 1920 px (Full HD portrait) |
+| Density bucket | xxhdpi — 480 dpi — 1 dp = 3 px |
+| dp canvas | **360 × 640 dp** |
+| Asset design size | 1080 × 1920 px (3×); export 1× and 2× fallbacks |
 
-The battle screen runs **full-bleed edge-to-edge** — content extends under
-both bars using window inset APIs. All other screens respect the safe zone.
+Always write layout in **dp**. Design and slice assets at 1080 × 1920 px then
+export downscaled copies for lower density buckets.
+
+### Full-Bleed Canvas
+
+```
+┌──────────────────────────────────────────┐  px: 0,0    dp: 0,0
+│▓▓▓▓▓▓ CAMERA / NOTCH ZONE  ▓▓▓▓▓▓▓▓▓▓▓│  ← device-reported top inset
+├──────────────────────────────────────────┤
+│                                          │
+│                                          │
+│         TRUE CONTENT ZONE                │  dynamic height
+│    (interactive elements live here)      │
+│                                          │
+│                                          │
+├──────────────────────────────────────────┤
+│▓▓▓▓▓▓ GESTURE / HOME BAR  ▓▓▓▓▓▓▓▓▓▓▓▓│  ← device-reported bottom inset
+└──────────────────────────────────────────┘  px: 1080,1920   dp: 360,640
+
+  ▓▓▓ = safe-area inset — backgrounds bleed here; buttons must not
+```
+
+Inset values are **read at runtime** from `display_service.get_safe_insets()`.
+They vary per device — never hardcode them.
+
+### Reference Insets (fallback when platform cannot report)
+
+| Inset | Default dp | Note |
+|---|---|---|
+| Top | 24 dp | Camera / status bar region |
+| Bottom | 48 dp | Gesture bar / home indicator |
+| Left | 0 dp | Portrait — no side insets |
+| Right | 0 dp | Portrait — no side insets |
+
+### Content Zone (using reference insets)
+
+| Property | dp | Note |
+|---|---|---|
+| Content top | 24 dp | Below top inset |
+| Content bottom | 592 dp | Above bottom inset (640 − 48) |
+| Content height | 568 dp | Safe interactive area |
+| Side padding | 12 dp | Inside safe area left/right |
+| Content width | 336 dp | 360 − 12 − 12 |
+
+> Screen docs use these reference insets for ASCII schematics.
+> Actual runtime values will vary per device.
 
 ---
 

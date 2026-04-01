@@ -185,9 +185,53 @@ Each file includes a `type` field identifying its schema so the loader knows how
 ## Mobile-First Rules
 
 - **Always use `dp()` / `sp()` units** — never hardcode pixel values
-- **Minimum touch target**: 48dp × 48dp
-- **Design for portrait at 360×640dp first**, then scale up and handle landscape
-- **Asset optimization**: compressed PNGs, compressed audio — keep APK size minimal
+- **Minimum touch target**: 48 × 48 dp
+- **Portrait-first, no landscape** — all screens target 1080 × 1920 px (360 × 640 dp at xxhdpi); landscape is explicitly unsupported
+- **Asset density**: design and export at **3× (xxhdpi)** as primary scale; provide 1× and 2× fallbacks in `assets/images/`
+- **Asset optimisation**: compressed PNGs, compressed audio — keep APK size minimal
+
+---
+
+## Display & Full-Screen Rules
+
+Genesis runs **edge-to-edge, full-bleed, immersive** on every screen — system bars are never visible during gameplay.
+
+### Physical Resolution Reference
+
+| Property | Value |
+|---|---|
+| Target resolution | 1080 × 1920 px (Full HD portrait) |
+| dp canvas at xxhdpi (480 dpi) | 360 × 640 dp |
+| 1 dp at xxhdpi | 3 px |
+| Asset design scale | 3× (xxhdpi) primary; 1× and 2× fallbacks |
+
+Always write layout values in dp. Design and slice assets at 1080 × 1920 px (3×) then export downscaled copies for lower density buckets.
+
+### Full-Screen Setup
+
+- **Kivy Config** — `Config.set('graphics', 'fullscreen', 'auto')` must be at the **very top** of `main.py`, before any `Window` or `App` import
+- **`display_service.py`** — the **only** module allowed to call pyjnius Window / system-UI APIs; all other code calls `display_service.get_safe_insets()`
+- **Android immersive sticky** — set via pyjnius in `display_service.py`, guarded by `platform == 'android'`; handles both API < 30 (SystemUiVisibility flags) and API ≥ 30 (WindowInsetsController)
+- **iOS** — full-screen handled automatically by Kivy/buildozer; no extra code required
+- **Desktop** — runs in a resizable window; `display_service` returns default fallback insets so layout logic is identical on all platforms
+
+### Safe-Area Insets
+
+Cameras, notches, rounded corners, and gesture bars occupy physical space even in full-screen mode.
+
+- `display_service.get_safe_insets()` → `{"top": int, "bottom": int, "left": int, "right": int}` in dp
+- **Never hardcode inset values** — always read from `display_service` at runtime
+- Fallback values when the platform cannot report insets: `top=24 dp, bottom=48 dp, left=0, right=0`
+- All **interactive content** must sit inside the safe area; decorative backgrounds may bleed to the true device edge
+
+### buildozer.spec Requirements
+
+```ini
+fullscreen = 1
+android.wakelock = False
+```
+
+`fullscreen = 1` suppresses the status bar at the Kivy level; `display_service` then upgrades to true immersive sticky mode via pyjnius.
 
 ---
 
@@ -286,8 +330,9 @@ These are guides, not hard rules — split when it improves clarity, not just to
 ## What Claude Should Never Do
 
 - Import Kivy inside `core/`
-- Hardcode pixel values
+- Hardcode pixel values or inset values — pixel values belong in asset files; insets come from `display_service`
 - Put layout properties in Python when they belong in `.kv`
+- Call pyjnius Window / system-UI APIs outside `display_service.py`
 - Write a function or class that does more than one thing — split it instead
 - Leave any code large or messy when a helper class would make it clean — this applies everywhere, no exceptions
 - Leave a module growing beyond ~150 lines without evaluating whether to split it
