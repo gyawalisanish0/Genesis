@@ -13,6 +13,7 @@ import os
 
 from kivy.app import App
 from kivy.lang import Builder
+from kivy.properties import BooleanProperty
 from kivy.uix.screenmanager import ScreenManager, FadeTransition
 
 import app.services.display_service as display_service_module
@@ -22,26 +23,28 @@ from app.core.game_context import GameContext
 
 _KV_DIR = os.path.join(os.path.dirname(__file__), 'assets', 'kv')
 
+# Set GENESIS_DEBUG=1 in the environment to enable the in-app debug tools.
+_DEBUG = os.environ.get('GENESIS_DEBUG', '').lower() in ('1', 'true', 'yes')
+
 # KV files loaded in dependency order (most-reused widgets first).
-# Extend this list as new screens are added in later phases.
 _KV_FILES = [
     'stub_screen.kv',
     'splash_screen.kv',
     'main_menu_screen.kv',
-    # Phase 2
     'settings_screen.kv',
-    # Phase 3
     'roster_screen.kv',
-    # Phase 4
     'pre_battle_screen.kv',
     'battle_screen.kv',
-    # Phase 5
     'battle_result_screen.kv',
+    'debug_screen.kv',
 ]
 
 
 class GenesisApp(App):
     """Root application — owns the ScreenManager and shared state."""
+
+    # Reactive property — accessible as `app.debug_mode` in KV files.
+    debug_mode = BooleanProperty(_DEBUG)
 
     game_context = GameContext()
 
@@ -77,20 +80,20 @@ class GenesisApp(App):
         from app.screens.roster_screen import RosterScreen
         from app.screens.pre_battle_screen import PreBattleScreen
         from app.screens.battle_result_screen import BattleResultScreen
+        from app.screens.debug_screen import DebugScreen
 
         # 5. Wire ScreenManager — first screen added becomes the start screen.
         sm = ScreenManager(transition=FadeTransition(duration=0.25))
         sm.add_widget(SplashScreen(name='splash'))
         sm.add_widget(MainMenuScreen(name='main_menu'))
         sm.add_widget(BattleScreen(name='battle'))
-
-        # Stub placeholders for screens built in later phases
         sm.add_widget(PreBattleScreen(name='pre_battle'))
         sm.add_widget(RosterScreen(name='roster'))
         sm.add_widget(SettingsScreen(name='settings'))
-        sm.add_widget(StubScreen(name='mastery_road',  title_text='MASTERY ROAD'))
-        sm.add_widget(StubScreen(name='shop',          title_text='SHOP'))
         sm.add_widget(BattleResultScreen(name='battle_result'))
+        sm.add_widget(DebugScreen(name='debug'))
+        sm.add_widget(StubScreen(name='mastery_road', title_text='MASTERY ROAD'))
+        sm.add_widget(StubScreen(name='shop',         title_text='SHOP'))
 
         return sm
 

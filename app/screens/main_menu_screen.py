@@ -31,3 +31,6 @@ class MainMenuScreen(Screen):
 
     def on_shop(self) -> None:
         self.manager.current = 'shop'
+
+    def on_debug(self) -> None:
+        self.manager.current = 'debug'
