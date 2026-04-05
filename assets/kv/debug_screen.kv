@@ -1,0 +1,278 @@
+#: kivy 2.3.0
+# DebugScreen — in-app developer tools (GENESIS_DEBUG=1)
+
+<DebugScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        canvas.before:
+            Color:
+                rgba: (0.040, 0.036, 0.060, 1)
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+        # ── Header ──────────────────────────────────────────────────────────
+        BoxLayout:
+            size_hint_y: None
+            height: dp(56)
+            canvas.before:
+                Color:
+                    rgba: (0.200, 0.040, 0.040, 1)
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+            Button:
+                text: '\u2190'
+                size_hint_x: None
+                width: dp(56)
+                font_size: sp(20)
+                color: (0.945, 0.941, 1.0, 1)
+                background_color: (0, 0, 0, 0)
+                on_release: root._on_back()
+            Label:
+                text: '\u26a0  DEBUG MODE'
+                font_size: sp(15)
+                bold: True
+                color: (1.0, 0.6, 0.2, 1)
+                halign: 'left'
+                valign: 'middle'
+                text_size: self.size
+            Label:
+                id: fps_label
+                text: 'FPS  --'
+                font_size: sp(12)
+                color: (0.608, 0.557, 0.769, 1)
+                size_hint_x: None
+                width: dp(72)
+                halign: 'right'
+                valign: 'middle'
+                text_size: self.size
+                padding: dp(8), 0
+
+        # ── Scrollable body ──────────────────────────────────────────────────
+        ScrollView:
+            do_scroll_x: False
+            BoxLayout:
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                padding: dp(12), dp(8)
+                spacing: dp(16)
+
+                # ── QUICK NAV ──────────────────────────────────────────────
+                Label:
+                    text: 'QUICK NAV'
+                    font_size: sp(11)
+                    bold: True
+                    color: (1.0, 0.6, 0.2, 1)
+                    size_hint_y: None
+                    height: dp(28)
+                    halign: 'left'
+                    valign: 'bottom'
+                    text_size: self.size
+
+                GridLayout:
+                    cols: 2
+                    size_hint_y: None
+                    height: self.minimum_height
+                    spacing: dp(6)
+
+                    Button:
+                        text: 'Splash'
+                        size_hint_y: None
+                        height: dp(44)
+                        font_size: sp(13)
+                        color: (0.945, 0.941, 1.0, 1)
+                        background_normal: ''
+                        background_color: (0, 0, 0, 0)
+                        on_release: root.go_splash()
+                        canvas.before:
+                            Color:
+                                rgba: (0.141, 0.137, 0.188, 1)
+                            RoundedRectangle:
+                                pos: self.pos
+                                size: self.size
+                                radius: [dp(8)]
+
+                    Button:
+                        text: 'Main Menu'
+                        size_hint_y: None
+                        height: dp(44)
+                        font_size: sp(13)
+                        color: (0.945, 0.941, 1.0, 1)
+                        background_normal: ''
+                        background_color: (0, 0, 0, 0)
+                        on_release: root.go_main_menu()
+                        canvas.before:
+                            Color:
+                                rgba: (0.141, 0.137, 0.188, 1)
+                            RoundedRectangle:
+                                pos: self.pos
+                                size: self.size
+                                radius: [dp(8)]
+
+                    Button:
+                        text: 'Roster'
+                        size_hint_y: None
+                        height: dp(44)
+                        font_size: sp(13)
+                        color: (0.945, 0.941, 1.0, 1)
+                        background_normal: ''
+                        background_color: (0, 0, 0, 0)
+                        on_release: root.go_roster()
+                        canvas.before:
+                            Color:
+                                rgba: (0.141, 0.137, 0.188, 1)
+                            RoundedRectangle:
+                                pos: self.pos
+                                size: self.size
+                                radius: [dp(8)]
+
+                    Button:
+                        text: 'Pre-Battle'
+                        size_hint_y: None
+                        height: dp(44)
+                        font_size: sp(13)
+                        color: (0.945, 0.941, 1.0, 1)
+                        background_normal: ''
+                        background_color: (0, 0, 0, 0)
+                        on_release: root.go_pre_battle()
+                        canvas.before:
+                            Color:
+                                rgba: (0.141, 0.137, 0.188, 1)
+                            RoundedRectangle:
+                                pos: self.pos
+                                size: self.size
+                                radius: [dp(8)]
+
+                    Button:
+                        text: '\u26a1 Battle (auto-fill)'
+                        size_hint_y: None
+                        height: dp(44)
+                        font_size: sp(13)
+                        bold: True
+                        color: (0.945, 0.941, 1.0, 1)
+                        background_normal: ''
+                        background_color: (0, 0, 0, 0)
+                        on_release: root.go_battle()
+                        canvas.before:
+                            Color:
+                                rgba: (0.231, 0.510, 0.965, 0.8)
+                            RoundedRectangle:
+                                pos: self.pos
+                                size: self.size
+                                radius: [dp(8)]
+
+                    Button:
+                        text: '\u2605 Victory result'
+                        size_hint_y: None
+                        height: dp(44)
+                        font_size: sp(13)
+                        bold: True
+                        color: (0.945, 0.941, 1.0, 1)
+                        background_normal: ''
+                        background_color: (0, 0, 0, 0)
+                        on_release: root.go_battle_result()
+                        canvas.before:
+                            Color:
+                                rgba: (0.961, 0.620, 0.043, 0.7)
+                            RoundedRectangle:
+                                pos: self.pos
+                                size: self.size
+                                radius: [dp(8)]
+
+                    Button:
+                        text: '\u2715 Defeat result'
+                        size_hint_y: None
+                        height: dp(44)
+                        font_size: sp(13)
+                        bold: True
+                        color: (0.945, 0.941, 1.0, 1)
+                        background_normal: ''
+                        background_color: (0, 0, 0, 0)
+                        on_release: root.go_defeat()
+                        canvas.before:
+                            Color:
+                                rgba: (0.937, 0.267, 0.267, 0.7)
+                            RoundedRectangle:
+                                pos: self.pos
+                                size: self.size
+                                radius: [dp(8)]
+
+                    Button:
+                        text: 'Settings'
+                        size_hint_y: None
+                        height: dp(44)
+                        font_size: sp(13)
+                        color: (0.945, 0.941, 1.0, 1)
+                        background_normal: ''
+                        background_color: (0, 0, 0, 0)
+                        on_release: root.go_settings()
+                        canvas.before:
+                            Color:
+                                rgba: (0.141, 0.137, 0.188, 1)
+                            RoundedRectangle:
+                                pos: self.pos
+                                size: self.size
+                                radius: [dp(8)]
+
+                # Status line (error / info feedback)
+                Label:
+                    id: status_label
+                    text: ''
+                    font_size: sp(11)
+                    color: (0.937, 0.267, 0.267, 1)
+                    size_hint_y: None
+                    height: dp(20)
+                    halign: 'left'
+                    text_size: self.size
+
+                # ── DATA SERVICE ───────────────────────────────────────────
+                Label:
+                    text: 'DATA SERVICE CACHE'
+                    font_size: sp(11)
+                    bold: True
+                    color: (1.0, 0.6, 0.2, 1)
+                    size_hint_y: None
+                    height: dp(28)
+                    halign: 'left'
+                    valign: 'bottom'
+                    text_size: self.size
+
+                Label:
+                    id: ds_stats
+                    text: '—'
+                    font_size: sp(12)
+                    color: (0.608, 0.557, 0.769, 1)
+                    size_hint_y: None
+                    height: dp(100)
+                    halign: 'left'
+                    valign: 'top'
+                    text_size: self.size
+
+                # ── GAME CONTEXT ───────────────────────────────────────────
+                Label:
+                    text: 'GAME CONTEXT'
+                    font_size: sp(11)
+                    bold: True
+                    color: (1.0, 0.6, 0.2, 1)
+                    size_hint_y: None
+                    height: dp(28)
+                    halign: 'left'
+                    valign: 'bottom'
+                    text_size: self.size
+
+                Label:
+                    id: ctx_snapshot
+                    text: '—'
+                    font_size: sp(12)
+                    color: (0.608, 0.557, 0.769, 1)
+                    size_hint_y: None
+                    height: dp(72)
+                    halign: 'left'
+                    valign: 'top'
+                    text_size: self.size
+
+                Widget:
+                    size_hint_y: None
+                    height: dp(48)

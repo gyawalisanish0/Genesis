@@ -62,6 +62,20 @@
                 background_color: (0, 0, 0, 0)
                 on_release: root.on_settings()
 
+            # DEV button — only visible when GENESIS_DEBUG=1
+            Button:
+                text: 'DEV'
+                font_size: sp(10)
+                bold: True
+                size_hint_x: None
+                width: dp(36) if app.debug_mode else 0
+                opacity: 1 if app.debug_mode else 0
+                disabled: not app.debug_mode
+                color: (1.0, 0.6, 0.2, 1)
+                background_normal: ''
+                background_color: (0.200, 0.040, 0.040, 1) if app.debug_mode else (0, 0, 0, 0)
+                on_release: root.on_debug()
+
         # ── Hero zone ────────────────────────────────────────────────────────
         RelativeLayout:
             size_hint_y: None
