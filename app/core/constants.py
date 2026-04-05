@@ -37,6 +37,7 @@ EVASION_COUNTER_MIN  = 0.01  # floor: never below 1%
 
 # Unit limits
 MAX_SKILL_SLOTS = 4
+TEAM_SIZE_MAX   = 2   # maximum player characters per battle
 
 # Input timing thresholds (used in input_service and input_helpers)
 HOVER_THROTTLE_MS      = 100

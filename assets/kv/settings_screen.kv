@@ -1,0 +1,368 @@
+#: kivy 2.3.0
+# SettingsScreen — game preferences
+
+<SettingsScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        canvas.before:
+            Color:
+                rgba: (0.067, 0.063, 0.094, 1)
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+        # ── Sticky header ────────────────────────────────────────────────────
+        BoxLayout:
+            size_hint_y: None
+            height: dp(56)
+            canvas.before:
+                Color:
+                    rgba: (0.082, 0.078, 0.114, 1)
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+            Button:
+                text: '\u2190'
+                size_hint_x: None
+                width: dp(56)
+                font_size: sp(20)
+                color: (0.945, 0.941, 1.0, 1)
+                background_color: (0, 0, 0, 0)
+                on_release: root._on_back()
+            Label:
+                text: 'SETTINGS'
+                font_size: sp(16)
+                bold: True
+                color: (0.945, 0.941, 1.0, 1)
+                halign: 'left'
+                valign: 'middle'
+                text_size: self.size
+
+        # ── Scrollable body ──────────────────────────────────────────────────
+        ScrollView:
+            do_scroll_x: False
+            BoxLayout:
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                padding: dp(16), dp(8)
+                spacing: dp(4)
+
+                # ── AUDIO ──────────────────────────────────────────────────
+                Label:
+                    text: 'AUDIO'
+                    font_size: sp(11)
+                    bold: True
+                    color: (0.545, 0.361, 0.965, 1)
+                    size_hint_y: None
+                    height: dp(36)
+                    halign: 'left'
+                    valign: 'bottom'
+                    text_size: self.size
+
+                # Music Volume
+                BoxLayout:
+                    size_hint_y: None
+                    height: dp(52)
+                    spacing: dp(8)
+                    padding: dp(12), dp(4)
+                    canvas.before:
+                        Color:
+                            rgba: (0.110, 0.106, 0.149, 1)
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [dp(8)]
+                    Label:
+                        text: 'Music Volume'
+                        font_size: sp(14)
+                        color: (0.945, 0.941, 1.0, 1)
+                        size_hint_x: None
+                        width: dp(120)
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.size
+                    Slider:
+                        id: music_slider
+                        min: 0.0
+                        max: 1.0
+                        step: 0.01
+                        value: 0.75
+                        cursor_size: dp(20), dp(20)
+                        on_value: root._on_music_volume(self.value)
+                    Label:
+                        id: music_val
+                        text: '75%'
+                        font_size: sp(13)
+                        color: (0.608, 0.557, 0.769, 1)
+                        size_hint_x: None
+                        width: dp(40)
+                        halign: 'right'
+                        valign: 'middle'
+                        text_size: self.size
+
+                Widget:
+                    size_hint_y: None
+                    height: dp(4)
+
+                # SFX Volume
+                BoxLayout:
+                    size_hint_y: None
+                    height: dp(52)
+                    spacing: dp(8)
+                    padding: dp(12), dp(4)
+                    canvas.before:
+                        Color:
+                            rgba: (0.110, 0.106, 0.149, 1)
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [dp(8)]
+                    Label:
+                        text: 'SFX Volume'
+                        font_size: sp(14)
+                        color: (0.945, 0.941, 1.0, 1)
+                        size_hint_x: None
+                        width: dp(120)
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.size
+                    Slider:
+                        id: sfx_slider
+                        min: 0.0
+                        max: 1.0
+                        step: 0.01
+                        value: 0.80
+                        cursor_size: dp(20), dp(20)
+                        on_value: root._on_sfx_volume(self.value)
+                    Label:
+                        id: sfx_val
+                        text: '80%'
+                        font_size: sp(13)
+                        color: (0.608, 0.557, 0.769, 1)
+                        size_hint_x: None
+                        width: dp(40)
+                        halign: 'right'
+                        valign: 'middle'
+                        text_size: self.size
+
+                Widget:
+                    size_hint_y: None
+                    height: dp(4)
+
+                # Mute All
+                BoxLayout:
+                    size_hint_y: None
+                    height: dp(52)
+                    spacing: dp(8)
+                    padding: dp(12), dp(4)
+                    canvas.before:
+                        Color:
+                            rgba: (0.110, 0.106, 0.149, 1)
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [dp(8)]
+                    Label:
+                        text: 'Mute All'
+                        font_size: sp(14)
+                        color: (0.945, 0.941, 1.0, 1)
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.size
+                    Switch:
+                        id: mute_switch
+                        size_hint_x: None
+                        width: dp(72)
+                        active: False
+                        on_active: root._on_mute_all(self.active)
+
+                # ── DISPLAY ────────────────────────────────────────────────
+                Label:
+                    text: 'DISPLAY'
+                    font_size: sp(11)
+                    bold: True
+                    color: (0.545, 0.361, 0.965, 1)
+                    size_hint_y: None
+                    height: dp(44)
+                    halign: 'left'
+                    valign: 'bottom'
+                    text_size: self.size
+
+                # Reduce Animations
+                BoxLayout:
+                    size_hint_y: None
+                    height: dp(52)
+                    spacing: dp(8)
+                    padding: dp(12), dp(4)
+                    canvas.before:
+                        Color:
+                            rgba: (0.110, 0.106, 0.149, 1)
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [dp(8)]
+                    Label:
+                        text: 'Reduce Animations'
+                        font_size: sp(14)
+                        color: (0.945, 0.941, 1.0, 1)
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.size
+                    Switch:
+                        id: anim_switch
+                        size_hint_x: None
+                        width: dp(72)
+                        active: False
+                        on_active: root._on_reduce_animations(self.active)
+
+                Widget:
+                    size_hint_y: None
+                    height: dp(4)
+
+                # Show Damage Numbers
+                BoxLayout:
+                    size_hint_y: None
+                    height: dp(52)
+                    spacing: dp(8)
+                    padding: dp(12), dp(4)
+                    canvas.before:
+                        Color:
+                            rgba: (0.110, 0.106, 0.149, 1)
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [dp(8)]
+                    Label:
+                        text: 'Show Damage Numbers'
+                        font_size: sp(14)
+                        color: (0.945, 0.941, 1.0, 1)
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.size
+                    Switch:
+                        id: dmg_switch
+                        size_hint_x: None
+                        width: dp(72)
+                        active: True
+                        on_active: root._on_show_damage_numbers(self.active)
+
+                Widget:
+                    size_hint_y: None
+                    height: dp(4)
+
+                # Timeline Zoom
+                BoxLayout:
+                    size_hint_y: None
+                    height: dp(52)
+                    spacing: dp(8)
+                    padding: dp(12), dp(4)
+                    canvas.before:
+                        Color:
+                            rgba: (0.110, 0.106, 0.149, 1)
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [dp(8)]
+                    Label:
+                        text: 'Timeline Zoom'
+                        font_size: sp(14)
+                        color: (0.945, 0.941, 1.0, 1)
+                        size_hint_x: None
+                        width: dp(120)
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.size
+                    Slider:
+                        id: zoom_slider
+                        min: 1
+                        max: 10
+                        step: 1
+                        value: 5
+                        cursor_size: dp(20), dp(20)
+                        on_value: root._on_timeline_zoom(self.value)
+                    Label:
+                        id: zoom_val
+                        text: '5'
+                        font_size: sp(13)
+                        color: (0.608, 0.557, 0.769, 1)
+                        size_hint_x: None
+                        width: dp(40)
+                        halign: 'right'
+                        valign: 'middle'
+                        text_size: self.size
+
+                # ── GAMEPLAY ───────────────────────────────────────────────
+                Label:
+                    text: 'GAMEPLAY'
+                    font_size: sp(11)
+                    bold: True
+                    color: (0.545, 0.361, 0.965, 1)
+                    size_hint_y: None
+                    height: dp(44)
+                    halign: 'left'
+                    valign: 'bottom'
+                    text_size: self.size
+
+                # Battle Reminders
+                BoxLayout:
+                    size_hint_y: None
+                    height: dp(52)
+                    spacing: dp(8)
+                    padding: dp(12), dp(4)
+                    canvas.before:
+                        Color:
+                            rgba: (0.110, 0.106, 0.149, 1)
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [dp(8)]
+                    Label:
+                        text: 'Battle Reminders'
+                        font_size: sp(14)
+                        color: (0.945, 0.941, 1.0, 1)
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.size
+                    Switch:
+                        id: remind_switch
+                        size_hint_x: None
+                        width: dp(72)
+                        active: False
+                        on_active: root._on_battle_reminders(self.active)
+
+                Widget:
+                    size_hint_y: None
+                    height: dp(4)
+
+                # New Content Alerts
+                BoxLayout:
+                    size_hint_y: None
+                    height: dp(52)
+                    spacing: dp(8)
+                    padding: dp(12), dp(4)
+                    canvas.before:
+                        Color:
+                            rgba: (0.110, 0.106, 0.149, 1)
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [dp(8)]
+                    Label:
+                        text: 'New Content Alerts'
+                        font_size: sp(14)
+                        color: (0.945, 0.941, 1.0, 1)
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.size
+                    Switch:
+                        id: alerts_switch
+                        size_hint_x: None
+                        width: dp(72)
+                        active: True
+                        on_active: root._on_new_content_alerts(self.active)
+
+                # Bottom padding
+                Widget:
+                    size_hint_y: None
+                    height: dp(64)

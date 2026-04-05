@@ -116,7 +116,7 @@ They vary per device — never hardcode them.
 | 4 — Epic | `$rarity-4` | `#8B5CF6` |
 | 5 — Legendary | `$rarity-5` | `#F59E0B` |
 | 6 — Mythic | `$rarity-6` | `#F97316` |
-| 7 — Genesis | `$rarity-7` | gradient `#8B5CF6 → #F59E0B` |
+| 7 — Omega | `$rarity-7` | gradient `#8B5CF6 → #F59E0B` |
 
 ---
 
