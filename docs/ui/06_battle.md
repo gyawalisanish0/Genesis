@@ -2,12 +2,10 @@
 
 ## Purpose
 
-The core gameplay screen. Displays the live Tick timeline, all combatants,
-the combat feed, and the active unit's action bar. Every interaction the
-player takes during a battle flows through this single screen.
-
-This is the most complex screen in Genesis — all zones must be readable
-at arm's length on a 360dp-wide portrait display.
+The core gameplay screen. Displays the vertical tick timeline on the left edge,
+an opponent info card at top-right, a scrollable action log in the centre, the
+player's status effects, a portrait panel, and a collapsible action grid.
+Every interaction the player takes during a battle flows through this screen.
 
 ---
 
@@ -16,17 +14,16 @@ at arm's length on a 360dp-wide portrait display.
 | | Screen |
 |---|---|
 | **Entry from** | Pre-Battle (Step 3 CONTINUE) |
-| **Exit to** | Battle Result (win/loss condition met) · Main Menu (forfeit) |
+| **Exit to** | Battle Result (win/loss) · Main Menu (forfeit) |
 
 ---
 
 ## Dimensions
 
 ```
-Canvas     : 360 × 640 dp   FULL-BLEED — no safe-zone insets
-Status bar : transparent overlay
-Nav bar    : transparent overlay (gesture nav)
-Side pad   : 12 dp
+Canvas    : 360 × 640 dp   FULL-BLEED — edge-to-edge immersive
+Timeline  : 28 dp wide strip on left edge, full height
+Main area : 332 dp wide (x=28 to x=360)
 ```
 
 ---
@@ -34,252 +31,277 @@ Side pad   : 12 dp
 ## Layout Schematic
 
 ```
-┌──────────────────────────────────────────┐  y=0
-│░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░│  24dp  status bar (transparent)
-├──────────────────────────────────────────┤  y=24
-│ ◀NOW  [U1][  ][U3][     ][U2][  ][E1]▶ │  40dp  TIMELINE STRIP
-├──────────────────────────────────────────┤  y=64
-│  [E1 port][HP══════════░░░░][AP═══░░]   │
-│  Bone Tyrant  ★★★★         [💀][🔥]    │  64dp  enemy unit row (per enemy)
-├──────────────────────────────────────────┤  y=128  (second enemy)
-│  [E2 port][HP══════░░░░░░░░][AP═░░░░]   │  64dp
-├──────────────────────────────────────────┤  y=192
-│  ╔══════════════════════════════════════╗│
-│  ║                                     ║│
-│  ║     ✦  BOOSTED!                     ║│
-│  ║                                     ║│  152dp  COMBAT FEED
-│  ║       + 187 DMG                     ║│
-│  ║                                     ║│
-│  ╚══════════════════════════════════════╝│
-│  [Iron Warden → Slash → Bone Tyrant]    │  24dp  action log line
-├──────────────────────────────────────────┤  y=368
-│  [port 64dp]  Iron Warden     SP: ●●○   │
-│  HP  ████████████████████░░░░   960/1200│  96dp  ACTIVE UNIT PANEL
-│  AP  ██████████████░░░░░░░░░░    65/100 │
-│  [💀][🔥][⬆]  Lv 3  · Warrior         │
-├──────────────────────────────────────────┤  y=464
-│  ┌──────────────────┐ ┌────────────────┐ │
-│  │ [icon] Slash   1 │ │[icon] Power  2 │ │  72dp  skill row 1
-│  │ ▓▓▓▓▓▓░░  AP:20  │ │ ▓▓▓▓▓░░  AP:35│ │
-│  │ TU: 8            │ │ TU: 10        │ │
-│  └──────────────────┘ └────────────────┘ │
-├──────────────────────────────────────────┤  y=544  (8dp gap)
-│  ┌──────────────────┐ ┌────────────────┐ │
-│  │ [icon] Skill 3 3 │ │[icon] Skill 4 1│ │  72dp  skill row 2
-│  │ ▓▓░░░░  AP:50    │ │  ——  AP: 0     │ │
-│  └──────────────────┘ └────────────────┘ │
-├──────────────────────────────────────────┤  y=616  (8dp gap)
-│  ┌──────────────────┐ ┌────────────────┐ │
-│  │  ⚔  BASIC ATK   │ │  ⏭  END TURN  │ │  48dp  basic + end turn
-│  └──────────────────┘ └────────────────┘ │
-└──────────────────────────────────────────┘  y=664  (24dp extends under nav)
-                                            ↑ gesture bar region (transparent)
+┌──┬─────────────────────────────────────────┐  y=0
+│TL│  Opponent Info Card (rarity bg tint)    │  130dp  hidden on player turn
+│TL│  name · class · portrait · HP · AP      │
+│TL│  rarity colour · LVL badge · TU value   │
+│TL├─────────────────────────────────────────┤  y=130
+│TL│                                         │
+│TL│  Action Log Box  (scrollable)           │  fills remaining space
+│TL│                                         │
+│TL├─────────────────────────────────────────┤  y=var
+│TL│  ╭──[■]──[■]──[■]──╮  Status Slots     │  44dp
+│TL├─────────────────────────────────────────┤
+│  │ [Turn N] [Tick: N]  │  Basic  │ End/Sk │  48dp  action row 1
+│  │                     │─────────┼────────│
+│  │  ◉ portrait circle  │  Skill1 │ Skill2 │  72dp  skill row 1
+│  │  LVL   CXP/NLU      │─────────┼────────│
+│  │  HP ████ CHP/MHP    │  Skill3 │ Skill4 │  72dp  skill row 2
+│  │  AP ██░░ CAP/MAP    │                  │
+│  │                     │    [#1 toggle]   │  54dp  collapse button row
+└──┴─────────────────────────────────────────┘  y=640
 ```
 
-Note: Bottom 24dp flows under the transparent navigation bar.
+Left TL strip: 28 dp wide · full height · vertical tick axis, ally/enemy markers  
+Portrait circle: 100 dp diameter, positioned bottom-left, overlaps status row boundary  
+Skill columns: (332 − 8) / 2 = 162 dp each, 8 dp gap between columns
 
 ---
 
 ## Zone Breakdown
 
-| Zone | Y | Height | Content |
-|---|---|---|---|
-| Status bar | 0 | 24 | System — transparent overlay |
-| Timeline strip | 24 | 40 | All unit markers on the Tick stream |
-| Enemy area | 64 | 128 | Up to 2 enemies at 64dp each (scrollable if 3+) |
-| Combat feed | 192 | 176 | Dice outcome display · action log · animations |
-| Active unit panel | 368 | 96 | Active unit portrait, HP/AP, status, skill points, level |
-| Skill row 1 | 464 | 72 | Skill slots 1 + 2 |
-| Skill row 2 | 544 | 72 | Skill slots 3 + 4 |
-| Action row | 624 | 40 | Basic Attack + End Turn (extends 24dp under nav bar) |
-
-Total: 24+40+128+176+96+72+72+40 = 648dp (8dp extends under nav bar) ✓
+| Zone | Height | Visibility |
+|---|---|---|
+| Timeline strip | full height 640 dp | Always visible — 28 dp left column |
+| Opponent info card | 130 dp | Visible only during enemy turn |
+| Action log | fills remainder | Expands when opponent card hidden |
+| Status slots pill | 44 dp | Always visible |
+| Bottom area | 246 dp | Portrait + stats always; action grid collapsible |
 
 ---
 
 ## Component Specifications
 
-### Timeline Strip
+### Vertical Timeline Strip (28 dp × 640 dp)
 
 ```
-◀NOW  ┌──┐     ┌──┐        ┌──┐    ┌──┐  ▶
-      │U1│     │U3│        │E1│    │U2│
-      └──┘  ↑  └──┘        └──┘    └──┘
-            TICK
-            marker
-            line
+ ↑  → [A] ally marker (points right)
+ │
+ │  ← [E] enemy marker (points left)
+ │
+ ↓  → [A] next ally
 ```
 
 | Component | Size (dp) | Properties |
 |---|---|---|
-| Strip bg | 360 × 40 | `$bg-elevated`; bottom border 1dp `$bg-panel` |
-| "NOW" label | 32 × 12 | `$t-micro` `$accent-genesis`; left edge 8dp; left arrow |
-| Tick axis | 296 × 2 | `$bg-panel`; horizontal; y-center of strip |
-| Unit marker | 28 × 28 | `UnitPortrait` circle; player team `$accent-genesis` ring 2dp; enemy `$accent-danger` ring 2dp |
-| Active marker | 32 × 32 | `$accent-genesis` ring 3dp; pulse animation |
-| Marker tick label | 24 × 10 | `$t-micro` `$text-muted`; below each marker |
-| Future marker (≥20 ticks away) | 20 × 20 | Faded 40% opacity |
+| Strip bg | 28 × 640 | `$bg-elevated`; right border 1 dp `$bg-panel` |
+| Tick axis line | 2 × 580 | `$bg-panel`; vertical; x-center of strip |
+| Ally marker | 24 × 24 | `$accent-genesis` ring 2 dp; label points → |
+| Enemy marker | 24 × 24 | `$accent-danger` ring 2 dp; label points ← |
+| Active marker | 28 × 28 | Accent ring 3 dp; accent ring pulses |
+| Far marker (≥20 ticks) | 18 × 18 | 40% opacity |
 
-The strip auto-scrolls so the current unit's marker stays within the leftmost
-25% of the strip width. Player and enemy markers are colour-coded.
+Markers are sorted top-to-bottom by ascending `unit.tick_position` (soonest = top).
 
 ---
 
-### Enemy Unit Row
+### Opponent Info Card (332 × 130 dp)
 
-```
-┌──────────────────────────────────────────┐  64 × 64dp
-│ ┌────────┐  Bone Tyrant        [💀][🔥]  │
-│ │[port   │  ════════════════░░░  HP 82%  │
-│ │ 52×52] │  ══════░░░░░░░░░░░░  AP 30%  │
-│ └────────┘                               │
-└──────────────────────────────────────────┘
-```
+Hidden (`height=0`, `opacity=0`) during the player's turn. Appears with a 0.15 s
+fade when the enemy takes their turn.
 
-| Component | Size (dp) | Position | Properties |
-|---|---|---|---|
-| Row bg | 336 × 60 | 12, y | `$bg-panel` `$r-md` |
-| Portrait | 52 × 52 | 12 + 8, y + 4 | `UnitPortrait sm` |
-| Name | 180 × 18 | 80, y + 6 | `$t-subheading` `$text-primary` |
-| Status icons | 16 × 16 each | 252, y + 6 | `StatusEffectChip` row, max 4 visible |
-| HP bar | 216 × 8 | 80, y + 28 | `ResourceBar HP`; value label right-aligned `$t-micro` |
-| AP bar | 216 × 6 | 80, y + 40 | `ResourceBar AP` |
+| Component | Size (dp) | Properties |
+|---|---|---|
+| Card bg | 332 × 130 | Rarity tint bg (see rarity colours below); `$r-md` |
+| Portrait | 64 × 64 | Circle; 8 dp left pad; vertically centred |
+| Name | 200 × 18 | `$t-subheading` `$text-primary`; x=80, y=top+16 |
+| Class label | 120 × 14 | `$t-micro` `$text-secondary`; below name |
+| Rarity badge | auto × 16 | Coloured pill; rarity name `$t-micro` |
+| HP bar | 200 × 10 | `ResourceBar HP`; x=80, below class label |
+| AP bar | 200 × 8 | `ResourceBar AP`; below HP |
+| TU value | 40 × 14 | "TU: N" `$t-micro` `$text-muted`; bottom-right |
+| LVL badge | 36 × 14 | "LVL N" `$t-micro` `$accent-gold` pill |
 
-Tapping an enemy shows a 240dp tooltip with full stat read-out.
+**Rarity bg tints:**
 
----
-
-### Combat Feed
-
-```
-┌──────────────────────────────────────────┐
-│                                          │
-│         ✦ BOOSTED!                       │  $t-display $accent-gold
-│                                          │
-│            +187 DMG                      │  48sp bold $accent-danger float-up
-│                                          │
-│                                          │
-└──────────────────────────────────────────┘
-────────────────────────────────────────────  1dp separator
- Iron Warden → Slash → Bone Tyrant         $t-micro $text-muted
-```
-
-| Component | Size (dp) | Position | Properties |
-|---|---|---|---|
-| Feed bg | 360 × 152 | 0, 192 | `$bg-deep`; subtle vignette border |
-| Outcome label | 240 × 44 | center, feed center-y − 20 | `$t-display`; coloured by outcome (see design system); appears with spring animation |
-| Outcome icon | 40 × 40 | center − 140, feed center-y − 20 | Outcome-specific glyph (✦ Boosted · ✓ Success · ↯ Tumbling · 🛡 Guard Up · ✦ Evasion) |
-| Damage/heal number | dynamic | center, feed center-y + 16 | 48sp bold; `$accent-danger` (dmg) or `$accent-heal` (heal); float-up 40dp then fade |
-| Tick delay indicator | 160 × 24 | center, feed bottom − 32 | Tumbling only: "+3 Tick delay" `$t-label` `$accent-warn` |
-| Action log bar | 360 × 24 | 0, 344 | `$bg-panel`; "Unit → Skill → Target" `$t-micro` `$text-muted`; left-scrollable for last 5 actions |
-
-**Idle state** (waiting for player input): feed shows unit name and a subtle
-prompt "Choose your action" — `$t-body` `$text-secondary` centered.
-
----
-
-### Active Unit Panel
-
-```
-┌──────────────────────────────────────────┐  96dp
-│ ┌───────┐  Iron Warden             SP:●●○│
-│ │[port  │  HP  ████████████████░░   960  │
-│ │ 64×64]│  AP  █████████████░░░░     65  │
-│ └───────┘  [💀][🔥][⬆]  Lv 3 · Warrior  │
-└──────────────────────────────────────────┘
-```
-
-| Component | Size (dp) | Position | Properties |
-|---|---|---|---|
-| Panel bg | 360 × 96 | 0, 368 | `$bg-panel`; top border 1dp `$accent-genesis` |
-| Portrait | 64 × 64 | 12, 376 | `UnitPortrait md`; `$accent-genesis` ring during this unit's turn |
-| Name | 200 × 18 | 88, 376 | `$t-subheading` `$text-primary` |
-| SP indicator | 72 × 18 | 276, 376 | "SP: ●●○" — filled dots = available points; `$accent-gold`; tap → Skill Upgrade modal |
-| HP bar + label | 256 × 16 | 88, 398 | `ResourceBar HP`; value right of bar `$t-micro` |
-| AP bar + label | 256 × 14 | 88, 418 | `ResourceBar AP`; value right of bar `$t-micro` |
-| Status row | 180 × 20 | 88, 436 | Up to 5 `StatusEffectChip` 20×20dp |
-| Level badge | 60 × 16 | 252, 440 | "Lv 3" `$t-micro` `$bg-elevated` `$r-pill` |
-| Class label | 52 × 16 | 320, 440 | "Warrior" `$t-micro` `$text-muted` |
-
----
-
-### Skill Button (in-battle variant)
-
-Each slot: **164 × 72 dp**
-
-```
-┌──────────────────────────────────────────┐
-│ [icon 28dp]  Slash                  Lv 1 │  $t-subheading  level right
-│ ▓▓▓▓▓▓▓▓░░░ AP mini-bar (4dp)          │  shows % of AP needed
-│ AP: 20  ·  TU: 8                         │  $t-micro $text-secondary
-└──────────────────────────────────────────┘
-```
-
-Slot layout in action bar:
-```
-┌───────────────────────┬───────────────────────┐  y=464
-│       Skill 1         │       Skill 2          │  72dp
-├───────────────────────┴───────────────────────┤  y=544  8dp gap
-├───────────────────────┬───────────────────────┤
-│       Skill 3         │       Skill 4          │  72dp
-└───────────────────────┴───────────────────────┘
-```
-
-Column width: (360 − 12 − 8 − 12) / 2 = 164 dp. Gap: 8 dp. Outer pad: 12 dp each side.
-
-| State | Visual |
+| Rarity | Colour |
 |---|---|
-| Available | `$bg-card`; full opacity |
-| Insufficient AP | `$bg-card` 50% opacity; AP bar shows deficit in `$accent-danger` |
-| Empty slot | Dashed border `$bg-elevated`; "—" centered |
-| Selected (held) | `$accent-genesis` border 2dp; scale 0.97 |
-| Long-press | Triggers Skill Upgrade modal if SP available |
+| Common | `#6B7280` 30% overlay |
+| Uncommon | `#22C55E` 20% overlay |
+| Rare | `#3B82F6` 20% overlay |
+| Epic | `#A855F7` 20% overlay |
+| Legendary | `#F59E0B` 20% overlay |
 
 ---
 
-### Basic Attack + End Turn Row
+### Action Log (332 × variable dp)
 
-| Component | Size (dp) | Position | Properties |
-|---|---|---|---|
-| Row bg | 360 × 40 | 0, 624 | `$bg-deep` |
-| Basic Attack | 164 × 40 | 12, 624 | `$bg-elevated` `$r-md`; "⚔ BASIC ATK" `$t-label`; always available on player turn |
-| End Turn | 164 × 40 | 184, 624 | `$bg-elevated` `$r-md`; "⏭ END TURN" `$t-label` `$text-secondary` |
+Scrollable list of combat events. Oldest at top, newest at bottom. Auto-scrolls
+to bottom on each new entry.
+
+| Component | Properties |
+|---|---|
+| Log bg | `$bg-deep` |
+| Log entry | `$t-micro` `$text-muted`; 24 dp height per line; left-padded 8 dp |
+| Outcome line | Coloured by outcome type; `$t-label` weight |
+
+---
+
+### Status Slots Pill (332 × 44 dp)
+
+Horizontally centred pill row showing the player's active status effects.
+
+- Maximum **3 chips** visible
+- If `len(unit.status_slots) > 3`: chips 0–2 visible + `+N` overflow label  
+  where N = `len(unit.status_slots) − 3`
+- **Tap any chip** → opens `StatusDetailPopup` for that status
+- **Tap the `+N` label** → opens `StatusDetailPopup` in scrollable-list mode
+
+| Component | Size (dp) | Properties |
+|---|---|---|
+| Pill bg | auto × 40 | `$bg-elevated` `$r-pill`; centred |
+| Status chip | 32 × 32 | Icon + 2-char label; `$bg-card` `$r-pill` |
+| Overflow label | 32 × 32 | `+N` `$t-label` `$text-secondary` |
+
+---
+
+### Player Portrait Panel (left column, 130 × 246 dp)
+
+| Component | Size (dp) | Properties |
+|---|---|---|
+| Turn counter | auto × 20 | "Turn N" `$t-micro` `$text-secondary` |
+| Tick value | auto × 20 | "Tick: N" `$t-micro` `$text-muted` |
+| Portrait circle | 100 × 100 | `$accent-genesis` ring 3 dp; placeholder image |
+| LVL label | auto × 16 | "LVL N" `$t-micro` `$accent-gold` |
+| XP label | auto × 14 | "CXP/NLU" `$t-micro` `$text-muted` |
+| HP label | 12 × 12 | "HP" `$t-micro` |
+| HP bar | 100 × 8 | `ResourceBar HP`; value right-aligned |
+| AP label | 12 × 12 | "AP" `$t-micro` |
+| AP bar | 100 × 6 | `ResourceBar AP`; value right-aligned |
+
+---
+
+### Action Grid (right column, 202 × 246 dp)
+
+Three rows stacked vertically. The entire grid is collapsible via the `#1` toggle.
+
+```
+┌──────────────┬───────────────┐  48dp
+│    Basic     │   End/Skip    │
+├──────────────┼───────────────┤  72dp
+│    Skill 1   │    Skill 2    │
+├──────────────┼───────────────┤  72dp
+│    Skill 3   │    Skill 4    │
+└──────────────┴───────────────┘
+         [    #1 toggle    ]      54dp
+```
+
+Column width: (202 − 8) / 2 = 97 dp per column; 8 dp gap.
+
+#### Skill Slot Layout (97 × 72 dp)
+
+```
+┌──────────────────────────┐
+│  {Skill Name}       LVL  │  name left · LVL badge top-right
+│                          │
+│  TUC                CHRG │  bottom-left · bottom-right
+└──────────────────────────┘
+```
+
+| Element | Properties |
+|---|---|
+| Slot bg | `$bg-card` `$r-md` |
+| Skill name | `$t-label` `$text-primary`; top-left pad 6 dp |
+| LVL badge | `$t-micro` `$accent-gold`; top-right corner |
+| TUC label | "TU: N" `$t-micro` `$text-muted`; bottom-left |
+| CHRG label | "×N" `$t-micro` `$text-secondary`; bottom-right |
+
+#### Skill Slot States
+
+| State | Visual change |
+|---|---|
+| Available | Full opacity; normal border |
+| Insufficient AP | 50% opacity; border tinted `$accent-danger` |
+| Empty | 30% opacity; name label shows "—" |
+| Tap selected | `$accent-genesis` border 2 dp; scale 0.97 → proceeds to target |
+| Long-press | Opens `SkillDetailPopup` (read-only, no upgrade action) |
+| Enemy turn | `disabled=True`; 20% opacity |
+
+#### Basic Attack (97 × 48 dp)
+
+`$bg-elevated` `$r-md`; "Basic" `$t-label`; always enabled on player turn.
+Shows TUC value below name.
+
+#### End / Skip (97 × 48 dp)
+
+`$bg-elevated` `$r-md`; "End/Skip" `$t-label` `$text-secondary`.
+Ends the player's turn without using a skill.
+
+---
+
+### Skills Collapse Toggle (#1 Button)
+
+A circular toggle button at the bottom of the right column.
+
+| State | Icon | Behaviour |
+|---|---|---|
+| Expanded | ▼ | Grid visible; tap to collapse |
+| Collapsed | ▲ | Grid hidden (height=0 animated 0.2 s); tap to expand |
+
+The `#1` button is always visible regardless of collapse state.
+Collapsed state removes the action grid height but keeps the portrait panel.
+
+---
+
+### Target Select Popup (`TargetSelectPopup`)
+
+Opens when the player activates a skill and `len(alive_enemies) ≥ 2`.
+If only 1 enemy is alive, the popup is skipped and the action resolves immediately.
+
+`ModalView` centred, 85% screen width, height = 60 dp × enemy count + 40 dp header.
+
+| Component | Properties |
+|---|---|
+| Header | "Select Target" `$t-subheading`; `$bg-elevated` |
+| Enemy row | Portrait circle 32 dp + name `$t-label` + HP bar; 60 dp height |
+| Cancel row | "Cancel" `$t-label` `$text-secondary` |
+
+Tapping an enemy row dispatches `on_target_selected(unit)` and dismisses the popup.
+
+---
+
+### Skill Detail Popup (`SkillDetailPopup`)
+
+Opens on long-press of any skill button. Read-only during battle.
+
+`ModalView` centred, 85% screen width.
+
+| Component | Properties |
+|---|---|
+| Skill name | `$t-subheading` `$text-primary` |
+| LVL badge | `$accent-gold` pill |
+| AP cost | "AP: N" `$t-label` |
+| TU cost | "TU: N" `$t-label` |
+| CHRG | "Charges: N" `$t-label` |
+| Description | `$t-body` `$text-secondary`; wrapping |
+| Close button | "Close" `$t-label` |
+
+---
+
+### Status Detail Popup (`StatusDetailPopup`)
+
+Opens on tap of any status chip (or the `+N` overflow label).
+
+When opened from `+N`, shows a scrollable list of all statuses.
+When opened from a specific chip, shows that status at the top.
+
+| Component | Properties |
+|---|---|
+| Status name | `$t-subheading` |
+| Description | `$t-body` `$text-secondary`; wrapping |
+| Duration | "N turns remaining" or "N ticks" `$t-micro` `$text-muted` |
+| Source | "Applied by: Unit Name" `$t-micro` `$text-muted` |
+| Close button | "Close" `$t-label` |
 
 ---
 
 ## Enemy Turn State
 
-When it is an enemy unit's turn, the action bar is disabled:
-
-```
-│  ═══════════════════════════════════════ │
-│  [Enemy portrait]  Bone Tyrant is acting │  overlay on action bar
-│  ═══════════════════════════════════════ │
-```
-
-- Skill buttons dim to 20% opacity
-- "Thinking…" label with animated dots
-- Enemy's action plays out in the combat feed
-- Auto-advances after animation completes
-
----
-
-## Forfeit / Pause
-
-Accessed via long-press anywhere outside the action bar for 1 second:
-
-```
-╭──────────────────────────────────────────╮  bottom sheet 200dp
-│  ▬                                        │
-│  Pause                                    │
-│  ╭────────────────────────────────────╮   │
-│  │           RESUME                   │   │  56dp
-│  ╰────────────────────────────────────╯   │
-│  ╭────────────────────────────────────╮   │
-│  │           FORFEIT                  │   │  48dp  $accent-danger
-│  ╰────────────────────────────────────╯   │
-╰──────────────────────────────────────────╯
-```
+When an enemy acts:
+- Opponent info card fades in (0.15 s) showing the acting enemy's details
+- All 6 action buttons `disabled=True`, opacity 20%
+- Log entry appended: "Enemy Name is acting…"
+- After enemy action resolves, player turn state is restored
 
 ---
 
@@ -287,12 +309,11 @@ Accessed via long-press anywhere outside the action bar for 1 second:
 
 | Element | Animation | Trigger |
 |---|---|---|
-| Timeline markers | Slide to new position | After each action |
-| Active marker | Pulse ring | During player turn |
-| Damage number | Float up 40dp + fade out | On hit |
-| Outcome label | Spring scale 0.5 → 1.05 → 1.0 | Dice resolved |
-| HP bar | Width tween | Damage / heal applied |
-| AP bar | Width tween | After each tick advance |
-| Tumbling overlay | Unit marker bumps right on timeline | Tumbling outcome |
-| Enemy thinking | Three dots pulsing | Enemy turn |
-| Evasion counter chain | Each counter animates sequentially | Evasion chain |
+| Opponent card | Fade height 0 ↔ 130 dp (0.15 s) | Turn switch |
+| Timeline markers | Rebuild on tick advance | After each action |
+| Active marker | Pulse ring (scale 1.0 → 1.1 → 1.0) | Player turn |
+| Skill slot | Scale 0.97 flash (0.08 s) on tap | Skill selected |
+| Insufficient AP | Opacity flash 0.2 → 0.5 (0.1 s × 2) | Failed AP check |
+| Skill grid | Height 0 ↔ 192 dp (0.2 s) | Collapse toggle |
+| HP / AP bars | Width tween (0.4 s ease-out) | Damage / regen |
+| Log scroll | Auto-scroll to bottom | New entry |

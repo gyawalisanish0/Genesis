@@ -1,0 +1,426 @@
+#: import dp kivy.metrics.dp
+
+# ── Reusable skill slot rule ───────────────────────────────────────────────────
+<SkillSlot@RelativeLayout>:
+    canvas.before:
+        Color:
+            rgba: 0.110, 0.110, 0.157, 1
+        RoundedRectangle:
+            pos: 2, 2
+            size: self.width - 4, self.height - 4
+            radius: [dp(6)]
+
+    # Skill name — top-left
+    Label:
+        id: skill_name
+        text: '—'
+        font_size: '12sp'
+        color: 0.973, 0.973, 1.0, 1
+        pos: dp(6), self.parent.height - dp(26)
+        size: self.parent.width - dp(38), dp(20)
+        halign: 'left'
+        valign: 'middle'
+        text_size: self.size
+
+    # LVL badge — top-right
+    Label:
+        id: skill_lvl
+        text: ''
+        font_size: '9sp'
+        color: 0.961, 0.620, 0.043, 1
+        pos: self.parent.width - dp(32), self.parent.height - dp(22)
+        size: dp(28), dp(16)
+        halign: 'right'
+        valign: 'middle'
+        text_size: self.size
+
+    # TUC — bottom-left
+    Label:
+        id: skill_tuc
+        text: ''
+        font_size: '10sp'
+        color: 0.612, 0.639, 0.686, 1
+        pos: dp(6), dp(4)
+        size: dp(44), dp(16)
+        halign: 'left'
+        valign: 'middle'
+        text_size: self.size
+
+    # CHRG — bottom-right
+    Label:
+        id: skill_chrg
+        text: ''
+        font_size: '10sp'
+        color: 0.612, 0.639, 0.686, 1
+        pos: self.parent.width - dp(36), dp(4)
+        size: dp(32), dp(16)
+        halign: 'right'
+        valign: 'middle'
+        text_size: self.size
+
+
+# ── Resource bar rule (custom canvas bar) ─────────────────────────────────────
+<ResourceBar@Widget>:
+    value: 0
+    max: 100
+    bar_color: 0.063, 0.725, 0.506, 1
+    canvas:
+        Color:
+            rgba: 0.145, 0.145, 0.208, 1
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(3)]
+        Color:
+            rgba: root.bar_color
+        RoundedRectangle:
+            pos: self.pos
+            size: self.width * min(root.value / max(float(root.max), 1), 1), self.height
+            radius: [dp(3)]
+
+
+# ── Main BattleScreen layout ───────────────────────────────────────────────────
+<BattleScreen>:
+    canvas.before:
+        Color:
+            rgba: 0.039, 0.039, 0.059, 1
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    BoxLayout:
+        orientation: 'horizontal'
+        pos: self.parent.pos
+        size: self.parent.size
+
+        # ── Left: vertical timeline strip (28dp) ──────────────────────────────
+        Widget:
+            id: timeline_strip
+            size_hint_x: None
+            width: dp(28)
+            canvas.before:
+                Color:
+                    rgba: 0.145, 0.145, 0.208, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+                # Tick axis line (vertical, centred)
+                Color:
+                    rgba: 0.075, 0.075, 0.102, 1
+                Rectangle:
+                    pos: self.x + self.width / 2 - 1, self.y
+                    size: 2, self.height
+
+        # ── Right: main content ───────────────────────────────────────────────
+        BoxLayout:
+            orientation: 'vertical'
+
+            # Opponent info card (hidden on player turn; height=0)
+            BoxLayout:
+                id: opponent_card
+                size_hint_y: None
+                height: 0
+                opacity: 0
+                canvas.before:
+                    Color:
+                        rgba: 0.075, 0.075, 0.102, 1
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [dp(8)]
+
+                # Portrait placeholder
+                Image:
+                    source: 'assets/images/3x/portrait_placeholder_enemy.png'
+                    size_hint: None, None
+                    size: dp(64), dp(64)
+                    pos_hint: {'center_y': 0.5}
+
+                BoxLayout:
+                    orientation: 'vertical'
+                    padding: dp(8), dp(8)
+                    spacing: dp(4)
+
+                    Label:
+                        id: opp_name
+                        text: ''
+                        font_size: '14sp'
+                        color: 0.973, 0.973, 1.0, 1
+                        halign: 'left'
+                        text_size: self.size
+                        size_hint_y: None
+                        height: dp(20)
+
+                    Label:
+                        id: opp_class
+                        text: ''
+                        font_size: '11sp'
+                        color: 0.612, 0.639, 0.686, 1
+                        halign: 'left'
+                        text_size: self.size
+                        size_hint_y: None
+                        height: dp(16)
+
+                    ResourceBar:
+                        id: opp_hp_bar
+                        size_hint_y: None
+                        height: dp(8)
+                        bar_color: 0.063, 0.725, 0.506, 1
+
+                    Label:
+                        id: opp_tu
+                        text: ''
+                        font_size: '10sp'
+                        color: 0.612, 0.639, 0.686, 1
+                        halign: 'right'
+                        text_size: self.size
+                        size_hint_y: None
+                        height: dp(14)
+
+            # Action log (scrollable — fills remaining vertical space)
+            ScrollView:
+                id: action_log_scroll
+                do_scroll_x: False
+                BoxLayout:
+                    id: action_log_inner
+                    orientation: 'vertical'
+                    size_hint_y: None
+                    height: self.minimum_height
+                    padding: dp(8), dp(4)
+                    spacing: dp(2)
+                    canvas.before:
+                        Color:
+                            rgba: 0.039, 0.039, 0.059, 1
+                        Rectangle:
+                            pos: self.pos
+                            size: self.size
+
+            # Status slots pill (44dp)
+            BoxLayout:
+                id: status_slots_row
+                orientation: 'horizontal'
+                size_hint_y: None
+                height: dp(44)
+                spacing: dp(6)
+                padding: dp(8), dp(6)
+                canvas.before:
+                    Color:
+                        rgba: 0.145, 0.145, 0.208, 1
+                    RoundedRectangle:
+                        pos: self.x + dp(40), self.y + dp(4)
+                        size: self.width - dp(80), self.height - dp(8)
+                        radius: [dp(999)]
+
+            # ── Bottom area: player info + action grid ────────────────────────
+            BoxLayout:
+                id: bottom_area
+                orientation: 'horizontal'
+                size_hint_y: None
+                height: dp(246)
+
+                # Player info column (130dp)
+                BoxLayout:
+                    id: player_info_col
+                    orientation: 'vertical'
+                    size_hint_x: None
+                    width: dp(130)
+                    padding: dp(6), dp(6)
+                    spacing: dp(2)
+                    canvas.before:
+                        Color:
+                            rgba: 0.075, 0.075, 0.102, 1
+                        Rectangle:
+                            pos: self.pos
+                            size: self.size
+
+                    # Turn counter + tick
+                    BoxLayout:
+                        orientation: 'horizontal'
+                        size_hint_y: None
+                        height: dp(20)
+                        Label:
+                            id: turn_counter_label
+                            text: 'Turn 1'
+                            font_size: '10sp'
+                            color: 0.612, 0.639, 0.686, 1
+                            halign: 'left'
+                            text_size: self.size
+                        Label:
+                            id: tick_label
+                            text: 'Tick: 0'
+                            font_size: '10sp'
+                            color: 0.294, 0.333, 0.388, 1
+                            halign: 'right'
+                            text_size: self.size
+
+                    # Portrait circle
+                    Image:
+                        id: player_portrait
+                        source: 'assets/images/3x/portrait_placeholder_ally.png'
+                        size_hint: None, None
+                        size: dp(100), dp(100)
+                        pos_hint: {'center_x': 0.5}
+
+                    # LVL + XP row
+                    BoxLayout:
+                        orientation: 'horizontal'
+                        size_hint_y: None
+                        height: dp(16)
+                        Label:
+                            id: char_lvl_label
+                            text: 'LVL —'
+                            font_size: '10sp'
+                            color: 0.961, 0.620, 0.043, 1
+                            halign: 'left'
+                            text_size: self.size
+                        Label:
+                            id: char_xp_label
+                            text: 'CXP/NLU'
+                            font_size: '9sp'
+                            color: 0.294, 0.333, 0.388, 1
+                            halign: 'right'
+                            text_size: self.size
+
+                    # HP row
+                    BoxLayout:
+                        orientation: 'horizontal'
+                        size_hint_y: None
+                        height: dp(14)
+                        spacing: dp(4)
+                        Label:
+                            text: 'HP'
+                            font_size: '9sp'
+                            color: 0.612, 0.639, 0.686, 1
+                            size_hint_x: None
+                            width: dp(16)
+                        ResourceBar:
+                            id: hp_bar
+                            bar_color: 0.063, 0.725, 0.506, 1
+                        Label:
+                            id: hp_label
+                            text: '—/—'
+                            font_size: '9sp'
+                            color: 0.612, 0.639, 0.686, 1
+                            size_hint_x: None
+                            width: dp(36)
+                            halign: 'right'
+                            text_size: self.size
+
+                    # AP row
+                    BoxLayout:
+                        orientation: 'horizontal'
+                        size_hint_y: None
+                        height: dp(12)
+                        spacing: dp(4)
+                        Label:
+                            text: 'AP'
+                            font_size: '9sp'
+                            color: 0.612, 0.639, 0.686, 1
+                            size_hint_x: None
+                            width: dp(16)
+                        ResourceBar:
+                            id: ap_bar
+                            bar_color: 0.961, 0.620, 0.043, 1
+                        Label:
+                            id: ap_label
+                            text: '—/—'
+                            font_size: '9sp'
+                            color: 0.612, 0.639, 0.686, 1
+                            size_hint_x: None
+                            width: dp(36)
+                            halign: 'right'
+                            text_size: self.size
+
+                    Widget:  # spacer
+
+                # Action grid column (fills remaining width)
+                BoxLayout:
+                    orientation: 'vertical'
+                    spacing: dp(4)
+                    padding: dp(4), dp(4)
+
+                    # Collapsible skill grid (rows 1–3)
+                    BoxLayout:
+                        id: skill_grid
+                        orientation: 'vertical'
+                        size_hint_y: None
+                        height: dp(192)
+                        spacing: dp(4)
+
+                        # Row 1: Basic + End/Skip (48dp)
+                        BoxLayout:
+                            orientation: 'horizontal'
+                            size_hint_y: None
+                            height: dp(48)
+                            spacing: dp(4)
+
+                            Button:
+                                id: basic_btn
+                                text: 'Basic\nTU: —'
+                                font_size: '12sp'
+                                background_color: 0, 0, 0, 0
+                                canvas.before:
+                                    Color:
+                                        rgba: 0.145, 0.145, 0.208, 1
+                                    RoundedRectangle:
+                                        pos: self.pos
+                                        size: self.size
+                                        radius: [dp(6)]
+
+                            Button:
+                                id: end_skip_btn
+                                text: 'End/Skip'
+                                font_size: '12sp'
+                                color: 0.612, 0.639, 0.686, 1
+                                background_color: 0, 0, 0, 0
+                                canvas.before:
+                                    Color:
+                                        rgba: 0.145, 0.145, 0.208, 1
+                                    RoundedRectangle:
+                                        pos: self.pos
+                                        size: self.size
+                                        radius: [dp(6)]
+
+                        # Row 2: Skill 1 + 2 (72dp)
+                        BoxLayout:
+                            orientation: 'horizontal'
+                            size_hint_y: None
+                            height: dp(72)
+                            spacing: dp(4)
+                            SkillSlot:
+                                id: skill_1
+                            SkillSlot:
+                                id: skill_2
+
+                        # Row 3: Skill 3 + 4 (72dp)
+                        BoxLayout:
+                            orientation: 'horizontal'
+                            size_hint_y: None
+                            height: dp(72)
+                            spacing: dp(4)
+                            SkillSlot:
+                                id: skill_3
+                            SkillSlot:
+                                id: skill_4
+
+                    # Collapse toggle button (#1) — always visible
+                    BoxLayout:
+                        size_hint_y: None
+                        height: dp(50)
+                        padding: dp(20), dp(6)
+
+                        Button:
+                            id: collapse_btn
+                            text: '▼'
+                            font_size: '18sp'
+                            color: 0.612, 0.639, 0.686, 1
+                            background_color: 0, 0, 0, 0
+                            size_hint: None, None
+                            size: dp(48), dp(48)
+                            pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+                            canvas.before:
+                                Color:
+                                    rgba: 0.145, 0.145, 0.208, 1
+                                Ellipse:
+                                    pos: self.pos
+                                    size: self.size
