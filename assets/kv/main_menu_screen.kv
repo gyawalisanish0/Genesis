@@ -1,0 +1,216 @@
+#: kivy 2.3.0
+# MainMenuScreen — hub navigation screen
+
+<MainMenuScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        canvas.before:
+            Color:
+                rgba: (0.067, 0.063, 0.094, 1)
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+        # ── Header ──────────────────────────────────────────────────────────
+        BoxLayout:
+            size_hint_y: None
+            height: dp(56)
+            padding: dp(8), 0
+            spacing: dp(4)
+            canvas.before:
+                Color:
+                    rgba: (0.082, 0.078, 0.114, 1)
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+
+            # Level badge
+            Label:
+                text: 'Lv 1'
+                font_size: sp(12)
+                bold: True
+                color: (0.961, 0.620, 0.043, 1)
+                size_hint_x: None
+                width: dp(48)
+                halign: 'center'
+
+            # Title
+            Label:
+                text: 'GENESIS'
+                font_size: sp(17)
+                bold: True
+                color: (0.945, 0.941, 1.0, 1)
+                halign: 'center'
+
+            # Currency
+            Label:
+                text: '[color=fce033]\u25c6[/color] 0'
+                markup: True
+                font_size: sp(13)
+                color: (0.945, 0.941, 1.0, 1)
+                size_hint_x: None
+                width: dp(72)
+                halign: 'center'
+
+            # Settings button
+            Button:
+                text: '\u2699'
+                font_size: sp(20)
+                size_hint_x: None
+                width: dp(48)
+                color: (0.945, 0.941, 1.0, 1)
+                background_color: (0, 0, 0, 0)
+                on_release: root.on_settings()
+
+        # ── Hero zone ────────────────────────────────────────────────────────
+        RelativeLayout:
+            size_hint_y: None
+            height: dp(200)
+            canvas.before:
+                Color:
+                    rgba: (0.082, 0.078, 0.114, 1)
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+
+            # Character silhouette placeholder
+            Widget:
+                size_hint: None, None
+                size: dp(160), dp(160)
+                pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+                canvas:
+                    Color:
+                        rgba: (0.141, 0.137, 0.188, 1)
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [dp(12)]
+                    Color:
+                        rgba: (0.545, 0.361, 0.965, 0.3)
+                    Ellipse:
+                        pos: self.x + dp(40), self.y + dp(80)
+                        size: dp(80), dp(80)
+                    Color:
+                        rgba: (0.545, 0.361, 0.965, 0.2)
+                    Ellipse:
+                        pos: self.x + dp(48), self.y + dp(20)
+                        size: dp(64), dp(64)
+
+            Label:
+                text: 'No character selected'
+                font_size: sp(11)
+                color: (0.361, 0.329, 0.502, 1)
+                size_hint: None, None
+                size: dp(160), dp(24)
+                pos_hint: {'center_x': 0.5}
+                y: self.parent.y + dp(4)
+                halign: 'center'
+
+        # ── Main action buttons ───────────────────────────────────────────────
+        BoxLayout:
+            orientation: 'vertical'
+            padding: dp(16), dp(12)
+            spacing: dp(8)
+            size_hint_y: None
+            height: dp(196)
+
+            # PLAY — primary CTA
+            Button:
+                text: '\u25b6  PLAY'
+                font_size: sp(16)
+                bold: True
+                size_hint_y: None
+                height: dp(64)
+                color: (0.945, 0.941, 1.0, 1)
+                background_normal: ''
+                background_color: (0, 0, 0, 0)
+                on_release: root.on_play()
+                canvas.before:
+                    Color:
+                        rgba: (0.545, 0.361, 0.965, 1)
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [dp(10)]
+
+            # ROSTER
+            Button:
+                text: 'ROSTER'
+                font_size: sp(14)
+                size_hint_y: None
+                height: dp(52)
+                color: (0.945, 0.941, 1.0, 1)
+                background_normal: ''
+                background_color: (0, 0, 0, 0)
+                on_release: root.on_roster()
+                canvas.before:
+                    Color:
+                        rgba: (0.141, 0.137, 0.188, 1)
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [dp(10)]
+
+            # MASTERY ROAD
+            Button:
+                text: 'MASTERY ROAD'
+                font_size: sp(14)
+                size_hint_y: None
+                height: dp(52)
+                color: (0.945, 0.941, 1.0, 1)
+                background_normal: ''
+                background_color: (0, 0, 0, 0)
+                on_release: root.on_mastery_road()
+                canvas.before:
+                    Color:
+                        rgba: (0.141, 0.137, 0.188, 1)
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [dp(10)]
+
+        # ── Flexible spacer ───────────────────────────────────────────────────
+        Widget:
+            size_hint_y: 1
+
+        # ── Bottom row ────────────────────────────────────────────────────────
+        BoxLayout:
+            size_hint_y: None
+            height: dp(56)
+            padding: dp(16), dp(4)
+            spacing: dp(8)
+
+            Button:
+                text: 'SETTINGS'
+                font_size: sp(13)
+                color: (0.608, 0.557, 0.769, 1)
+                background_normal: ''
+                background_color: (0, 0, 0, 0)
+                on_release: root.on_settings()
+                canvas.before:
+                    Color:
+                        rgba: (0.110, 0.106, 0.149, 1)
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [dp(8)]
+
+            Button:
+                text: 'SHOP'
+                font_size: sp(13)
+                color: (0.608, 0.557, 0.769, 1)
+                background_normal: ''
+                background_color: (0, 0, 0, 0)
+                on_release: root.on_shop()
+                canvas.before:
+                    Color:
+                        rgba: (0.110, 0.106, 0.149, 1)
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [dp(8)]
+
+        # Safe-area bottom buffer
+        Widget:
+            size_hint_y: None
+            height: dp(48)
