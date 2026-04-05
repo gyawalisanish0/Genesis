@@ -13,6 +13,8 @@ Usage
 from __future__ import annotations
 
 from kivy.animation import Animation
+from kivy.app import App
+from kivy.clock import Clock
 from kivy.metrics import dp
 from kivy.uix.screenmanager import Screen
 
@@ -39,6 +41,7 @@ class BattleScreen(Screen):
         self._skill_grid_full_h: float = dp(_SKILL_GRID_HEIGHT_DP)
         self._turn: int = 1
         self._is_player_turn: bool = True
+        self._finish_event = None
 
     def on_kv_post(self, base_widget) -> None:
         self._timeline = BattleScreen1(self.ids.timeline_strip)
@@ -57,6 +60,9 @@ class BattleScreen(Screen):
         svc = input_service.get()
         svc.unbind(on_game_tap=self._on_tap)
         svc.unbind(on_game_long_press=self._on_long_press)
+        if self._finish_event:
+            self._finish_event.cancel()
+            self._finish_event = None
 
     # ── Battle setup ───────────────────────────────────────────────────────────
 
@@ -213,6 +219,19 @@ class BattleScreen(Screen):
             ids[sid].opacity = 0.2
         ids.basic_btn.disabled = True
         ids.end_skip_btn.disabled = True
+        # Prototype: no enemy AI — auto-resolve after a brief pause.
+        self._finish_event = Clock.schedule_once(self._finish_battle, 1.5)
+
+    def _finish_battle(self, dt: float) -> None:
+        """Populate battle_result in GameContext and navigate to result screen."""
+        self._finish_event = None
+        ctx = App.get_running_app().game_context
+        ctx.battle_result = {
+            'outcome': 'victory',
+            'turns':   self._turn,
+            'xp_gained': max(50, self._turn * 30),
+        }
+        self.manager.current = 'battle_result'
 
     def _set_player_turn_state(self) -> None:
         self._is_player_turn = True

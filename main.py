@@ -34,8 +34,9 @@ _KV_FILES = [
     'roster_screen.kv',
     # Phase 4
     'pre_battle_screen.kv',
-    # 'battle_result_screen.kv',
     'battle_screen.kv',
+    # Phase 5
+    'battle_result_screen.kv',
 ]
 
 
@@ -75,6 +76,7 @@ class GenesisApp(App):
         from app.screens.settings_screen import SettingsScreen
         from app.screens.roster_screen import RosterScreen
         from app.screens.pre_battle_screen import PreBattleScreen
+        from app.screens.battle_result_screen import BattleResultScreen
 
         # 5. Wire ScreenManager — first screen added becomes the start screen.
         sm = ScreenManager(transition=FadeTransition(duration=0.25))
@@ -88,7 +90,7 @@ class GenesisApp(App):
         sm.add_widget(SettingsScreen(name='settings'))
         sm.add_widget(StubScreen(name='mastery_road',  title_text='MASTERY ROAD'))
         sm.add_widget(StubScreen(name='shop',          title_text='SHOP'))
-        sm.add_widget(StubScreen(name='battle_result', title_text='BATTLE RESULT'))
+        sm.add_widget(BattleResultScreen(name='battle_result'))
 
         return sm
 
