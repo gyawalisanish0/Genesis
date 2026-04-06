@@ -18,6 +18,7 @@ from kivy.app import App
 from kivy.uix.screenmanager import Screen
 
 import app.services.data_service as _data_service
+import app.services.input_service as _input_service
 from app.screens.pre_battle_screen_1 import PreBattleScreen1
 from app.screens.pre_battle_screen_2 import PreBattleScreen2
 from app.screens.pre_battle_screen_3 import PreBattleScreen3
@@ -45,6 +46,18 @@ class PreBattleScreen(Screen):
         self._step2.reset()
         self._step3.reset()
         self._set_step(1)
+        svc = _input_service.get()
+        if svc:
+            svc.bind(on_game_key=self._on_game_key)
+
+    def on_leave(self) -> None:
+        svc = _input_service.get()
+        if svc:
+            svc.unbind(on_game_key=self._on_game_key)
+
+    def _on_game_key(self, _svc, action, key, modifiers) -> None:
+        if action == 'cancel':
+            self._on_back()
 
     # ── Navigation ─────────────────────────────────────────────────────────────
 

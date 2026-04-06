@@ -13,6 +13,7 @@ from __future__ import annotations
 from kivy.uix.screenmanager import Screen
 
 import app.services.data_service as _data_service
+import app.services.input_service as _input_service
 from app.screens.roster_screen_1 import RosterScreen1
 
 
@@ -32,6 +33,18 @@ class RosterScreen(Screen):
         self._load_chars()
         self._build_filters()
         self._rebuild_grid()
+        svc = _input_service.get()
+        if svc:
+            svc.bind(on_game_key=self._on_game_key)
+
+    def on_leave(self) -> None:
+        svc = _input_service.get()
+        if svc:
+            svc.unbind(on_game_key=self._on_game_key)
+
+    def _on_game_key(self, _svc, action, key, modifiers) -> None:
+        if action == 'cancel':
+            self._on_back()
 
     # ── Navigation ─────────────────────────────────────────────────────────────
 

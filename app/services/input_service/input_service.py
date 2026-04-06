@@ -69,6 +69,10 @@ class InputService(EventDispatcher):
     # ── Window bindings ───────────────────────────────────────────────────────
 
     def _bind_window(self) -> None:
+        # on_keyboard fires before on_key_down and can consume events by
+        # returning True.  We use it exclusively for the Android back button
+        # (key 27) so the OS does not exit the app.
+        Window.bind(on_keyboard=self._on_hardware_back)
         Window.bind(on_touch_down=self._on_touch_down)
         Window.bind(on_touch_move=self._on_touch_move)
         Window.bind(on_touch_up=self._on_touch_up)
@@ -77,6 +81,18 @@ class InputService(EventDispatcher):
         # Desktop-only: mouse hover via on_mouse_pos
         if platform in ("win", "linux", "macosx"):
             Window.bind(on_mouse_pos=self._io_handler.on_mouse_pos)
+
+    def _on_hardware_back(self, window, key, *args) -> bool:
+        """
+        Intercept the Android back button (key 27 / Escape on desktop).
+        Dispatch a named 'cancel' action so the current screen can respond,
+        then return True to consume the event and prevent Android from
+        exiting the app.
+        """
+        if key == 27:
+            self.dispatch("on_game_key", "cancel", key, [])
+            return True  # consumed — back press handled in-app
+        return False
 
     # ── Raw event forwarding ──────────────────────────────────────────────────
 

@@ -18,6 +18,8 @@ from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
 from kivy.uix.screenmanager import Screen
 
+import app.services.input_service as _input_service
+
 _OUTCOME_STYLE: dict[str, dict] = {
     'victory': {
         'title':    '\u2605 VICTORY \u2605',
@@ -47,12 +49,25 @@ class BattleResultScreen(Screen):
         self._populate_rewards(result)
         self._populate_unit_rows(team)
         self._populate_stats(result)
+        svc = _input_service.get()
+        if svc:
+            svc.bind(on_game_key=self._on_game_key)
 
     def on_leave(self) -> None:
         self.ids.unit_rows.clear_widgets()
         self.ids.stats_grid.clear_widgets()
+        svc = _input_service.get()
+        if svc:
+            svc.unbind(on_game_key=self._on_game_key)
+
+    def _on_game_key(self, _svc, action, key, modifiers) -> None:
+        if action == 'cancel':
+            self._on_back()
 
     # ── Navigation ─────────────────────────────────────────────────────────────
+
+    def _on_back(self) -> None:
+        self.manager.current = 'main_menu'
 
     def _on_play_again(self) -> None:
         self.manager.current = 'pre_battle'

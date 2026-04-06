@@ -53,16 +53,31 @@ class BattleScreen(Screen):
 
     def on_enter(self) -> None:
         svc = input_service.get()
-        svc.bind(on_game_tap=self._on_tap)
-        svc.bind(on_game_long_press=self._on_long_press)
+        if svc:
+            svc.bind(on_game_tap=self._on_tap)
+            svc.bind(on_game_long_press=self._on_long_press)
+            svc.bind(on_game_key=self._on_game_key)
 
     def on_leave(self) -> None:
         svc = input_service.get()
-        svc.unbind(on_game_tap=self._on_tap)
-        svc.unbind(on_game_long_press=self._on_long_press)
+        if svc:
+            svc.unbind(on_game_tap=self._on_tap)
+            svc.unbind(on_game_long_press=self._on_long_press)
+            svc.unbind(on_game_key=self._on_game_key)
         if self._finish_event:
             self._finish_event.cancel()
             self._finish_event = None
+
+    def _on_game_key(self, _svc, action, key, modifiers) -> None:
+        if action == 'cancel':
+            self._on_back()
+
+    def _on_back(self) -> None:
+        """Abandon the current battle and return to main menu."""
+        if self._finish_event:
+            self._finish_event.cancel()
+            self._finish_event = None
+        self.manager.current = 'main_menu'
 
     # ── Battle setup ───────────────────────────────────────────────────────────
 
