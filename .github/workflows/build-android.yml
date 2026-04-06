@@ -50,21 +50,43 @@ jobs:
             libtinfo5 cmake libffi-dev libssl-dev \
             python3-pip
 
-      # 4. Pin Buildozer and Cython to known-good versions for Kivy 2.3
+      # 4. Pre-install Android SDK so buildozer finds API 33 immediately.
+      #    The ubuntu-22.04 runner ships ANDROID_SDK_ROOT at /usr/local/lib/android/sdk
+      #    but only a subset of platforms are pre-installed.  We use the bundled
+      #    sdkmanager to install the exact platform + build-tools buildozer needs,
+      #    accepting licences non-interactively before buildozer ever runs.
+      - name: Install Android SDK platform 33
+        run: |
+          export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
+          export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
+
+          # Accept all pending licences non-interactively
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+
+          # Install the platform + matching build-tools
+          sdkmanager \
+            "platforms;android-33" \
+            "build-tools;33.0.2" \
+            "platform-tools"
+
+      # 5. Pin Buildozer and Cython to known-good versions for Kivy 2.3
       - name: Install Buildozer
         run: |
           pip3 install --upgrade pip
           pip3 install buildozer==1.5.0 cython==0.29.36
 
-      # 5. Build the debug APK
+      # 6. Build the debug APK
       #    GENESIS_DEBUG is NOT set here — the APK is a clean release-like build.
       #    The debug signing key is the default Android debug keystore (auto-generated).
+      #    Point buildozer at the pre-installed SDK so it doesn't re-download it.
       - name: Build debug APK
         run: buildozer -v android debug
         env:
           JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
+          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+          ANDROID_HOME: /usr/local/lib/android/sdk
 
-      # 6. Upload the APK so it can be downloaded from the Actions run page
+      # 7. Upload the APK so it can be downloaded from the Actions run page
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -73,7 +95,7 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
-      # 7. Print the APK size for a quick sanity check
+      # 8. Print the APK size for a quick sanity check
       - name: Report APK size
         if: success()
         run: |
