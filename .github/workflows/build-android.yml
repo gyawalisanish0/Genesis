@@ -50,35 +50,53 @@ jobs:
             libtinfo5 cmake libffi-dev libssl-dev \
             python3-pip
 
-      # 4. Ensure Android SDK platform 33 is present in the runner's SDK.
-      #    ubuntu-22.04 ships the SDK at /usr/local/lib/android/sdk with
-      #    cmdline-tools already installed — we just need to add platform 33
-      #    and accept licences non-interactively.
-      - name: Install Android SDK platform 33
+      # 4. Set up Android SDK with platform 33.
+      #
+      #    Two problems to solve:
+      #    a) The runner's cmdline-tools layout varies — download a pinned version
+      #       so sdkmanager is always available at a known path.
+      #    b) Buildozer 1.5.0 looks for sdkmanager at the LEGACY path
+      #       $SDK_ROOT/tools/bin/sdkmanager, which no longer exists in modern
+      #       Android SDK layouts.  We create a symlink so buildozer can find it.
+      - name: Set up Android SDK with platform 33
         run: |
           SDK_ROOT=/usr/local/lib/android/sdk
-          SDKMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          CMDLINE_DIR="$SDK_ROOT/cmdline-tools"
+          SDKMANAGER="$CMDLINE_DIR/latest/bin/sdkmanager"
 
-          echo "SDK root  : $SDK_ROOT"
-          echo "sdkmanager: $SDKMANAGER"
+          # ── Download cmdline-tools if sdkmanager is missing ──────────────────
+          if [ ! -x "$SDKMANAGER" ]; then
+            echo "sdkmanager not found — downloading pinned cmdline-tools..."
+            mkdir -p "$CMDLINE_DIR"
+            wget -q "https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip" \
+                 -O /tmp/cmdline-tools.zip
+            unzip -q /tmp/cmdline-tools.zip -d /tmp/cmdline-tools-unzip
+            mv /tmp/cmdline-tools-unzip/cmdline-tools "$CMDLINE_DIR/latest"
+          fi
 
-          # Refresh cmdline-tools first so sdkmanager itself is up to date
-          echo "y" | "$SDKMANAGER" --sdk_root="$SDK_ROOT" "cmdline-tools;latest" || true
+          echo "sdkmanager: $($SDKMANAGER --version)"
 
-          # Accept all pending licences non-interactively
-          yes | "$SDKMANAGER" --licenses --sdk_root="$SDK_ROOT" > /dev/null 2>&1 || true
-
-          # Install platform 33 + matching build-tools
-          "$SDKMANAGER" --sdk_root="$SDK_ROOT" "platforms;android-33" "build-tools;33.0.2" "platform-tools"
+          # ── Accept licences & install platform 33 ────────────────────────────
+          yes | "$SDKMANAGER" --sdk_root="$SDK_ROOT" --licenses > /dev/null 2>&1 || true
+          "$SDKMANAGER" --sdk_root="$SDK_ROOT" \
+            "platforms;android-33" "build-tools;33.0.2" "platform-tools"
 
           # Hard failure if the platform directory is still missing
           if [ ! -d "$SDK_ROOT/platforms/android-33" ]; then
             echo "ERROR: platforms;android-33 was not installed — aborting."
             exit 1
           fi
-          ls -la "$SDK_ROOT/platforms/android-33"
+          echo "platform 33 OK: $(ls "$SDK_ROOT/platforms/android-33")"
 
-          # Persist the SDK root for all later steps via GITHUB_ENV
+          # ── Legacy symlink for buildozer 1.5.0 ───────────────────────────────
+          # Buildozer 1.5.0 resolves sdkmanager at tools/bin/sdkmanager (the old
+          # SDK Tools layout).  Modern SDKs only ship cmdline-tools; without this
+          # symlink buildozer logs "sdkmanager is not installed" and aborts.
+          mkdir -p "$SDK_ROOT/tools/bin"
+          ln -sf "$SDKMANAGER" "$SDK_ROOT/tools/bin/sdkmanager"
+          echo "legacy symlink: $(ls -la "$SDK_ROOT/tools/bin/sdkmanager")"
+
+          # ── Persist SDK root for later steps ─────────────────────────────────
           echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
           echo "ANDROID_HOME=$SDK_ROOT"      >> "$GITHUB_ENV"
 
