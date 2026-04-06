@@ -10,9 +10,12 @@ Config.set('graphics', 'width', '360')
 Config.set('graphics', 'height', '640')
 
 import os
+import sys
+import traceback
 
 from kivy.app import App
 from kivy.lang import Builder
+from kivy.logger import Logger
 from kivy.properties import BooleanProperty
 from kivy.uix.screenmanager import ScreenManager, FadeTransition
 
@@ -20,6 +23,30 @@ import app.services.display_service as display_service_module
 import app.services.input_service   as input_service_module
 
 from app.core.game_context import GameContext
+
+
+def _install_crash_logger() -> None:
+    """
+    Write any uncaught Python exception to /sdcard/genesis_crash.log
+    so it can be read on-device without adb logcat.
+    Falls back silently if /sdcard is not writable (desktop, emulator).
+    """
+    _original = sys.excepthook
+
+    def _hook(exc_type, exc_value, exc_tb):
+        msg = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
+        Logger.critical("GenesisApp: UNCAUGHT EXCEPTION\n%s", msg)
+        try:
+            with open("/sdcard/genesis_crash.log", "w") as f:
+                f.write(msg)
+        except OSError:
+            pass
+        _original(exc_type, exc_value, exc_tb)
+
+    sys.excepthook = _hook
+
+
+_install_crash_logger()
 
 _KV_DIR = os.path.join(os.path.dirname(__file__), 'assets', 'kv')
 
@@ -62,10 +89,19 @@ class GenesisApp(App):
 
     def build(self):
         # 1. Display first — sets immersive mode and reads safe-area insets.
-        display_service_module.init()
+        #    Wrapped so a pyjnius/API failure never crashes App.build().
+        try:
+            display_service_module.init()
+        except Exception as exc:
+            Logger.error("GenesisApp: display_service.init() failed: %s\n%s",
+                         exc, traceback.format_exc())
 
         # 2. Input service — binds to Window touch/keyboard events.
-        input_service_module.init()
+        try:
+            input_service_module.init()
+        except Exception as exc:
+            Logger.error("GenesisApp: input_service.init() failed: %s\n%s",
+                         exc, traceback.format_exc())
 
         # 3. Load all KV layout files before instantiating any screens.
         for filename in _KV_FILES:

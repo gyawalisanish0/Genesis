@@ -31,12 +31,19 @@ class DisplayService2:
     # ── Android dispatch ──────────────────────────────────────────────────────
 
     def _read_android(self) -> dict:
-        from jnius import autoclass  # noqa: PLC0415 — runtime Android-only
-        Build    = autoclass("android.os.Build")
-        activity = autoclass("org.kivy.android.PythonActivity").mActivity
-        if Build.VERSION.SDK_INT >= 30:
-            return self._read_modern(activity)
-        return self._read_legacy(activity)
+        try:
+            from jnius import autoclass  # noqa: PLC0415 — runtime Android-only
+            Build    = autoclass("android.os.Build")
+            activity = autoclass("org.kivy.android.PythonActivity").mActivity
+            if activity is None:
+                return dict(_FALLBACK)
+            if Build.VERSION.SDK_INT >= 30:
+                return self._read_modern(activity)
+            return self._read_legacy(activity)
+        except Exception as exc:
+            from kivy.logger import Logger
+            Logger.warning("DisplayService2: inset read failed, using fallback: %s", exc)
+            return dict(_FALLBACK)
 
     def _read_modern(self, activity) -> dict:
         """API ≥ 30: WindowInsets.getInsets(systemBars())."""

@@ -17,9 +17,15 @@ class DisplayService1:
         """
         Hide system bars and enter immersive sticky mode.
         Safe to call on any platform — only acts on Android.
+        Never raises: exceptions are logged and swallowed so a display
+        failure never crashes the app.
         """
         if platform == "android":
-            self._apply_android()
+            try:
+                self._apply_android()
+            except Exception as exc:
+                from kivy.logger import Logger
+                Logger.warning("DisplayService1: immersive setup failed: %s", exc)
 
     # ── Android dispatch ──────────────────────────────────────────────────────
 
@@ -27,6 +33,10 @@ class DisplayService1:
         from jnius import autoclass  # noqa: PLC0415 — runtime Android-only
         Build    = autoclass("android.os.Build")
         activity = autoclass("org.kivy.android.PythonActivity").mActivity
+        if activity is None:
+            from kivy.logger import Logger
+            Logger.warning("DisplayService1: mActivity is None — skipping immersive")
+            return
         if Build.VERSION.SDK_INT >= 30:
             self._apply_modern(activity)
         else:
