@@ -13,7 +13,6 @@ on:
     branches:
       - main
       - master
-  # Allow manual runs from the Actions tab at any time
   workflow_dispatch:
 
 # ── Jobs ───────────────────────────────────────────────────────────────────────
@@ -27,17 +26,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Cache the Buildozer working directory
-      #    The platform download (NDK, p4a recipes) is ~3 GB; caching cuts
-      #    subsequent builds from ~25 min down to ~5 min.
-      #    Cache is invalidated when buildozer.spec or requirements.txt change.
+      # 2. Cache the Buildozer working directory.
+      #    SDK + NDK + p4a recipes total ~3 GB; caching cuts subsequent builds
+      #    from ~30 min down to ~5 min.  Prefix v1 so the cache can be manually
+      #    busted (bump to v2, v3 …) if the SDK ever becomes corrupted.
       - name: Cache Buildozer directory
         uses: actions/cache@v4
         with:
           path: .buildozer
-          key: buildozer-${{ runner.os }}-${{ hashFiles('buildozer.spec', 'requirements.txt') }}
-          # No restore-keys fallback — a partial/broken cache causes subtle SDK
-          # errors; it is faster to start clean than to debug corrupted state.
+          key: buildozer-v1-${{ runner.os }}-${{ hashFiles('buildozer.spec', 'requirements.txt') }}
 
       # 3. System dependencies Buildozer needs on a bare Ubuntu runner
       - name: Install system dependencies
@@ -50,83 +47,56 @@ jobs:
             libtinfo5 cmake libffi-dev libssl-dev \
             python3-pip
 
-      # 4. Set up Android SDK with platform 33.
+      # 4. Pre-accept Android SDK licences.
       #
-      #    Two problems to solve:
-      #    a) The runner's cmdline-tools layout varies — download a pinned version
-      #       so sdkmanager is always available at a known path.
-      #    b) Buildozer 1.5.0 looks for sdkmanager at the LEGACY path
-      #       $SDK_ROOT/tools/bin/sdkmanager, which no longer exists in modern
-      #       Android SDK layouts.  We create a symlink so buildozer can find it.
-      - name: Set up Android SDK with platform 33
+      #    Buildozer manages its own Android SDK at:
+      #      .buildozer/android/platform/android-sdk/
+      #    It does NOT use the system SDK at /usr/local/lib/android/sdk.
+      #
+      #    Android SDK licences are plain text files containing SHA-1 hashes.
+      #    sdkmanager checks for these files before installing any package.
+      #    Pre-seeding them here guarantees sdkmanager never blocks waiting for
+      #    interactive input — even if buildozer's android.accept_sdk_license
+      #    option has any edge-case failures in version 1.5.0.
+      #
+      #    These hashes are the stable, well-known acceptance signatures for the
+      #    standard Android SDK licence, preview licence, and TV licence.
+      - name: Pre-accept Android SDK licences
         run: |
-          SDK_ROOT=/usr/local/lib/android/sdk
-          CMDLINE_DIR="$SDK_ROOT/cmdline-tools"
-          SDKMANAGER="$CMDLINE_DIR/latest/bin/sdkmanager"
+          LICENSES_DIR=".buildozer/android/platform/android-sdk/licenses"
+          mkdir -p "$LICENSES_DIR"
 
-          # ── Download cmdline-tools if sdkmanager is missing ──────────────────
-          if [ ! -x "$SDKMANAGER" ]; then
-            echo "sdkmanager not found — downloading pinned cmdline-tools..."
-            mkdir -p "$CMDLINE_DIR"
-            wget -q "https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip" \
-                 -O /tmp/cmdline-tools.zip
-            unzip -q /tmp/cmdline-tools.zip -d /tmp/cmdline-tools-unzip
-            mv /tmp/cmdline-tools-unzip/cmdline-tools "$CMDLINE_DIR/latest"
-          fi
+          printf "%s\n%s\n%s\n" \
+            "8933bad161af4178b1185d1a37fbf41ea5269c55" \
+            "d56f5187479451eabf01fb78af6dfcb131a6481e" \
+            "24333f8a63b6825ea9c5514f83c2829b004d1fee" \
+            > "$LICENSES_DIR/android-sdk-license"
 
-          echo "sdkmanager: $($SDKMANAGER --version)"
+          printf "84831b9409646a918e30573bab4c9c91346d8abd\n" \
+            > "$LICENSES_DIR/android-sdk-preview-license"
 
-          # ── Accept licences & install platform 33 ────────────────────────────
-          yes | "$SDKMANAGER" --sdk_root="$SDK_ROOT" --licenses > /dev/null 2>&1 || true
-          "$SDKMANAGER" --sdk_root="$SDK_ROOT" \
-            "platforms;android-33" "build-tools;33.0.2" "platform-tools"
+          printf "33b6937984506f2c2de3cfef0deda041f8da1d54\n" \
+            > "$LICENSES_DIR/android-googletv-license"
 
-          # Hard failure if the platform directory is still missing
-          if [ ! -d "$SDK_ROOT/platforms/android-33" ]; then
-            echo "ERROR: platforms;android-33 was not installed — aborting."
-            exit 1
-          fi
-          echo "platform 33 OK: $(ls "$SDK_ROOT/platforms/android-33")"
+          echo "Licence files written:"
+          ls -la "$LICENSES_DIR"
 
-          # ── Legacy symlink for buildozer 1.5.0 ───────────────────────────────
-          # Buildozer 1.5.0 resolves sdkmanager at tools/bin/sdkmanager (the old
-          # SDK Tools layout).  Modern SDKs only ship cmdline-tools; without this
-          # symlink buildozer logs "sdkmanager is not installed" and aborts.
-          mkdir -p "$SDK_ROOT/tools/bin"
-          ln -sf "$SDKMANAGER" "$SDK_ROOT/tools/bin/sdkmanager"
-          echo "legacy symlink: $(ls -la "$SDK_ROOT/tools/bin/sdkmanager")"
-
-          # ── Persist SDK root for later steps ─────────────────────────────────
-          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
-          echo "ANDROID_HOME=$SDK_ROOT"      >> "$GITHUB_ENV"
-
-      # 5. Tell buildozer 1.5.0 to use the pre-installed SDK.
-      #    buildozer reads android.sdk_path from the [app] section of the spec.
-      #    It does NOT honour ANDROID_HOME / ANDROID_SDK_ROOT env vars.
-      #    We inject the line before [buildozer] so it lands in [app], not in
-      #    the [buildozer] section (appending to end of file would be wrong).
-      #    The committed buildozer.spec stays clean for local development.
-      - name: Point buildozer at the pre-installed SDK
-        run: |
-          sed -i "s|\[buildozer\]|# CI override — injected by workflow\nandroid.sdk_path = $ANDROID_SDK_ROOT\n\n[buildozer]|" buildozer.spec
-          echo "--- buildozer.spec tail (verify sdk_path placement) ---"
-          grep -n "sdk_path\|\[buildozer\]\|\[app\]" buildozer.spec
-
-      # 6. Pin Buildozer and Cython to known-good versions for Kivy 2.3
+      # 5. Pin Buildozer and Cython to known-good versions for Kivy 2.3
       - name: Install Buildozer
         run: |
           pip3 install --upgrade pip
           pip3 install buildozer==1.5.0 cython==0.29.36
 
-      # 7. Build the debug APK
-      #    GENESIS_DEBUG is NOT set — the APK is a clean release-like build.
-      #    The debug signing key is the default Android debug keystore (auto-generated).
+      # 6. Build the debug APK.
+      #    Buildozer downloads its own Android SDK + NDK on first run, installs
+      #    platform 33, compiles the app with python-for-android, and signs the
+      #    APK with the default debug keystore.
       - name: Build debug APK
         run: buildozer -v android debug
         env:
           JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
 
-      # 8. Upload the APK so it can be downloaded from the Actions run page
+      # 7. Upload the APK so it can be downloaded from the Actions run page
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -135,7 +105,7 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
-      # 9. Print the APK size for a quick sanity check
+      # 8. Print the APK size for a quick sanity check
       - name: Report APK size
         if: success()
         run: |
@@ -144,7 +114,7 @@ jobs:
           echo "### APK built successfully" >> $GITHUB_STEP_SUMMARY
           echo "| Property | Value |"       >> $GITHUB_STEP_SUMMARY
           echo "|---|---|"                  >> $GITHUB_STEP_SUMMARY
-          echo "| File | \`$(basename $APK)\` |"        >> $GITHUB_STEP_SUMMARY
-          echo "| Size | $SIZE |"                       >> $GITHUB_STEP_SUMMARY
-          echo "| Commit | \`${{ github.sha }}\` |"     >> $GITHUB_STEP_SUMMARY
+          echo "| File | \`$(basename $APK)\` |"         >> $GITHUB_STEP_SUMMARY
+          echo "| Size | $SIZE |"                        >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |"      >> $GITHUB_STEP_SUMMARY
           echo "| Branch | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
