@@ -98,8 +98,9 @@
             size_hint_y: None
             height: dp(12)
 
-        # Loading label
+        # Loading label — id used by SplashScreen._show_error() on crash
         Label:
+            id: loading_label
             text: 'Loading...'
             font_size: sp(11)
             color: (0.361, 0.329, 0.502, 1)
