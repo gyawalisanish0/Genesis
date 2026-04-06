@@ -59,16 +59,23 @@ jobs:
           SDK_ROOT=/usr/local/lib/android/sdk
           SDKMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
 
-          echo "SDK root : $SDK_ROOT"
+          echo "SDK root  : $SDK_ROOT"
           echo "sdkmanager: $SDKMANAGER"
+
+          # Refresh cmdline-tools first so sdkmanager itself is up to date
+          echo "y" | "$SDKMANAGER" --sdk_root="$SDK_ROOT" "cmdline-tools;latest" || true
 
           # Accept all pending licences non-interactively
           yes | "$SDKMANAGER" --licenses --sdk_root="$SDK_ROOT" > /dev/null 2>&1 || true
 
-          # Install platform 33 + matching build-tools if not already present
+          # Install platform 33 + matching build-tools
           "$SDKMANAGER" --sdk_root="$SDK_ROOT" "platforms;android-33" "build-tools;33.0.2" "platform-tools"
 
-          # Fail fast if the platform still isn't there
+          # Hard failure if the platform directory is still missing
+          if [ ! -d "$SDK_ROOT/platforms/android-33" ]; then
+            echo "ERROR: platforms;android-33 was not installed — aborting."
+            exit 1
+          fi
           ls -la "$SDK_ROOT/platforms/android-33"
 
           # Persist the SDK root for all later steps via GITHUB_ENV
@@ -76,15 +83,16 @@ jobs:
           echo "ANDROID_HOME=$SDK_ROOT"      >> "$GITHUB_ENV"
 
       # 5. Tell buildozer 1.5.0 to use the pre-installed SDK.
-      #    buildozer reads android.sdk_path from the spec file; it does NOT
-      #    honour ANDROID_HOME / ANDROID_SDK_ROOT environment variables.
-      #    Appending here keeps the checked-in buildozer.spec clean for local
-      #    development (where omitting the key makes buildozer manage its own SDK).
+      #    buildozer reads android.sdk_path from the [app] section of the spec.
+      #    It does NOT honour ANDROID_HOME / ANDROID_SDK_ROOT env vars.
+      #    We inject the line before [buildozer] so it lands in [app], not in
+      #    the [buildozer] section (appending to end of file would be wrong).
+      #    The committed buildozer.spec stays clean for local development.
       - name: Point buildozer at the pre-installed SDK
         run: |
-          echo ""                                                          >> buildozer.spec
-          echo "# ── CI override — injected by workflow, do not commit ──" >> buildozer.spec
-          echo "android.sdk_path = $ANDROID_SDK_ROOT"                     >> buildozer.spec
+          sed -i "s|\[buildozer\]|# CI override — injected by workflow\nandroid.sdk_path = $ANDROID_SDK_ROOT\n\n[buildozer]|" buildozer.spec
+          echo "--- buildozer.spec tail (verify sdk_path placement) ---"
+          grep -n "sdk_path\|\[buildozer\]\|\[app\]" buildozer.spec
 
       # 6. Pin Buildozer and Cython to known-good versions for Kivy 2.3
       - name: Install Buildozer
