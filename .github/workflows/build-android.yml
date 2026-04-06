@@ -28,16 +28,16 @@ jobs:
         uses: actions/checkout@v4
 
       # 2. Cache the Buildozer working directory
-      #    The platform download (SDK, NDK, p4a recipes) is ~3 GB;
-      #    caching it cuts subsequent builds from ~25 min down to ~5 min.
+      #    The platform download (NDK, p4a recipes) is ~3 GB; caching cuts
+      #    subsequent builds from ~25 min down to ~5 min.
       #    Cache is invalidated when buildozer.spec or requirements.txt change.
       - name: Cache Buildozer directory
         uses: actions/cache@v4
         with:
           path: .buildozer
           key: buildozer-${{ runner.os }}-${{ hashFiles('buildozer.spec', 'requirements.txt') }}
-          restore-keys: |
-            buildozer-${{ runner.os }}-
+          # No restore-keys fallback — a partial/broken cache causes subtle SDK
+          # errors; it is faster to start clean than to debug corrupted state.
 
       # 3. System dependencies Buildozer needs on a bare Ubuntu runner
       - name: Install system dependencies
@@ -50,43 +50,57 @@ jobs:
             libtinfo5 cmake libffi-dev libssl-dev \
             python3-pip
 
-      # 4. Pre-install Android SDK so buildozer finds API 33 immediately.
-      #    The ubuntu-22.04 runner ships ANDROID_SDK_ROOT at /usr/local/lib/android/sdk
-      #    but only a subset of platforms are pre-installed.  We use the bundled
-      #    sdkmanager to install the exact platform + build-tools buildozer needs,
-      #    accepting licences non-interactively before buildozer ever runs.
+      # 4. Ensure Android SDK platform 33 is present in the runner's SDK.
+      #    ubuntu-22.04 ships the SDK at /usr/local/lib/android/sdk with
+      #    cmdline-tools already installed — we just need to add platform 33
+      #    and accept licences non-interactively.
       - name: Install Android SDK platform 33
         run: |
-          export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
-          export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
+          SDK_ROOT=/usr/local/lib/android/sdk
+          SDKMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+
+          echo "SDK root : $SDK_ROOT"
+          echo "sdkmanager: $SDKMANAGER"
 
           # Accept all pending licences non-interactively
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
 
-          # Install the platform + matching build-tools
-          sdkmanager \
-            "platforms;android-33" \
-            "build-tools;33.0.2" \
-            "platform-tools"
+          # Install platform 33 + matching build-tools if not already present
+          "$SDKMANAGER" "platforms;android-33" "build-tools;33.0.2" "platform-tools"
 
-      # 5. Pin Buildozer and Cython to known-good versions for Kivy 2.3
+          # Fail fast if the platform still isn't there
+          ls -la "$SDK_ROOT/platforms/android-33"
+
+          # Persist the SDK root for all later steps via GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=$SDK_ROOT"      >> "$GITHUB_ENV"
+
+      # 5. Tell buildozer 1.5.0 to use the pre-installed SDK.
+      #    buildozer reads android.sdk_path from the spec file; it does NOT
+      #    honour ANDROID_HOME / ANDROID_SDK_ROOT environment variables.
+      #    Appending here keeps the checked-in buildozer.spec clean for local
+      #    development (where omitting the key makes buildozer manage its own SDK).
+      - name: Point buildozer at the pre-installed SDK
+        run: |
+          echo ""                                                          >> buildozer.spec
+          echo "# ── CI override — injected by workflow, do not commit ──" >> buildozer.spec
+          echo "android.sdk_path = $ANDROID_SDK_ROOT"                     >> buildozer.spec
+
+      # 6. Pin Buildozer and Cython to known-good versions for Kivy 2.3
       - name: Install Buildozer
         run: |
           pip3 install --upgrade pip
           pip3 install buildozer==1.5.0 cython==0.29.36
 
-      # 6. Build the debug APK
-      #    GENESIS_DEBUG is NOT set here — the APK is a clean release-like build.
+      # 7. Build the debug APK
+      #    GENESIS_DEBUG is NOT set — the APK is a clean release-like build.
       #    The debug signing key is the default Android debug keystore (auto-generated).
-      #    Point buildozer at the pre-installed SDK so it doesn't re-download it.
       - name: Build debug APK
         run: buildozer -v android debug
         env:
           JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
-          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
-          ANDROID_HOME: /usr/local/lib/android/sdk
 
-      # 7. Upload the APK so it can be downloaded from the Actions run page
+      # 8. Upload the APK so it can be downloaded from the Actions run page
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -95,16 +109,16 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
-      # 8. Print the APK size for a quick sanity check
+      # 9. Print the APK size for a quick sanity check
       - name: Report APK size
         if: success()
         run: |
           APK=$(ls bin/*.apk | head -1)
           SIZE=$(du -sh "$APK" | cut -f1)
           echo "### APK built successfully" >> $GITHUB_STEP_SUMMARY
-          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
-          echo "| File | \`$(basename $APK)\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Size | $SIZE |" >> $GITHUB_STEP_SUMMARY
-          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |"       >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|"                  >> $GITHUB_STEP_SUMMARY
+          echo "| File | \`$(basename $APK)\` |"        >> $GITHUB_STEP_SUMMARY
+          echo "| Size | $SIZE |"                       >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |"     >> $GITHUB_STEP_SUMMARY
           echo "| Branch | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
