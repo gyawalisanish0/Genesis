@@ -12,9 +12,12 @@ Usage
 """
 from __future__ import annotations
 
+import traceback
+
 from kivy.animation import Animation
 from kivy.app import App
 from kivy.clock import Clock
+from kivy.logger import Logger
 from kivy.metrics import dp
 from kivy.uix.screenmanager import Screen
 
@@ -83,17 +86,49 @@ class BattleScreen(Screen):
 
     def load_battle(self, player_unit, enemies: list, allies: list | None = None) -> None:
         """Populate the screen with battle data before entering."""
+        try:
+            self._do_load_battle(player_unit, enemies, allies)
+        except Exception as exc:
+            Logger.error(
+                'BattleScreen: load_battle CRASHED: %s\n%s',
+                exc, traceback.format_exc(),
+            )
+            try:
+                with open('/sdcard/genesis_crash.log', 'w') as f:
+                    f.write(traceback.format_exc())
+            except OSError:
+                pass
+
+    def _do_load_battle(self, player_unit, enemies: list, allies: list | None = None) -> None:
+        Logger.info('BattleScreen: _do_load_battle start, player=%s', getattr(player_unit, 'name', '?'))
         self._player_unit = player_unit
         self._enemies = enemies
         self._allies = allies or [player_unit]
         self._is_player_turn = True
         self._turn = 1
+
+        Logger.info('BattleScreen: _refresh_player_panel')
         self._refresh_player_panel()
+
+        Logger.info('BattleScreen: _refresh_skill_buttons')
         self._refresh_skill_buttons()
-        self._timeline.refresh_timeline(self._allies, self._enemies, player_unit)
-        self._log.refresh_status_slots(player_unit)
-        self._log.append_log('Battle started.')
+
+        if self._timeline is not None:
+            Logger.info('BattleScreen: refresh_timeline')
+            self._timeline.refresh_timeline(self._allies, self._enemies, player_unit)
+        else:
+            Logger.warning('BattleScreen: _timeline is None — skipping refresh_timeline')
+
+        if self._log is not None:
+            Logger.info('BattleScreen: refresh_status_slots')
+            self._log.refresh_status_slots(player_unit)
+            self._log.append_log('Battle started.')
+        else:
+            Logger.warning('BattleScreen: _log is None — skipping log init')
+
+        Logger.info('BattleScreen: _hide_opponent_card')
         self._hide_opponent_card()
+        Logger.info('BattleScreen: _do_load_battle complete')
 
     # ── Input routing ──────────────────────────────────────────────────────────
 
@@ -112,7 +147,8 @@ class BattleScreen(Screen):
             if ids[sid].collide_point(x, y):
                 self._on_skill_tap(i)
                 return
-        self._log.handle_status_tap(x, y)
+        if self._log is not None:
+            self._log.handle_status_tap(x, y)
 
     def _on_long_press(self, dispatcher, x: float, y: float) -> None:
         for i, sid in enumerate(_SKILL_IDS):
@@ -195,6 +231,10 @@ class BattleScreen(Screen):
         if unit is None:
             return
         ids = self.ids
+        Logger.info(
+            'BattleScreen: panel — hp=%s/%s ap=%s/%s tick=%s',
+            unit.hp, unit.max_hp, unit.ap, unit.max_ap, unit.tick_position,
+        )
         ids.turn_counter_label.text = f'Turn {self._turn}'
         ids.tick_label.text = f'Tick: {unit.tick_position}'
         ids.hp_label.text = f'{unit.hp}/{unit.max_hp}'
@@ -207,20 +247,35 @@ class BattleScreen(Screen):
     def _refresh_skill_buttons(self) -> None:
         unit = self._player_unit
         for i, sid in enumerate(_SKILL_IDS):
-            slot = self.ids[sid]
+            slot = self.ids.get(sid)
+            if slot is None:
+                Logger.warning('BattleScreen: ids[%s] is None — skipping', sid)
+                continue
+            slot_ids = slot.ids
+            if not slot_ids:
+                Logger.warning('BattleScreen: slot.ids empty for %s — skipping', sid)
+                continue
             has_skill = unit is not None and i < len(unit.skills)
             if has_skill:
                 skill = unit.skills[i]
-                slot.ids.skill_name.text = getattr(skill, 'name', '—')
-                slot.ids.skill_tuc.text = f'TU:{getattr(skill, "tu_cost", "—")}'
-                slot.ids.skill_chrg.text = f'×{getattr(skill, "charge", 0)}'
-                slot.ids.skill_lvl.text = f'LVL {getattr(skill, "level", 1)}'
+                if 'skill_name' in slot_ids:
+                    slot_ids.skill_name.text = getattr(skill, 'name', '—')
+                if 'skill_tuc' in slot_ids:
+                    slot_ids.skill_tuc.text = f'TU:{getattr(skill, "tu_cost", "—")}'
+                if 'skill_chrg' in slot_ids:
+                    slot_ids.skill_chrg.text = f'×{getattr(skill, "charge", 0)}'
+                if 'skill_lvl' in slot_ids:
+                    slot_ids.skill_lvl.text = f'LVL {getattr(skill, "level", 1)}'
                 slot.opacity = 1.0
             else:
-                slot.ids.skill_name.text = '—'
-                slot.ids.skill_tuc.text = ''
-                slot.ids.skill_chrg.text = ''
-                slot.ids.skill_lvl.text = ''
+                if 'skill_name' in slot_ids:
+                    slot_ids.skill_name.text = '—'
+                if 'skill_tuc' in slot_ids:
+                    slot_ids.skill_tuc.text = ''
+                if 'skill_chrg' in slot_ids:
+                    slot_ids.skill_chrg.text = ''
+                if 'skill_lvl' in slot_ids:
+                    slot_ids.skill_lvl.text = ''
                 slot.opacity = 0.3
 
     def _flash_insufficient_ap(self, slot_index: int) -> None:

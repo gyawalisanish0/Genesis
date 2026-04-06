@@ -7,10 +7,13 @@ Hover:    on_mouse_pos fires on desktop when no button is pressed;
           the dispatcher's throttled _emit_hover handles deduplication.
 """
 
-# Kivy key code → named game action
+# Kivy key code → named game action.
+# Key 27 (Escape / Android back) is intentionally absent here — it is handled
+# exclusively by InputService._on_hardware_back() via on_keyboard, which
+# returns True to consume the event and prevent the OS default behaviour.
+# Having it here as well would cause double-dispatch of "cancel".
 _KEY_ACTION_MAP: dict[int, str] = {
     13:  "confirm",   # Enter / Return
-    27:  "cancel",    # Escape
     32:  "attack",    # Space
     273: "up",        # Arrow Up
     274: "down",      # Arrow Down

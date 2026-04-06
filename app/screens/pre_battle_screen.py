@@ -104,20 +104,49 @@ class PreBattleScreen(Screen):
     # ── Battle launch ──────────────────────────────────────────────────────────
 
     def _launch_battle(self) -> None:
+        import traceback
+        from kivy.logger import Logger
+        try:
+            self._do_launch_battle()
+        except Exception as exc:
+            Logger.error(
+                'PreBattleScreen: _launch_battle CRASHED: %s\n%s',
+                exc, traceback.format_exc(),
+            )
+            try:
+                with open('/sdcard/genesis_crash.log', 'w') as f:
+                    f.write(traceback.format_exc())
+            except OSError:
+                pass
+
+    def _do_launch_battle(self) -> None:
+        from kivy.logger import Logger
+        Logger.info('PreBattleScreen: _do_launch_battle start')
+
         ctx = App.get_running_app().game_context
         ctx.selected_mode = self._step1.selected_mode or {}
         ctx.selected_team = self._step2.selected_team
+        Logger.info('PreBattleScreen: selected_team size=%d', len(ctx.selected_team))
 
+        Logger.info('PreBattleScreen: building player units')
         player_units = self._step3.build_player_units(ctx.selected_team)
-        enemy_units  = self._step3.build_enemy_units(self._chars)
-        ctx.enemies  = enemy_units
+        Logger.info('PreBattleScreen: player_units=%d', len(player_units))
+
+        Logger.info('PreBattleScreen: building enemy units')
+        enemy_units = self._step3.build_enemy_units(self._chars)
+        Logger.info('PreBattleScreen: enemy_units=%d', len(enemy_units))
+        ctx.enemies = enemy_units
 
         if not player_units:
+            Logger.warning('PreBattleScreen: no player units — aborting launch')
             return
 
+        Logger.info('PreBattleScreen: calling battle.load_battle()')
         battle = self.manager.get_screen('battle')
         battle.load_battle(player_units[0], enemy_units, player_units)
+        Logger.info('PreBattleScreen: load_battle() done — switching to battle')
         self.manager.current = 'battle'
+        Logger.info('PreBattleScreen: switched to battle')
 
     # ── Data loading ───────────────────────────────────────────────────────────
 
