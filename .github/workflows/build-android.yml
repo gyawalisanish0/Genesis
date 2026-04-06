@@ -63,10 +63,10 @@ jobs:
           echo "sdkmanager: $SDKMANAGER"
 
           # Accept all pending licences non-interactively
-          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+          yes | "$SDKMANAGER" --licenses --sdk_root="$SDK_ROOT" > /dev/null 2>&1 || true
 
           # Install platform 33 + matching build-tools if not already present
-          "$SDKMANAGER" "platforms;android-33" "build-tools;33.0.2" "platform-tools"
+          "$SDKMANAGER" --sdk_root="$SDK_ROOT" "platforms;android-33" "build-tools;33.0.2" "platform-tools"
 
           # Fail fast if the platform still isn't there
           ls -la "$SDK_ROOT/platforms/android-33"
