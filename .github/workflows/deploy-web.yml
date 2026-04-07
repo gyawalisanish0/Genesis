@@ -4,9 +4,9 @@ name: Deploy Web
 on:
   workflow_dispatch:
     inputs:
-      environment:
-        description: 'Target environment'
-        required: true
+      label:
+        description: 'Deployment label (informational only)'
+        required: false
         default: 'production'
         type: choice
         options:
@@ -65,8 +65,10 @@ jobs:
     name: Deploy to GitHub Pages
     needs: build
     runs-on: ubuntu-24.04
+    # 'github-pages' is the required environment name for actions/deploy-pages.
+    # The user-chosen label is surfaced in the summary only.
     environment:
-      name: ${{ github.event.inputs.environment }}
+      name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
 
     steps:
@@ -79,7 +81,7 @@ jobs:
           echo "### Web deployed successfully"        >> $GITHUB_STEP_SUMMARY
           echo "| Property | Value |"                >> $GITHUB_STEP_SUMMARY
           echo "|---|---|"                            >> $GITHUB_STEP_SUMMARY
-          echo "| Environment | \`${{ github.event.inputs.environment }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Label | \`${{ github.event.inputs.label }}\` |"             >> $GITHUB_STEP_SUMMARY
           echo "| URL | ${{ steps.deploy.outputs.page_url }} |"               >> $GITHUB_STEP_SUMMARY
           echo "| Commit | \`${{ github.sha }}\` |"  >> $GITHUB_STEP_SUMMARY
           echo "| Branch | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
