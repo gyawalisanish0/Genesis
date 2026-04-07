@@ -1,12 +1,22 @@
+# ── Python (legacy — no longer in active use) ─────────────────────────
 __pycache__/
 *.pyc
 *.pyo
-*.pyd
 .pytest_cache/
 .buildozer/
 bin/
-*.spec.bak
+
+# ── Node / Web ─────────────────────────────────────────────────────────
+node_modules/
+genesis-web/dist/
+genesis-web/android/
+genesis-web/ios/
+genesis-web/*.tsbuildinfo
+
+# ── Environment & secrets ──────────────────────────────────────────────
 .env
-*.egg-info/
-dist/
-build/
+*.env.local
+
+# ── OS ────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
