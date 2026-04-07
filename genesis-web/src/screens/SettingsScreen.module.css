@@ -1,0 +1,163 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-deep);
+  overflow: hidden;
+}
+
+/* ── Sticky header ──────────────────────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  height: 3.5rem;
+  padding: 0 var(--s-xs);
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--bg-elevated);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.backBtn {
+  width: var(--touch-min);
+  height: var(--touch-min);
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 1.125rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-pill);
+  flex-shrink: 0;
+}
+
+.headerTitle {
+  flex: 1;
+  text-align: center;
+  font-size: var(--t-subheading-size);
+  font-weight: var(--t-subheading-weight);
+  color: var(--text-primary);
+  margin-right: var(--touch-min); /* balance back button */
+}
+
+/* ── Scrollable body ────────────────────────────────────────────────── */
+.scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--s-sm) var(--s-md) var(--s-2xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-xs);
+}
+
+/* ── Section header ─────────────────────────────────────────────────── */
+.sectionHeader {
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.125rem;
+  padding: var(--s-sm) 0 var(--s-xs);
+  margin: 0;
+}
+
+/* ── Row group (rounded card containing rows) ───────────────────────── */
+.group {
+  background: var(--bg-card);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+.divider {
+  height: 1px;
+  background: var(--bg-elevated);
+  margin: 0 var(--s-md);
+}
+
+/* ── Base row ───────────────────────────────────────────────────────── */
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-sm);
+  padding: 0 var(--s-md);
+  min-height: 3rem;  /* 48 dp */
+  cursor: pointer;
+  transition: background var(--motion-button);
+  user-select: none;
+}
+
+.row:active { background: var(--bg-elevated); }
+
+.rowDisabled {
+  opacity: 0.4;
+  cursor: default;
+  pointer-events: none;
+}
+
+.rowLabel {
+  flex: 1;
+  font-size: var(--t-body-size);
+  color: var(--text-primary);
+}
+
+/* ── Slider ─────────────────────────────────────────────────────────── */
+.slider {
+  width: 7.5rem;  /* 120 dp */
+  accent-color: var(--accent-genesis);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.sliderValue {
+  font-size: var(--t-label-size);
+  color: var(--text-secondary);
+  width: 2rem;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ── Toggle ─────────────────────────────────────────────────────────── */
+.toggleTrack {
+  width: 2.75rem;   /* 44 dp */
+  height: 1.5rem;   /* 24 dp */
+  border-radius: var(--r-pill);
+  background: var(--bg-elevated);
+  position: relative;
+  transition: background var(--motion-button);
+  flex-shrink: 0;
+}
+
+.toggleTrackOn { background: var(--accent-genesis); }
+
+.toggleThumb {
+  position: absolute;
+  top: 0.125rem;
+  left: 0.125rem;
+  width: 1.25rem;   /* 20 dp */
+  height: 1.25rem;
+  border-radius: var(--r-pill);
+  background: var(--text-on-accent);
+  transition: transform 150ms ease;
+}
+
+.toggleThumbOn { transform: translateX(1.25rem); }
+
+/* ── Nav row chevron ────────────────────────────────────────────────── */
+.chevron {
+  font-size: 1.25rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* ── Version footer ─────────────────────────────────────────────────── */
+.versionFooter {
+  font-size: var(--t-micro-size);
+  color: var(--text-muted);
+  text-align: center;
+  padding: var(--s-lg) 0 var(--s-sm);
+  margin: 0;
+}

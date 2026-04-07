@@ -1,0 +1,297 @@
+/* Full-bleed battle layout. No safe-area padding (ScreenShell uses 'top-only'). */
+
+.root {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-deep);
+  overflow: hidden;
+}
+
+/* ── Timeline strip (28dp left column) ─────────────────────────────── */
+.timeline {
+  width: 1.75rem;  /* 28 dp */
+  height: 100%;
+  background: var(--bg-elevated);
+  border-right: 1px solid var(--bg-panel);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.timelineAxis {
+  position: absolute;
+  left: 50%;
+  top: 2.5rem;
+  bottom: 2.5rem;
+  width: 2px;
+  transform: translateX(-50%);
+  background: var(--bg-panel);
+}
+
+.marker {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1.5rem;   /* 24 dp */
+  height: 1.5rem;
+  border-radius: var(--r-pill);
+  border: 2px solid transparent;
+  background: var(--bg-card);
+}
+
+.markerAlly  { border-color: var(--accent-genesis); }
+.markerEnemy { border-color: var(--accent-danger); }
+
+.markerActive {
+  width: 1.75rem;  /* 28 dp */
+  height: 1.75rem;
+  animation: markerPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes markerPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4); }
+  50%       { box-shadow: 0 0 0 0.375rem rgba(139, 92, 246, 0); }
+}
+
+/* ── Main content area (332dp right column) ────────────────────────── */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Opponent info card ─────────────────────────────────────────────── */
+.opponentCard {
+  display: flex;
+  align-items: center;
+  gap: var(--s-sm);
+  padding: var(--s-sm) var(--s-sm);
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--bg-elevated);
+  height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: height 150ms ease, opacity 150ms ease;
+  flex-shrink: 0;
+}
+
+.opponentCardVisible {
+  height: 5.125rem;  /* ~82 dp — portrait + bars */
+  opacity: 1;
+}
+
+.opponentPortrait {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  border: 2px solid var(--rarity-3);
+}
+
+.opponentInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.opponentName {
+  font-size: var(--t-subheading-size);
+  font-weight: var(--t-subheading-weight);
+  color: var(--text-primary);
+}
+
+.opponentClass {
+  font-size: var(--t-micro-size);
+  color: var(--text-secondary);
+}
+
+/* ── Action log ─────────────────────────────────────────────────────── */
+.log {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--s-sm);
+  background: var(--bg-deep);
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg-elevated) transparent;
+}
+
+.logEntry {
+  font-size: var(--t-micro-size);
+  color: var(--text-muted);
+  line-height: var(--t-micro-lh);
+  padding: 0.125rem 0;
+  margin: 0;
+}
+
+/* ── Status slots pill ──────────────────────────────────────────────── */
+.statusSlots {
+  height: 2.75rem;  /* 44 dp */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--s-sm);
+  background: var(--bg-panel);
+  border-top: 1px solid var(--bg-elevated);
+  flex-shrink: 0;
+}
+
+.statusPlaceholder {
+  font-size: var(--t-micro-size);
+  color: var(--text-muted);
+}
+
+/* ── Bottom panel (portrait + action grid) ──────────────────────────── */
+.bottom {
+  display: flex;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--bg-elevated);
+  flex-shrink: 0;
+}
+
+/* ── Portrait panel ─────────────────────────────────────────────────── */
+.portrait {
+  width: 8.125rem;  /* 130 dp */
+  padding: var(--s-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.turnLabel { font-size: var(--t-micro-size); color: var(--text-secondary); }
+.tickLabel { font-size: var(--t-micro-size); color: var(--text-muted); }
+
+.portraitCircle {
+  width: 6.25rem;  /* 100 dp */
+  height: 6.25rem;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  border: 3px solid var(--accent-genesis);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  color: var(--text-muted);
+  align-self: center;
+}
+
+.lvlBadge {
+  font-size: var(--t-micro-size);
+  color: var(--accent-gold);
+  align-self: center;
+}
+
+.barRow {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--s-xs);
+}
+
+.barLabel {
+  font-size: var(--t-micro-size);
+  color: var(--text-muted);
+  width: 1rem;
+  flex-shrink: 0;
+}
+
+/* ── Action grid ────────────────────────────────────────────────────── */
+.actionGrid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: var(--s-sm);
+  gap: var(--s-xs);
+}
+
+.actionRow {
+  display: flex;
+  gap: var(--s-xs);
+}
+
+.actionBtn {
+  flex: 1;
+  height: 3rem;  /* 48 dp */
+  background: var(--bg-elevated);
+  border: none;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-sans);
+  transition: transform var(--motion-button);
+}
+
+.actionBtn:active:not(:disabled) { transform: scale(0.95); }
+.actionBtn:disabled { opacity: 0.2; }
+
+.actionBtnBasic  { background: var(--bg-elevated); }
+.actionBtnEnd    { background: var(--bg-card); }
+
+.actionBtnName {
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  color: var(--text-primary);
+}
+
+.actionBtnMeta {
+  font-size: var(--t-micro-size);
+  color: var(--text-muted);
+}
+
+.skillRows {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-xs);
+  flex: 1;
+}
+
+.skillBtn {
+  background: var(--bg-card);
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  display: grid;
+  grid-template-areas: "name lvl" "tu   chrg";
+  grid-template-columns: 1fr auto;
+  padding: var(--s-xs);
+  gap: 0.125rem;
+  font-family: var(--font-sans);
+  min-height: 4.5rem;  /* 72 dp */
+  transition: border-color var(--motion-button), transform var(--motion-button);
+  align-content: space-between;
+}
+
+.skillBtn:active:not(:disabled) { transform: scale(0.95); }
+
+.skillBtnDisabled { opacity: 0.2; cursor: default; }
+
+.skillName { grid-area: name; font-size: var(--t-label-size); color: var(--text-primary); text-align: left; }
+.skillLvl  { grid-area: lvl;  font-size: var(--t-micro-size); color: var(--accent-gold); text-align: right; }
+.skillTu   { grid-area: tu;   font-size: var(--t-micro-size); color: var(--text-muted); text-align: left; }
+.skillChrg { grid-area: chrg; font-size: var(--t-micro-size); color: var(--text-secondary); text-align: right; }
+
+.collapseBtn {
+  height: 2rem;
+  background: var(--bg-elevated);
+  border: none;
+  border-radius: var(--r-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: var(--t-label-size);
+  width: 100%;
+  transition: background var(--motion-button);
+}
+
+.collapseBtn:active { background: var(--bg-card); }

@@ -1,0 +1,26 @@
+.shell {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: var(--bg-deep);
+}
+
+/* All four device edges inset — use for menus, roster, settings */
+.full {
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+}
+
+/* Top edge only — use for battle (game canvas fills the bottom edge) */
+.top-only {
+  padding-top: var(--safe-top);
+}
+
+/* No padding — use for splash and other full-bleed screens */
+.none {
+  /* intentionally empty */
+}

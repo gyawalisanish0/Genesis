@@ -1,0 +1,180 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-deep);
+  overflow: hidden;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  height: 3.5rem;  /* 56 dp */
+  padding: 0 var(--s-xs);
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--bg-elevated);
+  flex-shrink: 0;
+  gap: var(--s-xs);
+}
+
+.headerTitle {
+  flex: 1;
+  text-align: center;
+  font-size: var(--t-subheading-size);
+  font-weight: var(--t-subheading-weight);
+  color: var(--text-primary);
+}
+
+.iconBtn {
+  width: var(--touch-min);
+  height: var(--touch-min);
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 1.125rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-pill);
+  flex-shrink: 0;
+}
+
+.searchInput {
+  flex: 1;
+  background: var(--bg-elevated);
+  border: none;
+  border-radius: var(--r-md);
+  color: var(--text-primary);
+  font-size: var(--t-body-size);
+  padding: 0.5rem var(--s-sm);
+  height: 2.25rem;
+  outline: none;
+}
+
+/* ── Class filter tabs ──────────────────────────────────────────────── */
+.classTabBar {
+  display: flex;
+  gap: 0;
+  padding: 0 var(--s-sm);
+  height: 3rem;  /* 48 dp */
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--bg-elevated);
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.classTabBar::-webkit-scrollbar { display: none; }
+
+.classTab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  font-family: var(--font-sans);
+  padding: 0 var(--s-md);
+  height: 100%;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--motion-button), border-color var(--motion-button);
+}
+
+.classTabActive {
+  color: var(--accent-genesis);
+  border-bottom-color: var(--accent-genesis);
+}
+
+/* ── Rarity chips ───────────────────────────────────────────────────── */
+.rarityBar {
+  display: flex;
+  gap: var(--s-sm);
+  padding: var(--s-sm) var(--s-md);
+  height: 2.5rem;  /* 40 dp */
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.rarityBar::-webkit-scrollbar { display: none; }
+
+.rarityChip {
+  background: var(--bg-elevated);
+  border: none;
+  border-radius: var(--r-pill);
+  color: var(--text-muted);
+  font-size: var(--t-micro-size);
+  padding: 0.25rem 0.625rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--motion-button), color var(--motion-button);
+  min-height: 1.75rem;
+  font-family: var(--font-sans);
+}
+
+.rarityChipActive {
+  background: var(--accent-genesis);
+  color: var(--text-on-accent);
+}
+
+/* ── Character grid ─────────────────────────────────────────────────── */
+.grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-sm);
+  padding: var(--s-sm) var(--s-md);
+  overflow-y: auto;
+  align-content: start;
+}
+
+.card {
+  background: var(--bg-card);
+  border-radius: var(--r-md);
+  border-left: 3px solid var(--rarity-1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--s-sm) var(--s-sm) var(--s-sm);
+  gap: var(--s-xs);
+  min-height: 12rem;  /* 192 dp */
+  cursor: pointer;
+  transition: transform var(--motion-button);
+}
+
+.card:active { transform: scale(0.97); }
+
+.cardName {
+  font-size: var(--t-subheading-size);
+  font-weight: var(--t-subheading-weight);
+  color: var(--text-primary);
+  margin: 0;
+  text-align: center;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cardMeta {
+  font-size: var(--t-label-size);
+  color: var(--text-secondary);
+  margin: 0;
+  text-align: center;
+}
+
+.cardBar { width: 100%; }
+
+.emptyMsg {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--t-body-size);
+  padding: var(--s-2xl) 0;
+  margin: 0;
+}

@@ -1,0 +1,32 @@
+.portrait {
+  border-radius: var(--r-md);
+  border: 2px solid transparent;
+  background: var(--bg-elevated);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.initial {
+  font-size: var(--t-subheading-size);
+  font-weight: var(--t-subheading-weight);
+  color: var(--text-secondary);
+}
+
+/* Size variants */
+.sm  { width: 2.5rem;  height: 2.5rem; }   /* 40 dp */
+.md  { width: 4rem;    height: 4rem; }     /* 64 dp */
+.lg  { width: 6rem;    height: 6rem; }     /* 96 dp */
+.xl  { width: 7.5rem;  height: 7.5rem; }  /* 120 dp */
+
+.greyscale {
+  filter: grayscale(1) brightness(0.6);
+}

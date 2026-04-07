@@ -1,0 +1,87 @@
+name: Deploy Web
+
+# Manual trigger only — run from Actions tab when ready to ship.
+on:
+  workflow_dispatch:
+    inputs:
+      label:
+        description: 'Deployment label (informational only)'
+        required: false
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+# Required for GitHub Pages deployment
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one deployment runs at a time; new runs cancel queued ones.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+# ── Jobs ───────────────────────────────────────────────────────────────────────
+jobs:
+  build:
+    name: Build Vite app
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: genesis-web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: genesis-web
+        run: npm ci
+
+      - name: Run tests
+        working-directory: genesis-web
+        run: npm run test
+
+      - name: Build
+        working-directory: genesis-web
+        run: npm run build
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: genesis-web/dist
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-24.04
+    # 'github-pages' is the required environment name for actions/deploy-pages.
+    # The user-chosen label is surfaced in the summary only.
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
+
+      - name: Deployment summary
+        run: |
+          echo "### Web deployed successfully"        >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |"                >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|"                            >> $GITHUB_STEP_SUMMARY
+          echo "| Label | \`${{ github.event.inputs.label }}\` |"             >> $GITHUB_STEP_SUMMARY
+          echo "| URL | ${{ steps.deploy.outputs.page_url }} |"               >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |"  >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
