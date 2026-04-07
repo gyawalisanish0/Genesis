@@ -1,0 +1,126 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-deep);
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Star field background ──────────────────────────────────────────── */
+.stars {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 20% 15%, rgba(255,255,255,0.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 60% 30%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 80% 60%, rgba(255,255,255,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 40% 75%, rgba(255,255,255,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 10% 85%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(2px 2px at 70% 10%, rgba(139,92,246,0.4) 0%, transparent 100%),
+    radial-gradient(2px 2px at 30% 50%, rgba(139,92,246,0.3) 0%, transparent 100%);
+  animation: drift 12s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes drift {
+  from { background-position: 0 0; }
+  to   { background-position: 0 -40px; }
+}
+
+/* ── Logo zone (centered vertically in upper portion) ───────────────── */
+.logoZone {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-md);
+  padding-top: var(--s-2xl);
+}
+
+.logoMark {
+  width: 7.5rem;    /* 120 dp */
+  height: 7.5rem;
+  border-radius: var(--r-xl);
+  background: linear-gradient(135deg, var(--accent-genesis), var(--accent-info));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--t-display-size);
+  font-weight: var(--t-display-weight);
+  color: var(--text-on-accent);
+  animation: pulse 2s ease-in-out infinite;
+  box-shadow: 0 0 2rem rgba(139, 92, 246, 0.4);
+}
+
+.logoDone {
+  animation: none;
+  transform: scale(1.04);
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.04); }
+}
+
+.title {
+  font-size: var(--t-display-size);
+  font-weight: var(--t-display-weight);
+  line-height: var(--t-display-lh);
+  color: var(--text-primary);
+  letter-spacing: 0.5rem;
+  margin: 0;
+}
+
+.tagline {
+  font-size: var(--t-body-size);
+  color: var(--text-secondary);
+  margin: 0;
+  text-align: center;
+}
+
+.errorText { color: var(--accent-danger); }
+
+/* ── Progress bar zone ──────────────────────────────────────────────── */
+.progressZone {
+  display: flex;
+  align-items: center;
+  gap: var(--s-sm);
+  width: 12.5rem;  /* 200 dp */
+  margin-bottom: var(--s-xl);
+}
+
+.barTrack {
+  flex: 1;
+  height: 0.5rem;  /* 8 dp */
+  background: var(--bg-elevated);
+  border-radius: var(--r-pill);
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  background: var(--accent-genesis);
+  border-radius: var(--r-pill);
+  transition: width var(--motion-bar);
+}
+
+.progressLabel {
+  font-size: var(--t-micro-size);
+  color: var(--text-muted);
+  width: 2rem;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ── Footer ────────────────────────────────────────────────────────── */
+.footer {
+  font-size: var(--t-micro-size);
+  color: var(--text-muted);
+  text-align: center;
+  padding-bottom: var(--s-lg);
+}

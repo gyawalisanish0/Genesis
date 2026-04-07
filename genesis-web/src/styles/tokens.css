@@ -1,26 +1,30 @@
 /* Genesis Design System — CSS custom properties
- * Converted from KV RGBA tuples in the original Kivy codebase.
- * Import this file once in main.tsx; use variables everywhere else.
+ * Matches docs/ui/00_design_system.md exactly.
+ * Import once in main.tsx; use variables everywhere else.
  */
 
 :root {
-  /* ── Background ──────────────────────────────────────────────────────── */
-  --bg-deep:     #110f18;   /* screen backgrounds          */
-  --bg-panel:    #15131d;   /* header / footer bars        */
-  --bg-card:     #1c1a26;   /* card surfaces               */
-  --bg-elevated: #242035;   /* elevated / selected cards   */
+  /* ── Backgrounds ──────────────────────────────────────────────────────── */
+  --bg-deep:     #0a0a14;           /* root background, darkest layer       */
+  --bg-panel:    #12122a;           /* cards, panels, drawers               */
+  --bg-card:     #1c1c3a;           /* interactive card surfaces             */
+  --bg-elevated: #26264a;           /* buttons, focused states               */
+  --bg-overlay:  rgba(0, 0, 0, 0.8);/* modal backdrop                       */
 
   /* ── Accent ──────────────────────────────────────────────────────────── */
-  --accent-genesis: #8b5cf6;  /* primary brand purple        */
-  --accent-gold:    #f59e0b;  /* rewards, rarity 5, gold     */
-  --accent-danger:  #ef4444;  /* defeat, errors              */
-  --accent-heal:    #10b981;  /* HP bars, heal               */
-  --accent-ap:      #f59e0b;  /* AP bars                     */
+  --accent-genesis: #8b5cf6;  /* primary brand, active states, timeline     */
+  --accent-gold:    #f59e0b;  /* boosted outcome, rarity 5 / legendary      */
+  --accent-info:    #3b82f6;  /* AP bar, information                        */
+  --accent-heal:    #10b981;  /* healing, positive buffs                    */
+  --accent-warn:    #f97316;  /* tumbling outcome, guard up                 */
+  --accent-danger:  #ef4444;  /* HP bar, damage numbers, death, defeat      */
+  --accent-evasion: #06b6d4;  /* evasion outcome, dodge                     */
 
   /* ── Text ────────────────────────────────────────────────────────────── */
-  --text-primary:   #f1f0ff;
-  --text-secondary: #9b8ec4;
-  --text-muted:     #5c5384;
+  --text-primary:    #f1f0ff;  /* body text, labels                         */
+  --text-secondary:  #9b8ec4;  /* subtitles, metadata                       */
+  --text-muted:      #5c5480;  /* disabled, placeholder                     */
+  --text-on-accent:  #ffffff;  /* text on coloured buttons / filled badges  */
 
   /* ── Rarity colours ──────────────────────────────────────────────────── */
   --rarity-1: #6b7280;  /* Common    */
@@ -28,28 +32,71 @@
   --rarity-3: #3b82f6;  /* Rare      */
   --rarity-4: #8b5cf6;  /* Epic      */
   --rarity-5: #f59e0b;  /* Legendary */
-
-  /* ── Safe area insets (overridden by CSS env() on real devices) ───────── */
-  --safe-top:    env(safe-area-inset-top,    24px);
-  --safe-bottom: env(safe-area-inset-bottom, 48px);
-  --safe-left:   env(safe-area-inset-left,   0px);
-  --safe-right:  env(safe-area-inset-right,  0px);
-
-  /* ── Touch ───────────────────────────────────────────────────────────── */
-  --touch-min: 48px;
+  --rarity-6: #f97316;  /* Mythic    */
+  /* Rarity 7 (Omega) is a gradient — apply inline: linear-gradient(135deg, #8b5cf6, #f59e0b) */
 
   /* ── Typography ──────────────────────────────────────────────────────── */
-  --font-sans: system-ui, -apple-system, sans-serif;
-  --font-size-xs:  0.625rem;   /* 10px */
-  --font-size-sm:  0.6875rem;  /* 11px */
-  --font-size-md:  0.8125rem;  /* 13px */
-  --font-size-lg:  0.9375rem;  /* 15px */
-  --font-size-xl:  1rem;       /* 16px */
-  --font-size-2xl: 1.25rem;    /* 20px */
+  --font-sans: 'Nunito', system-ui, -apple-system, sans-serif;
 
-  /* ── Radius ──────────────────────────────────────────────────────────── */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-pill: 999px;
+  /* Display — 36sp / Bold 700 / lh 44sp */
+  --t-display-size:   2.25rem;
+  --t-display-weight: 700;
+  --t-display-lh:     2.75rem;
+
+  /* Heading — 22sp / SemiBold 600 / lh 28sp */
+  --t-heading-size:   1.375rem;
+  --t-heading-weight: 600;
+  --t-heading-lh:     1.75rem;
+
+  /* Subheading — 16sp / SemiBold 600 / lh 22sp */
+  --t-subheading-size:   1rem;
+  --t-subheading-weight: 600;
+  --t-subheading-lh:     1.375rem;
+
+  /* Body — 14sp / Regular 400 / lh 20sp */
+  --t-body-size:   0.875rem;
+  --t-body-weight: 400;
+  --t-body-lh:     1.25rem;
+
+  /* Label — 12sp / Medium 500 / lh 16sp */
+  --t-label-size:   0.75rem;
+  --t-label-weight: 500;
+  --t-label-lh:     1rem;
+
+  /* Micro — 10sp / Regular 400 / lh 14sp */
+  --t-micro-size:   0.625rem;
+  --t-micro-weight: 400;
+  --t-micro-lh:     0.875rem;
+
+  /* ── Spacing scale ───────────────────────────────────────────────────── */
+  --s-xs:  0.25rem;   /*  4 dp */
+  --s-sm:  0.5rem;    /*  8 dp */
+  --s-md:  1rem;      /* 16 dp */
+  --s-lg:  1.5rem;    /* 24 dp */
+  --s-xl:  2rem;      /* 32 dp */
+  --s-2xl: 3rem;      /* 48 dp */
+
+  /* ── Corner radius ───────────────────────────────────────────────────── */
+  --r-sm:   0.25rem;  /*  4 dp */
+  --r-md:   0.5rem;   /*  8 dp */
+  --r-lg:   1rem;     /* 16 dp */
+  --r-xl:   1.5rem;   /* 24 dp */
+  --r-pill: 999px;
+
+  /* ── Touch target (minimum 48 × 48 dp) ──────────────────────────────── */
+  --touch-min: 3rem;  /* 48 dp */
+
+  /* ── Motion durations & easing ───────────────────────────────────────── */
+  --motion-screen:     300ms ease-out;   /* screen push/pop          */
+  --motion-modal-in:   250ms ease-out;   /* bottom sheet slide-up    */
+  --motion-modal-out:  200ms ease-in;    /* bottom sheet slide-down  */
+  --motion-bar:        400ms ease-out;   /* HP / AP bar width tween  */
+  --motion-button:      80ms ease-in;    /* button press scale       */
+  --motion-timeline:   200ms ease-in-out;/* timeline marker move     */
+
+  /* ── Safe-area insets (overridden by CSS env() on real devices) ──────── */
+  --safe-top:    env(safe-area-inset-top,    1.5rem);  /* fallback 24 dp */
+  --safe-bottom: env(safe-area-inset-bottom, 3rem);    /* fallback 48 dp */
+  --safe-left:   env(safe-area-inset-left,   0rem);
+  --safe-right:  env(safe-area-inset-right,  0rem);
 }

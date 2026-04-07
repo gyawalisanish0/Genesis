@@ -1,0 +1,161 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-deep);
+}
+
+/* ── Header ─────────────────────────────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--s-md);
+  height: 3.5rem;  /* 56 dp */
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--bg-elevated);
+  flex-shrink: 0;
+}
+
+.levelBadge {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--r-pill);
+}
+
+.wordmark {
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  letter-spacing: 0.25rem;
+  color: var(--accent-genesis);
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: var(--s-xs);
+}
+
+.currencyChip {
+  background: var(--bg-elevated);
+  color: var(--accent-gold);
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--r-pill);
+}
+
+.iconBtn {
+  width: var(--touch-min);
+  height: var(--touch-min);
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-pill);
+}
+
+/* ── Hero zone ──────────────────────────────────────────────────────── */
+.heroZone {
+  position: relative;
+  height: 13.75rem;  /* 220 dp */
+  background: var(--bg-deep);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.heroGlow {
+  position: absolute;
+  width: 12rem;
+  height: 12rem;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.heroArt {
+  width: 11.25rem;  /* 180 dp */
+  height: 12.5rem;  /* 200 dp */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.heroInitial {
+  font-size: 6rem;
+  font-weight: 700;
+  color: rgba(139, 92, 246, 0.3);
+  user-select: none;
+}
+
+.universeBadge {
+  position: absolute;
+  bottom: var(--s-sm);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: var(--t-micro-size);
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--r-pill);
+}
+
+/* ── Navigation ─────────────────────────────────────────────────────── */
+.nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-sm);
+  padding: var(--s-sm) var(--s-md) var(--s-md);
+}
+
+.navBtn {
+  border: none;
+  border-radius: var(--r-md);
+  font-family: var(--font-sans);
+  font-size: var(--t-subheading-size);
+  font-weight: var(--t-subheading-weight);
+  cursor: pointer;
+  width: 100%;
+  min-height: var(--touch-min);
+  transition: transform var(--motion-button);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.navBtn:active { transform: scale(0.97); }
+
+.navBtnPlay {
+  height: 4rem;  /* 64 dp */
+  background: var(--accent-genesis);
+  color: var(--text-on-accent);
+}
+
+.navBtnSecondary {
+  height: 3.5rem;  /* 56 dp */
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.navRow {
+  display: flex;
+  gap: var(--s-sm);
+}
+
+.navRow .navBtn { flex: 1; }
+
+.navBtnCard {
+  height: 3rem;  /* 48 dp */
+  background: var(--bg-card);
+  color: var(--text-primary);
+}

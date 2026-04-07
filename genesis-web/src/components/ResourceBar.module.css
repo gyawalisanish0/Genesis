@@ -1,0 +1,33 @@
+.track {
+  position: relative;
+  width: 100%;
+  background: var(--bg-elevated);
+  border-radius: var(--r-pill);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  border-radius: var(--r-pill);
+  transition: width var(--motion-bar);
+}
+
+.label {
+  position: absolute;
+  right: 0.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: var(--t-micro-size);
+  color: var(--text-on-accent);
+  line-height: 1;
+}
+
+/* Variant heights and fill colours */
+.hp { height: 0.5rem; }    /* 8 dp */
+.hp .fill { background: var(--accent-danger); }
+
+.ap { height: 0.375rem; }  /* 6 dp */
+.ap .fill { background: var(--accent-info); }
+
+.xp { height: 0.25rem; }   /* 4 dp */
+.xp .fill { background: var(--accent-genesis); }

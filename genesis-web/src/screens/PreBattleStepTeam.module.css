@@ -1,0 +1,129 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-md);
+  padding: var(--s-md);
+  overflow-y: auto;
+  flex: 1;
+}
+
+.sectionTitle {
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  color: var(--text-muted);
+  letter-spacing: 0.125rem;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+/* ── Team slots ──────────────────────────────────────────────────────── */
+.slots {
+  display: flex;
+  gap: var(--s-md);
+}
+
+.slot {
+  flex: 1;
+  background: var(--bg-card);
+  border-radius: var(--r-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-xs);
+  min-height: 5.5rem;  /* 88 dp */
+  position: relative;
+  padding: var(--s-sm);
+}
+
+.slotEmpty {
+  border: 2px dashed var(--bg-elevated);
+  background: transparent;
+}
+
+.slotName {
+  font-size: var(--t-micro-size);
+  color: var(--text-secondary);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.addIcon {
+  font-size: 2rem;
+  color: var(--text-muted);
+}
+
+.removeBtn {
+  position: absolute;
+  top: var(--s-xs);
+  right: var(--s-xs);
+  width: 1.25rem;
+  height: 1.25rem;
+  background: var(--accent-danger);
+  border: none;
+  border-radius: var(--r-pill);
+  color: var(--text-on-accent);
+  font-size: var(--t-micro-size);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Roster grid ─────────────────────────────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-sm);
+}
+
+.card {
+  background: var(--bg-card);
+  border: 2px solid transparent;
+  border-radius: var(--r-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-xs);
+  padding: var(--s-sm);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  position: relative;
+  transition: border-color var(--motion-button), opacity var(--motion-button), transform var(--motion-button);
+}
+
+.card:active { transform: scale(0.97); }
+
+.cardSelected { border-color: var(--accent-genesis); }
+
+.cardDimmed { opacity: 0.4; }
+
+.cardName {
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.cardMeta {
+  font-size: var(--t-micro-size);
+  color: var(--accent-gold);
+}
+
+.checkmark {
+  position: absolute;
+  top: var(--s-xs);
+  right: var(--s-xs);
+  background: var(--accent-genesis);
+  color: var(--text-on-accent);
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: var(--r-pill);
+  font-size: var(--t-micro-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

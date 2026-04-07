@@ -1,0 +1,103 @@
+.wizard {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-deep);
+}
+
+/* ── Wizard header ──────────────────────────────────────────────────── */
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 3.5rem;  /* 56 dp */
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--bg-elevated);
+  padding: var(--s-xs) var(--s-sm);
+  flex-shrink: 0;
+  position: relative;
+}
+
+.backBtn {
+  position: absolute;
+  left: var(--s-xs);
+  top: 50%;
+  transform: translateY(-50%);
+  width: var(--touch-min);
+  height: var(--touch-min);
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 1.125rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-pill);
+}
+
+.stepIndicator {
+  display: flex;
+  align-items: center;
+  gap: var(--s-sm);
+  margin-top: var(--s-xs);
+}
+
+.stepDot {
+  width: 0.625rem;   /* 10 dp */
+  height: 0.625rem;
+  border-radius: var(--r-pill);
+  background: var(--bg-elevated);
+  transition: width var(--motion-button), background var(--motion-button);
+}
+
+.stepDotActive {
+  width: 1rem;       /* 16 dp */
+  background: var(--accent-genesis);
+}
+
+.stepLabel {
+  font-size: var(--t-micro-size);
+  color: var(--text-muted);
+  letter-spacing: 0.0625rem;
+}
+
+.headerSpacer { flex: 1; }
+
+/* ── Step content ───────────────────────────────────────────────────── */
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Sticky footer with CONTINUE button ────────────────────────────── */
+.footer {
+  padding: var(--s-md);
+  background: var(--bg-panel);
+  border-top: 1px solid var(--bg-elevated);
+  flex-shrink: 0;
+}
+
+.continueBtn {
+  width: 100%;
+  height: 3.5rem;   /* 56 dp */
+  background: var(--accent-genesis);
+  border: none;
+  border-radius: var(--r-md);
+  color: var(--text-on-accent);
+  font-family: var(--font-sans);
+  font-size: var(--t-subheading-size);
+  font-weight: var(--t-subheading-weight);
+  cursor: pointer;
+  transition: transform var(--motion-button), opacity var(--motion-button);
+}
+
+.continueBtn:active:not(:disabled) { transform: scale(0.97); }
+
+.continueBtnDisabled {
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  cursor: default;
+}
