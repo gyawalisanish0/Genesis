@@ -14,6 +14,53 @@ Genesis is a turn-based tactical mobile game.
 
 ---
 
+## Game Design Principles
+
+These principles come from `CONCEPT.md` and are **load-bearing** for the
+architecture. Any code in `core/` that violates them is wrong by definition,
+even if it compiles and passes tests.
+
+### 1. The system is dynamic, not absolute
+
+The framework provides **hooks**, not behaviour. The Tick stream, dice table,
+AP economy, stats, and status slots are scaffolding — *what actually happens
+on the battlefield is defined by the skill, item, or passive itself*.
+
+- `core/` must never hardcode what a skill "is allowed to do"
+- The dice resolver must expose alteration hooks (probability shifts, rerolls,
+  outcome overrides) so skill/item definitions can drive resolution
+- Status effects must carry an open payload (stat mods, tick-interval effects,
+  custom hooks) — not a fixed enum of effect types
+- Skill `effectType` is declared on the skill, not constrained by the framework
+- New mechanics should be expressible by adding a JSON definition, **not** by
+  editing `core/` — if `core/` needs a code change to support a new skill,
+  the hook is in the wrong place
+
+### 2. No fixed character or team count
+
+Just like the Tick stream is unbounded in time, the unit roster is unbounded
+in count. The combat framework treats units as an open collection.
+
+- **Never** hardcode a team-size constant in `core/` (no `TEAM_SIZE_MAX`,
+  no `MAX_PLAYERS`, no fixed-length arrays for units)
+- Combat math, AI lookahead, and timeline rendering must scale to arbitrary
+  unit counts
+- **Modes are the only layer allowed to impose a cap** — via an optional
+  `maxTeamSize?: number` (or similar) field on `ModeDef`. Absent = unlimited
+- A mode-imposed limit is an exception applied at the mode boundary, not a
+  property of the combat system
+
+### 3. Tick stream is continuous and infinite
+
+- No rounds, no turns, no global turn counter — `core/` must not contain a
+  `currentRound` or `turnNumber` variable
+- `BattleResult` and similar records use `ticksElapsed`, never `turns`
+- Every unit owns its own `tickPosition`; battle state is the set of all
+  positions on a shared infinite stream
+
+---
+
+
 ## Tech Stack
 
 | Layer | Tool |
