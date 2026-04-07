@@ -50,13 +50,17 @@ in count. The combat framework treats units as an open collection.
 - A mode-imposed limit is an exception applied at the mode boundary, not a
   property of the combat system
 
-### 3. Tick stream is continuous and infinite
+### 3. Tick stream is the only source of action ordering
 
-- No rounds, no turns, no global turn counter — `core/` must not contain a
-  `currentRound` or `turnNumber` variable
-- `BattleResult` and similar records use `ticksElapsed`, never `turns`
+- **No global round / turn counter** that gates when units act — `core/`
+  must not contain a `currentRound` or shared `turnNumber` variable, and
+  initiative is never decided by "whose turn it is in the round"
 - Every unit owns its own `tickPosition`; battle state is the set of all
   positions on a shared infinite stream
+- **Per-character action counters are fine** — counting how many actions
+  a unit has taken (for XP scaling, stats, telemetry, `BattleResult.turns`,
+  etc.) is a runtime metric, not a round system. The rule is about
+  initiative truth, not vocabulary
 
 ---
 
