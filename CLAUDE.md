@@ -52,6 +52,7 @@ Genesis/
 │       ├── core/                 # Pure TS game logic — zero UI imports
 │       │   ├── types.ts
 │       │   ├── constants.ts
+│       │   ├── screen-types.ts
 │       │   ├── unit.ts
 │       │   ├── GameContext.ts    # Zustand store
 │       │   ├── combat/
@@ -60,15 +61,20 @@ Genesis/
 │       │   │   ├── DiceResolver.ts
 │       │   │   └── index.ts
 │       │   └── __tests__/
-│       ├── services/             # Side-effectful singletons; Capacitor allowed
-│       │   ├── DataService.ts
-│       │   └── DisplayService.ts
-│       ├── scenes/               # Phaser scenes — Phaser imports only
-│       │   └── BattleScene.ts
+│       ├── navigation/           # Screen routing, safe-area, back-button
+│       │   ├── screenRegistry.ts
+│       │   ├── ScreenContext.tsx
+│       │   ├── ScreenShell.tsx
+│       │   └── useScreen.ts
+│       ├── services/             # (planned) Side-effectful singletons; Capacitor allowed
+│       │   ├── DataService.ts    # (planned) JSON loader + Zod validation
+│       │   └── DisplayService.ts # (planned) StatusBar / fullscreen control
+│       ├── scenes/               # (planned) Phaser scenes — Phaser imports only
+│       │   └── BattleScene.ts    # (planned)
 │       ├── screens/              # React screen components
 │       │   ├── SplashScreen.tsx
 │       │   ├── MainMenuScreen.tsx
-│       │   ├── PreBattleScreen.tsx
+│       │   ├── PreBattleScreen.tsx  # split into PreBattleStep{Mode,Team,Items}
 │       │   ├── BattleScreen.tsx
 │       │   ├── BattleResultScreen.tsx
 │       │   ├── RosterScreen.tsx
@@ -76,10 +82,15 @@ Genesis/
 │       ├── components/           # Reusable React widgets
 │       ├── styles/
 │       │   └── tokens.css        # CSS custom properties (design system)
-│       ├── App.tsx               # React Router root + Capacitor back-button
+│       ├── App.tsx               # React Router root + ScreenProvider
 │       └── main.tsx              # Vite entry point
-└── app/                          # Legacy Python/Kivy tree (archived, do not modify)
 ```
+
+> **Note:** `services/` and `scenes/` are reserved directories — the architecture
+> depends on them but they have not yet been created. Any code requiring a
+> service or Phaser scene must add the directory and module rather than
+> bypassing the layer. The legacy Python/Kivy prototype has been removed from
+> this repository.
 
 ---
 

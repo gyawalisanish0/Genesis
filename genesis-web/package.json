@@ -12,15 +12,15 @@
     "lint":  "eslint src"
   },
   "dependencies": {
-    "phaser":           "^3.87.0",
+    "phaser":           "^3.90.0",
     "react":            "^18.3.1",
     "react-dom":        "^18.3.1",
-    "react-router-dom": "^6.28.0",
-    "zustand":          "^4.5.5",
-    "zod":              "^3.23.8",
-    "@capacitor/core":        "^6.2.0",
-    "@capacitor/app":         "^6.0.2",
-    "@capacitor/status-bar":  "^6.0.1"
+    "react-router-dom": "^6.30.3",
+    "zustand":          "^4.5.7",
+    "zod":              "^3.25.76",
+    "@capacitor/core":        "^6.2.1",
+    "@capacitor/app":         "^6.0.3",
+    "@capacitor/status-bar":  "^6.0.3"
   },
   "devDependencies": {
     "@types/react":            "^18.3.12",
