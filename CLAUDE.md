@@ -125,14 +125,74 @@ Each layer may only import from layers to its left.
 
 - **Menus / screens**: standard React `onClick` / `onPointerDown` handlers
 - **Battle canvas**: Phaser input system (`this.input.on('pointerdown', ...)`)
-- **Android back button**: one global listener in `App.tsx` via Capacitor `@capacitor/app`
-  ```typescript
-  App.addListener('backButton', ({ canGoBack }) => {
-    if (canGoBack) window.history.back()
-    else App.exitApp()
-  })
-  ```
+- **Android back button**: handled by `ScreenProvider` via Capacitor — one listener, never re-registered
 - All timing thresholds (long-press, double-tap, swipe) are constants in `src/core/constants.ts`
+
+---
+
+## Screen System
+
+All screen routing, lifecycle, safe-area padding, and back-button behaviour flows through the screen handling system in `src/navigation/`.
+
+### Key files
+
+| File | Purpose |
+|---|---|
+| `src/core/screen-types.ts` | Pure TS types: `ScreenId`, `ScreenConfig`, `SafeAreaMode`, `ScreenLifecycleHooks` |
+| `src/navigation/screenRegistry.ts` | `SCREEN_IDS` constants + `SCREEN_REGISTRY` map |
+| `src/navigation/ScreenContext.tsx` | React context + `ScreenProvider` |
+| `src/navigation/useScreen.ts` | Hook for all screens |
+| `src/navigation/ScreenShell.tsx` | Safe-area wrapper component |
+
+### Rules
+
+- **Always use `SCREEN_IDS`** for navigation targets — never string literals for routes
+- **Every screen must render `<ScreenShell>` as its outermost element** — this applies the correct safe-area padding automatically
+- **Use `useScreen(hooks?)` inside every screen** — it returns `{ screen, safeInsets, navigateTo }`
+- **`ScreenProvider` must be a direct child of `<HashRouter>`** in `App.tsx` (it calls `useLocation`)
+- **Back-button override**: pass `onBack: () => boolean` in the hooks argument to `useScreen()`; return `true` to consume the event, `false` to fall through to the default
+
+### `SafeAreaMode` values
+
+| Value | When to use |
+|---|---|
+| `'full'` | All 4 edges inset — menus, roster, settings, battle-result |
+| `'top-only'` | Top edge only — battle screen (game canvas fills the bottom) |
+| `'none'` | No insets — splash or full-bleed decorative screens |
+
+### `ScreenConfig` fields
+
+| Field | Purpose |
+|---|---|
+| `canGoBack` | `true` → default back = `history.back()` |
+| `exitAppOnBack` | `true` → back exits the app (used for splash, main-menu) |
+| `safeAreaMode` | Controls `ScreenShell` padding |
+
+### Example: screen with a back override
+
+```tsx
+export function PreBattleScreen() {
+  const { navigateTo } = useScreen({
+    onEnter: () => { /* load roster data */ },
+    onBack:  () => {
+      if (stepIndex > 0) { setStepIndex(s => s - 1); return true }
+      return false  // let default handler navigate back
+    },
+  })
+  return <ScreenShell>…</ScreenShell>
+}
+```
+
+### In-screen coordination
+
+Complex screens with multiple coordinating children (e.g. BattleScreen: Phaser canvas + timeline + skill buttons) must use a **screen-local context** rather than prop drilling or the global Zustand store.
+
+- Define `src/screens/<Name>Context.tsx` — a React context + `use<Name>Screen()` hook scoped to that screen
+- Child components read from the screen context, never from props or global Zustand directly
+- Screen contexts hold **ephemeral within-session state** (active turn, animation locks, selected targets) — things that don't survive navigation
+- The global Zustand store (`GameContext`) is for **cross-screen persistent state only**: team selection, battle result, settings
+- Phaser scenes communicate with React via a typed callback ref stored in the screen context (e.g. `onBattleEvent`) — never via direct Zustand writes during a Phaser frame
+- **Rule of thumb**: if two sibling components need the same piece of state, lift it to the screen context, not to Zustand
 
 ---
 
