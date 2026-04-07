@@ -1,0 +1,55 @@
+/* Genesis Design System — CSS custom properties
+ * Converted from KV RGBA tuples in the original Kivy codebase.
+ * Import this file once in main.tsx; use variables everywhere else.
+ */
+
+:root {
+  /* ── Background ──────────────────────────────────────────────────────── */
+  --bg-deep:     #110f18;   /* screen backgrounds          */
+  --bg-panel:    #15131d;   /* header / footer bars        */
+  --bg-card:     #1c1a26;   /* card surfaces               */
+  --bg-elevated: #242035;   /* elevated / selected cards   */
+
+  /* ── Accent ──────────────────────────────────────────────────────────── */
+  --accent-genesis: #8b5cf6;  /* primary brand purple        */
+  --accent-gold:    #f59e0b;  /* rewards, rarity 5, gold     */
+  --accent-danger:  #ef4444;  /* defeat, errors              */
+  --accent-heal:    #10b981;  /* HP bars, heal               */
+  --accent-ap:      #f59e0b;  /* AP bars                     */
+
+  /* ── Text ────────────────────────────────────────────────────────────── */
+  --text-primary:   #f1f0ff;
+  --text-secondary: #9b8ec4;
+  --text-muted:     #5c5384;
+
+  /* ── Rarity colours ──────────────────────────────────────────────────── */
+  --rarity-1: #6b7280;  /* Common    */
+  --rarity-2: #10b981;  /* Uncommon  */
+  --rarity-3: #3b82f6;  /* Rare      */
+  --rarity-4: #8b5cf6;  /* Epic      */
+  --rarity-5: #f59e0b;  /* Legendary */
+
+  /* ── Safe area insets (overridden by CSS env() on real devices) ───────── */
+  --safe-top:    env(safe-area-inset-top,    24px);
+  --safe-bottom: env(safe-area-inset-bottom, 48px);
+  --safe-left:   env(safe-area-inset-left,   0px);
+  --safe-right:  env(safe-area-inset-right,  0px);
+
+  /* ── Touch ───────────────────────────────────────────────────────────── */
+  --touch-min: 48px;
+
+  /* ── Typography ──────────────────────────────────────────────────────── */
+  --font-sans: system-ui, -apple-system, sans-serif;
+  --font-size-xs:  0.625rem;   /* 10px */
+  --font-size-sm:  0.6875rem;  /* 11px */
+  --font-size-md:  0.8125rem;  /* 13px */
+  --font-size-lg:  0.9375rem;  /* 15px */
+  --font-size-xl:  1rem;       /* 16px */
+  --font-size-2xl: 1.25rem;    /* 20px */
+
+  /* ── Radius ──────────────────────────────────────────────────────────── */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
+}

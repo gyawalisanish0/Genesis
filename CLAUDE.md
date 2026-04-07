@@ -6,10 +6,10 @@ This file defines the core rules for this repository. All contributors and AI as
 
 ## Project Overview
 
-Genesis is a game project built with Python + Kivy.
+Genesis is a turn-based tactical mobile game.
 
-- **Target platforms**: Android and iOS first; desktop is secondary
-- **UI paradigm**: Mobile-first, touch-native
+- **Target platforms**: Android and iOS first; desktop browser is secondary
+- **UI paradigm**: Mobile-first, touch-native, portrait-only
 - **Philosophy**: Modular, robust, human-readable code above all else — prefer smaller focused modules over large monolithic files
 
 ---
@@ -18,13 +18,17 @@ Genesis is a game project built with Python + Kivy.
 
 | Layer | Tool |
 |---|---|
-| Language | Python 3.11+ |
-| UI Framework | Kivy (KivyMD optional for Material widgets) |
-| Packaging | Buildozer (Android/iOS) |
-| State | Lightweight observable pattern — no heavy frameworks |
-| Data | JSON files — all game content definitions (characters, skills, items, quests) |
-| Low-level Android | pyjnius — Python-Java bridge for Android APIs not exposed by Kivy |
-| Testing | pytest + pytest-kivy |
+| Language | TypeScript 5.x |
+| UI Framework | React 18 + React Router v6 |
+| Game Canvas | Phaser 3 (battle rendering only) |
+| Build Tool | Vite 5 |
+| State | Zustand 4 |
+| Schema Validation | Zod 3 |
+| Styling | CSS Modules + CSS custom properties |
+| Native Bridge | Capacitor 6 (Android / iOS packaging) |
+| Native Plugins | @capacitor/app, @capacitor/status-bar |
+| Testing | Vitest + React Testing Library |
+| Data | JSON files — all game content definitions |
 
 ---
 
@@ -34,41 +38,47 @@ Genesis is a game project built with Python + Kivy.
 Genesis/
 ├── CLAUDE.md
 ├── README.md
-├── buildozer.spec
-├── requirements.txt
-├── main.py                  # Entry point only — no logic here
-├── app/
-│   ├── __init__.py
-│   ├── core/                # Pure Python game logic (zero Kivy imports)
-│   │   ├── __init__.py
-│   │   └── ...
-│   ├── screens/             # One file per screen
-│   │   ├── __init__.py
-│   │   └── ...
-│   ├── components/          # Reusable Kivy widgets
-│   │   ├── __init__.py
-│   │   └── ...
-│   ├── services/            # APIs, persistence, audio, analytics, etc.
-│   │   ├── __init__.py
-│   │   ├── input_service.py # Global input handler — single source of truth for input events
-│   │   └── ...
-│   └── utils/               # Helper functions and classes — stateless preferred, no Kivy imports
-│       ├── __init__.py
-│       ├── input_helpers.py # Stateless helpers: gesture detection, hold timing, swipe math
-│       └── ...
-├── assets/
-│   ├── images/
-│   ├── fonts/
-│   ├── audio/
-│   ├── kv/                  # .kv layout files — mirror app/ structure
-│   └── data/                # JSON definition files — all game content
-│       ├── characters/      # One JSON per character
-│       ├── skills/          # One JSON per skill
-│       ├── items/           # Equipment and relic definitions
-│       ├── quests/          # Mastery Road quest definitions
-│       └── modes/           # Game mode configurations
-└── tests/
-    └── ...
+├── genesis-web/                  # Web project root (Vite + React + Capacitor)
+│   ├── index.html
+│   ├── package.json
+│   ├── vite.config.ts
+│   ├── tsconfig.json
+│   ├── capacitor.config.ts
+│   ├── android/                  # Capacitor-generated Android project
+│   ├── public/
+│   │   ├── data/                 # JSON game content (characters, skills, modes…)
+│   │   └── images/               # 3x PNG assets (primary density)
+│   └── src/
+│       ├── core/                 # Pure TS game logic — zero UI imports
+│       │   ├── types.ts
+│       │   ├── constants.ts
+│       │   ├── unit.ts
+│       │   ├── GameContext.ts    # Zustand store
+│       │   ├── combat/
+│       │   │   ├── TickCalculator.ts
+│       │   │   ├── HitChanceEvaluator.ts
+│       │   │   ├── DiceResolver.ts
+│       │   │   └── index.ts
+│       │   └── __tests__/
+│       ├── services/             # Side-effectful singletons; Capacitor allowed
+│       │   ├── DataService.ts
+│       │   └── DisplayService.ts
+│       ├── scenes/               # Phaser scenes — Phaser imports only
+│       │   └── BattleScene.ts
+│       ├── screens/              # React screen components
+│       │   ├── SplashScreen.tsx
+│       │   ├── MainMenuScreen.tsx
+│       │   ├── PreBattleScreen.tsx
+│       │   ├── BattleScreen.tsx
+│       │   ├── BattleResultScreen.tsx
+│       │   ├── RosterScreen.tsx
+│       │   └── SettingsScreen.tsx
+│       ├── components/           # Reusable React widgets
+│       ├── styles/
+│       │   └── tokens.css        # CSS custom properties (design system)
+│       ├── App.tsx               # React Router root + Capacitor back-button
+│       └── main.tsx              # Vite entry point
+└── app/                          # Legacy Python/Kivy tree (archived, do not modify)
 ```
 
 ---
@@ -77,238 +87,145 @@ Genesis/
 
 ### Layer Ordering (no circular imports)
 ```
-core → services → components → screens → main
+core → services → components/scenes → screens → App
 ```
 Each layer may only import from layers to its left.
 
-### core/
-- **Zero Kivy imports** — game logic must be framework-agnostic and independently testable
-- Contains entities, game state, rules, and algorithms
+### `core/`
+- **Zero UI imports** — no React, no Phaser, no Capacitor
+- Pure TypeScript functions and interfaces
+- Unit is an **immutable value object** — mutation functions return a new object
 
-### screens/
-- One screen = one `.py` file in `screens/` + one matching `.kv` in `assets/kv/`
-- Screens orchestrate components; they do not contain raw game logic
+### `services/`
+- No React imports
+- Capacitor plugin imports allowed, always guarded by platform check:
+  ```typescript
+  import { Capacitor } from '@capacitor/core'
+  if (Capacitor.isNativePlatform()) { /* native-only code */ }
+  ```
+- Accessed as module-level singletons
 
-### components/
-- Self-contained reusable widgets
-- Communicate upward via Kivy events (`dispatch`) — never call parent methods directly
+### `scenes/`
+- Phaser 3 scenes only — no React imports
+- Receives data from React via a typed interface passed at scene start
+- Communicates results back to React via a callback or Zustand store write
 
-### services/
-- Accessed as module-level singletons or via a simple `ServiceLocator`
-- Examples: `audio_service.py`, `save_service.py`, `analytics_service.py`
-- `input_service.py` is the **single global input handler** — all raw Kivy touch/keyboard events are funnelled here first
+### `components/`
+- React + CSS Modules only — no Phaser
+- Communicate upward via props/callbacks — never reach into parent state directly
 
-### utils/
-- Helper functions and helper classes — no Kivy imports
-- Stateless pure functions are preferred; stateful helper classes are allowed when logic is complex enough to warrant it
-- `input_helpers.py` provides stateless gesture utilities consumed by `input_service`
-- Each helper module has a single clear responsibility — split by domain, not by file size
+### `screens/`
+- One screen = one `.tsx` file in `screens/` + one `.module.css` alongside it
+- Screens read Zustand store and navigate via `useNavigate()`
+- No raw game logic — delegate to `core/` functions
 
 ---
 
 ## Input Handling
 
-### Global Input Service (`app/services/input_service.py`)
-- Single module-level singleton — instantiated once in `main.py`
-- Binds to Kivy's `Window` for keyboard events and wraps `on_touch_*` for touch events
-- Translates raw Kivy events into named game-level actions (e.g. `"confirm"`, `"attack"`, `"drag"`)
-- Dispatches named Kivy events that components and screens subscribe to — no direct calls into game objects
-- Holds the minimal state required for gesture recognition (touch start position, timestamp); all detection logic lives in `input_helpers.py`
-
-### Input Helpers (`app/utils/input_helpers.py`)
-Pure, stateless functions. Each helper receives raw touch/event data and returns a result; no side effects.
-
-| Helper | What it detects |
-|---|---|
-| `is_tap(touch)` | Quick press-and-release within a small movement radius |
-| `is_long_press(touch, duration)` | Touch held beyond a configurable threshold (default 500 ms) |
-| `is_swipe(touch, min_distance)` | Directional movement past a distance threshold; returns direction enum |
-| `is_pinch(touches)` | Two-finger spread or squeeze; returns scale delta |
-| `is_double_tap(touch)` | Two taps in quick succession (uses Kivy's built-in `is_double_tap`) |
-| `is_hover(motion_event)` | Pointer/finger dwelling over a target with no active press; behaviour varies by platform (see below) |
-
-### Hover — Universal Behaviour
-Hover is supported on **all platforms** but is expressed differently per input device:
-
-| Platform | Hover source | Kivy event |
-|---|---|---|
-| Android / iOS | Finger held still over a target (no movement, no lift) | `on_touch_move` with near-zero delta |
-| Desktop (mouse) | Mouse pointer over a target with no button pressed | `on_mouse_pos` |
-| Desktop (touch/stylus) | Same as mobile — stationary contact | `on_touch_move` with near-zero delta |
-
-`is_hover` normalises these into a single boolean result so callers need no platform checks.
-`input_service` tracks the last pointer position and emits a `"hover"` named event at a throttled rate (defined by `HOVER_THROTTLE_MS` in `constants.py`).
-
-### Rules
-- **`input_service` is the only place** that binds to raw Kivy touch/keyboard events
-- Components and screens **never** bind `on_touch_down` directly for game actions — they subscribe to named events from `input_service`
-- All timing thresholds (long-press duration, double-tap window, swipe distance, hover throttle) are constants defined in `app/core/constants.py`
+- **Menus / screens**: standard React `onClick` / `onPointerDown` handlers
+- **Battle canvas**: Phaser input system (`this.input.on('pointerdown', ...)`)
+- **Android back button**: one global listener in `App.tsx` via Capacitor `@capacitor/app`
+  ```typescript
+  App.addListener('backButton', ({ canGoBack }) => {
+    if (canGoBack) window.history.back()
+    else App.exitApp()
+  })
+  ```
+- All timing thresholds (long-press, double-tap, swipe) are constants in `src/core/constants.ts`
 
 ---
 
 ## Data Architecture
 
 ### JSON Definition Files
-All game content — characters, skills, items, quests, modes — is defined in JSON files under `assets/data/`. No game content is hardcoded in Python.
+All game content is in `public/data/`. No content is hardcoded in TypeScript.
 
-- **One file per entity** — one JSON per character, one per skill, one per item
-- **Loaded by `data_service.py`** — a singleton service in `app/services/` that reads, validates, and caches all definitions at startup
-- **`core/` never reads files directly** — it receives parsed Python objects from `data_service`; file I/O never touches the game logic layer
-- **Schema is strict** — every JSON file must conform to its defined schema; unknown fields are rejected at load time
+- **One file per entity** — one JSON per character, skill, mode, item
+- **Loaded by `DataService`** — fetches, validates with Zod, caches at startup
+- **`core/` never fetches** — it receives plain objects from `DataService`
+- **Schema is strict** — every JSON file must conform to its Zod schema
 
-### JSON Schema Conventions
+### Path convention
 ```
-assets/data/characters/warrior_001.json
-assets/data/skills/slash_001.json
-assets/data/items/relic_001.json
-assets/data/quests/mastery_warrior_001.json
-assets/data/modes/story.json
+public/data/characters/warrior_001.json
+public/data/skills/slash_001.json
+public/data/modes/story.json
 ```
 
-Each file includes a `type` field identifying its schema so the loader knows how to parse it.
-
-### pyjnius — Low-Level Android Access
-`pyjnius` is the Python-Java bridge for Android APIs not exposed by Kivy.
-
-- **Used only in `services/`** — never in `core/`, `utils/`, `components/`, or `screens/`
-- **Wrapped in a service** (e.g. `android_service.py`) — the rest of the app never calls pyjnius directly
-- **Always guarded by platform check** — pyjnius imports must be conditional so the app still runs on desktop for development:
-  ```python
-  from kivy.utils import platform
-  if platform == 'android':
-      from jnius import autoclass
-  ```
-- Use cases: vibration, Android notifications, device sensors, native file pickers
+Each file includes a `type` field identifying its schema.
 
 ---
 
-## Mobile-First Rules
+## Styling Rules
 
-- **Always use `dp()` / `sp()` units** — never hardcode pixel values
-- **Minimum touch target**: 48 × 48 dp
-- **Portrait-first, no landscape** — all screens target 1080 × 1920 px (360 × 640 dp at xxhdpi); landscape is explicitly unsupported
-- **Asset density**: design and export at **3× (xxhdpi)** as primary scale; provide 1× and 2× fallbacks in `assets/images/`
-- **Asset optimisation**: compressed PNGs, compressed audio — keep APK size minimal
+- **All sizes in `rem` or CSS custom properties** — no raw `px` except 1px borders/lines
+- **Design tokens in `tokens.css`** — never hardcode colour values inline
+- **Minimum touch target**: 48px × 48px (`var(--touch-min)`)
+- **Safe-area insets via CSS env()**: `env(safe-area-inset-top)` or `var(--safe-top)`
+  — never hardcode inset values
+- **Portrait-only** — no landscape media queries; layout targets 360 × 640 px viewport
+- **Layout in CSS modules** — do not set layout properties via React `style` prop
+  unless the value is dynamic (e.g. calculated from game state)
+
+### Design tokens (defined in `tokens.css`)
+```css
+--bg-deep, --bg-panel, --bg-card, --bg-elevated
+--accent-genesis, --accent-gold, --accent-danger, --accent-heal
+--text-primary, --text-secondary, --text-muted
+--rarity-1 … --rarity-5
+--safe-top, --safe-bottom, --safe-left, --safe-right
+--touch-min
+```
 
 ---
 
 ## Display & Full-Screen Rules
 
-Genesis runs **edge-to-edge, full-bleed, immersive** on every screen — system bars are never visible during gameplay.
+Genesis runs edge-to-edge on mobile — system bars are hidden during gameplay.
 
-### Physical Resolution Reference
-
-| Property | Value |
-|---|---|
-| Target resolution | 1080 × 1920 px (Full HD portrait) |
-| dp canvas at xxhdpi (480 dpi) | 360 × 640 dp |
-| 1 dp at xxhdpi | 3 px |
-| Asset design scale | 3× (xxhdpi) primary; 1× and 2× fallbacks |
-
-Always write layout values in dp. Design and slice assets at 1080 × 1920 px (3×) then export downscaled copies for lower density buckets.
-
-### Full-Screen Setup
-
-- **Kivy Config** — `Config.set('graphics', 'fullscreen', 'auto')` must be at the **very top** of `main.py`, before any `Window` or `App` import
-- **`display_service.py`** — the **only** module allowed to call pyjnius Window / system-UI APIs; all other code calls `display_service.get_safe_insets()`
-- **Android immersive sticky** — set via pyjnius in `display_service.py`, guarded by `platform == 'android'`; handles both API < 30 (SystemUiVisibility flags) and API ≥ 30 (WindowInsetsController)
-- **iOS** — full-screen handled automatically by Kivy/buildozer; no extra code required
-- **Desktop** — runs in a resizable window; `display_service` returns default fallback insets so layout logic is identical on all platforms
-
-### Safe-Area Insets
-
-Cameras, notches, rounded corners, and gesture bars occupy physical space even in full-screen mode.
-
-- `display_service.get_safe_insets()` → `{"top": int, "bottom": int, "left": int, "right": int}` in dp
-- **Never hardcode inset values** — always read from `display_service` at runtime
-- Fallback values when the platform cannot report insets: `top=24 dp, bottom=48 dp, left=0, right=0`
-- All **interactive content** must sit inside the safe area; decorative backgrounds may bleed to the true device edge
-
-### buildozer.spec Requirements
-
-```ini
-fullscreen = 1
-android.wakelock = False
-```
-
-`fullscreen = 1` suppresses the status bar at the Kivy level; `display_service` then upgrades to true immersive sticky mode via pyjnius.
+- **Capacitor StatusBar plugin** hides the status bar on app launch
+- **`DisplayService`** is the only module that calls Capacitor display APIs
+- **`env(safe-area-inset-*)` CSS variables** provide notch / gesture bar offsets
+- **Desktop** runs in a 360 × 640 browser window; `env()` returns zero, layout works identically
 
 ---
 
 ## Modular Design Rules
 
-Genesis is a complex system — combat, ticks, dice, progression, and UI all interact. Modularity is the primary defence against unmaintainable code.
+### Universal rule
+**Any code that becomes large or messy must be broken into helper functions or submodules.** No exceptions.
 
-### Universal rule — applies to every layer, every file
-**Any code that becomes large or messy must be broken into helper classes or submodules.** This is not optional and has no exceptions — it applies equally to `core/`, `services/`, `components/`, `screens/`, and `utils/`.
-
-### When to create a helper class or module
-- A function exceeds ~30 lines and has clearly separable concerns
-- A module is growing beyond ~150 lines
+### When to split
+- A function exceeds ~30 lines and has separable concerns
+- A module grows beyond ~150 lines
 - A concept appears in more than one place and could be encapsulated
-- A data structure and the logic that operates on it naturally belong together
-- Code is becoming hard to read or follow — **this alone is sufficient reason to extract a helper**
-- **When in doubt, split it out** — a well-named helper class is always clearer than a large monolithic function
-
-### Helper class rules
-- One responsibility per class — name it after what it does (`TickCalculator`, `DiceResolver`, `HitChanceEvaluator`)
-- Helper classes live in the same layer as the code that needs them — a `core/` helper stays in `core/`, a `components/` helper stays in `components/`
-- Helper classes in `core/` and `utils/` must not import Kivy
-- Helper classes in `components/`, `services/`, or `screens/` may import Kivy where necessary
-- Layer ordering still applies — helpers cannot import from layers to their right
-- Prefer composition over inheritance — small focused helpers composed together beat deep class hierarchies
-
-### Naming convention — helper classes
-When a class is split into helpers, each helper inherits the parent class name with a numeric suffix:
-
-```
-DiceResolver      →  DiceResolver1, DiceResolver2, ...
-TickCalculator    →  TickCalculator1, TickCalculator2, ...
-```
-
-The parent class remains the public interface — it composes the numbered helpers internally.
-
-### Subfolder convention
-When a domain grows large enough to warrant multiple helpers, group them into a subfolder named after the domain. Every subfolder requires an `__init__.py` that exposes only the public interface:
-
-```
-app/core/
-├── combat/
-│   ├── __init__.py          # exposes: DiceResolver, TickCalculator
-│   ├── dice_resolver.py     # class DiceResolver
-│   ├── dice_resolver_1.py   # class DiceResolver1
-│   ├── dice_resolver_2.py   # class DiceResolver2
-│   ├── tick_calculator.py   # class TickCalculator
-│   └── tick_calculator_1.py # class TickCalculator1
-├── characters/
-│   ├── __init__.py
-│   ├── stat_block.py
-│   └── stat_block_1.py
-└── ...
-```
-
-The same subfolder pattern applies in every layer — `services/`, `components/`, `screens/`, `utils/`.
+- Code is hard to follow — **this alone is sufficient reason to extract a helper**
 
 ### File size guidelines
 
 | Layer | Soft limit | Action when exceeded |
 |---|---|---|
-| Any module | 150 lines | Consider splitting into focused submodules |
-| Any function / method | 30 lines | Extract sub-responsibilities into helper methods or classes |
-| Any class | 100 lines | Extract grouped behaviour into a dedicated helper class |
+| Any module | 150 lines | Split into focused submodules |
+| Any function | 30 lines | Extract sub-responsibilities |
+| Any component | 100 lines | Extract child components |
 
-These are guides, not hard rules — split when it improves clarity, not just to hit a number.
+### Naming convention
+When a screen or service is split, use a numeric suffix for helpers:
+```
+PreBattleScreen.tsx  →  PreBattleScreen.tsx  +  PreBattleStepMode.tsx
+                                              +  PreBattleStepTeam.tsx
+```
 
 ---
 
 ## Code Readability Rules
 
-- **One function, one responsibility** — aim for ≤30 lines per function
-- **No magic numbers** — define all constants in `app/core/constants.py`
-- **Descriptive names**: `player_health` not `ph`, `on_attack_pressed` not `oap`
-- **Layout lives in `.kv`** — do not set `size_hint`, `pos_hint`, `padding`, or colors in Python unless dynamically required
-- **Comments explain *why*, not *what*** — the code explains what; comments explain intent and non-obvious decisions
-- **Prefer explicit over clever** — readable code beats concise code that requires thought to parse
+- **One function, one responsibility** — ≤30 lines per function
+- **No magic numbers** — all constants in `src/core/constants.ts`
+- **Descriptive names**: `playerUnit` not `pu`, `onAttackPressed` not `oap`
+- **Comments explain *why***, not *what* — the code explains what
+- **Prefer explicit over clever** — readable beats concise
 
 ---
 
@@ -321,21 +238,22 @@ These are guides, not hard rules — split when it improves clarity, not just to
 | Refactor | `refactor/<short-name>` |
 | Assets/content | `content/<short-name>` |
 
-**Commit messages**: imperative mood, present tense, concise.
-- Good: `Add health bar component`
-- Bad: `added healthbar stuff`
+**Commit messages**: imperative mood, present tense.
+- Good: `Add TickCalculator port`
+- Bad: `added tick stuff`
 
 ---
 
 ## What Claude Should Never Do
 
-- Import Kivy inside `core/`
-- Hardcode pixel values or inset values — pixel values belong in asset files; insets come from `display_service`
-- Put layout properties in Python when they belong in `.kv`
-- Call pyjnius Window / system-UI APIs outside `display_service.py`
-- Write a function or class that does more than one thing — split it instead
-- Leave any code large or messy when a helper class would make it clean — this applies everywhere, no exceptions
-- Leave a module growing beyond ~150 lines without evaluating whether to split it
-- Create deeply nested logic that could be flattened with a helper class
+- Import React, Phaser, or Capacitor inside `core/`
+- Import Phaser inside `components/` or `screens/`
+- Import React inside `scenes/`
+- Hardcode colour values — use CSS custom properties from `tokens.css`
+- Hardcode safe-area inset values — use `env(safe-area-inset-*)` or `var(--safe-*)`
+- Set layout properties via React `style` prop when they belong in a CSS module
+- Call Capacitor display/native APIs outside `services/`
+- Write a function that does more than one thing — split it
+- Leave any module beyond ~150 lines without evaluating a split
 - Add error handling for scenarios that cannot happen
 - Introduce features beyond what was explicitly requested
