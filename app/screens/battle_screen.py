@@ -12,6 +12,7 @@ Usage
 """
 from __future__ import annotations
 
+import os
 import traceback
 
 from kivy.animation import Animation
@@ -24,6 +25,16 @@ from kivy.uix.screenmanager import Screen
 from app.screens.battle_screen_1 import BattleScreen1
 from app.screens.battle_screen_2 import BattleScreen2
 from app.services import input_service
+
+def _writable_crash_path() -> str:
+    try:
+        app = App.get_running_app()
+        if app is not None:
+            return os.path.join(app.user_data_dir, 'genesis_crash.log')
+    except Exception:
+        pass
+    return os.path.join(os.path.dirname(__file__), 'genesis_crash.log')
+
 
 _SKILL_IDS = ('skill_1', 'skill_2', 'skill_3', 'skill_4')
 _SKILL_GRID_HEIGHT_DP = 192
@@ -89,13 +100,12 @@ class BattleScreen(Screen):
         try:
             self._do_load_battle(player_unit, enemies, allies)
         except Exception as exc:
-            Logger.error(
-                'BattleScreen: load_battle CRASHED: %s\n%s',
-                exc, traceback.format_exc(),
-            )
+            tb = traceback.format_exc()
+            Logger.error('BattleScreen: load_battle CRASHED: %s\n%s', exc, tb)
             try:
-                with open('/sdcard/genesis_crash.log', 'w') as f:
-                    f.write(traceback.format_exc())
+                log_path = _writable_crash_path()
+                with open(log_path, 'w') as f:
+                    f.write(tb)
             except OSError:
                 pass
 

@@ -17,7 +17,7 @@ from kivy.app import App
 from kivy.lang import Builder
 from kivy.logger import Logger
 from kivy.properties import BooleanProperty
-from kivy.uix.screenmanager import ScreenManager, FadeTransition
+from kivy.uix.screenmanager import ScreenManager, NoTransition
 
 import app.services.display_service as display_service_module
 import app.services.input_service   as input_service_module
@@ -25,11 +25,26 @@ import app.services.input_service   as input_service_module
 from app.core.game_context import GameContext
 
 
+def _crash_log_path() -> str:
+    """
+    Return a writable path for the crash log.
+    On Android 10+ /sdcard is blocked by scoped storage — use user_data_dir
+    (the app's private files dir) which is always writable.
+    On desktop fall back to the current working directory.
+    """
+    try:
+        app = App.get_running_app()
+        if app is not None:
+            return os.path.join(app.user_data_dir, 'genesis_crash.log')
+    except Exception:
+        pass
+    return os.path.join(os.path.dirname(__file__), 'genesis_crash.log')
+
+
 def _install_crash_logger() -> None:
     """
-    Write any uncaught Python exception to /sdcard/genesis_crash.log
+    Write any uncaught Python exception to a writable crash log file
     so it can be read on-device without adb logcat.
-    Falls back silently if /sdcard is not writable (desktop, emulator).
     """
     _original = sys.excepthook
 
@@ -37,7 +52,7 @@ def _install_crash_logger() -> None:
         msg = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
         Logger.critical("GenesisApp: UNCAUGHT EXCEPTION\n%s", msg)
         try:
-            with open("/sdcard/genesis_crash.log", "w") as f:
+            with open(_crash_log_path(), 'w') as f:
                 f.write(msg)
         except OSError:
             pass
@@ -119,7 +134,7 @@ class GenesisApp(App):
         from app.screens.debug_screen import DebugScreen
 
         # 5. Wire ScreenManager — first screen added becomes the start screen.
-        sm = ScreenManager(transition=FadeTransition(duration=0.25))
+        sm = ScreenManager(transition=NoTransition())
         sm.add_widget(SplashScreen(name='splash'))
         sm.add_widget(MainMenuScreen(name='main_menu'))
         sm.add_widget(BattleScreen(name='battle'))

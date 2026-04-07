@@ -109,15 +109,41 @@ class PreBattleScreen(Screen):
         try:
             self._do_launch_battle()
         except Exception as exc:
-            Logger.error(
-                'PreBattleScreen: _launch_battle CRASHED: %s\n%s',
-                exc, traceback.format_exc(),
-            )
-            try:
-                with open('/sdcard/genesis_crash.log', 'w') as f:
-                    f.write(traceback.format_exc())
-            except OSError:
-                pass
+            tb = traceback.format_exc()
+            Logger.error('PreBattleScreen: _launch_battle CRASHED: %s\n%s', exc, tb)
+            self._show_launch_error(str(exc), tb)
+
+    def _show_launch_error(self, short_msg: str, full_tb: str) -> None:
+        """Show an on-screen popup and write the crash to the app's data dir."""
+        import traceback as _tb
+        from kivy.app import App
+        from kivy.uix.popup import Popup
+        from kivy.uix.label import Label
+        from kivy.metrics import dp
+        import os
+
+        try:
+            app = App.get_running_app()
+            if app is not None:
+                log_path = os.path.join(app.user_data_dir, 'genesis_crash.log')
+                with open(log_path, 'w') as f:
+                    f.write(full_tb)
+        except OSError:
+            pass
+
+        content = Label(
+            text=f'BATTLE LAUNCH FAILED\n\n{short_msg[:300]}',
+            text_size=(dp(280), None),
+            halign='left',
+            valign='top',
+            font_size=dp(11),
+            color=(1, 0.4, 0.4, 1),
+        )
+        Popup(
+            title='Crash — check genesis_crash.log',
+            content=content,
+            size_hint=(0.92, 0.6),
+        ).open()
 
     def _do_launch_battle(self) -> None:
         from kivy.logger import Logger
