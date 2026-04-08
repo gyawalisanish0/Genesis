@@ -326,7 +326,7 @@ Skills in Genesis are **self-defining** — there are no locked categories or ty
 - **Base chance** — a multiplier from `0.01` to `1.50` applied against the user's Precision stat to calculate the skill's final hit chance
 - **Effect type** — what the base value does: `damage`, `heal`, or any other combat factor defined on the skill itself
 - **Tags** — 1 to 4 tags that describe the skill's nature (see below)
-- **Max level** — the highest level this skill can reach during a battle; defined on the skill
+- **Max level** — the highest level this skill can reach during a run; defined on the skill
 - **Level upgrades** — the effects and stat changes unlocked at each level; fully defined on the skill
 
 ### Output Formula
@@ -383,6 +383,113 @@ Each skill carries between one and four tags that classify its behaviour and ena
 | **Misc** | Catch-all for effects that don't fit other tags |
 
 This open design means skills can be as simple or complex as their character demands, without the framework constraining what a skill is allowed to do.
+
+---
+
+## Engine Architecture
+
+Genesis's combat logic is split into **three cooperating engines** that share
+a single set of effect primitives. All battlefield behaviour — everything that
+happens when a skill is cast, a status ticks, or a passive triggers — is
+expressed as **composable effects** driven by JSON definitions. The engines
+are scaffolding; the effects are the vocabulary; the JSON is the script.
+
+### Composable Effects (engine architecture)
+
+`core/effects/` holds a registry of **effect primitives** — small, typed
+functions like `damage`, `heal`, `tickShove`, `applyStatus`, `modifyStat`,
+`gainAp`, `shiftProbability`, `rerollDice`, `forceOutcome`, `triggerSkill`.
+
+- Every primitive takes an `EffectContext` (`caster`, `target?`, `battle`,
+  `source`) and mutates battle state only through that context
+- New primitives are added to the registry as the design demands them
+- Content (skills, statuses, passives, items) never reaches into raw state —
+  it only composes primitives declaratively
+
+A `ValueExpr` type lets effect amounts reference character stats (e.g.
+`{ stat: "strength", percent: 80 }`) without needing a mini-language.
+
+### Effect-Keyed Scripts (content style)
+
+Skills, statuses, and passives declare a **flat list of effects**, where each
+effect carries its own `when` field describing the event that triggers it:
+
+```json
+{
+  "id": "power_slash",
+  "tuCost": 5,
+  "apCost": 12,
+  "tags": ["physical", "melee"],
+  "effects": [
+    { "when": "onCast", "type": "damage",
+      "amount": { "stat": "strength", "percent": 90 }, "target": "enemy" },
+    { "when": "onHit",  "type": "applyStatus",
+      "status": "stagger", "duration": 4, "chance": 0.6 }
+  ]
+}
+```
+
+This keeps authoring ergonomic for designers (one list per script) while
+giving per-effect flexibility — each effect can carry its own `condition`
+and its own `target` override.
+
+### The Three Engines
+
+All three engines share the effect registry; they differ only in which events
+they listen to and what context they pass.
+
+| Engine | Owns | Listens to | Lifecycle |
+|---|---|---|---|
+| **Skill Engine** | Skill instances, level patches, AP/TU costs, dice roll triggering | `onCast`, `onDiceRoll`, `onHit`, `onMiss`, `onAfterHit` | Instance per equipped skill per battle |
+| **Status Engine** | Active status instances, durations, stacking, lifecycle | `onApply`, `onTickInterval`, `onExpire`, `onRemoved`, plus any unit-level event while active | Instance per applied status per unit |
+| **Passive Engine** | Each unit's single unique passive — always on | Any unit-level event (`onTakeDamage`, `onUnitTurnStart`, `onHpThreshold`, `onDiceRoll`…) | One instance per unit, lives for the whole battle |
+
+Content authors learn one effect vocabulary, then choose which engine to
+write for based on whether the script is a skill, a status, or a passive.
+
+### Skill Level Lifecycle & Patch Cache
+
+Temporary progression is scoped to a **run**, not a single battle. A
+Story/Campaign run contains multiple battles, and skill levels, XP, unit
+levels, and skill points all persist across those battles within the same
+run. Reset happens only when the run as a whole ends (campaign complete,
+campaign abandoned, roguelite run ends, etc.).
+
+The Skill Engine therefore exposes a **`resetToDefault()` capability** on
+the skill instance (and the unit), but `core/` never decides when to call
+it. **The mode / run lifecycle owns reset timing** — the battle engine never
+calls it.
+
+To keep casts fast and level-ups clean, every `SkillInstance` holds:
+
+- An untouched reference to its **level-1 base form** (the source of truth
+  from JSON — the immutable baseline)
+- `currentLevel: number`
+- `cachedEffects: Effect[]` — the patched effect list, **recomputed once on
+  level-up** and cached
+- `cachedCosts: { tuCost, apCost }` — recomputed the same way
+
+Every cast reads from the cache (no per-call patch math). `resetToDefault()`
+discards the cache and rebuilds from the level-1 base. If a passive ever
+needs to re-patch a skill mid-battle, it bumps a `cacheVersion` flag and the
+engine recomputes the cache on the next read. This gives fast casts, clean
+resets, and a single clear invalidation path.
+
+### Duration Model
+
+All in-battle mods applied by skills, statuses, and passives are
+**temporary** — their scope is the run. Skills declare their level-1
+behaviour as the base, level upgrades patch it during the run, and the
+run-end reset wipes everything back to the level-1 baseline. Nothing leaks
+past run end into the permanent layer; permanent progression has its own
+separate systems (Game Currency, User Level, Mastery Road).
+
+### Stacking
+
+Status stacking is **per-status, not global**. Each status JSON declares its
+own stacking rule (`refresh`, `extend`, `stack`, `independent`, etc.) as
+part of its definition. The Status Engine enforces whatever the status
+declares — it never assumes a default stacking policy.
 
 ---
 

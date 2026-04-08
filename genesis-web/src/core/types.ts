@@ -99,6 +99,9 @@ export interface Unit {
 
 export interface BattleResult {
   outcome:   'victory' | 'defeat'
+  // Total individual character actions taken during the battle.
+  // Per-character action counter for runtime tracking — NOT a global
+  // round counter. The Tick stream remains the source of action ordering.
   turns:     number
   xpGained:  number
 }

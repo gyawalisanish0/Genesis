@@ -14,6 +14,57 @@ Genesis is a turn-based tactical mobile game.
 
 ---
 
+## Game Design Principles
+
+These principles come from `CONCEPT.md` and are **load-bearing** for the
+architecture. Any code in `core/` that violates them is wrong by definition,
+even if it compiles and passes tests.
+
+### 1. The system is dynamic, not absolute
+
+The framework provides **hooks**, not behaviour. The Tick stream, dice table,
+AP economy, stats, and status slots are scaffolding — *what actually happens
+on the battlefield is defined by the skill, item, or passive itself*.
+
+- `core/` must never hardcode what a skill "is allowed to do"
+- The dice resolver must expose alteration hooks (probability shifts, rerolls,
+  outcome overrides) so skill/item definitions can drive resolution
+- Status effects must carry an open payload (stat mods, tick-interval effects,
+  custom hooks) — not a fixed enum of effect types
+- Skill `effectType` is declared on the skill, not constrained by the framework
+- New mechanics should be expressible by adding a JSON definition, **not** by
+  editing `core/` — if `core/` needs a code change to support a new skill,
+  the hook is in the wrong place
+
+### 2. No fixed character or team count
+
+Just like the Tick stream is unbounded in time, the unit roster is unbounded
+in count. The combat framework treats units as an open collection.
+
+- **Never** hardcode a team-size constant in `core/` (no `TEAM_SIZE_MAX`,
+  no `MAX_PLAYERS`, no fixed-length arrays for units)
+- Combat math, AI lookahead, and timeline rendering must scale to arbitrary
+  unit counts
+- **Modes are the only layer allowed to impose a cap** — via an optional
+  `maxTeamSize?: number` (or similar) field on `ModeDef`. Absent = unlimited
+- A mode-imposed limit is an exception applied at the mode boundary, not a
+  property of the combat system
+
+### 3. Tick stream is the only source of action ordering
+
+- **No global round / turn counter** that gates when units act — `core/`
+  must not contain a `currentRound` or shared `turnNumber` variable, and
+  initiative is never decided by "whose turn it is in the round"
+- Every unit owns its own `tickPosition`; battle state is the set of all
+  positions on a shared infinite stream
+- **Per-character action counters are fine** — counting how many actions
+  a unit has taken (for XP scaling, stats, telemetry, `BattleResult.turns`,
+  etc.) is a runtime metric, not a round system. The rule is about
+  initiative truth, not vocabulary
+
+---
+
+
 ## Tech Stack
 
 | Layer | Tool |
@@ -52,6 +103,7 @@ Genesis/
 │       ├── core/                 # Pure TS game logic — zero UI imports
 │       │   ├── types.ts
 │       │   ├── constants.ts
+│       │   ├── screen-types.ts
 │       │   ├── unit.ts
 │       │   ├── GameContext.ts    # Zustand store
 │       │   ├── combat/
@@ -60,15 +112,20 @@ Genesis/
 │       │   │   ├── DiceResolver.ts
 │       │   │   └── index.ts
 │       │   └── __tests__/
-│       ├── services/             # Side-effectful singletons; Capacitor allowed
-│       │   ├── DataService.ts
-│       │   └── DisplayService.ts
-│       ├── scenes/               # Phaser scenes — Phaser imports only
-│       │   └── BattleScene.ts
+│       ├── navigation/           # Screen routing, safe-area, back-button
+│       │   ├── screenRegistry.ts
+│       │   ├── ScreenContext.tsx
+│       │   ├── ScreenShell.tsx
+│       │   └── useScreen.ts
+│       ├── services/             # (planned) Side-effectful singletons; Capacitor allowed
+│       │   ├── DataService.ts    # (planned) JSON loader + Zod validation
+│       │   └── DisplayService.ts # (planned) StatusBar / fullscreen control
+│       ├── scenes/               # (planned) Phaser scenes — Phaser imports only
+│       │   └── BattleScene.ts    # (planned)
 │       ├── screens/              # React screen components
 │       │   ├── SplashScreen.tsx
 │       │   ├── MainMenuScreen.tsx
-│       │   ├── PreBattleScreen.tsx
+│       │   ├── PreBattleScreen.tsx  # split into PreBattleStep{Mode,Team,Items}
 │       │   ├── BattleScreen.tsx
 │       │   ├── BattleResultScreen.tsx
 │       │   ├── RosterScreen.tsx
@@ -76,10 +133,15 @@ Genesis/
 │       ├── components/           # Reusable React widgets
 │       ├── styles/
 │       │   └── tokens.css        # CSS custom properties (design system)
-│       ├── App.tsx               # React Router root + Capacitor back-button
+│       ├── App.tsx               # React Router root + ScreenProvider
 │       └── main.tsx              # Vite entry point
-└── app/                          # Legacy Python/Kivy tree (archived, do not modify)
 ```
+
+> **Note:** `services/` and `scenes/` are reserved directories — the architecture
+> depends on them but they have not yet been created. Any code requiring a
+> service or Phaser scene must add the directory and module rather than
+> bypassing the layer. The legacy Python/Kivy prototype has been removed from
+> this repository.
 
 ---
 
