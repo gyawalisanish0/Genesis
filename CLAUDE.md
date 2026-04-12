@@ -190,6 +190,57 @@ Each layer may only import from layers to its left.
 - **Android back button**: handled by `ScreenProvider` via Capacitor — one listener, never re-registered
 - All timing thresholds (long-press, double-tap, swipe) are constants in `src/core/constants.ts`
 
+### **CRITICAL: Scroll-Aware Pointer Detection (Session Rule)**
+
+**Any interactive element (button, card, clickable row) inside a scrollable container MUST use `useScrollAwarePointer` or risk broken UX.**
+
+#### The Problem
+Without scroll detection, scrolling inside a list accidentally triggers button taps — the `onPointerDown` fires even though the user intended to scroll, not select. This breaks immersion and creates rage-quit moments.
+
+#### The Solution
+**Use `useScrollAwarePointer` hook** from `src/utils/useScrollAwarePointer.ts`:
+
+```tsx
+import { useRef } from 'react'
+import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
+
+export function MyScreen() {
+  const scrollContainer = useRef<HTMLDivElement>(null)
+  const createHandler = useScrollAwarePointer(scrollContainer)
+
+  return (
+    <div ref={scrollContainer} style={{ overflowY: 'auto' }}>
+      <button onPointerDown={createHandler({
+        onTap: () => { /* fires on quick tap, no scroll */ },
+        onHold: () => { /* fires after LONG_PRESS_DURATION_MS */ },
+        onScroll: () => { /* fires if user scrolls >SCROLL_DETECT_THRESHOLD_PX */ }
+      })}>
+        Select
+      </button>
+    </div>
+  )
+}
+```
+
+#### When to Apply
+- ✅ **ALWAYS** if your interactive element is inside a container with `overflow-y: auto`
+- ✅ **ALWAYS** in list/grid screens (PreBattleStepTeam, RosterScreen, SettingsScreen, etc.)
+- ❌ **NOT NEEDED** if your element is in a non-scrolling context (menus, fixed nav, overlays)
+- ❌ **NOT NEEDED** for sliders, range inputs (they have their own scroll semantics)
+
+#### Hook Options Breakdown
+- `onTap()` — User pressed and released quickly without scrolling. **Most common action.**
+- `onHold()` — User held the pointer for `LONG_PRESS_DURATION_MS` (500ms). Use for context menus, long-press effects.
+- `onScroll()` — User scrolled the container by ≥`SCROLL_DETECT_THRESHOLD_PX` (8px) during pointer interaction. **Optional; often unused.**
+
+You can pass any subset of these; unused handlers are simply ignored.
+
+#### Backward Compatibility
+The hook still accepts the old signature (direct callback):
+```tsx
+createHandler(() => selectCard())  // equivalent to createHandler({ onTap: () => selectCard() })
+```
+
 ---
 
 ## Screen System

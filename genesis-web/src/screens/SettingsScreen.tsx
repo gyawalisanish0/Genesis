@@ -1,9 +1,11 @@
 // Settings screen — audio, display, notifications, account.
 // Reads and writes AppSettings from the Zustand store.
 
+import { useRef } from 'react'
 import { ScreenShell } from '../navigation/ScreenShell'
 import { useScreen } from '../navigation/useScreen'
 import { useGameStore } from '../core/GameContext'
+import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import type { AppSettings } from '../core/types'
 import styles from './SettingsScreen.module.css'
 
@@ -44,11 +46,12 @@ interface ToggleRowProps {
   label: string
   value: boolean
   onToggle: () => void
+  onPointerDown?: () => void
 }
 
-function ToggleRow({ label, value, onToggle }: ToggleRowProps) {
+function ToggleRow({ label, value, onToggle, onPointerDown }: ToggleRowProps) {
   return (
-    <div className={styles.row} onPointerDown={onToggle}>
+    <div className={styles.row} onPointerDown={onPointerDown ?? onToggle}>
       <span className={styles.rowLabel}>{label}</span>
       <div className={`${styles.toggleTrack} ${value ? styles.toggleTrackOn : ''}`}>
         <div className={`${styles.toggleThumb} ${value ? styles.toggleThumbOn : ''}`} />
@@ -60,11 +63,12 @@ function ToggleRow({ label, value, onToggle }: ToggleRowProps) {
 interface NavRowProps {
   label: string
   onPress?: () => void
+  onPointerDown?: () => void
 }
 
-function NavRow({ label, onPress }: NavRowProps) {
+function NavRow({ label, onPress, onPointerDown }: NavRowProps) {
   return (
-    <div className={styles.row} onPointerDown={onPress}>
+    <div className={styles.row} onPointerDown={onPointerDown ?? onPress}>
       <span className={styles.rowLabel}>{label}</span>
       <span className={styles.chevron}>›</span>
     </div>
@@ -79,8 +83,10 @@ function SectionGroup({ children }: { children: React.ReactNode }) {
 
 export function SettingsScreen() {
   useScreen()
-  const settings      = useGameStore((s) => s.settings)
-  const updateSetting = useGameStore((s) => s.updateSetting)
+  const settings          = useGameStore((s) => s.settings)
+  const updateSetting     = useGameStore((s) => s.updateSetting)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const createScrollAwareHandler = useScrollAwarePointer(scrollContainerRef)
 
   function set<K extends keyof AppSettings>(key: K, value: AppSettings[K]) {
     updateSetting(key, value)
@@ -97,7 +103,7 @@ export function SettingsScreen() {
         </header>
 
         {/* Scrollable content */}
-        <div className={styles.scroll}>
+        <div ref={scrollContainerRef} className={styles.scroll}>
 
           <SectionHeader label="AUDIO" />
           <SectionGroup>
@@ -105,34 +111,71 @@ export function SettingsScreen() {
             <div className={styles.divider} />
             <SliderRow label="SFX Volume"   value={settings.sfxVolume}   disabled={settings.muteAll} onChange={(v) => set('sfxVolume', v)} />
             <div className={styles.divider} />
-            <ToggleRow label="Mute All"     value={settings.muteAll}     onToggle={() => set('muteAll', !settings.muteAll)} />
+            <ToggleRow
+              label="Mute All"
+              value={settings.muteAll}
+              onToggle={() => set('muteAll', !settings.muteAll)}
+              onPointerDown={createScrollAwareHandler({ onTap: () => set('muteAll', !settings.muteAll) })}
+            />
           </SectionGroup>
 
           <SectionHeader label="DISPLAY" />
           <SectionGroup>
-            <ToggleRow label="Reduce Animations"    value={settings.reduceAnimations}  onToggle={() => set('reduceAnimations',  !settings.reduceAnimations)} />
+            <ToggleRow
+              label="Reduce Animations"
+              value={settings.reduceAnimations}
+              onToggle={() => set('reduceAnimations',  !settings.reduceAnimations)}
+              onPointerDown={createScrollAwareHandler({ onTap: () => set('reduceAnimations',  !settings.reduceAnimations) })}
+            />
             <div className={styles.divider} />
-            <ToggleRow label="Show Damage Numbers"  value={settings.showDamageNumbers} onToggle={() => set('showDamageNumbers', !settings.showDamageNumbers)} />
+            <ToggleRow
+              label="Show Damage Numbers"
+              value={settings.showDamageNumbers}
+              onToggle={() => set('showDamageNumbers', !settings.showDamageNumbers)}
+              onPointerDown={createScrollAwareHandler({ onTap: () => set('showDamageNumbers', !settings.showDamageNumbers) })}
+            />
             <div className={styles.divider} />
             <SliderRow label="Timeline Zoom" value={settings.timelineZoom} onChange={(v) => set('timelineZoom', v)} />
           </SectionGroup>
 
           <SectionHeader label="NOTIFICATIONS" />
           <SectionGroup>
-            <ToggleRow label="Battle Reminders"   value={settings.battleReminders}   onToggle={() => set('battleReminders',   !settings.battleReminders)} />
+            <ToggleRow
+              label="Battle Reminders"
+              value={settings.battleReminders}
+              onToggle={() => set('battleReminders',   !settings.battleReminders)}
+              onPointerDown={createScrollAwareHandler({ onTap: () => set('battleReminders',   !settings.battleReminders) })}
+            />
             <div className={styles.divider} />
-            <ToggleRow label="New Content Alerts" value={settings.newContentAlerts}  onToggle={() => set('newContentAlerts',  !settings.newContentAlerts)} />
+            <ToggleRow
+              label="New Content Alerts"
+              value={settings.newContentAlerts}
+              onToggle={() => set('newContentAlerts',  !settings.newContentAlerts)}
+              onPointerDown={createScrollAwareHandler({ onTap: () => set('newContentAlerts',  !settings.newContentAlerts) })}
+            />
           </SectionGroup>
 
           <SectionHeader label="ACCOUNT" />
           <SectionGroup>
-            <NavRow label="Sync / Cloud Save" />
+            <NavRow
+              label="Sync / Cloud Save"
+              onPointerDown={createScrollAwareHandler({ onTap: () => { /* TODO: sync handler */ } })}
+            />
             <div className={styles.divider} />
-            <NavRow label="Restore Purchases" />
+            <NavRow
+              label="Restore Purchases"
+              onPointerDown={createScrollAwareHandler({ onTap: () => { /* TODO: restore handler */ } })}
+            />
             <div className={styles.divider} />
-            <NavRow label="Privacy Policy" />
+            <NavRow
+              label="Privacy Policy"
+              onPointerDown={createScrollAwareHandler({ onTap: () => { /* TODO: open privacy policy */ } })}
+            />
             <div className={styles.divider} />
-            <NavRow label="Terms of Service" />
+            <NavRow
+              label="Terms of Service"
+              onPointerDown={createScrollAwareHandler({ onTap: () => { /* TODO: open ToS */ } })}
+            />
           </SectionGroup>
 
           <p className={styles.versionFooter}>Genesis v{APP_VERSION} · Build 001</p>

@@ -58,7 +58,7 @@ export function PreBattleStepTeam() {
             <button
               key={char.id}
               className={`${styles.card} ${selected ? styles.cardSelected : ''} ${dimmed ? styles.cardDimmed : ''}`}
-              onPointerDown={createScrollAwareHandler(() => toggleTeamMember(char))}
+              onPointerDown={createScrollAwareHandler({ onTap: () => toggleTeamMember(char) })}
             >
               <UnitPortrait name={char.name} rarity={char.rarity} size="lg" />
               <span className={styles.cardName}>{char.name}</span>
