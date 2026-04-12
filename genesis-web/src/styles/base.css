@@ -1,0 +1,20 @@
+/* Global base resets for a native-app feel.
+ * Imported once in main.tsx; applies to the entire document.
+ */
+
+*,
+*::before,
+*::after {
+  user-select: none;
+  -webkit-user-select: none;
+  /* Suppress iOS long-press callout (copy / share / look-up menu) */
+  -webkit-touch-callout: none;
+}
+
+/* Re-enable selection inside text inputs so typing still works. */
+input,
+textarea {
+  user-select: text;
+  -webkit-user-select: text;
+  -webkit-touch-callout: default;
+}
