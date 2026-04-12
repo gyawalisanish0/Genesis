@@ -35,7 +35,7 @@ function collectPatchesUpTo(upgrades: LevelUpgrade[], level: number): LevelUpgra
 
 function applyPatch(skill: SkillDef, patch: LevelUpgrade): SkillDef {
   for (const [key, value] of Object.entries(patch.patch)) {
-    writeByPath(skill, splitKey(key), value, skill.effects)
+    writeByPath(skill as unknown as Record<string, unknown>, splitKey(key), value, skill.effects)
   }
   return skill
 }

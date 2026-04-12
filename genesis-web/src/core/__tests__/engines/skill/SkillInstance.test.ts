@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   createSkillInstance, levelUpSkill, resetSkillToDefault, invalidateCache, getCachedSkill,
 } from '../../../engines/skill/SkillInstance'
-import type { SkillDef } from '../../../effects/types'
+import type { Effect, SkillDef } from '../../../effects/types'
 
 const SKILL: SkillDef = {
   type: 'skill',
@@ -23,9 +23,9 @@ const SKILL: SkillDef = {
   ],
 }
 
-function dmgPercent(effects: readonly { type: string; amount: unknown }[]): number {
+function dmgPercent(effects: readonly Effect[]): number {
   const dmg = effects.find(e => e.type === 'damage')!
-  return (dmg.amount as { percent: number }).percent
+  return ((dmg as { amount: { percent: number } }).amount).percent
 }
 
 describe('SkillInstance lifecycle', () => {
