@@ -7,17 +7,48 @@ import { ScreenShell } from '../navigation/ScreenShell'
 import { useScreen } from '../navigation/useScreen'
 import { BattleProvider, useBattleScreen } from './BattleContext'
 import { ResourceBar } from '../components/ResourceBar'
+import { calculateMarkerPosition, sortUnitsByTick } from '../utils/timelinePositioning'
 import styles from './BattleScreen.module.css'
 
 // ── Timeline strip ──────────────────────────────────────────────────────────
 function BattleTimeline() {
-  // TODO: render ally/enemy markers sorted by tickPosition from BattleContext.
+  const { playerUnit, enemies, phase, tickValue } = useBattleScreen()
+
+  // Collect all units in battle
+  const allUnits = [
+    ...(playerUnit ? [{ ...playerUnit, isAlly: true }] : []),
+    ...enemies.map((e) => ({ ...e, isAlly: false })),
+  ]
+
+  // Sort by tick position (soonest first)
+  const sortedUnits = sortUnitsByTick(allUnits)
+
   return (
     <div className={styles.timeline}>
       <div className={styles.timelineAxis} />
-      <div className={`${styles.marker} ${styles.markerAlly} ${styles.markerActive}`} style={{ top: '15%' }} />
-      <div className={`${styles.marker} ${styles.markerEnemy}`} style={{ top: '35%' }} />
-      <div className={`${styles.marker} ${styles.markerAlly}`}  style={{ top: '55%' }} />
+
+      {sortedUnits.map((unit) => {
+        // Determine if this unit is currently acting
+        const isActive = phase === 'player' ? unit.isAlly : !unit.isAlly
+
+        // Calculate visual position (bottom = act now, top = future)
+        const top = calculateMarkerPosition(unit.tickPosition, tickValue)
+        const ticksAhead = Math.max(0, unit.tickPosition - tickValue)
+
+        return (
+          <div
+            key={unit.id}
+            className={`
+              ${styles.marker}
+              ${unit.isAlly ? styles.markerAlly : styles.markerEnemy}
+              ${isActive ? styles.markerActive : ''}
+            `}
+            style={{ top }}
+            title={`${unit.name} · Tick ${unit.tickPosition} (${ticksAhead} ahead)`}
+            aria-label={`${unit.name} timeline marker`}
+          />
+        )
+      })}
     </div>
   )
 }
