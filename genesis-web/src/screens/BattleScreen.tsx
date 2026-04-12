@@ -2,7 +2,7 @@
 // Layout: 28dp timeline strip (left) + main area (right).
 // Child components read from BattleContext via useBattleScreen().
 
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ScreenShell } from '../navigation/ScreenShell'
 import { useScreen } from '../navigation/useScreen'
@@ -11,58 +11,64 @@ import { useBackButton } from '../input/useBackButton'
 import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import { BattleProvider, useBattleScreen } from './BattleContext'
 import { ResourceBar } from '../components/ResourceBar'
-import { TIMELINE_TICK_RANGE, TIMELINE_PX_PER_TICK } from '../core/constants'
+import { TIMELINE_PX_PER_TICK, TIMELINE_OVERLAY_PX } from '../core/constants'
 import styles from './BattleScreen.module.css'
 
 // ── Timeline helpers ─────────────────────────────────────────────────────────
-const TRACK_HEIGHT_PX = TIMELINE_TICK_RANGE * TIMELINE_PX_PER_TICK
 
-/** Convert a tick value → CSS top offset inside the track (tick 0 = bottom, tick 300 = top). */
-function tickToTop(tick: number): number {
-  return (TIMELINE_TICK_RANGE - tick) * TIMELINE_PX_PER_TICK
+/**
+ * Convert a tick → CSS top offset inside the track.
+ * tick = maxTick → top: 0 (strip top edge)
+ * tick = minTick → top: trackHeight (strip bottom edge)
+ */
+function tickToTop(tick: number, maxTick: number): number {
+  return (maxTick - tick) * TIMELINE_PX_PER_TICK
 }
-
-/** Minor tick mark every 10 ticks, major every 50. */
-const TICK_MARK_POSITIONS = Array.from(
-  { length: Math.floor(TIMELINE_TICK_RANGE / 10) + 1 },
-  (_, i) => i * 10,
-)
 
 // ── Timeline strip ──────────────────────────────────────────────────────────
 function BattleTimeline() {
-  const { tickValue, playerUnit, enemies } = useBattleScreen()
+  const { tickValue, playerUnit, enemies, scrollBounds } = useBattleScreen()
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // Keep "now" at 75% from the viewport top so future actors (above) dominate.
-  // paddingTop is read from computed style so the CSS value is the single source of truth.
+  const trackHeight = (scrollBounds.max - scrollBounds.min) * TIMELINE_PX_PER_TICK
+
+  // Tick marks: minor every 10, major every 50, spanning the registered range.
+  const tickMarkPositions = useMemo(() => {
+    const marks: number[] = []
+    for (let t = scrollBounds.min; t <= scrollBounds.max; t += 10) marks.push(t)
+    return marks
+  }, [scrollBounds])
+
+  // Keep "now" at 75% from viewport top. TIMELINE_OVERLAY_PX offsets for the dead-zone overlay.
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
-    const paddingTop = parseFloat(getComputedStyle(el).paddingTop)
-    el.scrollTop = paddingTop + tickToTop(tickValue) - el.clientHeight * 0.75
-  }, [tickValue])
+    el.scrollTop = tickToTop(tickValue, scrollBounds.max) - el.clientHeight * 0.75 + TIMELINE_OVERLAY_PX
+  }, [tickValue, scrollBounds])
 
   const allUnits = playerUnit ? [playerUnit, ...enemies] : enemies
 
   return (
-    <div className={styles.timeline} ref={scrollRef}>
-      <div className={styles.timelineTrack} style={{ height: TRACK_HEIGHT_PX }}>
-        <div className={styles.timelineAxis} />
-        {TICK_MARK_POSITIONS.map((tick) => (
-          <div
-            key={tick}
-            className={`${styles.tickMark} ${tick % 50 === 0 ? styles.tickMarkMajor : ''}`}
-            style={{ top: tickToTop(tick) }}
-          />
-        ))}
-        <div className={styles.nowLine} style={{ top: tickToTop(tickValue) }} />
-        {allUnits.map((unit) => (
-          <div
-            key={unit.id}
-            className={`${styles.marker} ${unit.isAlly ? styles.markerAlly : styles.markerEnemy} ${unit === playerUnit ? styles.markerActive : ''}`}
-            style={{ top: tickToTop(unit.tickPosition) }}
-          />
-        ))}
+    <div className={styles.timelineWrap}>
+      <div className={styles.timeline} ref={scrollRef}>
+        <div className={styles.timelineTrack} style={{ height: trackHeight }}>
+          <div className={styles.timelineAxis} />
+          {tickMarkPositions.map((tick) => (
+            <div
+              key={tick}
+              className={`${styles.tickMark} ${tick % 50 === 0 ? styles.tickMarkMajor : ''}`}
+              style={{ top: tickToTop(tick, scrollBounds.max) }}
+            />
+          ))}
+          <div className={styles.nowLine} style={{ top: tickToTop(tickValue, scrollBounds.max) }} />
+          {allUnits.map((unit) => (
+            <div
+              key={unit.id}
+              className={`${styles.marker} ${unit.isAlly ? styles.markerAlly : styles.markerEnemy} ${unit === playerUnit ? styles.markerActive : ''}`}
+              style={{ top: tickToTop(unit.tickPosition, scrollBounds.max) }}
+            />
+          ))}
+        </div>
       </div>
     </div>
   )

@@ -8,22 +8,46 @@
   overflow: hidden;
 }
 
-/* ── Timeline strip (28dp left column, scrollable) ──────────────────── */
-.timeline {
+/* ── Timeline column (28dp left column) ─────────────────────────────── */
+.timelineWrap {
   width: 1.75rem;  /* 28 dp */
   height: 100%;
-  background: var(--bg-elevated);
   border-right: 1px solid var(--bg-panel);
   flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Dead-zone overlays — content scrolls physically behind these.
+ * Height = 3rem (48dp) must match TIMELINE_OVERLAY_PX in constants.ts. */
+.timelineWrap::before,
+.timelineWrap::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3rem;
+  background: var(--bg-deep);
+  pointer-events: none;
+  z-index: 1;
+}
+.timelineWrap::before { top: 0; }
+.timelineWrap::after  { bottom: 0; }
+
+/* Scrollable strip — fills the wrap; content slides under the overlays. */
+.timeline {
+  width: 100%;
+  height: 100%;
+  background: var(--bg-elevated);
   overflow-y: auto;
   overflow-x: hidden;
-  scrollbar-width: none;  /* Firefox */
-  padding-block: var(--s-xl);  /* breathing room at strip edges; JS reads this via getComputedStyle */
+  scrollbar-width: none;       /* Firefox */
+  overscroll-behavior: none;   /* no rubber-band past track edges */
 }
 
 .timeline::-webkit-scrollbar { display: none; }  /* Chrome / Safari */
 
-/* Inner scrollable canvas — height set inline from TIMELINE_TICK_RANGE × TIMELINE_PX_PER_TICK */
+/* Inner scrollable canvas — height set inline from dynamic registered tick range */
 .timelineTrack {
   position: relative;
   width: 100%;
