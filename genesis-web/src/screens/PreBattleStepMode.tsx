@@ -1,7 +1,6 @@
 // Step 1 — Mode Select
 // Player picks a game mode (Story, Ranked, Draft).
 
-import { useRef } from 'react'
 import { usePreBattleScreen } from './PreBattleContext'
 import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import styles from './PreBattleStepMode.module.css'
@@ -23,11 +22,10 @@ const MODES: ModeOption[] = [
 
 export function PreBattleStepMode() {
   const { selectedModeId, selectMode } = usePreBattleScreen()
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const createScrollAwareHandler = useScrollAwarePointer(scrollContainerRef)
+  const createScrollAwareHandler = useScrollAwarePointer()
 
   return (
-    <div ref={scrollContainerRef} className={styles.root}>
+    <div className={styles.root}>
       <h2 className={styles.sectionTitle}>SELECT A MODE</h2>
       <div className={styles.list}>
         {MODES.map((mode) => (

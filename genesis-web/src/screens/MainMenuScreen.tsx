@@ -6,12 +6,14 @@ import { ScreenShell } from '../navigation/ScreenShell'
 import { useScreen } from '../navigation/useScreen'
 import { SCREEN_IDS } from '../navigation/screenRegistry'
 import { useBackButton } from '../input/useBackButton'
+import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import styles from './MainMenuScreen.module.css'
 
 export function MainMenuScreen() {
   const { navigateTo } = useScreen()
   const [showQuitConfirm, setShowQuitConfirm] = useState(false)
   useBackButton(() => setShowQuitConfirm(true))
+  const createHandler = useScrollAwarePointer()
 
   return (
     <ScreenShell>
@@ -25,7 +27,7 @@ export function MainMenuScreen() {
             <span className={styles.currencyChip}>💎 0</span>
             <button
               className={styles.iconBtn}
-              onPointerDown={() => navigateTo(SCREEN_IDS.SETTINGS)}
+              onPointerDown={createHandler({ onTap: () => navigateTo(SCREEN_IDS.SETTINGS) })}
               aria-label="Settings"
             >⚙</button>
           </div>
@@ -44,21 +46,21 @@ export function MainMenuScreen() {
         <nav className={styles.nav}>
           <button
             className={`${styles.navBtn} ${styles.navBtnPlay}`}
-            onPointerDown={() => navigateTo(SCREEN_IDS.PRE_BATTLE)}
+            onPointerDown={createHandler({ onTap: () => navigateTo(SCREEN_IDS.PRE_BATTLE) })}
           >
             ▶  PLAY
           </button>
 
           <button
             className={`${styles.navBtn} ${styles.navBtnSecondary}`}
-            onPointerDown={() => navigateTo(SCREEN_IDS.ROSTER)}
+            onPointerDown={createHandler({ onTap: () => navigateTo(SCREEN_IDS.ROSTER) })}
           >
             ROSTER
           </button>
 
           <button
             className={`${styles.navBtn} ${styles.navBtnSecondary}`}
-            onPointerDown={() => {}}
+            onPointerDown={createHandler({ onTap: () => {} })}
           >
             MASTERY ROAD
           </button>
@@ -66,13 +68,13 @@ export function MainMenuScreen() {
           <div className={styles.navRow}>
             <button
               className={`${styles.navBtn} ${styles.navBtnCard}`}
-              onPointerDown={() => navigateTo(SCREEN_IDS.SETTINGS)}
+              onPointerDown={createHandler({ onTap: () => navigateTo(SCREEN_IDS.SETTINGS) })}
             >
               SETTINGS
             </button>
             <button
               className={`${styles.navBtn} ${styles.navBtnCard}`}
-              onPointerDown={() => {}}
+              onPointerDown={createHandler({ onTap: () => {} })}
             >
               💎 SHOP
             </button>
@@ -85,8 +87,8 @@ export function MainMenuScreen() {
           <div className={styles.dialog}>
             <span className={styles.dialogTitle}>Quit Game?</span>
             <div className={styles.dialogActions}>
-              <button className={styles.dialogBtn} onPointerDown={() => setShowQuitConfirm(false)}>CANCEL</button>
-              <button className={`${styles.dialogBtn} ${styles.dialogBtnQuit}`} onPointerDown={() => CapApp.exitApp()}>QUIT</button>
+              <button className={styles.dialogBtn} onPointerDown={createHandler({ onTap: () => setShowQuitConfirm(false) })}>CANCEL</button>
+              <button className={`${styles.dialogBtn} ${styles.dialogBtnQuit}`} onPointerDown={createHandler({ onTap: () => CapApp.exitApp() })}>QUIT</button>
             </div>
           </div>
         </div>

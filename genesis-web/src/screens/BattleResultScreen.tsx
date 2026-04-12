@@ -1,7 +1,6 @@
 // Battle Result screen — Victory or Defeat summary.
 // Reads battleResult from Zustand store; falls back to a mock for dev.
 
-import { useRef } from 'react'
 import { ScreenShell } from '../navigation/ScreenShell'
 import { useScreen } from '../navigation/useScreen'
 import { SCREEN_IDS } from '../navigation/screenRegistry'
@@ -36,8 +35,7 @@ export function BattleResultScreen() {
 
   const result   = storedResult ?? MOCK_RESULT
   const victory  = result.outcome === 'victory'
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const createScrollAwareHandler = useScrollAwarePointer(scrollContainerRef)
+  const createScrollAwareHandler = useScrollAwarePointer()
 
   const handlePrimary = () => {
     resetBattle()
@@ -64,7 +62,7 @@ export function BattleResultScreen() {
           {victory && <span className={styles.bannerIconRight}>★</span>}
         </div>
 
-        <div ref={scrollContainerRef} className={styles.scroll}>
+        <div className={styles.scroll}>
 
           {/* Rewards (victory only) */}
           {victory && (

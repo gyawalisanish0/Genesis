@@ -1,7 +1,6 @@
 // Settings screen — audio, display, notifications, account.
 // Reads and writes AppSettings from the Zustand store.
 
-import { useRef } from 'react'
 import { ScreenShell } from '../navigation/ScreenShell'
 import { useScreen } from '../navigation/useScreen'
 import { SCREEN_IDS } from '../navigation/screenRegistry'
@@ -48,7 +47,7 @@ interface ToggleRowProps {
   label: string
   value: boolean
   onToggle: () => void
-  onPointerDown?: () => void
+  onPointerDown?: React.PointerEventHandler<HTMLDivElement>
 }
 
 function ToggleRow({ label, value, onToggle, onPointerDown }: ToggleRowProps) {
@@ -65,7 +64,7 @@ function ToggleRow({ label, value, onToggle, onPointerDown }: ToggleRowProps) {
 interface NavRowProps {
   label: string
   onPress?: () => void
-  onPointerDown?: () => void
+  onPointerDown?: React.PointerEventHandler<HTMLDivElement>
 }
 
 function NavRow({ label, onPress, onPointerDown }: NavRowProps) {
@@ -88,8 +87,7 @@ export function SettingsScreen() {
   const handleBack = useBackButton(() => navigateTo(SCREEN_IDS.MAIN_MENU))
   const settings          = useGameStore((s) => s.settings)
   const updateSetting     = useGameStore((s) => s.updateSetting)
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const createScrollAwareHandler = useScrollAwarePointer(scrollContainerRef)
+  const createScrollAwareHandler = useScrollAwarePointer()
 
   function set<K extends keyof AppSettings>(key: K, value: AppSettings[K]) {
     updateSetting(key, value)
@@ -101,12 +99,12 @@ export function SettingsScreen() {
 
         {/* Sticky header */}
         <header className={styles.header}>
-          <button className={styles.backBtn} onPointerDown={handleBack} aria-label="Back">←</button>
+          <button className={styles.backBtn} onPointerDown={createScrollAwareHandler({ onTap: handleBack })} aria-label="Back">←</button>
           <span className={styles.headerTitle}>SETTINGS</span>
         </header>
 
         {/* Scrollable content */}
-        <div ref={scrollContainerRef} className={styles.scroll}>
+        <div className={styles.scroll}>
 
           <SectionHeader label="AUDIO" />
           <SectionGroup>

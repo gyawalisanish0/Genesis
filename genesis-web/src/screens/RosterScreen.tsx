@@ -1,11 +1,12 @@
 // Roster screen — browse and filter the character collection.
 // Data comes from DataService (not yet wired); renders mock data in the meantime.
 
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { ScreenShell } from '../navigation/ScreenShell'
 import { useScreen } from '../navigation/useScreen'
 import { SCREEN_IDS } from '../navigation/screenRegistry'
 import { useBackButton } from '../input/useBackButton'
+import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import { UnitPortrait } from '../components/UnitPortrait'
 import { ResourceBar } from '../components/ResourceBar'
 import styles from './RosterScreen.module.css'
@@ -26,7 +27,7 @@ const RARITIES = [0, 1, 2, 3, 4, 5]  // 0 = All
 export function RosterScreen() {
   const { navigateTo } = useScreen()
   const handleBack = useBackButton(() => navigateTo(SCREEN_IDS.MAIN_MENU))
-  const gridRef = useRef<HTMLDivElement>(null)
+  const createHandler = useScrollAwarePointer()
   const [activeClass, setActiveClass]   = useState('All')
   const [activeRarity, setActiveRarity] = useState(0)
   const [searchQuery, setSearchQuery]   = useState('')
@@ -47,7 +48,7 @@ export function RosterScreen() {
         <header className={styles.header}>
           {searching ? (
             <>
-              <button className={styles.iconBtn} onPointerDown={() => { setSearching(false); setSearchQuery('') }}>✕</button>
+              <button className={styles.iconBtn} onPointerDown={createHandler({ onTap: () => { setSearching(false); setSearchQuery('') } })}>✕</button>
               <input
                 className={styles.searchInput}
                 placeholder="Search characters…"
@@ -58,9 +59,9 @@ export function RosterScreen() {
             </>
           ) : (
             <>
-              <button className={styles.iconBtn} onPointerDown={handleBack} aria-label="Back">←</button>
+              <button className={styles.iconBtn} onPointerDown={createHandler({ onTap: handleBack })} aria-label="Back">←</button>
               <span className={styles.headerTitle}>ROSTER</span>
-              <button className={styles.iconBtn} onPointerDown={() => setSearching(true)} aria-label="Search">🔍</button>
+              <button className={styles.iconBtn} onPointerDown={createHandler({ onTap: () => setSearching(true) })} aria-label="Search">🔍</button>
             </>
           )}
         </header>
@@ -71,7 +72,7 @@ export function RosterScreen() {
             <button
               key={cls}
               className={`${styles.classTab} ${activeClass === cls ? styles.classTabActive : ''}`}
-              onPointerDown={() => setActiveClass(cls)}
+              onPointerDown={createHandler({ onTap: () => setActiveClass(cls) })}
             >
               {cls}
             </button>
@@ -84,7 +85,7 @@ export function RosterScreen() {
             <button
               key={r}
               className={`${styles.rarityChip} ${activeRarity === r ? styles.rarityChipActive : ''}`}
-              onPointerDown={() => setActiveRarity(r)}
+              onPointerDown={createHandler({ onTap: () => setActiveRarity(r) })}
             >
               {r === 0 ? 'All' : '★'.repeat(r)}
             </button>
@@ -92,7 +93,7 @@ export function RosterScreen() {
         </div>
 
         {/* Character grid */}
-        <div ref={gridRef} className={styles.grid}>
+        <div className={styles.grid}>
           {filtered.length === 0
             ? <p className={styles.emptyMsg}>No characters match</p>
             : filtered.map((char) => (

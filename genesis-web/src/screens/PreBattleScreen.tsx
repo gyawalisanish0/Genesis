@@ -5,6 +5,7 @@ import { ScreenShell } from '../navigation/ScreenShell'
 import { useScreen } from '../navigation/useScreen'
 import { SCREEN_IDS } from '../navigation/screenRegistry'
 import { useBackButton } from '../input/useBackButton'
+import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import { PreBattleProvider, usePreBattleScreen, type WizardStep } from './PreBattleContext'
 import { PreBattleStepMode }  from './PreBattleStepMode'
 import { PreBattleStepTeam }  from './PreBattleStepTeam'
@@ -35,6 +36,7 @@ function PreBattleWizard() {
     if (step > 0) { setStep((step - 1) as WizardStep); return }
     navigateTo(SCREEN_IDS.MAIN_MENU)
   })
+  const createHandler = useScrollAwarePointer()
 
   const handleContinue = () => {
     if (step < 2) { setStep((step + 1) as WizardStep); return }
@@ -48,7 +50,7 @@ function PreBattleWizard() {
     <div className={styles.wizard}>
       {/* Wizard header */}
       <header className={styles.header}>
-        <button className={styles.backBtn} onPointerDown={handleBack} aria-label="Back">←</button>
+        <button className={styles.backBtn} onPointerDown={createHandler({ onTap: handleBack })} aria-label="Back">←</button>
         <div className={styles.stepIndicator}>
           {STEP_LABELS.map((label, i) => (
             <span key={label} className={`${styles.stepDot} ${i === step ? styles.stepDotActive : ''}`} />
@@ -70,7 +72,7 @@ function PreBattleWizard() {
         <button
           className={`${styles.continueBtn} ${!canContinue ? styles.continueBtnDisabled : ''}`}
           disabled={!canContinue}
-          onPointerDown={handleContinue}
+          onPointerDown={createHandler({ onTap: handleContinue })}
         >
           {step < 2 ? 'CONTINUE →' : '▶ START BATTLE'}
         </button>
