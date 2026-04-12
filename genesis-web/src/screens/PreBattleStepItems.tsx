@@ -1,12 +1,16 @@
 // Step 3 — Genesis Items
 // Player optionally equips items to each team member. Items are optional.
 
+import { useRef } from 'react'
 import { usePreBattleScreen } from './PreBattleContext'
 import { UnitPortrait } from '../components/UnitPortrait'
+import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import styles from './PreBattleStepItems.module.css'
 
 export function PreBattleStepItems() {
   const { selectedTeam } = usePreBattleScreen()
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const createScrollAwareHandler = useScrollAwarePointer(scrollContainerRef)
 
   if (selectedTeam.length === 0) {
     return (
@@ -17,7 +21,7 @@ export function PreBattleStepItems() {
   }
 
   return (
-    <div className={styles.root}>
+    <div ref={scrollContainerRef} className={styles.root}>
       <h2 className={styles.sectionTitle}>EQUIP GENESIS ITEMS</h2>
       <p className={styles.subtitle}>Items persist across all battles. All slots are optional.</p>
 
@@ -28,8 +32,18 @@ export function PreBattleStepItems() {
             <div className={styles.unitInfo}>
               <span className={styles.unitName}>{unit.name}</span>
               <div className={styles.slotRow}>
-                <button className={styles.itemSlot}>— Empty —</button>
-                <button className={styles.itemSlot}>— Empty —</button>
+                <button
+                  className={styles.itemSlot}
+                  onPointerDown={createScrollAwareHandler({ onTap: () => { /* TODO: open item selector */ } })}
+                >
+                  — Empty —
+                </button>
+                <button
+                  className={styles.itemSlot}
+                  onPointerDown={createScrollAwareHandler({ onTap: () => { /* TODO: open item selector */ } })}
+                >
+                  — Empty —
+                </button>
               </div>
             </div>
           </div>

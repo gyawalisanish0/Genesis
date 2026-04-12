@@ -1,7 +1,7 @@
 // Roster screen — browse and filter the character collection.
 // Data comes from DataService (not yet wired); renders mock data in the meantime.
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { ScreenShell } from '../navigation/ScreenShell'
 import { useScreen } from '../navigation/useScreen'
 import { UnitPortrait } from '../components/UnitPortrait'
@@ -23,6 +23,7 @@ const RARITIES = [0, 1, 2, 3, 4, 5]  // 0 = All
 
 export function RosterScreen() {
   const { navigateTo: _navigateTo } = useScreen()
+  const gridRef = useRef<HTMLDivElement>(null)
   const [activeClass, setActiveClass]   = useState('All')
   const [activeRarity, setActiveRarity] = useState(0)
   const [searchQuery, setSearchQuery]   = useState('')
@@ -88,7 +89,7 @@ export function RosterScreen() {
         </div>
 
         {/* Character grid */}
-        <div className={styles.grid}>
+        <div ref={gridRef} className={styles.grid}>
           {filtered.length === 0
             ? <p className={styles.emptyMsg}>No characters match</p>
             : filtered.map((char) => (
