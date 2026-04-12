@@ -8,7 +8,6 @@ import {
   createContext,
   useContext,
   useRef,
-  useCallback,
   useEffect,
   useState,
   type ReactNode,
@@ -17,6 +16,7 @@ import { useLocation } from 'react-router-dom'
 import { App as CapApp } from '@capacitor/app'
 import type { ScreenConfig, SafeInsets } from '../core/screen-types'
 import { SCREEN_REGISTRY } from './screenRegistry'
+import { invokeBackHandler } from '../input/backButtonRegistry'
 
 // Fallback insets when env() is unavailable (Android notification bar ~24px,
 // home gesture bar ~48px).
@@ -48,16 +48,11 @@ function readCssSafeInsets(): SafeInsets {
 interface ScreenContextValue {
   screen: ScreenConfig | null
   safeInsets: SafeInsets
-  // Called by useScreen() to register a per-screen back override.
-  registerBackHandler: (fn: () => boolean) => void
-  unregisterBackHandler: () => void
 }
 
 const ScreenContext = createContext<ScreenContextValue>({
   screen: null,
   safeInsets: FALLBACK_INSETS,
-  registerBackHandler: () => {},
-  unregisterBackHandler: () => {},
 })
 
 export function useScreenContext(): ScreenContextValue {
@@ -68,7 +63,6 @@ interface Props { children: ReactNode }
 
 export function ScreenProvider({ children }: Props) {
   const location = useLocation()
-  const backHandlerRef = useRef<(() => boolean) | null>(null)
   const screenRef = useRef<ScreenConfig | null>(null)
   const [safeInsets, setSafeInsets] = useState<SafeInsets>(FALLBACK_INSETS)
 
@@ -91,35 +85,16 @@ export function ScreenProvider({ children }: Props) {
   }, [screen])
 
   // Register the Capacitor back-button listener exactly once for the app lifetime.
-  // Using refs means route changes never cause a re-register.
+  // Dispatch is handled entirely by the input registry — no fallback logic here.
   useEffect(() => {
     const sub = CapApp.addListener('backButton', () => {
-      // 1. Per-screen handler takes priority.
-      if (backHandlerRef.current?.()) return
-
-      const cur = screenRef.current
-      // 2. Default: navigate back if the screen allows it.
-      if (cur?.canGoBack) {
-        window.history.back()
-      } else if (cur?.exitAppOnBack) {
-        // 3. Exit the app (e.g. main menu, splash).
-        CapApp.exitApp()
-      }
-      // battle-result: back does nothing — screen must navigate explicitly
+      invokeBackHandler()
     })
     return () => { sub.then((h) => h.remove()) }
-  }, []) // intentionally empty — refs keep this handler current
-
-  const registerBackHandler = useCallback((fn: () => boolean) => {
-    backHandlerRef.current = fn
-  }, [])
-
-  const unregisterBackHandler = useCallback(() => {
-    backHandlerRef.current = null
-  }, [])
+  }, []) // intentionally empty — input registry is module-level
 
   return (
-    <ScreenContext.Provider value={{ screen, safeInsets, registerBackHandler, unregisterBackHandler }}>
+    <ScreenContext.Provider value={{ screen, safeInsets }}>
       {children}
     </ScreenContext.Provider>
   )

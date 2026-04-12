@@ -3,8 +3,11 @@
 // Child components read from BattleContext via useBattleScreen().
 
 import { useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ScreenShell } from '../navigation/ScreenShell'
 import { useScreen } from '../navigation/useScreen'
+import { SCREEN_REGISTRY, SCREEN_IDS } from '../navigation/screenRegistry'
+import { useBackButton } from '../input/useBackButton'
 import { BattleProvider, useBattleScreen } from './BattleContext'
 import { ResourceBar } from '../components/ResourceBar'
 import styles from './BattleScreen.module.css'
@@ -133,11 +136,31 @@ function ActionGrid() {
   )
 }
 
+// ── Pause overlay ───────────────────────────────────────────────────────────
+function PauseOverlay() {
+  const { setPaused } = useBattleScreen()
+  const navigate = useNavigate()
+  return (
+    <div className={styles.pauseOverlay}>
+      <div className={styles.pauseCard}>
+        <span className={styles.pauseTitle}>PAUSED</span>
+        <button className={styles.pauseBtn} onPointerDown={() => setPaused(false)}>RESUME</button>
+        <button className={styles.pauseBtn} onPointerDown={() => navigate(SCREEN_REGISTRY[SCREEN_IDS.MAIN_MENU].path)}>LEAVE BATTLE</button>
+      </div>
+    </div>
+  )
+}
+
 // ── Battle layout ───────────────────────────────────────────────────────────
 function BattleLayout() {
-  useScreen()  // registers screen with the navigation system
+  const { isPaused, setPaused } = useBattleScreen()
+  useScreen()
+  // Back toggles pause. LEAVE BATTLE in the overlay handles navigation out.
+  useBackButton(() => setPaused(!isPaused))
+
   return (
     <div className={styles.root}>
+      {isPaused && <PauseOverlay />}
       <BattleTimeline />
       <div className={styles.main}>
         <OpponentCard />

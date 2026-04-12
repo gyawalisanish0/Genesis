@@ -18,11 +18,9 @@ export type SafeAreaMode = 'full' | 'top-only' | 'none'
 
 export interface ScreenConfig {
   id: ScreenId
-  path: string           // React Router path, e.g. '/splash'
-  title: string          // used for document.title
+  path: string        // React Router path, e.g. '/splash'
+  title: string       // used for document.title
   safeAreaMode: SafeAreaMode
-  canGoBack: boolean     // default back action = history.back()
-  exitAppOnBack: boolean // when canGoBack is false, exit the app on back press
 }
 
 export interface SafeInsets {
@@ -36,6 +34,4 @@ export interface SafeInsets {
 export interface ScreenLifecycleHooks {
   onEnter?: () => void
   onLeave?: () => void
-  // Return true to mark the back event as handled; false to use the default.
-  onBack?: () => boolean
 }

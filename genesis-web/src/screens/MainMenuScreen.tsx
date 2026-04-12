@@ -1,12 +1,17 @@
 // Main Menu hub — entry point for all game modes and navigation.
 
+import { useState } from 'react'
+import { App as CapApp } from '@capacitor/app'
 import { ScreenShell } from '../navigation/ScreenShell'
 import { useScreen } from '../navigation/useScreen'
 import { SCREEN_IDS } from '../navigation/screenRegistry'
+import { useBackButton } from '../input/useBackButton'
 import styles from './MainMenuScreen.module.css'
 
 export function MainMenuScreen() {
   const { navigateTo } = useScreen()
+  const [showQuitConfirm, setShowQuitConfirm] = useState(false)
+  useBackButton(() => setShowQuitConfirm(true))
 
   return (
     <ScreenShell>
@@ -75,6 +80,17 @@ export function MainMenuScreen() {
         </nav>
 
       </div>
+      {showQuitConfirm && (
+        <div className={styles.overlay}>
+          <div className={styles.dialog}>
+            <span className={styles.dialogTitle}>Quit Game?</span>
+            <div className={styles.dialogActions}>
+              <button className={styles.dialogBtn} onPointerDown={() => setShowQuitConfirm(false)}>CANCEL</button>
+              <button className={`${styles.dialogBtn} ${styles.dialogBtnQuit}`} onPointerDown={() => CapApp.exitApp()}>QUIT</button>
+            </div>
+          </div>
+        </div>
+      )}
     </ScreenShell>
   )
 }

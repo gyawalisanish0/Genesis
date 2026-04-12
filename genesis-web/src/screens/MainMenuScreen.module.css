@@ -159,3 +159,56 @@
   background: var(--bg-card);
   color: var(--text-primary);
 }
+
+/* ── Quit confirmation overlay ──────────────────────────────────────── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.dialog {
+  background: var(--bg-panel);
+  border: 1px solid var(--bg-elevated);
+  border-radius: var(--r-md);
+  padding: var(--s-md);
+  width: 80%;
+  max-width: 18rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-md);
+}
+
+.dialogTitle {
+  font-size: var(--t-subheading-size);
+  font-weight: var(--t-subheading-weight);
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.dialogActions {
+  display: flex;
+  gap: var(--s-sm);
+}
+
+.dialogBtn {
+  flex: 1;
+  height: var(--touch-min);
+  border: none;
+  border-radius: var(--r-md);
+  font-family: var(--font-sans);
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  cursor: pointer;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.dialogBtnQuit {
+  background: var(--accent-danger);
+  color: var(--text-on-accent);
+}

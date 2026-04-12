@@ -15,8 +15,7 @@ interface UseScreenResult {
 }
 
 export function useScreen(hooks?: ScreenLifecycleHooks): UseScreenResult {
-  const { screen, safeInsets, registerBackHandler, unregisterBackHandler } =
-    useScreenContext()
+  const { screen, safeInsets } = useScreenContext()
   const navigate = useNavigate()
 
   // Register lifecycle hooks on mount; clean up on unmount.
@@ -28,14 +27,6 @@ export function useScreen(hooks?: ScreenLifecycleHooks): UseScreenResult {
     enter?.()
     return () => { leave?.() }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Register per-screen back override. Unregister when the screen unmounts.
-  useEffect(() => {
-    if (!hooks?.onBack) return
-    const handler = hooks.onBack
-    registerBackHandler(handler)
-    return () => { unregisterBackHandler() }
-  }, [hooks?.onBack, registerBackHandler, unregisterBackHandler]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Type-safe navigation — always go through the registry so paths stay in one place.
   function navigateTo(id: ScreenId) {
