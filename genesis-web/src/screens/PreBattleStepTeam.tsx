@@ -39,7 +39,7 @@ export function PreBattleStepTeam() {
                 <>
                   <UnitPortrait name={unit.name} rarity={unit.rarity} size="md" />
                   <span className={styles.slotName}>{unit.name}</span>
-                  <button className={styles.removeBtn} onPointerDown={() => toggleTeamMember(unit)} aria-label="Remove">✕</button>
+                  <button className={styles.removeBtn} onPointerDown={createScrollAwareHandler({ onTap: () => toggleTeamMember(unit) })} aria-label="Remove">✕</button>
                 </>
               ) : (
                 <span className={styles.addIcon}>+</span>

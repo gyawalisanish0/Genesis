@@ -1,12 +1,14 @@
 // Battle Result screen — Victory or Defeat summary.
 // Reads battleResult from Zustand store; falls back to a mock for dev.
 
+import { useRef } from 'react'
 import { ScreenShell } from '../navigation/ScreenShell'
 import { useScreen } from '../navigation/useScreen'
 import { SCREEN_IDS } from '../navigation/screenRegistry'
 import { useGameStore } from '../core/GameContext'
 import { ResourceBar } from '../components/ResourceBar'
 import { UnitPortrait } from '../components/UnitPortrait'
+import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import styles from './BattleResultScreen.module.css'
 
 const MOCK_RESULT = {
@@ -32,8 +34,10 @@ export function BattleResultScreen() {
   const storedResult = useGameStore((s) => s.battleResult)
   const resetBattle  = useGameStore((s) => s.resetBattle)
 
-  const result  = storedResult ?? MOCK_RESULT
-  const victory = result.outcome === 'victory'
+  const result   = storedResult ?? MOCK_RESULT
+  const victory  = result.outcome === 'victory'
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const createScrollAwareHandler = useScrollAwarePointer(scrollContainerRef)
 
   const handlePrimary = () => {
     resetBattle()
@@ -60,7 +64,7 @@ export function BattleResultScreen() {
           {victory && <span className={styles.bannerIconRight}>★</span>}
         </div>
 
-        <div className={styles.scroll}>
+        <div ref={scrollContainerRef} className={styles.scroll}>
 
           {/* Rewards (victory only) */}
           {victory && (
@@ -109,11 +113,11 @@ export function BattleResultScreen() {
           <div className={styles.actions}>
             <button
               className={`${styles.primaryBtn} ${!victory ? styles.primaryBtnRetry : ''}`}
-              onPointerDown={handlePrimary}
+              onPointerDown={createScrollAwareHandler({ onTap: handlePrimary })}
             >
               {victory ? 'CONTINUE →' : '↺ RETRY'}
             </button>
-            <button className={styles.ghostBtn} onPointerDown={handleMainMenu}>
+            <button className={styles.ghostBtn} onPointerDown={createScrollAwareHandler({ onTap: handleMainMenu })}>
               MAIN MENU
             </button>
           </div>
