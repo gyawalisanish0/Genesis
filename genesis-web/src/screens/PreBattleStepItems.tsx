@@ -1,7 +1,6 @@
 // Step 3 — Genesis Items
 // Player optionally equips items to each team member. Items are optional.
 
-import { useRef } from 'react'
 import { usePreBattleScreen } from './PreBattleContext'
 import { UnitPortrait } from '../components/UnitPortrait'
 import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
@@ -9,8 +8,7 @@ import styles from './PreBattleStepItems.module.css'
 
 export function PreBattleStepItems() {
   const { selectedTeam } = usePreBattleScreen()
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const createScrollAwareHandler = useScrollAwarePointer(scrollContainerRef)
+  const createScrollAwareHandler = useScrollAwarePointer()
 
   if (selectedTeam.length === 0) {
     return (
@@ -21,7 +19,7 @@ export function PreBattleStepItems() {
   }
 
   return (
-    <div ref={scrollContainerRef} className={styles.root}>
+    <div className={styles.root}>
       <h2 className={styles.sectionTitle}>EQUIP GENESIS ITEMS</h2>
       <p className={styles.subtitle}>Items persist across all battles. All slots are optional.</p>
 

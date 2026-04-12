@@ -1,7 +1,6 @@
 // Step 2 — Team Compose
 // Player picks up to 2 units for the battle team.
 
-import { useRef } from 'react'
 import { usePreBattleScreen } from './PreBattleContext'
 import { UnitPortrait } from '../components/UnitPortrait'
 import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
@@ -21,12 +20,11 @@ const TEAM_MAX = 2
 
 export function PreBattleStepTeam() {
   const { selectedTeam, toggleTeamMember } = usePreBattleScreen()
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const createScrollAwareHandler = useScrollAwarePointer(scrollContainerRef)
+  const createScrollAwareHandler = useScrollAwarePointer()
   const teamFull = selectedTeam.length >= TEAM_MAX
 
   return (
-    <div ref={scrollContainerRef} className={styles.root}>
+    <div className={styles.root}>
       <h2 className={styles.sectionTitle}>SELECT YOUR TEAM ({TEAM_MAX} max)</h2>
 
       {/* Selected team slots */}
@@ -39,7 +37,7 @@ export function PreBattleStepTeam() {
                 <>
                   <UnitPortrait name={unit.name} rarity={unit.rarity} size="md" />
                   <span className={styles.slotName}>{unit.name}</span>
-                  <button className={styles.removeBtn} onPointerDown={() => toggleTeamMember(unit)} aria-label="Remove">✕</button>
+                  <button className={styles.removeBtn} onPointerDown={createScrollAwareHandler({ onTap: () => toggleTeamMember(unit) })} aria-label="Remove">✕</button>
                 </>
               ) : (
                 <span className={styles.addIcon}>+</span>

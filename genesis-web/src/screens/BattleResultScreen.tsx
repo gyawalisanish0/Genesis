@@ -7,6 +7,7 @@ import { SCREEN_IDS } from '../navigation/screenRegistry'
 import { useGameStore } from '../core/GameContext'
 import { ResourceBar } from '../components/ResourceBar'
 import { UnitPortrait } from '../components/UnitPortrait'
+import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import styles from './BattleResultScreen.module.css'
 
 const MOCK_RESULT = {
@@ -32,8 +33,9 @@ export function BattleResultScreen() {
   const storedResult = useGameStore((s) => s.battleResult)
   const resetBattle  = useGameStore((s) => s.resetBattle)
 
-  const result  = storedResult ?? MOCK_RESULT
-  const victory = result.outcome === 'victory'
+  const result   = storedResult ?? MOCK_RESULT
+  const victory  = result.outcome === 'victory'
+  const createScrollAwareHandler = useScrollAwarePointer()
 
   const handlePrimary = () => {
     resetBattle()
@@ -109,11 +111,11 @@ export function BattleResultScreen() {
           <div className={styles.actions}>
             <button
               className={`${styles.primaryBtn} ${!victory ? styles.primaryBtnRetry : ''}`}
-              onPointerDown={handlePrimary}
+              onPointerDown={createScrollAwareHandler({ onTap: handlePrimary })}
             >
               {victory ? 'CONTINUE →' : '↺ RETRY'}
             </button>
-            <button className={styles.ghostBtn} onPointerDown={handleMainMenu}>
+            <button className={styles.ghostBtn} onPointerDown={createScrollAwareHandler({ onTap: handleMainMenu })}>
               MAIN MENU
             </button>
           </div>

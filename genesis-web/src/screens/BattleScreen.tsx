@@ -8,6 +8,7 @@ import { ScreenShell } from '../navigation/ScreenShell'
 import { useScreen } from '../navigation/useScreen'
 import { SCREEN_REGISTRY, SCREEN_IDS } from '../navigation/screenRegistry'
 import { useBackButton } from '../input/useBackButton'
+import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import { BattleProvider, useBattleScreen } from './BattleContext'
 import { ResourceBar } from '../components/ResourceBar'
 import styles from './BattleScreen.module.css'
@@ -92,6 +93,7 @@ function PortraitPanel() {
 // ── Action grid ─────────────────────────────────────────────────────────────
 function ActionGrid() {
   const { phase, gridCollapsed, toggleGrid, appendLog } = useBattleScreen()
+  const createHandler = useScrollAwarePointer()
   const disabled = phase !== 'player'
 
   const handleBasicAttack = () => {
@@ -109,11 +111,11 @@ function ActionGrid() {
       {!gridCollapsed && (
         <>
           <div className={styles.actionRow}>
-            <button className={`${styles.actionBtn} ${styles.actionBtnBasic}`} onPointerDown={handleBasicAttack} disabled={disabled}>
+            <button className={`${styles.actionBtn} ${styles.actionBtnBasic}`} onPointerDown={createHandler({ onTap: handleBasicAttack })} disabled={disabled}>
               <span className={styles.actionBtnName}>Basic</span>
               <span className={styles.actionBtnMeta}>TU: 6</span>
             </button>
-            <button className={`${styles.actionBtn} ${styles.actionBtnEnd}`} onPointerDown={handleEndTurn} disabled={disabled}>
+            <button className={`${styles.actionBtn} ${styles.actionBtnEnd}`} onPointerDown={createHandler({ onTap: handleEndTurn })} disabled={disabled}>
               <span className={styles.actionBtnName}>End/Skip</span>
             </button>
           </div>
@@ -129,7 +131,7 @@ function ActionGrid() {
           </div>
         </>
       )}
-      <button className={styles.collapseBtn} onPointerDown={toggleGrid}>
+      <button className={styles.collapseBtn} onPointerDown={createHandler({ onTap: toggleGrid })}>
         {gridCollapsed ? '▲' : '▼'}
       </button>
     </div>
@@ -140,12 +142,13 @@ function ActionGrid() {
 function PauseOverlay() {
   const { setPaused } = useBattleScreen()
   const navigate = useNavigate()
+  const createHandler = useScrollAwarePointer()
   return (
     <div className={styles.pauseOverlay}>
       <div className={styles.pauseCard}>
         <span className={styles.pauseTitle}>PAUSED</span>
-        <button className={styles.pauseBtn} onPointerDown={() => setPaused(false)}>RESUME</button>
-        <button className={styles.pauseBtn} onPointerDown={() => navigate(SCREEN_REGISTRY[SCREEN_IDS.MAIN_MENU].path)}>LEAVE BATTLE</button>
+        <button className={styles.pauseBtn} onPointerDown={createHandler({ onTap: () => setPaused(false) })}>RESUME</button>
+        <button className={styles.pauseBtn} onPointerDown={createHandler({ onTap: () => navigate(SCREEN_REGISTRY[SCREEN_IDS.MAIN_MENU].path) })}>LEAVE BATTLE</button>
       </div>
     </div>
   )
