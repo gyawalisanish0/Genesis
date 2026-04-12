@@ -6,7 +6,7 @@ export type PointerEventType = 'tap' | 'scroll' | 'hold'
 interface PointerState {
   scrollY: number
   startTime: number
-  timeoutId: NodeJS.Timeout | null
+  timeoutId: ReturnType<typeof setTimeout> | null
 }
 
 interface ScrollAwareHandlerOptions {
@@ -37,7 +37,7 @@ interface ScrollAwareHandlerOptions {
  *     <button onPointerDown={createHandler({
  *       onTap: () => selectCard(),
  *       onHold: () => showContextMenu(),
- *       onScroll: () => { /* optional feedback */ }
+ *       onScroll: () => {}
  *     })}>
  *       Select
  *     </button>
