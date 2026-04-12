@@ -1,13 +1,12 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Engine Content Contract — v0.1.0 (types only, no implementation)
+// Engine Content Contract — v0.1.0 types
 //
 // Mirrors docs/engine/00_content_contract.md exactly. This file is the
-// TypeScript surface the Skill / Status / Passive engines, the effect
-// registry, and the Zod schemas in services/DataService will build against.
-//
-// NOTHING IMPORTS THIS YET. It is a pure contract draft for review. The
-// existing SkillDef / StatusEffect in core/types.ts will be replaced by
-// these shapes in Wave B — intentional transitional overlap.
+// TypeScript surface the effect registry, the Skill Engine, and the Zod
+// schemas build against. It intentionally overlaps in name with the
+// legacy SkillDef in core/types.ts — the legacy shape is untouched and
+// still drives the existing unit.ts / tests until Wave C wires the new
+// engine into combat.
 //
 // Rules this file follows:
 //   1. Pure types — no runtime values, no classes, no functions
@@ -18,6 +17,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { DiceOutcome } from '../combat/DiceResolver'
+import type { Unit } from '../types'
 
 // ── Core vocabulary ──────────────────────────────────────────────────────────
 
@@ -300,41 +300,41 @@ export interface SkillInstance {
   cacheVersion:  number
 }
 
-// ── Runtime: EffectContext ───────────────────────────────────────────────────
+// ── Runtime: BattleState + EffectContext ────────────────────────────────────
 
 /** Which engine originated the effect — used for logging and telemetry. */
 export type EffectSource = 'skill' | 'status' | 'passive' | 'item'
 
 /**
- * Placeholder for the eventual BattleState surface. The real type will
- * expose typed methods (applyDamage, applyHeal, shoveMarker, applyStatus,
- * gainAp, ...) and will be the ONLY channel through which effect handlers
- * touch battle state. Defined here as an opaque handle so the contract
- * compiles before Wave B lands the real battle engine.
+ * Minimal mutable orchestrator that holds the battle's immutable Units
+ * and exposes lookup + replace semantics. Effect handlers mutate state
+ * only through this interface — they never reach into a store or mutate
+ * Unit properties directly.
+ *
+ * The interface is intentionally small: everything else (target
+ * resolution, AP economy, tick advancement) is built on top of these
+ * primitives in higher layers.
  */
 export interface BattleState {
-  readonly __battleStateBrand: unique symbol
+  getUnit(id: string):       Unit | undefined
+  setUnit(unit: Unit):        void
+  getAllUnits():              readonly Unit[]
 }
 
 /**
- * Placeholder Unit handle. The real Unit type lives in core/types.ts and
- * will be reconciled with the contract in Wave B. Kept opaque here so this
- * file stays a pure v0.1.0 draft with no incidental dependencies on the
- * legacy shape.
- */
-export interface UnitRef {
-  readonly __unitRefBrand: unique symbol
-}
-
-/**
- * The single argument every effect handler receives. Handlers mutate state
- * exclusively through `battle`; they never import from core/state, never
- * reach into the store, and never mutate Unit properties directly.
+ * The single argument every effect handler receives. Handlers mutate
+ * battle state exclusively through `battle`; they never import from
+ * state singletons and never mutate `caster`/`target` fields directly.
+ *
+ * `caster` is the unit performing the action. `target` is the default
+ * single target resolved from the skill's top-level targeting block.
+ * `targets` is populated when an effect-level override resolves to a
+ * multi-unit selector (`all-enemies`, `caster-and-target`, etc.).
  */
 export interface EffectContext {
-  caster:   UnitRef
-  target?:  UnitRef
-  targets?: UnitRef[]
+  caster:   Unit
+  target?:  Unit
+  targets?: readonly Unit[]
   battle:   BattleState
   source:   EffectSource
   event:    WhenClause

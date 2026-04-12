@@ -4,15 +4,28 @@
   "name": "Arcane Bolt",
   "tuCost": 10,
   "apCost": 35,
-  "baseChance": 1.1,
-  "baseValue": 95,
-  "statKey": "power",
+  "tags": ["energy", "ranged"],
   "maxLevel": 5,
-  "tags": ["magical", "ranged"],
+  "targeting": {
+    "selector": "enemy",
+    "range": "ranged"
+  },
+  "resolution": {
+    "baseChance": 1.1
+  },
+  "effects": [
+    {
+      "id": "dmg",
+      "when": { "event": "onCast" },
+      "type": "damage",
+      "amount": { "stat": "power", "percent": 95 },
+      "damageType": "energy"
+    }
+  ],
   "levelUpgrades": [
-    { "level": 2, "baseValue": 108 },
-    { "level": 3, "baseValue": 122 },
-    { "level": 4, "baseValue": 138 },
-    { "level": 5, "baseValue": 155 }
+    { "level": 2, "patch": { "effects.dmg.amount.percent": 108 } },
+    { "level": 3, "patch": { "effects.dmg.amount.percent": 122 } },
+    { "level": 4, "patch": { "effects.dmg.amount.percent": 138 } },
+    { "level": 5, "patch": { "effects.dmg.amount.percent": 155 } }
   ]
 }

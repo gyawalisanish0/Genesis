@@ -1,7 +1,9 @@
 name: Deploy Web
 
-# Manual trigger only — run from Actions tab when ready to ship.
+# Auto-deploy on push to main; manual dispatch still available.
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       label:
@@ -49,12 +51,16 @@ jobs:
         working-directory: genesis-web
         run: npm run test
 
-      - name: Build
-        working-directory: genesis-web
-        run: npm run build
-
+      # configure-pages outputs the correct base_path for this repo,
+      # which we pass to Vite so asset URLs work on GitHub Pages.
+      # The vite.config.ts base ('./') remains correct for Capacitor.
       - name: Configure GitHub Pages
+        id: pages
         uses: actions/configure-pages@v4
+
+      - name: Build for GitHub Pages
+        working-directory: genesis-web
+        run: npm run build -- --base "${{ steps.pages.outputs.base_path }}"
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
@@ -65,8 +71,6 @@ jobs:
     name: Deploy to GitHub Pages
     needs: build
     runs-on: ubuntu-24.04
-    # 'github-pages' is the required environment name for actions/deploy-pages.
-    # The user-chosen label is surfaced in the summary only.
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
@@ -78,10 +82,11 @@ jobs:
 
       - name: Deployment summary
         run: |
-          echo "### Web deployed successfully"        >> $GITHUB_STEP_SUMMARY
-          echo "| Property | Value |"                >> $GITHUB_STEP_SUMMARY
-          echo "|---|---|"                            >> $GITHUB_STEP_SUMMARY
-          echo "| Label | \`${{ github.event.inputs.label }}\` |"             >> $GITHUB_STEP_SUMMARY
-          echo "| URL | ${{ steps.deploy.outputs.page_url }} |"               >> $GITHUB_STEP_SUMMARY
-          echo "| Commit | \`${{ github.sha }}\` |"  >> $GITHUB_STEP_SUMMARY
-          echo "| Branch | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          LABEL="${{ github.event.inputs.label || 'auto' }}"
+          echo "### Web deployed successfully"                        >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |"                                >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|"                                            >> $GITHUB_STEP_SUMMARY
+          echo "| Label | \`${LABEL}\` |"                            >> $GITHUB_STEP_SUMMARY
+          echo "| URL | ${{ steps.deploy.outputs.page_url }} |"      >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |"                  >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | \`${{ github.ref_name }}\` |"             >> $GITHUB_STEP_SUMMARY
