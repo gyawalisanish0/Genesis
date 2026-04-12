@@ -1,84 +1,120 @@
 // Timeline marker positioning utilities.
 // Converts tick positions on the infinite timeline to visual positions on screen.
+//
+// **Timeline Direction:**
+// - BOTTOM (low %) = act now (current/earliest tick)
+// - TOP (high %) = soonest future action
+// - Fixed range: 0–300 ticks
 
 const TIMELINE_TOP_MARGIN = 2.5  // rem — matches CSS .timelineAxis top
 const TIMELINE_BOTTOM_MARGIN = 2.5  // rem — matches CSS .timelineAxis bottom
 const TIMELINE_CONTAINER_HEIGHT = 100  // vh
-const USABLE_HEIGHT = TIMELINE_CONTAINER_HEIGHT - (TIMELINE_TOP_MARGIN * 2)
+const USABLE_HEIGHT = TIMELINE_CONTAINER_HEIGHT - (TIMELINE_TOP_MARGIN + TIMELINE_BOTTOM_MARGIN)
+const MAX_TICK_RANGE = 300  // Fixed tick range: 0–300
 
 /**
  * Calculates the visual percentage (top: value) for a marker based on tick position.
  *
- * Distributes all units across the available vertical space. Units with lower
- * tickPositions appear higher; higher tickPositions appear lower.
+ * **Timeline Direction:**
+ * - Bottom (low %) = act now (current tick, earliest)
+ * - Top (high %) = soonest future actions
  *
- * @param unitTickPosition The unit's current tick position
- * @param allTickPositions Array of all tick positions in battle (for normalization)
- * @returns CSS percentage string (e.g., "25%")
+ * Uses fixed 0–300 tick range for consistent scaling across battles.
+ *
+ * @param unitTickPosition The unit's current tick position (0–300)
+ * @param currentTick The battle's current tick (for reference)
+ * @returns CSS percentage string (e.g., "75%" = near bottom = act soon)
  *
  * @example
- * const positions = units.map(u => u.tickPosition)
- * const top = calculateMarkerPosition(player.tickPosition, positions)
- * // Returns "45%" → apply via style={{ top }}
+ * // Player at tick 50, battle at tick 15
+ * const top = calculateMarkerPosition(50, 15)
+ * // Returns "78%" → player is 35 ticks ahead, appears near bottom
+ *
+ * // Enemy at tick 200, battle at tick 15
+ * const top = calculateMarkerPosition(200, 15)
+ * // Returns "61%" → enemy is 185 ticks ahead, appears higher up
  */
 export function calculateMarkerPosition(
   unitTickPosition: number,
-  allTickPositions: number[]
+  currentTick: number
 ): string {
-  if (allTickPositions.length === 0) return '50%'
-  if (allTickPositions.length === 1) return '50%'
+  // Calculate how far ahead this unit is from current tick
+  const ticksAhead = Math.max(0, unitTickPosition - currentTick)
 
-  // Find min/max tick positions to normalize
-  const minTick = Math.min(...allTickPositions)
-  const maxTick = Math.max(...allTickPositions)
-  const tickRange = maxTick - minTick
+  // Clamp to max range (0–300)
+  const clampedTicks = Math.min(ticksAhead, MAX_TICK_RANGE)
 
-  // Normalize tick position to 0–1
-  const normalized = tickRange === 0 ? 0.5 : (unitTickPosition - minTick) / tickRange
+  // Normalize to 0–1 (0 = act now at bottom, 1 = furthest future at top)
+  const normalized = clampedTicks / MAX_TICK_RANGE
 
-  // Map to available visual space (accounting for margins)
+  // Invert: top margin + (normalized * usable height)
+  // Higher normalized = higher on screen (future)
+  // Lower normalized = lower on screen (act now)
   const visualPercent = TIMELINE_TOP_MARGIN + normalized * USABLE_HEIGHT
+
   return `${visualPercent}%`
 }
 
 /**
- * Calculates marker position using a fixed tick range (e.g., 0–300).
- * Useful when you want consistent visual scaling across all battles.
+ * Alternate API: pass only unit tick, infer current from context.
+ * Use this when you already know the battle's current tick elsewhere.
  *
- * @param unitTickPosition The unit's current tick position
- * @param maxTickValue The maximum expected tick value in battle (e.g., 300)
- * @returns CSS percentage string (e.g., "25%")
- *
- * @example
- * // All battles use 0–300 tick range
- * const top = calculateMarkerPositionFixed(player.tickPosition, 300)
+ * @param unitTickPosition The unit's tick position
+ * @param currentTick The current battle tick (default: 0)
+ * @returns CSS percentage string
  */
-export function calculateMarkerPositionFixed(
+export function getMarkerPosition(
   unitTickPosition: number,
-  maxTickValue: number = 300
+  currentTick: number = 0
 ): string {
-  if (maxTickValue <= 0) return '50%'
-
-  // Clamp position to valid range
-  const clamped = Math.max(0, Math.min(unitTickPosition, maxTickValue))
-  const normalized = clamped / maxTickValue
-
-  // Map to available visual space
-  const visualPercent = TIMELINE_TOP_MARGIN + normalized * USABLE_HEIGHT
-  return `${visualPercent}%`
+  return calculateMarkerPosition(unitTickPosition, currentTick)
 }
 
 /**
  * Sorts units by tick position (ascending) — lowest ticks first.
- * Use this to render markers from top to bottom correctly.
+ * Useful for rendering or analyzing turn order.
  *
  * @param units Array of Unit objects
  * @returns Sorted array by tickPosition (lowest first)
  *
  * @example
  * const sorted = sortUnitsByTick(units)
- * return sorted.map(unit => <Marker key={unit.id} unit={unit} />)
+ * // sorted[0] acts soonest, sorted[n] acts last
  */
 export function sortUnitsByTick(units: { tickPosition: number; id: string }[]): typeof units {
   return [...units].sort((a, b) => a.tickPosition - b.tickPosition)
+}
+
+/**
+ * Identifies which unit acts next (soonest tick).
+ *
+ * @param units Array of Unit objects
+ * @returns The unit with the lowest tickPosition, or null if empty
+ */
+export function getNextActingUnit(
+  units: { tickPosition: number; id: string; name: string }[]
+): typeof units[0] | null {
+  if (units.length === 0) return null
+  return units.reduce((earliest, unit) =>
+    unit.tickPosition < earliest.tickPosition ? unit : earliest
+  )
+}
+
+/**
+ * Calculates visual distance between two units on the timeline.
+ * Useful for animation or visual grouping.
+ *
+ * @param tick1 First unit's tick position
+ * @param tick2 Second unit's tick position
+ * @param currentTick Battle's current tick
+ * @returns Visual percentage distance between them
+ */
+export function getMarkerDistance(
+  tick1: number,
+  tick2: number,
+  currentTick: number = 0
+): number {
+  const pos1 = parseFloat(calculateMarkerPosition(tick1, currentTick))
+  const pos2 = parseFloat(calculateMarkerPosition(tick2, currentTick))
+  return Math.abs(pos1 - pos2)
 }
