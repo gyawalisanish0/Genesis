@@ -4,6 +4,8 @@
 import { useRef, useState } from 'react'
 import { ScreenShell } from '../navigation/ScreenShell'
 import { useScreen } from '../navigation/useScreen'
+import { SCREEN_IDS } from '../navigation/screenRegistry'
+import { useBackButton } from '../input/useBackButton'
 import { UnitPortrait } from '../components/UnitPortrait'
 import { ResourceBar } from '../components/ResourceBar'
 import styles from './RosterScreen.module.css'
@@ -22,7 +24,8 @@ const CLASSES = ['All', 'Hunter', 'Ranger', 'Caster', 'Warrior', 'Enchanter', 'G
 const RARITIES = [0, 1, 2, 3, 4, 5]  // 0 = All
 
 export function RosterScreen() {
-  const { navigateTo: _navigateTo } = useScreen()
+  const { navigateTo } = useScreen()
+  const handleBack = useBackButton(() => navigateTo(SCREEN_IDS.MAIN_MENU))
   const gridRef = useRef<HTMLDivElement>(null)
   const [activeClass, setActiveClass]   = useState('All')
   const [activeRarity, setActiveRarity] = useState(0)
@@ -55,7 +58,7 @@ export function RosterScreen() {
             </>
           ) : (
             <>
-              <button className={styles.iconBtn} onPointerDown={() => window.history.back()} aria-label="Back">←</button>
+              <button className={styles.iconBtn} onPointerDown={handleBack} aria-label="Back">←</button>
               <span className={styles.headerTitle}>ROSTER</span>
               <button className={styles.iconBtn} onPointerDown={() => setSearching(true)} aria-label="Search">🔍</button>
             </>

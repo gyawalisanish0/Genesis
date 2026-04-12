@@ -22,11 +22,13 @@ interface BattleState {
   log:             LogEntry[]
   selectedSkill:   SkillInstance | null
   gridCollapsed:   boolean
+  isPaused:        boolean
   // Actions
   setPhase:        (p: TurnPhase) => void
   appendLog:       (entry: Omit<LogEntry, 'id'>) => void
   selectSkill:     (skill: SkillInstance | null) => void
   toggleGrid:      () => void
+  setPaused:       (v: boolean) => void
 }
 
 const BattleContext = createContext<BattleState | null>(null)
@@ -50,6 +52,7 @@ export function BattleProvider({ children }: Props) {
   ])
   const [selectedSkill, setSelectedSkill] = useState<SkillInstance | null>(null)
   const [gridCollapsed, setGridCollapsed] = useState(false)
+  const [isPaused, setPaused]             = useState(false)
 
   const appendLog = useCallback((entry: Omit<LogEntry, 'id'>) => {
     setLog((prev) => [...prev, { ...entry, id: String(Date.now()) }])
@@ -66,8 +69,8 @@ export function BattleProvider({ children }: Props) {
   return (
     <BattleContext.Provider value={{
       phase, turnNumber, tickValue, playerUnit, enemies, log,
-      selectedSkill, gridCollapsed,
-      setPhase, appendLog, selectSkill, toggleGrid,
+      selectedSkill, gridCollapsed, isPaused,
+      setPhase, appendLog, selectSkill, toggleGrid, setPaused,
     }}>
       {children}
     </BattleContext.Provider>

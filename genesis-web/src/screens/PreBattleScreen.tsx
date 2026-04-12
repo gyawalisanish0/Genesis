@@ -4,6 +4,7 @@
 import { ScreenShell } from '../navigation/ScreenShell'
 import { useScreen } from '../navigation/useScreen'
 import { SCREEN_IDS } from '../navigation/screenRegistry'
+import { useBackButton } from '../input/useBackButton'
 import { PreBattleProvider, usePreBattleScreen, type WizardStep } from './PreBattleContext'
 import { PreBattleStepMode }  from './PreBattleStepMode'
 import { PreBattleStepTeam }  from './PreBattleStepTeam'
@@ -28,10 +29,12 @@ function PreBattleWizard() {
   const { navigateTo } = useScreen()
   const setSelectedMode = useGameStore((s) => s.setSelectedMode)
 
-  const handleBack = () => {
+  // handleBack is registered with the global input registry so the hardware back
+  // button and the on-screen ← button always invoke the same wizard-step logic.
+  const handleBack = useBackButton(() => {
     if (step > 0) { setStep((step - 1) as WizardStep); return }
     navigateTo(SCREEN_IDS.MAIN_MENU)
-  }
+  })
 
   const handleContinue = () => {
     if (step < 2) { setStep((step + 1) as WizardStep); return }

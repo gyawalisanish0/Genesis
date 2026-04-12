@@ -295,3 +295,50 @@
 }
 
 .collapseBtn:active { background: var(--bg-card); }
+
+/* ── Pause overlay ──────────────────────────────────────────────────── */
+.pauseOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.pauseCard {
+  background: var(--bg-panel);
+  border: 1px solid var(--bg-elevated);
+  border-radius: var(--r-md);
+  padding: var(--s-md);
+  width: 80%;
+  max-width: 16rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-sm);
+}
+
+.pauseTitle {
+  font-size: var(--t-subheading-size);
+  font-weight: var(--t-subheading-weight);
+  color: var(--text-primary);
+  text-align: center;
+  letter-spacing: 0.15rem;
+}
+
+.pauseBtn {
+  width: 100%;
+  height: var(--touch-min);
+  border: none;
+  border-radius: var(--r-md);
+  font-family: var(--font-sans);
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  cursor: pointer;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  transition: transform var(--motion-button);
+}
+
+.pauseBtn:active { transform: scale(0.97); }

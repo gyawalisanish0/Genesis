@@ -4,6 +4,8 @@
 import { useRef } from 'react'
 import { ScreenShell } from '../navigation/ScreenShell'
 import { useScreen } from '../navigation/useScreen'
+import { SCREEN_IDS } from '../navigation/screenRegistry'
+import { useBackButton } from '../input/useBackButton'
 import { useGameStore } from '../core/GameContext'
 import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import type { AppSettings } from '../core/types'
@@ -82,7 +84,8 @@ function SectionGroup({ children }: { children: React.ReactNode }) {
 // ── Screen ─────────────────────────────────────────────────────────────────
 
 export function SettingsScreen() {
-  useScreen()
+  const { navigateTo } = useScreen()
+  const handleBack = useBackButton(() => navigateTo(SCREEN_IDS.MAIN_MENU))
   const settings          = useGameStore((s) => s.settings)
   const updateSetting     = useGameStore((s) => s.updateSetting)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -98,7 +101,7 @@ export function SettingsScreen() {
 
         {/* Sticky header */}
         <header className={styles.header}>
-          <button className={styles.backBtn} onPointerDown={() => window.history.back()} aria-label="Back">←</button>
+          <button className={styles.backBtn} onPointerDown={handleBack} aria-label="Back">←</button>
           <span className={styles.headerTitle}>SETTINGS</span>
         </header>
 
