@@ -8,32 +8,68 @@
   overflow: hidden;
 }
 
-/* ── Timeline strip (28dp left column) ─────────────────────────────── */
+/* ── Timeline strip (28dp left column, scrollable) ──────────────────── */
 .timeline {
   width: 1.75rem;  /* 28 dp */
   height: 100%;
   background: var(--bg-elevated);
   border-right: 1px solid var(--bg-panel);
-  position: relative;
   flex-shrink: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;  /* Firefox */
+}
+
+.timeline::-webkit-scrollbar { display: none; }  /* Chrome / Safari */
+
+/* Inner scrollable canvas — height set inline from TIMELINE_TICK_RANGE × TIMELINE_PX_PER_TICK */
+.timelineTrack {
+  position: relative;
+  width: 100%;
 }
 
 .timelineAxis {
   position: absolute;
   left: 50%;
-  top: 2.5rem;
-  bottom: 2.5rem;
+  top: 0;
+  bottom: 0;
   width: 2px;
   transform: translateX(-50%);
   background: var(--bg-panel);
 }
 
-.marker {
+/* Tick mark — top set inline; major variant widens and brightens. */
+.tickMark {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  width: 1.5rem;   /* 24 dp */
-  height: 1.5rem;
+  width: 0.5rem;
+  height: 1px;
+  background: var(--bg-panel);
+}
+
+.tickMarkMajor {
+  width: 1rem;
+  background: var(--text-muted);
+}
+
+/* Horizontal "now" bar at the current tick position. */
+.nowLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--accent-genesis);
+  transform: translateY(-50%);
+}
+
+/* Unit marker — centered on its tick position. */
+.marker {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 1.25rem;
+  height: 1.25rem;
   border-radius: var(--r-pill);
   border: 2px solid transparent;
   background: var(--bg-card);
@@ -43,8 +79,8 @@
 .markerEnemy { border-color: var(--accent-danger); }
 
 .markerActive {
-  width: 1.75rem;  /* 28 dp */
-  height: 1.75rem;
+  width: 1.5rem;
+  height: 1.5rem;
   animation: markerPulse 1.5s ease-in-out infinite;
 }
 

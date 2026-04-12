@@ -37,6 +37,10 @@ export const EVASION_COUNTER_MIN  = 0.01  // never below 1%
 export const MAX_SKILL_SLOTS = 4
 export const TEAM_SIZE_MAX   = 2
 
+// Timeline visual settings
+export const TIMELINE_TICK_RANGE  = 300  // total ticks visualised (0–300)
+export const TIMELINE_PX_PER_TICK = 10   // pixels per tick unit on the strip
+
 // Input timing thresholds (milliseconds / px)
 export const HOVER_THROTTLE_MS         = 100
 export const LONG_PRESS_DURATION_MS    = 500
