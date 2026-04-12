@@ -4,7 +4,7 @@
 
 import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react'
 import type { Unit, SkillInstance, StatBlockDef } from '../core/types'
-import { TIMELINE_BUFFER_TICKS } from '../core/constants'
+import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE } from '../core/constants'
 
 // ── Mock data — replace with DataService + createUnit() when wired ──────────
 const MOCK_STATS: StatBlockDef = {
@@ -58,6 +58,7 @@ interface BattleState {
   registerTick:    (id: string, tick: number) => void
   unregisterTick:  (id: string) => void
   // Actions
+  setTickValue:    (tick: number) => void
   setPhase:        (p: TurnPhase) => void
   appendLog:       (entry: Omit<LogEntry, 'id'>) => void
   selectSkill:     (skill: SkillInstance | null) => void
@@ -78,7 +79,7 @@ interface Props { children: ReactNode }
 export function BattleProvider({ children }: Props) {
   const [phase, setPhase]               = useState<TurnPhase>('player')
   const [turnNumber]                    = useState(1)
-  const [tickValue]                     = useState(0)
+  const [tickValue, setTickValue]       = useState(0)
   const [playerUnit]                    = useState<Unit | null>(MOCK_PLAYER)
   const [enemies]                       = useState<Unit[]>(MOCK_ENEMIES)
   const [log, setLog]                   = useState<LogEntry[]>([
@@ -108,15 +109,20 @@ export function BattleProvider({ children }: Props) {
     })
   }, [])
 
-  // scrollBounds: the exact tick range the timeline track covers, derived from registered positions.
+  // scrollBounds: the tick range the timeline track covers.
+  // max is always at least tickValue + TIMELINE_FUTURE_RANGE so 300 ticks of future are always shown.
   const scrollBounds = useMemo(() => {
     const ticks = [...registeredTicks.values()]
-    if (!ticks.length) return { min: 0, max: TIMELINE_BUFFER_TICKS * 2 }
-    return {
-      min: Math.max(0, Math.min(...ticks) - TIMELINE_BUFFER_TICKS),
-      max: Math.max(...ticks) + TIMELINE_BUFFER_TICKS,
+    const futureFloor = tickValue + TIMELINE_FUTURE_RANGE
+    if (!ticks.length) return {
+      min: Math.max(0, tickValue - TIMELINE_BUFFER_TICKS),
+      max: futureFloor,
     }
-  }, [registeredTicks])
+    return {
+      min: Math.max(0, Math.min(Math.min(...ticks), tickValue) - TIMELINE_BUFFER_TICKS),
+      max: Math.max(Math.max(...ticks) + TIMELINE_BUFFER_TICKS, futureFloor),
+    }
+  }, [registeredTicks, tickValue])
 
   const appendLog = useCallback((entry: Omit<LogEntry, 'id'>) => {
     setLog((prev) => [...prev, { ...entry, id: String(Date.now()) }])
@@ -135,7 +141,7 @@ export function BattleProvider({ children }: Props) {
       phase, turnNumber, tickValue, playerUnit, enemies, log,
       selectedSkill, gridCollapsed, isPaused,
       registeredTicks, scrollBounds, registerTick, unregisterTick,
-      setPhase, appendLog, selectSkill, toggleGrid, setPaused,
+      setTickValue, setPhase, appendLog, selectSkill, toggleGrid, setPaused,
     }}>
       {children}
     </BattleContext.Provider>
