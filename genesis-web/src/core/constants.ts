@@ -38,10 +38,11 @@ export const MAX_SKILL_SLOTS = 4
 export const TEAM_SIZE_MAX   = 2
 
 // Input timing thresholds (milliseconds / px)
-export const HOVER_THROTTLE_MS      = 100
-export const LONG_PRESS_DURATION_MS = 500
-export const SWIPE_MIN_DISTANCE_PX  = 50
-export const DOUBLE_TAP_WINDOW_MS   = 300
+export const HOVER_THROTTLE_MS         = 100
+export const LONG_PRESS_DURATION_MS    = 500
+export const SWIPE_MIN_DISTANCE_PX     = 50
+export const DOUBLE_TAP_WINDOW_MS      = 300
+export const SCROLL_DETECT_THRESHOLD_PX = 8  // if scrolled >8px, treat as scroll, not tap
 
 // Default app settings
 export const DEFAULT_SETTINGS: AppSettings = {
