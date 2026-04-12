@@ -34,10 +34,12 @@ function BattleTimeline() {
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // Keep "now" at 75% from the viewport top so future actors (above) dominate.
+  // paddingTop is read from computed style so the CSS value is the single source of truth.
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
-    el.scrollTop = tickToTop(tickValue) - el.clientHeight * 0.75
+    const paddingTop = parseFloat(getComputedStyle(el).paddingTop)
+    el.scrollTop = paddingTop + tickToTop(tickValue) - el.clientHeight * 0.75
   }, [tickValue])
 
   const allUnits = playerUnit ? [playerUnit, ...enemies] : enemies

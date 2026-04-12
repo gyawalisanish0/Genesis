@@ -18,6 +18,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: none;  /* Firefox */
+  padding-block: var(--s-xl);  /* breathing room at strip edges; JS reads this via getComputedStyle */
 }
 
 .timeline::-webkit-scrollbar { display: none; }  /* Chrome / Safari */
