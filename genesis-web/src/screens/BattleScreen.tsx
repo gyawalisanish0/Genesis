@@ -119,14 +119,23 @@ function PortraitPanel() {
 
 // ── Action grid ─────────────────────────────────────────────────────────────
 function ActionGrid() {
-  const { phase, gridCollapsed, toggleGrid, appendLog } = useBattleScreen()
+  const { phase, gridCollapsed, toggleGrid, appendLog, tickValue, setTickValue } = useBattleScreen()
   const disabled = phase !== 'player'
 
+  // Basic attack costs 6 TU
   const handleBasicAttack = () => {
     if (disabled) return
-    appendLog({ text: 'You used Basic Attack.', colour: 'var(--text-primary)' })
+    const BASIC_ATTACK_TU = 6
+    const newTick = tickValue + BASIC_ATTACK_TU
+
+    setTickValue(newTick)
+    appendLog({
+      text: `You used Basic Attack (+${BASIC_ATTACK_TU} TU → Tick ${newTick}).`,
+      colour: 'var(--text-primary)'
+    })
   }
 
+  // End turn costs 0 TU, just passes without advancing
   const handleEndTurn = () => {
     if (disabled) return
     appendLog({ text: 'You ended your turn.' })

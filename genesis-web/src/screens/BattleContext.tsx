@@ -24,6 +24,7 @@ interface BattleState {
   gridCollapsed:   boolean
   // Actions
   setPhase:        (p: TurnPhase) => void
+  setTickValue:    (tick: number) => void  // ← NEW
   appendLog:       (entry: Omit<LogEntry, 'id'>) => void
   selectSkill:     (skill: SkillInstance | null) => void
   toggleGrid:      () => void
@@ -40,16 +41,16 @@ export function useBattleScreen(): BattleState {
 interface Props { children: ReactNode }
 
 export function BattleProvider({ children }: Props) {
-  const [phase, setPhase]               = useState<TurnPhase>('player')
-  const [turnNumber]                    = useState(1)
-  const [tickValue]                     = useState(0)
-  const [playerUnit]                    = useState<Unit | null>(null)
-  const [enemies]                       = useState<Unit[]>([])
-  const [log, setLog]                   = useState<LogEntry[]>([
+  const [phase, setPhase]                       = useState<TurnPhase>('player')
+  const [turnNumber]                            = useState(1)
+  const [tickValue, setTickValue]               = useState(0)
+  const [playerUnit]                            = useState<Unit | null>(null)
+  const [enemies]                               = useState<Unit[]>([])
+  const [log, setLog]                           = useState<LogEntry[]>([
     { id: '0', text: 'Battle started. Your turn.', colour: 'var(--accent-genesis)' },
   ])
-  const [selectedSkill, setSelectedSkill] = useState<SkillInstance | null>(null)
-  const [gridCollapsed, setGridCollapsed] = useState(false)
+  const [selectedSkill, setSelectedSkill]       = useState<SkillInstance | null>(null)
+  const [gridCollapsed, setGridCollapsed]       = useState(false)
 
   const appendLog = useCallback((entry: Omit<LogEntry, 'id'>) => {
     setLog((prev) => [...prev, { ...entry, id: String(Date.now()) }])
@@ -67,7 +68,7 @@ export function BattleProvider({ children }: Props) {
     <BattleContext.Provider value={{
       phase, turnNumber, tickValue, playerUnit, enemies, log,
       selectedSkill, gridCollapsed,
-      setPhase, appendLog, selectSkill, toggleGrid,
+      setPhase, setTickValue, appendLog, selectSkill, toggleGrid,
     }}>
       {children}
     </BattleContext.Provider>
