@@ -2,8 +2,9 @@
 // Holds ephemeral within-session state: active turn, action log, animation locks.
 // The global Zustand store is NOT written during battle frames — only on battle end.
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react'
 import type { Unit, SkillInstance, StatBlockDef } from '../core/types'
+import { TIMELINE_BUFFER_TICKS } from '../core/constants'
 
 // ── Mock data — replace with DataService + createUnit() when wired ──────────
 const MOCK_STATS: StatBlockDef = {
@@ -51,6 +52,11 @@ interface BattleState {
   selectedSkill:   SkillInstance | null
   gridCollapsed:   boolean
   isPaused:        boolean
+  // Timeline registration — any entity (unit, event, effect) can claim a tick position.
+  registeredTicks: Map<string, number>
+  scrollBounds:    { min: number; max: number }
+  registerTick:    (id: string, tick: number) => void
+  unregisterTick:  (id: string) => void
   // Actions
   setPhase:        (p: TurnPhase) => void
   appendLog:       (entry: Omit<LogEntry, 'id'>) => void
@@ -82,6 +88,36 @@ export function BattleProvider({ children }: Props) {
   const [gridCollapsed, setGridCollapsed] = useState(false)
   const [isPaused, setPaused]             = useState(false)
 
+  // Seed the register map from mock units; keyed by stable id so re-registration is idempotent.
+  const [registeredTicks, setRegisteredTicks] = useState<Map<string, number>>(
+    () => new Map([
+      [MOCK_PLAYER.id, MOCK_PLAYER.tickPosition],
+      ...MOCK_ENEMIES.map((e) => [e.id, e.tickPosition] as [string, number]),
+    ])
+  )
+
+  const registerTick = useCallback((id: string, tick: number) => {
+    setRegisteredTicks((prev) => new Map(prev).set(id, tick))
+  }, [])
+
+  const unregisterTick = useCallback((id: string) => {
+    setRegisteredTicks((prev) => {
+      const next = new Map(prev)
+      next.delete(id)
+      return next
+    })
+  }, [])
+
+  // scrollBounds: the exact tick range the timeline track covers, derived from registered positions.
+  const scrollBounds = useMemo(() => {
+    const ticks = [...registeredTicks.values()]
+    if (!ticks.length) return { min: 0, max: TIMELINE_BUFFER_TICKS * 2 }
+    return {
+      min: Math.max(0, Math.min(...ticks) - TIMELINE_BUFFER_TICKS),
+      max: Math.max(...ticks) + TIMELINE_BUFFER_TICKS,
+    }
+  }, [registeredTicks])
+
   const appendLog = useCallback((entry: Omit<LogEntry, 'id'>) => {
     setLog((prev) => [...prev, { ...entry, id: String(Date.now()) }])
   }, [])
@@ -98,6 +134,7 @@ export function BattleProvider({ children }: Props) {
     <BattleContext.Provider value={{
       phase, turnNumber, tickValue, playerUnit, enemies, log,
       selectedSkill, gridCollapsed, isPaused,
+      registeredTicks, scrollBounds, registerTick, unregisterTick,
       setPhase, appendLog, selectSkill, toggleGrid, setPaused,
     }}>
       {children}
