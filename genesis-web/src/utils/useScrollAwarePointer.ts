@@ -28,6 +28,7 @@ interface ScrollAwareHandlerOptions {
  * @returns A function to wrap your onPointerDown callbacks with optional event handlers
  *
  * @example
+ * ```tsx
  * const scrollContainer = useRef<HTMLDivElement>(null)
  * const createHandler = useScrollAwarePointer(scrollContainer)
  *
@@ -42,6 +43,7 @@ interface ScrollAwareHandlerOptions {
  *     </button>
  *   </div>
  * )
+ * ```
  */
 export function useScrollAwarePointer(
   scrollContainerRef: React.RefObject<HTMLElement | null>
