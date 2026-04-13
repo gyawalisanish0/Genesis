@@ -16,5 +16,6 @@
   "maxAp": 100,
   "apRegenRate": 8,
   "passive": null,
-  "skillPath": "warrior_path"
+  "skillPath": "warrior_path",
+  "skills": ["slash_001"]
 }
