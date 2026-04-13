@@ -2,7 +2,7 @@
 // Layout: 28dp timeline strip (left) + main area (right).
 // Child components read from BattleContext via useBattleScreen().
 
-import { useRef, useEffect, useMemo } from 'react'
+import { useRef, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ScreenShell } from '../navigation/ScreenShell'
 import { useScreen } from '../navigation/useScreen'
@@ -78,36 +78,49 @@ function BattleTimeline() {
     return marks
   }, [scrollBounds])
 
-  // Anchor point: now-line sits at the inner edge of the bottom overlay in all cases.
-  // target = nowTop - clientHeight + OVERLAY_PX  → now-line flush with the bottom overlay edge.
-  const mountedRef = useRef(false)
-
-  // On mount: instant snap. On tick advance: smooth slide up to the anchor.
+  // Track the container's real rendered height via ResizeObserver.
+  // clientHeight reads 0 on mount because the browser hasn't resolved height:100%
+  // in time for the first useEffect run. ResizeObserver fires after layout is done.
+  const [containerHeight, setContainerHeight] = useState(0)
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
+    const ro = new ResizeObserver((entries) => {
+      setContainerHeight(entries[0].contentRect.height)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  // Anchor: now-line at the top edge of the bottom overlay.
+  // Skipped until containerHeight is known (> 0).
+  const mountedRef = useRef(false)
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el || containerHeight === 0) return
     const nowTop = tickToTop(tickValue, scrollBounds.max)
-    const target = nowTop - el.clientHeight + TIMELINE_OVERLAY_PX
+    const target = nowTop - containerHeight + TIMELINE_OVERLAY_PX
     const behavior = mountedRef.current ? 'smooth' : 'instant'
     el.scrollTo({ top: target, behavior })
     mountedRef.current = true
-  }, [tickValue, scrollBounds])
+  }, [tickValue, scrollBounds, containerHeight])
 
   // Auto-recenter: if the now-line scrolls out of the visible band, smooth-scroll
   // back to the bottom-overlay anchor after TIMELINE_RECENTER_DELAY_MS of idle.
   useEffect(() => {
     const el = scrollRef.current
-    if (!el) return
+    if (!el || containerHeight === 0) return
     let timer: ReturnType<typeof setTimeout> | null = null
 
     function onScroll() {
       if (timer) clearTimeout(timer)
       const nowTop  = tickToTop(tickValue, scrollBounds.max)
       const bandTop = el!.scrollTop + TIMELINE_OVERLAY_PX
-      const bandBot = el!.scrollTop + el!.clientHeight - TIMELINE_OVERLAY_PX
+      const bandBot = el!.scrollTop + containerHeight - TIMELINE_OVERLAY_PX
       if (nowTop < bandTop || nowTop > bandBot) {
         timer = setTimeout(() => {
-          const target = nowTop - el!.clientHeight + TIMELINE_OVERLAY_PX
+          const target = nowTop - containerHeight + TIMELINE_OVERLAY_PX
           el!.scrollTo({ top: target, behavior: 'smooth' })
         }, TIMELINE_RECENTER_DELAY_MS)
       }
@@ -118,7 +131,7 @@ function BattleTimeline() {
       el.removeEventListener('scroll', onScroll)
       if (timer) clearTimeout(timer)
     }
-  }, [tickValue, scrollBounds])
+  }, [tickValue, scrollBounds, containerHeight])
 
   const allUnits = playerUnit ? [playerUnit, ...enemies] : enemies
 
