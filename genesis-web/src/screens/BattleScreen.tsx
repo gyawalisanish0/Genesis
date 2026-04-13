@@ -11,7 +11,10 @@ import { useBackButton } from '../input/useBackButton'
 import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import { BattleProvider, useBattleScreen } from './BattleContext'
 import { ResourceBar } from '../components/ResourceBar'
-import { TIMELINE_PX_PER_TICK, TIMELINE_OVERLAY_PX } from '../core/constants'
+import {
+  TIMELINE_PX_PER_TICK, TIMELINE_OVERLAY_PX,
+  TIMELINE_NOW_FRACTION, TIMELINE_RECENTER_DELAY_MS,
+} from '../core/constants'
 import styles from './BattleScreen.module.css'
 
 // ── Timeline helpers ─────────────────────────────────────────────────────────
@@ -39,11 +42,40 @@ function BattleTimeline() {
     return marks
   }, [scrollBounds])
 
-  // Keep "now" at 75% from viewport top. TIMELINE_OVERLAY_PX offsets for the dead-zone overlay.
+  // Smooth-scroll "now" to TIMELINE_NOW_FRACTION from the top whenever tickValue or bounds change.
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
-    el.scrollTop = tickToTop(tickValue, scrollBounds.max) - el.clientHeight * 0.75 + TIMELINE_OVERLAY_PX
+    const target = tickToTop(tickValue, scrollBounds.max)
+      - el.clientHeight * TIMELINE_NOW_FRACTION + TIMELINE_OVERLAY_PX
+    el.scrollTo({ top: target, behavior: 'smooth' })
+  }, [tickValue, scrollBounds])
+
+  // Auto-recenter: if the user scrolls the now-line out of the visible band,
+  // smooth-scroll back to center it after TIMELINE_RECENTER_DELAY_MS of idle.
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    let timer: ReturnType<typeof setTimeout> | null = null
+
+    function onScroll() {
+      if (timer) clearTimeout(timer)
+      const nowTop  = tickToTop(tickValue, scrollBounds.max)
+      const bandTop = el!.scrollTop + TIMELINE_OVERLAY_PX
+      const bandBot = el!.scrollTop + el!.clientHeight - TIMELINE_OVERLAY_PX
+      if (nowTop < bandTop || nowTop > bandBot) {
+        timer = setTimeout(() => {
+          const target = nowTop - el!.clientHeight * TIMELINE_NOW_FRACTION + TIMELINE_OVERLAY_PX
+          el!.scrollTo({ top: target, behavior: 'smooth' })
+        }, TIMELINE_RECENTER_DELAY_MS)
+      }
+    }
+
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      el.removeEventListener('scroll', onScroll)
+      if (timer) clearTimeout(timer)
+    }
   }, [tickValue, scrollBounds])
 
   const allUnits = playerUnit ? [playerUnit, ...enemies] : enemies
@@ -140,17 +172,26 @@ function PortraitPanel() {
 
 // ── Action grid ─────────────────────────────────────────────────────────────
 function ActionGrid() {
-  const { phase, gridCollapsed, toggleGrid, appendLog } = useBattleScreen()
+  const {
+    phase, gridCollapsed, toggleGrid, appendLog,
+    tickValue, playerUnit, setTickValue, registerTick,
+  } = useBattleScreen()
   const createHandler = useScrollAwarePointer()
   const disabled = phase !== 'player'
 
   const handleBasicAttack = () => {
     if (disabled) return
+    const newTick = tickValue + 6
+    setTickValue(newTick)
+    if (playerUnit) registerTick(playerUnit.id, newTick)
     appendLog({ text: 'You used Basic Attack.', colour: 'var(--text-primary)' })
   }
 
   const handleEndTurn = () => {
     if (disabled) return
+    const newTick = tickValue + 10
+    setTickValue(newTick)
+    if (playerUnit) registerTick(playerUnit.id, newTick)
     appendLog({ text: 'You ended your turn.' })
   }
 

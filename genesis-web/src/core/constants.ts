@@ -38,9 +38,12 @@ export const MAX_SKILL_SLOTS = 4
 export const TEAM_SIZE_MAX   = 2
 
 // Timeline visual settings
-export const TIMELINE_PX_PER_TICK  = 10  // pixels per tick unit on the strip
-export const TIMELINE_BUFFER_TICKS = 15  // extra ticks beyond the outermost registered unit
-export const TIMELINE_OVERLAY_PX   = 48  // dead-zone overlay height at each strip edge (3rem @ 16px base — must match CSS)
+export const TIMELINE_PX_PER_TICK      = 10    // pixels per tick unit on the strip
+export const TIMELINE_BUFFER_TICKS     = 15    // extra ticks beyond the outermost registered unit
+export const TIMELINE_OVERLAY_PX       = 48    // dead-zone overlay height at each strip edge (3rem @ 16px base — must match CSS)
+export const TIMELINE_FUTURE_RANGE     = 300   // ticks always kept visible ahead of the current tick
+export const TIMELINE_NOW_FRACTION     = 0.75  // now-line sits at 75% from the strip top
+export const TIMELINE_RECENTER_DELAY_MS = 1500 // ms of scroll-idle before auto-recenter fires
 
 // Input timing thresholds (milliseconds / px)
 export const HOVER_THROTTLE_MS         = 100
