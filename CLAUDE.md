@@ -105,21 +105,31 @@ Genesis/
 │       │   ├── constants.ts
 │       │   ├── screen-types.ts
 │       │   ├── unit.ts
+│       │   ├── battleHistory.ts  # HistoryEntry type + makeHistoryEntry factory
 │       │   ├── GameContext.ts    # Zustand store
 │       │   ├── combat/
 │       │   │   ├── TickCalculator.ts
 │       │   │   ├── HitChanceEvaluator.ts
 │       │   │   ├── DiceResolver.ts
 │       │   │   └── index.ts
+│       │   ├── effects/          # Effect handler registry + builtins
+│       │   │   ├── types.ts
+│       │   │   ├── applyEffect.ts
+│       │   │   ├── resolveValue.ts
+│       │   │   ├── conditions.ts
+│       │   │   ├── patch.ts
+│       │   │   └── builtins/     # registerBuiltins() + 6 registered handlers
+│       │   ├── engines/skill/    # createSkillInstance, getCachedSkill, levelUpSkill
 │       │   └── __tests__/
 │       ├── navigation/           # Screen routing, safe-area, back-button
 │       │   ├── screenRegistry.ts
 │       │   ├── ScreenContext.tsx
 │       │   ├── ScreenShell.tsx
 │       │   └── useScreen.ts
-│       ├── services/             # (planned) Side-effectful singletons; Capacitor allowed
-│       │   ├── DataService.ts    # (planned) JSON loader + Zod validation
-│       │   └── DisplayService.ts # (planned) StatusBar / fullscreen control
+│       ├── services/             # Side-effectful singletons; Capacitor allowed
+│       │   ├── DataService.ts    # JSON loader with in-memory cache
+│       │   ├── DisplayService.ts # (planned) StatusBar / fullscreen control
+│       │   └── __tests__/
 │       ├── scenes/               # (planned) Phaser scenes — Phaser imports only
 │       │   └── BattleScene.ts    # (planned)
 │       ├── screens/              # React screen components
@@ -137,9 +147,10 @@ Genesis/
 │       └── main.tsx              # Vite entry point
 ```
 
-> **Note:** `services/` and `scenes/` are reserved directories — the architecture
-> depends on them but they have not yet been created. Any code requiring a
-> service or Phaser scene must add the directory and module rather than
+> **Note:** `scenes/` is a reserved directory — the architecture depends on it
+> but it has not yet been created. `services/` exists and contains `DataService`.
+> `DisplayService` and all Phaser scenes are still planned. Any code requiring
+> a new service or Phaser scene must add the directory and module rather than
 > bypassing the layer. The legacy Python/Kivy prototype has been removed from
 > this repository.
 

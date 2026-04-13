@@ -42,7 +42,7 @@ Main area : 332 dp wide (x=28 to x=360)
 │TL├─────────────────────────────────────────┤  y=var
 │TL│  ╭──[■]──[■]──[■]──╮  Status Slots     │  44dp
 │TL├─────────────────────────────────────────┤
-│  │ [Turn N] [Tick: N]  │  Basic  │ End/Sk │  48dp  action row 1
+│  │ [Turn N] [Tick: N]  │      End/Skip     │  48dp  action row 1
 │  │                     │─────────┼────────│
 │  │  ◉ portrait circle  │  Skill1 │ Skill2 │  72dp  skill row 1
 │  │  LVL   CXP/NLU      │─────────┼────────│
@@ -89,14 +89,15 @@ expands automatically to cover them all plus a 15-tick buffer at each end and
 └──────────────────────┘  ← dead-zone overlay (48 dp, bg-deep)
 ```
 
-Content scrolls **physically under** the 48 dp dead-zone overlays at top and
-bottom (`::before` / `::after` pseudo-elements). The now-line and all markers
-are part of the scrollable track — not fixed overlays.
+The track shifts via CSS `transform: translateY` under the 48 dp dead-zone
+overlays at top and bottom (`::before` / `::after` pseudo-elements). The
+now-line and all markers are children of the translated track — not fixed
+overlays.
 
 **Now-line** — a 1 dp horizontal accent bar at `tickValue` (the global battle
-clock). Moves with a `--motion-timeline` (200 ms ease-in-out) CSS transition
-whenever `tickValue` advances. Auto-recenters to the bottom dead-zone edge
-after 1.5 s of idle scroll.
+clock). Does not move individually — the whole track translates so the now-line
+sits at the bottom dead-zone inner edge. The translation is animated with
+`--motion-timeline` (200 ms ease-in-out).
 
 **Unit markers** — 24 × 24 SVG, positioned at `unit.tickPosition`:
 
@@ -115,10 +116,10 @@ marker is left at the old tick position (`filter: grayscale(1); opacity: 0.4;
 pointer-events: none`). Rendered behind live markers in DOM order. HP arc is
 shown as empty (hpFraction = 0) on ghosts.
 
-**Scroll behaviour:**
-- On mount: instant snap, now-line at bottom dead-zone inner edge
-- On `tickValue` advance: smooth scroll to same anchor
-- Manual scroll out-of-band: auto-recenter after `TIMELINE_RECENTER_DELAY_MS` (1500 ms)
+**Track position:**
+- On mount: instant snap — track translates so now-line sits at the bottom dead-zone inner edge; no animation on first layout
+- On `tickValue` advance: CSS transition (`--motion-timeline`) animates the track to the new anchor
+- Manual drag (pointer-capture): pans the track in real time without animation; recenters after `TIMELINE_RECENTER_DELAY_MS` (1500 ms) of idle
 
 **Constants** (all in `src/core/constants.ts`):
 
@@ -213,9 +214,9 @@ Horizontally centred pill row showing the player's active status effects.
 Three rows stacked vertically. The entire grid is collapsible via the `#1` toggle.
 
 ```
-┌──────────────┬───────────────┐  48dp
-│    Basic     │   End/Skip    │
-├──────────────┼───────────────┤  72dp
+┌──────────────────────────────┐  48dp
+│           End/Skip           │
+├──────────────┬───────────────┤  72dp
 │    Skill 1   │    Skill 2    │
 ├──────────────┼───────────────┤  72dp
 │    Skill 3   │    Skill 4    │
@@ -254,15 +255,10 @@ Column width: (202 − 8) / 2 = 97 dp per column; 8 dp gap.
 | Long-press | Opens `SkillDetailPopup` (read-only, no upgrade action) |
 | Enemy turn | `disabled=True`; 20% opacity |
 
-#### Basic Attack (97 × 48 dp)
-
-`$bg-elevated` `$r-md`; "Basic" `$t-label`; always enabled on player turn.
-Shows TUC value below name.
-
-#### End / Skip (97 × 48 dp)
+#### End / Skip (full width × 48 dp)
 
 `$bg-elevated` `$r-md`; "End/Skip" `$t-label` `$text-secondary`.
-Ends the player's turn without using a skill.
+Advances the player's tick by 10 without using a skill. Disabled during enemy turn.
 
 ---
 
@@ -355,4 +351,4 @@ When an enemy acts:
 | Skill grid collapse | height 0 ↔ full, 200 ms | Collapse toggle |
 | HP / AP bars | width tween, `--motion-bar` (400 ms ease-out) | Damage / regen |
 | Log scroll | smooth scroll to bottom | New log entry |
-| Timeline scroll-to-anchor | `scrollTo behavior: smooth` | tick advance, recenter |
+| Timeline track position | `transform: translateY`, `--motion-timeline` (200 ms ease-in-out) | tick advance, drag release + recenter |

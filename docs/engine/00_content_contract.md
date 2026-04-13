@@ -342,7 +342,7 @@ small and grows as the design demands.
 
 Adding a new primitive is a four-step change:
 1. Add the handler to `core/effects/builtins/<name>.ts`
-2. Register it in `core/effects/registry.ts`
+2. Call `registerEffect('<type>', handle)` from `core/effects/builtins/index.ts` (`registerBuiltins()`)
 3. Add its Zod schema variant to the effect union in `services/DataService.ts`
 4. Document it in this file
 
@@ -456,33 +456,31 @@ goes through `battle` methods. This is what keeps the engines composable.
 
 ```
 src/core/
+├── battleHistory.ts          # HistoryEntry type + makeHistoryEntry factory
 ├── effects/
 │   ├── types.ts              # Effect, EffectContext, ValueExpr, WhenClause, Condition, TargetSelector
-│   ├── registry.ts           # registerEffect, applyEffect
+│   ├── applyEffect.ts        # condition → target rescope → handler dispatch
 │   ├── resolveValue.ts       # ValueExpr → number
 │   ├── conditions.ts         # evaluateCondition
 │   ├── patch.ts              # named-key patch engine
 │   └── builtins/
-│       ├── damage.ts
-│       ├── heal.ts
-│       ├── tickShove.ts
-│       ├── applyStatus.ts
-│       ├── modifyStat.ts
-│       ├── gainAp.ts
-│       ├── shiftProbability.ts
-│       ├── rerollDice.ts
-│       ├── forceOutcome.ts
-│       └── triggerSkill.ts
+│       ├── index.ts          # registerBuiltins() — called once in main.tsx
+│       ├── damage.ts         ✅ registered
+│       ├── heal.ts           ✅ registered
+│       ├── gainAp.ts         ✅ registered
+│       ├── spendAp.ts        ✅ registered
+│       ├── tickShove.ts      ✅ registered
+│       ├── modifyStat.ts     ✅ registered
+│       ├── applyStatus.ts    (planned)
+│       ├── shiftProbability.ts (planned)
+│       ├── rerollDice.ts     (planned)
+│       ├── forceOutcome.ts   (planned)
+│       └── triggerSkill.ts   (planned)
 └── engines/
     ├── skill/
-    │   ├── SkillInstance.ts
-    │   └── SkillEngine.ts
-    ├── status/
-    │   ├── StatusInstance.ts
-    │   └── StatusEngine.ts
-    └── passive/
-        ├── PassiveInstance.ts
-        └── PassiveEngine.ts
+    │   └── SkillInstance.ts  ✅ implemented (createSkillInstance, getCachedSkill, levelUpSkill)
+    ├── status/               (planned)
+    └── passive/              (planned)
 ```
 
 Corresponding content layout:
@@ -522,6 +520,11 @@ contract version, update this document first, then update `core/` to match.
 
 ## Contract version
 
-**v0.1.0** — initial draft, pre-implementation. No `core/effects/` or
-`core/engines/` code exists yet. First implementation round should match
-this document exactly; drifts are bugs until the document is updated.
+**v0.2.0** — engine implementation live.
+
+`core/effects/` and `core/engines/skill/` are implemented. Six primitives are
+registered (`damage`, `heal`, `gainAp`, `spendAp`, `tickShove`, `modifyStat`).
+`DataService` loads and caches characters and skills. `BattleContext` wires the
+full execution pipeline (dice → `applyEffect` → state sync). Remaining
+primitives (`applyStatus`, `shiftProbability`, `rerollDice`, `forceOutcome`,
+`triggerSkill`) and the status / passive engines are still planned.
