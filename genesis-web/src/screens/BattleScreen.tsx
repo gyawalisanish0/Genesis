@@ -117,8 +117,8 @@ function BattleTimeline() {
     function onScroll() {
       if (timer) clearTimeout(timer)
       const nowTop  = tickToTop(tickValue, scrollBounds.max)
-      const bandTop = el!.scrollTop + TIMELINE_OVERLAY_PX
-      const bandBot = el!.scrollTop + containerHeight - TIMELINE_OVERLAY_PX
+      const bandTop = el!.scrollTop + TIMELINE_OVERLAY_PX - 10
+      const bandBot = el!.scrollTop + containerHeight - TIMELINE_OVERLAY_PX + 10
       if (nowTop < bandTop || nowTop > bandBot) {
         timer = setTimeout(() => {
           const target = nowTop - containerHeight + TIMELINE_OVERLAY_PX - 10
