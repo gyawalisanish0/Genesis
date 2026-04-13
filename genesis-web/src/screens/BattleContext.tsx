@@ -2,7 +2,7 @@
 // Holds ephemeral within-session state: active turn, action log, animation locks.
 // The global Zustand store is NOT written during battle frames — only on battle end.
 
-import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo, useEffect, type ReactNode } from 'react'
 import type { Unit, SkillInstance, StatBlockDef } from '../core/types'
 import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE } from '../core/constants'
 import type { HistoryEntry } from '../core/battleHistory'
@@ -46,8 +46,9 @@ export interface LogEntry {
 interface BattleState {
   phase:           TurnPhase
   turnNumber:      number
-  // tickValue is derived — always equals the minimum registered tick (the global "now").
   tickValue:       number
+  // IDs of units whose tickPosition equals tickValue — their activeTurn is true.
+  activeUnitIds:   Set<string>
   playerUnit:      Unit | null
   enemies:         Unit[]
   log:             LogEntry[]
@@ -115,12 +116,27 @@ export function BattleProvider({ children }: Props) {
     })
   }, [])
 
-  // tickValue: global battle clock — the minimum registered tick (next unit to act).
-  // Derived, not stored; advances automatically as units take actions.
-  const tickValue = useMemo(() => {
+  // tickValue: global battle clock — stored state, initialized to the earliest unit tick.
+  // Auto-advances when ALL registered ticks have moved past it (everyone has acted).
+  const [tickValue, setTickValue] = useState(() => {
+    const ticks = [MOCK_PLAYER.tickPosition, ...MOCK_ENEMIES.map((e) => e.tickPosition)]
+    return Math.min(...ticks)
+  })
+
+  useEffect(() => {
     const ticks = [...registeredTicks.values()]
-    return ticks.length ? Math.min(...ticks) : 0
-  }, [registeredTicks])
+    if (!ticks.length) return
+    if (ticks.every((t) => t > tickValue)) setTickValue(Math.min(...ticks))
+  }, [registeredTicks, tickValue])
+
+  // activeUnitIds: which units are currently at the now-line (activeTurn = true).
+  const activeUnitIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const [id, tick] of registeredTicks) {
+      if (tick === tickValue) ids.add(id)
+    }
+    return ids
+  }, [registeredTicks, tickValue])
 
   // scrollBounds: tick range the timeline track covers.
   // max is always at least tickValue + TIMELINE_FUTURE_RANGE so 300 ticks of future are visible.
@@ -155,7 +171,7 @@ export function BattleProvider({ children }: Props) {
 
   return (
     <BattleContext.Provider value={{
-      phase, turnNumber, tickValue, playerUnit, enemies, log, historyEntries,
+      phase, turnNumber, tickValue, activeUnitIds, playerUnit, enemies, log, historyEntries,
       selectedSkill, gridCollapsed, isPaused,
       registeredTicks, scrollBounds, registerTick, unregisterTick,
       pushHistory, setPhase, appendLog, selectSkill, toggleGrid, setPaused,
