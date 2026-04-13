@@ -16,5 +16,6 @@
   "maxAp": 100,
   "apRegenRate": 12,
   "passive": null,
-  "skillPath": "hunter_path"
+  "skillPath": "hunter_path",
+  "skills": ["arcane_bolt_001"]
 }

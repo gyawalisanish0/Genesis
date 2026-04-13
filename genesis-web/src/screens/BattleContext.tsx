@@ -1,53 +1,39 @@
 // Screen-local context for the Battle screen.
-// Holds ephemeral within-session state: active turn, action log, animation locks.
-// The global Zustand store is NOT written during battle frames — only on battle end.
+// Ephemeral within-session state: units, log, tick timeline, skill execution.
+// The global Zustand store is NOT written during battle frames — only on end.
 
-import { createContext, useContext, useState, useCallback, useMemo, useEffect, type ReactNode } from 'react'
-import type { Unit, SkillInstance, StatBlockDef } from '../core/types'
+import {
+  createContext, useContext, useState, useCallback,
+  useMemo, useEffect, useRef, type ReactNode,
+} from 'react'
+import type { Unit } from '../core/types'
+import type { SkillInstance, BattleState as EngineBattleState, EffectContext } from '../core/effects/types'
 import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE } from '../core/constants'
+import { createUnit, isAlive, setTickPosition } from '../core/unit'
+import { calculateStartingTick, advanceTick, calculateApGained } from '../core/combat/TickCalculator'
+import { calculateFinalChance, shiftProbabilities } from '../core/combat/HitChanceEvaluator'
+import { roll, calculateTumblingDelay } from '../core/combat/DiceResolver'
+import { applyEffect } from '../core/effects/applyEffect'
+import { createSkillInstance, getCachedSkill } from '../core/engines/skill/SkillInstance'
+import { loadCharacterWithSkills } from '../services/DataService'
+import { makeHistoryEntry } from '../core/battleHistory'
 import type { HistoryEntry } from '../core/battleHistory'
 
-// ── Mock data — replace with DataService + createUnit() when wired ──────────
-const MOCK_STATS: StatBlockDef = {
-  strength: 50, endurance: 50, power: 30,
-  resistance: 30, speed: 60, precision: 70,
-}
-
-const MOCK_PLAYER: Unit = {
-  id: 'player-1', defId: 'warrior_001', name: 'Iron Warden',
-  className: 'Warrior', rarity: 3, stats: MOCK_STATS,
-  maxHp: 1200, hp: 980, maxAp: 100, ap: 40, apRegenRate: 5,
-  tickPosition: 8, skills: [], statusSlots: [], isAlly: true,
-}
-
-const MOCK_ENEMIES: Unit[] = [
-  {
-    id: 'enemy-1', defId: 'caster_001', name: 'Ember Sage',
-    className: 'Caster', rarity: 4, stats: MOCK_STATS,
-    maxHp: 600, hp: 420, maxAp: 100, ap: 30, apRegenRate: 8,
-    tickPosition: 5, skills: [], statusSlots: [], isAlly: false,
-  },
-  {
-    id: 'enemy-2', defId: 'guardian_001', name: 'Stone Bastion',
-    className: 'Guardian', rarity: 5, stats: MOCK_STATS,
-    maxHp: 1600, hp: 1600, maxAp: 100, ap: 60, apRegenRate: 3,
-    tickPosition: 18, skills: [], statusSlots: [], isAlly: false,
-  },
-]
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 export type TurnPhase = 'player' | 'enemy' | 'resolving'
 
 export interface LogEntry {
   id:      string
   text:    string
-  colour?: string   // CSS colour value; undefined = default text-muted
+  colour?: string
 }
 
-interface BattleState {
+interface BattleContextValue {
+  // State
   phase:           TurnPhase
   turnNumber:      number
   tickValue:       number
-  // IDs of units whose tickPosition equals tickValue — their activeTurn is true.
   activeUnitIds:   Set<string>
   playerUnit:      Unit | null
   enemies:         Unit[]
@@ -56,12 +42,16 @@ interface BattleState {
   selectedSkill:   SkillInstance | null
   gridCollapsed:   boolean
   isPaused:        boolean
-  // Timeline registration — any entity (unit, event, effect) can claim a tick position.
+  isLoading:       boolean
+  // Timeline
   registeredTicks: Map<string, number>
   scrollBounds:    { min: number; max: number }
+  // Skill access
+  getUnitSkills:   (unitId: string) => SkillInstance[]
+  // Actions
+  executeSkill:    (skill: SkillInstance) => void
   registerTick:    (id: string, tick: number) => void
   unregisterTick:  (id: string) => void
-  // Actions
   pushHistory:     (entry: HistoryEntry) => void
   setPhase:        (p: TurnPhase) => void
   appendLog:       (entry: Omit<LogEntry, 'id'>) => void
@@ -70,40 +60,123 @@ interface BattleState {
   setPaused:       (v: boolean) => void
 }
 
-const BattleContext = createContext<BattleState | null>(null)
+const BattleContext = createContext<BattleContextValue | null>(null)
 
-export function useBattleScreen(): BattleState {
+export function useBattleScreen(): BattleContextValue {
   const ctx = useContext(BattleContext)
   if (!ctx) throw new Error('useBattleScreen must be used inside BattleProvider')
   return ctx
 }
 
+// ── Battle state adapter ──────────────────────────────────────────────────────
+
+/** Creates a mutable snapshot for the effects engine to operate on. */
+function makeSnapshot(playerUnit: Unit | null, enemies: Unit[]): Map<string, Unit> {
+  const snap = new Map<string, Unit>()
+  if (playerUnit) snap.set(playerUnit.id, { ...playerUnit })
+  enemies.forEach((e) => snap.set(e.id, { ...e }))
+  return snap
+}
+
+function snapshotToBattleState(snap: Map<string, Unit>): EngineBattleState {
+  return {
+    getUnit:     (id) => snap.get(id),
+    setUnit:     (unit) => snap.set(unit.id, unit),
+    getAllUnits: () => [...snap.values()],
+  }
+}
+
+// ── Outcome log helpers ───────────────────────────────────────────────────────
+
+function outcomeColour(outcome: string, evaded: boolean): string {
+  if (evaded)                    return 'var(--text-muted)'
+  if (outcome === 'Boosted')     return 'var(--accent-gold)'
+  if (outcome === 'Tumbling')    return 'var(--accent-danger)'
+  return 'var(--text-primary)'
+}
+
+// ── Provider ──────────────────────────────────────────────────────────────────
+
 interface Props { children: ReactNode }
 
 export function BattleProvider({ children }: Props) {
-  const [phase, setPhase]               = useState<TurnPhase>('player')
-  const [turnNumber]                    = useState(1)
-  const [playerUnit, setPlayerUnit]     = useState<Unit | null>(MOCK_PLAYER)
-  const [enemies, setEnemies]           = useState<Unit[]>(MOCK_ENEMIES)
-  const [log, setLog]                   = useState<LogEntry[]>([
-    { id: '0', text: 'Battle started. Your turn.', colour: 'var(--accent-genesis)' },
+  // ── Core unit state ────────────────────────────────────────────────────────
+  const [isLoading, setIsLoading]   = useState(true)
+  const [playerUnit, setPlayerUnit] = useState<Unit | null>(null)
+  const [enemies, setEnemies]       = useState<Unit[]>([])
+
+  // Per-unit skill instances: Map<unitId, SkillInstance[]>
+  const [unitSkillsMap, setUnitSkillsMap] = useState<Map<string, SkillInstance[]>>(
+    () => new Map(),
+  )
+
+  // ── Other battle state ─────────────────────────────────────────────────────
+  const [phase, setPhase]             = useState<TurnPhase>('resolving')
+  const [turnNumber]                  = useState(1)
+  const [log, setLog]                 = useState<LogEntry[]>([
+    { id: '0', text: 'Loading battle…', colour: 'var(--text-muted)' },
   ])
   const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>([])
   const [selectedSkill, setSelectedSkill]   = useState<SkillInstance | null>(null)
   const [gridCollapsed, setGridCollapsed]   = useState(false)
   const [isPaused, setPaused]               = useState(false)
 
-  // Seed the register map from mock units; keyed by stable id so re-registration is idempotent.
+  // Timeline tick registry — seeded from real unit positions after load.
   const [registeredTicks, setRegisteredTicks] = useState<Map<string, number>>(
-    () => new Map([
-      [MOCK_PLAYER.id, MOCK_PLAYER.tickPosition],
-      ...MOCK_ENEMIES.map((e) => [e.id, e.tickPosition] as [string, number]),
-    ])
+    () => new Map(),
   )
+
+  // Global battle clock — starts at 0, auto-advances when all units have acted.
+  const [tickValue, setTickValue] = useState(0)
+
+  // ── Load battle data ───────────────────────────────────────────────────────
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        const [playerData, enemyData] = await Promise.all([
+          loadCharacterWithSkills('warrior_001'),
+          loadCharacterWithSkills('hunter_001'),
+        ])
+
+        const player = setTickPosition(
+          createUnit(playerData.characterDef, true),
+          calculateStartingTick(playerData.characterDef.stats.speed, playerData.characterDef.className),
+        )
+        const enemy = setTickPosition(
+          createUnit(enemyData.characterDef, false),
+          calculateStartingTick(enemyData.characterDef.stats.speed, enemyData.characterDef.className),
+        )
+
+        const playerSkills = playerData.skillDefs.map(createSkillInstance)
+        const enemySkills  = enemyData.skillDefs.map(createSkillInstance)
+
+        if (!cancelled) {
+          setPlayerUnit(player)
+          setEnemies([enemy])
+          setUnitSkillsMap(new Map([
+            [player.id, playerSkills],
+            [enemy.id,  enemySkills],
+          ]))
+          setRegisteredTicks(new Map([
+            [player.id, player.tickPosition],
+            [enemy.id,  enemy.tickPosition],
+          ]))
+          setLog([{ id: '1', text: 'Battle started!', colour: 'var(--accent-genesis)' }])
+          setIsLoading(false)
+        }
+      } catch (err) {
+        console.error('BattleContext: failed to load battle data', err)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [])
+
+  // ── Timeline mechanics ─────────────────────────────────────────────────────
 
   const registerTick = useCallback((id: string, tick: number) => {
     setRegisteredTicks((prev) => new Map(prev).set(id, tick))
-    // Keep the unit's tickPosition in sync so its marker tracks the now-line.
     setPlayerUnit((prev) => prev?.id === id ? { ...prev, tickPosition: tick } : prev)
     setEnemies((prev) => prev.map((e) => e.id === id ? { ...e, tickPosition: tick } : e))
   }, [])
@@ -116,20 +189,14 @@ export function BattleProvider({ children }: Props) {
     })
   }, [])
 
-  // tickValue: global battle clock — stored state, initialized to the earliest unit tick.
-  // Auto-advances when ALL registered ticks have moved past it (everyone has acted).
-  const [tickValue, setTickValue] = useState(() => {
-    const ticks = [MOCK_PLAYER.tickPosition, ...MOCK_ENEMIES.map((e) => e.tickPosition)]
-    return Math.min(...ticks)
-  })
-
+  // Auto-advance global clock when all registered units have moved past it.
   useEffect(() => {
     const ticks = [...registeredTicks.values()]
     if (!ticks.length) return
     if (ticks.every((t) => t > tickValue)) setTickValue(Math.min(...ticks))
   }, [registeredTicks, tickValue])
 
-  // activeUnitIds: which units are currently at the now-line (activeTurn = true).
+  // Active units: those whose registered tick equals the global clock.
   const activeUnitIds = useMemo(() => {
     const ids = new Set<string>()
     for (const [id, tick] of registeredTicks) {
@@ -138,43 +205,181 @@ export function BattleProvider({ children }: Props) {
     return ids
   }, [registeredTicks, tickValue])
 
-  // scrollBounds: tick range the timeline track covers.
-  // max is always at least tickValue + TIMELINE_FUTURE_RANGE so 300 ticks of future are visible.
+  // Derive phase from active unit ids.
+  useEffect(() => {
+    if (isLoading) return
+    if (playerUnit && activeUnitIds.has(playerUnit.id)) {
+      setPhase('player')
+    } else if (enemies.some((e) => activeUnitIds.has(e.id))) {
+      setPhase('enemy')
+    }
+  }, [activeUnitIds, playerUnit, enemies, isLoading])
+
+  // Timeline scroll bounds.
   const scrollBounds = useMemo(() => {
     const ticks = [...registeredTicks.values()]
     const futureFloor = tickValue + TIMELINE_FUTURE_RANGE
-    if (!ticks.length) return {
-      min: Math.max(0, tickValue - TIMELINE_BUFFER_TICKS),
-      max: futureFloor,
-    }
+    if (!ticks.length) return { min: Math.max(0, tickValue - TIMELINE_BUFFER_TICKS), max: futureFloor }
     return {
       min: Math.max(0, Math.min(...ticks, tickValue) - TIMELINE_BUFFER_TICKS),
       max: Math.max(Math.max(...ticks) + TIMELINE_BUFFER_TICKS, futureFloor),
     }
   }, [registeredTicks, tickValue])
 
+  // ── Log + history helpers ──────────────────────────────────────────────────
+
+  const appendLog = useCallback((entry: Omit<LogEntry, 'id'>) => {
+    setLog((prev) => [...prev, { ...entry, id: String(Date.now() + Math.random()) }])
+  }, [])
+
   const pushHistory = useCallback((entry: HistoryEntry) => {
     setHistoryEntries((prev) => [...prev, entry])
   }, [])
 
-  const appendLog = useCallback((entry: Omit<LogEntry, 'id'>) => {
-    setLog((prev) => [...prev, { ...entry, id: String(Date.now()) }])
-  }, [])
+  // ── Core skill execution ───────────────────────────────────────────────────
 
-  const selectSkill = useCallback((skill: SkillInstance | null) => {
-    setSelectedSkill(skill)
-  }, [])
+  // Fresh-value refs so timer callbacks inside enemy AI always see current state.
+  const playerUnitRef    = useRef(playerUnit)
+  const enemiesRef       = useRef(enemies)
+  const unitSkillsMapRef = useRef(unitSkillsMap)
+  useEffect(() => { playerUnitRef.current = playerUnit },    [playerUnit])
+  useEffect(() => { enemiesRef.current = enemies },          [enemies])
+  useEffect(() => { unitSkillsMapRef.current = unitSkillsMap }, [unitSkillsMap])
 
-  const toggleGrid = useCallback(() => {
-    setGridCollapsed((prev) => !prev)
-  }, [])
+  /** Execute one attack: caster hits target using the given SkillInstance. */
+  const runAttack = useCallback((
+    caster: Unit,
+    target: Unit,
+    skillInst: SkillInstance,
+    snap: Map<string, Unit>,
+  ): { tumbleDelay: number } => {
+    const skill       = getCachedSkill(skillInst)
+    const finalChance = calculateFinalChance(caster.stats.precision, skill.resolution?.baseChance ?? 1.0)
+    const diceOutcome = roll(shiftProbabilities(finalChance))
+    const evaded      = diceOutcome === 'Evasion'
+    const tumbleDelay = diceOutcome === 'Tumbling' ? calculateTumblingDelay() : 0
+
+    const battle = snapshotToBattleState(snap)
+    // AP regen for the caster based on ticks elapsed since last action.
+    const ticksElapsed = tickValue > 0 ? skill.tuCost : 0
+    const apGained     = calculateApGained(ticksElapsed, caster.apRegenRate)
+    if (apGained > 0) {
+      const casterSnap = snap.get(caster.id)
+      if (casterSnap) snap.set(caster.id, { ...casterSnap, ap: Math.min(casterSnap.maxAp, casterSnap.ap + apGained) })
+    }
+
+    const ctx: EffectContext = {
+      caster,
+      target: evaded ? undefined : target,
+      battle,
+      source: 'skill',
+      event:  { event: 'onCast' },
+      dice:   diceOutcome,
+    }
+
+    for (const effect of skillInst.cachedEffects) {
+      if (effect.when.event === 'onCast') applyEffect(effect, ctx)
+    }
+
+    const color = outcomeColour(diceOutcome, evaded)
+    const msg   = evaded
+      ? `${target.name} evaded ${skill.name}!`
+      : `${caster.name} → ${skill.name} on ${target.name} [${diceOutcome}]`
+    appendLog({ text: msg, colour: color })
+
+    return { tumbleDelay }
+  }, [tickValue, appendLog])
+
+  /** Player presses a skill button. */
+  const executeSkill = useCallback((skillInst: SkillInstance) => {
+    if (!playerUnit || phase !== 'player') return
+    const target = enemies.find(isAlive)
+    if (!target) return
+
+    const snap = makeSnapshot(playerUnit, enemies)
+    const { tumbleDelay } = runAttack(playerUnit, target, skillInst, snap)
+
+    // Sync engine state back to React.
+    setPlayerUnit(snap.get(playerUnit.id) ?? playerUnit)
+    setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
+
+    const skill    = getCachedSkill(skillInst)
+    const fromTick = playerUnit.tickPosition
+    pushHistory(makeHistoryEntry(playerUnit.id, playerUnit.name, fromTick, playerUnit.isAlly))
+    registerTick(playerUnit.id, advanceTick(fromTick, skill.tuCost + tumbleDelay))
+
+    // Victory check — read updated enemies from snap.
+    const allDead = enemies.every((e) => !isAlive(snap.get(e.id) ?? e))
+    if (allDead) appendLog({ text: 'Victory! All enemies defeated.', colour: 'var(--accent-genesis)' })
+  }, [playerUnit, enemies, phase, runAttack, pushHistory, registerTick, appendLog])
+
+  // ── Enemy AI ───────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (phase !== 'enemy') return
+    const activeEnemies = enemiesRef.current.filter(
+      (e) => activeUnitIds.has(e.id) && isAlive(e),
+    )
+    if (!activeEnemies.length) return
+
+    const timer = setTimeout(() => {
+      const currentPlayer  = playerUnitRef.current
+      const currentEnemies = enemiesRef.current
+      const currentSkills  = unitSkillsMapRef.current
+      if (!currentPlayer || !isAlive(currentPlayer)) return
+
+      for (const enemy of activeEnemies) {
+        const enemySkills = currentSkills.get(enemy.id) ?? []
+        if (!enemySkills.length) {
+          const fromTick = enemy.tickPosition
+          pushHistory(makeHistoryEntry(enemy.id, enemy.name, fromTick, enemy.isAlly))
+          registerTick(enemy.id, advanceTick(fromTick, 10))
+          appendLog({ text: `${enemy.name} is gathering strength…`, colour: 'var(--text-muted)' })
+          continue
+        }
+
+        const skillInst = enemySkills[0]
+        const snap      = makeSnapshot(currentPlayer, currentEnemies)
+        const { tumbleDelay } = runAttack(enemy, currentPlayer, skillInst, snap)
+
+        setPlayerUnit(snap.get(currentPlayer.id) ?? currentPlayer)
+        setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
+
+        const skill    = getCachedSkill(skillInst)
+        const fromTick = enemy.tickPosition
+        pushHistory(makeHistoryEntry(enemy.id, enemy.name, fromTick, enemy.isAlly))
+        registerTick(enemy.id, advanceTick(fromTick, skill.tuCost + tumbleDelay))
+
+        const updatedPlayer = snap.get(currentPlayer.id) ?? currentPlayer
+        if (!isAlive(updatedPlayer)) {
+          appendLog({ text: 'Defeat! You have been slain.', colour: 'var(--accent-danger)' })
+        }
+      }
+    }, 700)
+
+    return () => clearTimeout(timer)
+  }, [phase, activeUnitIds]) // refs keep callbacks current; phase + activeUnitIds gate the trigger
+
+  // ── Misc actions ───────────────────────────────────────────────────────────
+
+  const selectSkill = useCallback((skill: SkillInstance | null) => setSelectedSkill(skill), [])
+  const toggleGrid  = useCallback(() => setGridCollapsed((v) => !v), [])
+
+  const getUnitSkills = useCallback((unitId: string): SkillInstance[] => {
+    return unitSkillsMap.get(unitId) ?? []
+  }, [unitSkillsMap])
+
+  // ── Provide ────────────────────────────────────────────────────────────────
 
   return (
     <BattleContext.Provider value={{
-      phase, turnNumber, tickValue, activeUnitIds, playerUnit, enemies, log, historyEntries,
-      selectedSkill, gridCollapsed, isPaused,
-      registeredTicks, scrollBounds, registerTick, unregisterTick,
-      pushHistory, setPhase, appendLog, selectSkill, toggleGrid, setPaused,
+      phase, turnNumber, tickValue, activeUnitIds,
+      playerUnit, enemies, log, historyEntries,
+      selectedSkill, gridCollapsed, isPaused, isLoading,
+      registeredTicks, scrollBounds,
+      getUnitSkills, executeSkill,
+      registerTick, unregisterTick, pushHistory,
+      setPhase, appendLog, selectSkill, toggleGrid, setPaused,
     }}>
       {children}
     </BattleContext.Provider>
