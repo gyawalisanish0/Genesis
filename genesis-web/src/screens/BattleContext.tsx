@@ -2,9 +2,10 @@
 // Holds ephemeral within-session state: active turn, action log, animation locks.
 // The global Zustand store is NOT written during battle frames — only on battle end.
 
-import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo, useEffect, type ReactNode } from 'react'
 import type { Unit, SkillInstance, StatBlockDef } from '../core/types'
 import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE } from '../core/constants'
+import type { HistoryEntry } from '../core/battleHistory'
 
 // ── Mock data — replace with DataService + createUnit() when wired ──────────
 const MOCK_STATS: StatBlockDef = {
@@ -46,9 +47,12 @@ interface BattleState {
   phase:           TurnPhase
   turnNumber:      number
   tickValue:       number
+  // IDs of units whose tickPosition equals tickValue — their activeTurn is true.
+  activeUnitIds:   Set<string>
   playerUnit:      Unit | null
   enemies:         Unit[]
   log:             LogEntry[]
+  historyEntries:  HistoryEntry[]
   selectedSkill:   SkillInstance | null
   gridCollapsed:   boolean
   isPaused:        boolean
@@ -58,7 +62,7 @@ interface BattleState {
   registerTick:    (id: string, tick: number) => void
   unregisterTick:  (id: string) => void
   // Actions
-  setTickValue:    (tick: number) => void
+  pushHistory:     (entry: HistoryEntry) => void
   setPhase:        (p: TurnPhase) => void
   appendLog:       (entry: Omit<LogEntry, 'id'>) => void
   selectSkill:     (skill: SkillInstance | null) => void
@@ -79,15 +83,15 @@ interface Props { children: ReactNode }
 export function BattleProvider({ children }: Props) {
   const [phase, setPhase]               = useState<TurnPhase>('player')
   const [turnNumber]                    = useState(1)
-  const [tickValue, setTickValue]       = useState(0)
-  const [playerUnit]                    = useState<Unit | null>(MOCK_PLAYER)
-  const [enemies]                       = useState<Unit[]>(MOCK_ENEMIES)
+  const [playerUnit, setPlayerUnit]     = useState<Unit | null>(MOCK_PLAYER)
+  const [enemies, setEnemies]           = useState<Unit[]>(MOCK_ENEMIES)
   const [log, setLog]                   = useState<LogEntry[]>([
     { id: '0', text: 'Battle started. Your turn.', colour: 'var(--accent-genesis)' },
   ])
-  const [selectedSkill, setSelectedSkill] = useState<SkillInstance | null>(null)
-  const [gridCollapsed, setGridCollapsed] = useState(false)
-  const [isPaused, setPaused]             = useState(false)
+  const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>([])
+  const [selectedSkill, setSelectedSkill]   = useState<SkillInstance | null>(null)
+  const [gridCollapsed, setGridCollapsed]   = useState(false)
+  const [isPaused, setPaused]               = useState(false)
 
   // Seed the register map from mock units; keyed by stable id so re-registration is idempotent.
   const [registeredTicks, setRegisteredTicks] = useState<Map<string, number>>(
@@ -99,6 +103,9 @@ export function BattleProvider({ children }: Props) {
 
   const registerTick = useCallback((id: string, tick: number) => {
     setRegisteredTicks((prev) => new Map(prev).set(id, tick))
+    // Keep the unit's tickPosition in sync so its marker tracks the now-line.
+    setPlayerUnit((prev) => prev?.id === id ? { ...prev, tickPosition: tick } : prev)
+    setEnemies((prev) => prev.map((e) => e.id === id ? { ...e, tickPosition: tick } : e))
   }, [])
 
   const unregisterTick = useCallback((id: string) => {
@@ -109,8 +116,30 @@ export function BattleProvider({ children }: Props) {
     })
   }, [])
 
-  // scrollBounds: the tick range the timeline track covers.
-  // max is always at least tickValue + TIMELINE_FUTURE_RANGE so 300 ticks of future are always shown.
+  // tickValue: global battle clock — stored state, initialized to the earliest unit tick.
+  // Auto-advances when ALL registered ticks have moved past it (everyone has acted).
+  const [tickValue, setTickValue] = useState(() => {
+    const ticks = [MOCK_PLAYER.tickPosition, ...MOCK_ENEMIES.map((e) => e.tickPosition)]
+    return Math.min(...ticks)
+  })
+
+  useEffect(() => {
+    const ticks = [...registeredTicks.values()]
+    if (!ticks.length) return
+    if (ticks.every((t) => t > tickValue)) setTickValue(Math.min(...ticks))
+  }, [registeredTicks, tickValue])
+
+  // activeUnitIds: which units are currently at the now-line (activeTurn = true).
+  const activeUnitIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const [id, tick] of registeredTicks) {
+      if (tick === tickValue) ids.add(id)
+    }
+    return ids
+  }, [registeredTicks, tickValue])
+
+  // scrollBounds: tick range the timeline track covers.
+  // max is always at least tickValue + TIMELINE_FUTURE_RANGE so 300 ticks of future are visible.
   const scrollBounds = useMemo(() => {
     const ticks = [...registeredTicks.values()]
     const futureFloor = tickValue + TIMELINE_FUTURE_RANGE
@@ -119,10 +148,14 @@ export function BattleProvider({ children }: Props) {
       max: futureFloor,
     }
     return {
-      min: Math.max(0, Math.min(Math.min(...ticks), tickValue) - TIMELINE_BUFFER_TICKS),
+      min: Math.max(0, Math.min(...ticks, tickValue) - TIMELINE_BUFFER_TICKS),
       max: Math.max(Math.max(...ticks) + TIMELINE_BUFFER_TICKS, futureFloor),
     }
   }, [registeredTicks, tickValue])
+
+  const pushHistory = useCallback((entry: HistoryEntry) => {
+    setHistoryEntries((prev) => [...prev, entry])
+  }, [])
 
   const appendLog = useCallback((entry: Omit<LogEntry, 'id'>) => {
     setLog((prev) => [...prev, { ...entry, id: String(Date.now()) }])
@@ -138,10 +171,10 @@ export function BattleProvider({ children }: Props) {
 
   return (
     <BattleContext.Provider value={{
-      phase, turnNumber, tickValue, playerUnit, enemies, log,
+      phase, turnNumber, tickValue, activeUnitIds, playerUnit, enemies, log, historyEntries,
       selectedSkill, gridCollapsed, isPaused,
       registeredTicks, scrollBounds, registerTick, unregisterTick,
-      setTickValue, setPhase, appendLog, selectSkill, toggleGrid, setPaused,
+      pushHistory, setPhase, appendLog, selectSkill, toggleGrid, setPaused,
     }}>
       {children}
     </BattleContext.Provider>

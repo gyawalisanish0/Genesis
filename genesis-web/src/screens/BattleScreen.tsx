@@ -10,10 +10,11 @@ import { SCREEN_REGISTRY, SCREEN_IDS } from '../navigation/screenRegistry'
 import { useBackButton } from '../input/useBackButton'
 import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import { BattleProvider, useBattleScreen } from './BattleContext'
+import { makeHistoryEntry } from '../core/battleHistory'
 import { ResourceBar } from '../components/ResourceBar'
 import {
   TIMELINE_PX_PER_TICK, TIMELINE_OVERLAY_PX,
-  TIMELINE_NOW_FRACTION, TIMELINE_RECENTER_DELAY_MS,
+  TIMELINE_RECENTER_DELAY_MS,
 } from '../core/constants'
 import styles from './BattleScreen.module.css'
 
@@ -28,9 +29,44 @@ function tickToTop(tick: number, maxTick: number): number {
   return (maxTick - tick) * TIMELINE_PX_PER_TICK
 }
 
+// ── Timeline marker (SVG portrait + HP arc ring) ────────────────────────────
+interface TimelineMarkerProps {
+  name:       string
+  isAlly:     boolean
+  hpFraction: number   // 0–1; drives arc fill length
+}
+
+function TimelineMarker({ name, isAlly, hpFraction }: TimelineMarkerProps) {
+  const circ      = 2 * Math.PI * 10
+  const ringColor = isAlly ? 'var(--accent-info)' : 'var(--accent-danger)'
+
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden>
+      {/* Portrait background */}
+      <circle cx="12" cy="12" r="9" fill="var(--bg-card)" />
+      {/* HP track — always full ring, dim */}
+      <circle cx="12" cy="12" r="10" fill="none"
+        stroke="var(--bg-elevated)" strokeWidth="2" />
+      {/* HP fill arc — length encodes hpFraction */}
+      <circle cx="12" cy="12" r="10" fill="none"
+        stroke={ringColor} strokeWidth="2"
+        strokeDasharray={`${hpFraction * circ} ${circ}`}
+        strokeLinecap="round"
+        transform="rotate(-90 12 12)"
+      />
+      {/* Unit initial as portrait stand-in */}
+      <text x="12" y="15.5" textAnchor="middle"
+        fontSize="7" fill="var(--text-secondary)"
+        fontFamily="var(--font-sans)">
+        {name.charAt(0).toUpperCase()}
+      </text>
+    </svg>
+  )
+}
+
 // ── Timeline strip ──────────────────────────────────────────────────────────
 function BattleTimeline() {
-  const { tickValue, playerUnit, enemies, scrollBounds } = useBattleScreen()
+  const { tickValue, playerUnit, enemies, scrollBounds, historyEntries } = useBattleScreen()
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const trackHeight = (scrollBounds.max - scrollBounds.min) * TIMELINE_PX_PER_TICK
@@ -42,17 +78,23 @@ function BattleTimeline() {
     return marks
   }, [scrollBounds])
 
-  // Smooth-scroll "now" to TIMELINE_NOW_FRACTION from the top whenever tickValue or bounds change.
+  // Anchor point: now-line sits at the inner edge of the bottom overlay in all cases.
+  // target = nowTop - clientHeight + OVERLAY_PX  → now-line flush with the bottom overlay edge.
+  const mountedRef = useRef(false)
+
+  // On mount: instant snap. On tick advance: smooth slide up to the anchor.
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
-    const target = tickToTop(tickValue, scrollBounds.max)
-      - el.clientHeight * TIMELINE_NOW_FRACTION + TIMELINE_OVERLAY_PX
-    el.scrollTo({ top: target, behavior: 'smooth' })
+    const nowTop = tickToTop(tickValue, scrollBounds.max)
+    const target = nowTop - el.clientHeight + TIMELINE_OVERLAY_PX
+    const behavior = mountedRef.current ? 'smooth' : 'instant'
+    el.scrollTo({ top: target, behavior })
+    mountedRef.current = true
   }, [tickValue, scrollBounds])
 
-  // Auto-recenter: if the user scrolls the now-line out of the visible band,
-  // smooth-scroll back to center it after TIMELINE_RECENTER_DELAY_MS of idle.
+  // Auto-recenter: if the now-line scrolls out of the visible band, smooth-scroll
+  // back to the bottom-overlay anchor after TIMELINE_RECENTER_DELAY_MS of idle.
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
@@ -65,7 +107,7 @@ function BattleTimeline() {
       const bandBot = el!.scrollTop + el!.clientHeight - TIMELINE_OVERLAY_PX
       if (nowTop < bandTop || nowTop > bandBot) {
         timer = setTimeout(() => {
-          const target = nowTop - el!.clientHeight * TIMELINE_NOW_FRACTION + TIMELINE_OVERLAY_PX
+          const target = nowTop - el!.clientHeight + TIMELINE_OVERLAY_PX
           el!.scrollTo({ top: target, behavior: 'smooth' })
         }, TIMELINE_RECENTER_DELAY_MS)
       }
@@ -93,12 +135,29 @@ function BattleTimeline() {
             />
           ))}
           <div className={styles.nowLine} style={{ top: tickToTop(tickValue, scrollBounds.max) }} />
+          {/* History ghosts — rendered first so live markers paint on top */}
+          {historyEntries.map((entry) => (
+            <div
+              key={entry.id}
+              className={`${styles.marker} ${styles.markerGhost}`}
+              style={{ top: tickToTop(entry.tick, scrollBounds.max) }}
+            >
+              <TimelineMarker name={entry.name} isAlly={entry.isAlly} hpFraction={0} />
+            </div>
+          ))}
+          {/* Live unit markers */}
           {allUnits.map((unit) => (
             <div
               key={unit.id}
-              className={`${styles.marker} ${unit.isAlly ? styles.markerAlly : styles.markerEnemy} ${unit === playerUnit ? styles.markerActive : ''}`}
+              className={`${styles.marker} ${unit === playerUnit ? styles.markerActive : ''}`}
               style={{ top: tickToTop(unit.tickPosition, scrollBounds.max) }}
-            />
+            >
+              <TimelineMarker
+                name={unit.name}
+                isAlly={unit.isAlly}
+                hpFraction={unit.maxHp > 0 ? unit.hp / unit.maxHp : 0}
+              />
+            </div>
           ))}
         </div>
       </div>
@@ -174,24 +233,24 @@ function PortraitPanel() {
 function ActionGrid() {
   const {
     phase, gridCollapsed, toggleGrid, appendLog,
-    tickValue, playerUnit, setTickValue, registerTick,
+    playerUnit, pushHistory, registerTick,
   } = useBattleScreen()
   const createHandler = useScrollAwarePointer()
   const disabled = phase !== 'player'
 
   const handleBasicAttack = () => {
-    if (disabled) return
-    const newTick = tickValue + 6
-    setTickValue(newTick)
-    if (playerUnit) registerTick(playerUnit.id, newTick)
+    if (disabled || !playerUnit) return
+    const fromTick = playerUnit.tickPosition
+    pushHistory(makeHistoryEntry(playerUnit.id, playerUnit.name, fromTick, playerUnit.isAlly))
+    registerTick(playerUnit.id, fromTick + 6)
     appendLog({ text: 'You used Basic Attack.', colour: 'var(--text-primary)' })
   }
 
   const handleEndTurn = () => {
-    if (disabled) return
-    const newTick = tickValue + 10
-    setTickValue(newTick)
-    if (playerUnit) registerTick(playerUnit.id, newTick)
+    if (disabled || !playerUnit) return
+    const fromTick = playerUnit.tickPosition
+    pushHistory(makeHistoryEntry(playerUnit.id, playerUnit.name, fromTick, playerUnit.isAlly))
+    registerTick(playerUnit.id, fromTick + 10)
     appendLog({ text: 'You ended your turn.' })
   }
 

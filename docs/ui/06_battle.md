@@ -72,26 +72,63 @@ Skill columns: (332 − 8) / 2 = 162 dp each, 8 dp gap between columns
 
 ## Component Specifications
 
-### Vertical Timeline Strip (28 dp × 640 dp)
+### Vertical Timeline Strip (28 dp × full height)
+
+The timeline is a **register-based infinite strip**. Its scrollable range is
+derived from the set of registered tick positions — it does not have a fixed
+length. Any unit, event, or effect can register a tick position; the strip
+expands automatically to cover them all plus a 15-tick buffer at each end and
+300 ticks of future range ahead of the now-line.
 
 ```
- ↑  → [A] ally marker (points right)
- │
- │  ← [E] enemy marker (points left)
- │
- ↓  → [A] next ally
+┌──────────────────────┐  ← dead-zone overlay (48 dp, bg-deep)
+│  [unit SVG marker]   │
+│  [now-line ─────────]│  ← global battle clock
+│  [unit SVG marker]   │
+│  [ghost marker ░░░░] │  ← grayscale history ghost
+└──────────────────────┘  ← dead-zone overlay (48 dp, bg-deep)
 ```
 
-| Component | Size (dp) | Properties |
+Content scrolls **physically under** the 48 dp dead-zone overlays at top and
+bottom (`::before` / `::after` pseudo-elements). The now-line and all markers
+are part of the scrollable track — not fixed overlays.
+
+**Now-line** — a 1 dp horizontal accent bar at `tickValue` (the global battle
+clock). Moves with a `--motion-timeline` (200 ms ease-in-out) CSS transition
+whenever `tickValue` advances. Auto-recenters to the bottom dead-zone edge
+after 1.5 s of idle scroll.
+
+**Unit markers** — 24 × 24 SVG, positioned at `unit.tickPosition`:
+
+| Layer | Description |
+|---|---|
+| Background circle (r=9) | `bg-card` fill |
+| HP track ring (r=10, 2 dp stroke) | `bg-elevated` — always full |
+| HP fill arc (r=10, 2 dp stroke) | `accent-info` (ally) or `accent-danger` (enemy); arc length = `hp / maxHp × circumference`; starts from top (rotate −90°) |
+| Portrait initial | Unit name first character; 7 px; `text-secondary` |
+
+Active unit (currently at the now-line): pulsing `box-shadow` animation
+(`markerPulse`, 1.5 s ease-in-out) on the wrapper div.
+
+**History ghosts** — when a unit takes an action, a grayscale copy of their
+marker is left at the old tick position (`filter: grayscale(1); opacity: 0.4;
+pointer-events: none`). Rendered behind live markers in DOM order. HP arc is
+shown as empty (hpFraction = 0) on ghosts.
+
+**Scroll behaviour:**
+- On mount: instant snap, now-line at bottom dead-zone inner edge
+- On `tickValue` advance: smooth scroll to same anchor
+- Manual scroll out-of-band: auto-recenter after `TIMELINE_RECENTER_DELAY_MS` (1500 ms)
+
+**Constants** (all in `src/core/constants.ts`):
+
+| Constant | Value | Purpose |
 |---|---|---|
-| Strip bg | 28 × 640 | `$bg-elevated`; right border 1 dp `$bg-panel` |
-| Tick axis line | 2 × 580 | `$bg-panel`; vertical; x-center of strip |
-| Ally marker | 24 × 24 | `$accent-genesis` ring 2 dp; label points → |
-| Enemy marker | 24 × 24 | `$accent-danger` ring 2 dp; label points ← |
-| Active marker | 28 × 28 | Accent ring 3 dp; accent ring pulses |
-| Far marker (≥20 ticks) | 18 × 18 | 40% opacity |
-
-Markers are sorted top-to-bottom by ascending `unit.tick_position` (soonest = top).
+| `TIMELINE_PX_PER_TICK` | 10 px | Pixel height per tick unit |
+| `TIMELINE_BUFFER_TICKS` | 15 | Extra ticks beyond outermost registered unit |
+| `TIMELINE_OVERLAY_PX` | 48 | Dead-zone height — must match 3 rem in CSS |
+| `TIMELINE_FUTURE_RANGE` | 300 | Ticks always kept visible ahead of now |
+| `TIMELINE_RECENTER_DELAY_MS` | 1500 | Idle ms before auto-recenter fires |
 
 ---
 
@@ -307,13 +344,15 @@ When an enemy acts:
 
 ## Animations Summary
 
-| Element | Animation | Trigger |
+| Element | Token / duration | Trigger |
 |---|---|---|
-| Opponent card | Fade height 0 ↔ 130 dp (0.15 s) | Turn switch |
-| Timeline markers | Rebuild on tick advance | After each action |
-| Active marker | Pulse ring (scale 1.0 → 1.1 → 1.0) | Player turn |
-| Skill slot | Scale 0.97 flash (0.08 s) on tap | Skill selected |
-| Insufficient AP | Opacity flash 0.2 → 0.5 (0.1 s × 2) | Failed AP check |
-| Skill grid | Height 0 ↔ 192 dp (0.2 s) | Collapse toggle |
-| HP / AP bars | Width tween (0.4 s ease-out) | Damage / regen |
-| Log scroll | Auto-scroll to bottom | New entry |
+| Opponent card | height/opacity 0 ↔ visible, 150 ms ease | Turn switch |
+| Now-line position | `--motion-timeline` (200 ms ease-in-out) | `tickValue` advance |
+| Unit marker position | `--motion-timeline` (200 ms ease-in-out) | `registerTick` |
+| Active marker pulse | `markerPulse` keyframe, 1.5 s ease-in-out infinite | Unit at now-line |
+| History ghost appear | instant (rendered on action) | Action taken |
+| Skill slot tap | scale 0.95, `--motion-button` (80 ms ease-in) | Button press |
+| Skill grid collapse | height 0 ↔ full, 200 ms | Collapse toggle |
+| HP / AP bars | width tween, `--motion-bar` (400 ms ease-out) | Damage / regen |
+| Log scroll | smooth scroll to bottom | New log entry |
+| Timeline scroll-to-anchor | `scrollTo behavior: smooth` | tick advance, recenter |
