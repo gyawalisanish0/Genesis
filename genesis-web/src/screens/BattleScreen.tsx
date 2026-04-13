@@ -92,16 +92,18 @@ function BattleTimeline() {
     return () => ro.disconnect()
   }, [])
 
-  // Anchor: now-line at the top edge of the bottom overlay.
-  // Skipped until containerHeight is known (> 0).
+  // Anchor: now-line at the top edge of the bottom overlay (offset = 0).
+  // Initial mount only: strip starts 5px above the anchor so the now-line
+  // sits just inside the overlay — snap is instant, advances use the anchor.
   const mountedRef = useRef(false)
 
   useEffect(() => {
     const el = scrollRef.current
     if (!el || containerHeight === 0) return
-    const nowTop = tickToTop(tickValue, scrollBounds.max)
-    const target = nowTop - containerHeight + TIMELINE_OVERLAY_PX
-    const behavior = mountedRef.current ? 'smooth' : 'instant'
+    const nowTop      = tickToTop(tickValue, scrollBounds.max)
+    const anchorTarget = nowTop - containerHeight + TIMELINE_OVERLAY_PX
+    const target      = mountedRef.current ? anchorTarget : anchorTarget - 5
+    const behavior    = mountedRef.current ? 'smooth' : 'instant'
     el.scrollTo({ top: target, behavior })
     mountedRef.current = true
   }, [tickValue, scrollBounds, containerHeight])
