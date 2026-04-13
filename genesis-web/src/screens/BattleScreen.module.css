@@ -88,24 +88,16 @@
   transform: translateY(-50%);
 }
 
-/* Unit marker — centered on its tick position. */
+/* Unit marker — positions the SVG portrait on its tick; SVG owns size/color. */
 .marker {
   position: absolute;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 1.25rem;
-  height: 1.25rem;
-  border-radius: var(--r-pill);
-  border: 2px solid transparent;
-  background: var(--bg-card);
+  display: flex;
+  border-radius: 50%;  /* needed for markerActive box-shadow pulse */
 }
 
-.markerAlly  { border-color: var(--accent-genesis); }
-.markerEnemy { border-color: var(--accent-danger); }
-
 .markerActive {
-  width: 1.5rem;
-  height: 1.5rem;
   animation: markerPulse 1.5s ease-in-out infinite;
 }
 

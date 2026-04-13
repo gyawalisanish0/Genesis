@@ -10,6 +10,7 @@ import { SCREEN_REGISTRY, SCREEN_IDS } from '../navigation/screenRegistry'
 import { useBackButton } from '../input/useBackButton'
 import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import { BattleProvider, useBattleScreen } from './BattleContext'
+import type { Unit } from '../core/types'
 import { ResourceBar } from '../components/ResourceBar'
 import {
   TIMELINE_PX_PER_TICK, TIMELINE_OVERLAY_PX,
@@ -26,6 +27,38 @@ import styles from './BattleScreen.module.css'
  */
 function tickToTop(tick: number, maxTick: number): number {
   return (maxTick - tick) * TIMELINE_PX_PER_TICK
+}
+
+// ── Timeline marker (SVG portrait + HP arc ring) ────────────────────────────
+interface TimelineMarkerProps { unit: Unit }
+
+function TimelineMarker({ unit }: TimelineMarkerProps) {
+  const hpFraction = unit.maxHp > 0 ? unit.hp / unit.maxHp : 0
+  const circ       = 2 * Math.PI * 10
+  const ringColor  = unit.isAlly ? 'var(--accent-info)' : 'var(--accent-danger)'
+
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden>
+      {/* Portrait background */}
+      <circle cx="12" cy="12" r="9" fill="var(--bg-card)" />
+      {/* HP track — always full ring, dim */}
+      <circle cx="12" cy="12" r="10" fill="none"
+        stroke="var(--bg-elevated)" strokeWidth="2" />
+      {/* HP fill arc — length encodes hp/maxHp */}
+      <circle cx="12" cy="12" r="10" fill="none"
+        stroke={ringColor} strokeWidth="2"
+        strokeDasharray={`${hpFraction * circ} ${circ}`}
+        strokeLinecap="round"
+        transform="rotate(-90 12 12)"
+      />
+      {/* Unit initial as portrait stand-in */}
+      <text x="12" y="15.5" textAnchor="middle"
+        fontSize="7" fill="var(--text-secondary)"
+        fontFamily="var(--font-sans)">
+        {unit.name.charAt(0).toUpperCase()}
+      </text>
+    </svg>
+  )
 }
 
 // ── Timeline strip ──────────────────────────────────────────────────────────
@@ -102,9 +135,11 @@ function BattleTimeline() {
           {allUnits.map((unit) => (
             <div
               key={unit.id}
-              className={`${styles.marker} ${unit.isAlly ? styles.markerAlly : styles.markerEnemy} ${unit === playerUnit ? styles.markerActive : ''}`}
+              className={`${styles.marker} ${unit === playerUnit ? styles.markerActive : ''}`}
               style={{ top: tickToTop(unit.tickPosition, scrollBounds.max) }}
-            />
+            >
+              <TimelineMarker unit={unit} />
+            </div>
           ))}
         </div>
       </div>
