@@ -100,10 +100,9 @@ function BattleTimeline() {
   useEffect(() => {
     const el = scrollRef.current
     if (!el || containerHeight === 0) return
-    const nowTop      = tickToTop(tickValue, scrollBounds.max)
-    const anchorTarget = nowTop - containerHeight + TIMELINE_OVERLAY_PX
-    const target      = mountedRef.current ? anchorTarget : anchorTarget - 5
-    const behavior    = mountedRef.current ? 'smooth' : 'instant'
+    const nowTop   = tickToTop(tickValue, scrollBounds.max)
+    const target   = nowTop - containerHeight + TIMELINE_OVERLAY_PX - 5
+    const behavior = mountedRef.current ? 'smooth' : 'instant'
     el.scrollTo({ top: target, behavior })
     mountedRef.current = true
   }, [tickValue, scrollBounds, containerHeight])
@@ -122,7 +121,7 @@ function BattleTimeline() {
       const bandBot = el!.scrollTop + containerHeight - TIMELINE_OVERLAY_PX
       if (nowTop < bandTop || nowTop > bandBot) {
         timer = setTimeout(() => {
-          const target = nowTop - containerHeight + TIMELINE_OVERLAY_PX
+          const target = nowTop - containerHeight + TIMELINE_OVERLAY_PX - 5
           el!.scrollTo({ top: target, behavior: 'smooth' })
         }, TIMELINE_RECENTER_DELAY_MS)
       }
