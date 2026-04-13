@@ -5,6 +5,7 @@
 import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react'
 import type { Unit, SkillInstance, StatBlockDef } from '../core/types'
 import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE } from '../core/constants'
+import type { HistoryEntry } from '../core/battleHistory'
 
 // ── Mock data — replace with DataService + createUnit() when wired ──────────
 const MOCK_STATS: StatBlockDef = {
@@ -45,10 +46,12 @@ export interface LogEntry {
 interface BattleState {
   phase:           TurnPhase
   turnNumber:      number
+  // tickValue is derived — always equals the minimum registered tick (the global "now").
   tickValue:       number
   playerUnit:      Unit | null
   enemies:         Unit[]
   log:             LogEntry[]
+  historyEntries:  HistoryEntry[]
   selectedSkill:   SkillInstance | null
   gridCollapsed:   boolean
   isPaused:        boolean
@@ -58,7 +61,7 @@ interface BattleState {
   registerTick:    (id: string, tick: number) => void
   unregisterTick:  (id: string) => void
   // Actions
-  setTickValue:    (tick: number) => void
+  pushHistory:     (entry: HistoryEntry) => void
   setPhase:        (p: TurnPhase) => void
   appendLog:       (entry: Omit<LogEntry, 'id'>) => void
   selectSkill:     (skill: SkillInstance | null) => void
@@ -79,15 +82,15 @@ interface Props { children: ReactNode }
 export function BattleProvider({ children }: Props) {
   const [phase, setPhase]               = useState<TurnPhase>('player')
   const [turnNumber]                    = useState(1)
-  const [tickValue, setTickValue]       = useState(0)
   const [playerUnit, setPlayerUnit]     = useState<Unit | null>(MOCK_PLAYER)
   const [enemies, setEnemies]           = useState<Unit[]>(MOCK_ENEMIES)
   const [log, setLog]                   = useState<LogEntry[]>([
     { id: '0', text: 'Battle started. Your turn.', colour: 'var(--accent-genesis)' },
   ])
-  const [selectedSkill, setSelectedSkill] = useState<SkillInstance | null>(null)
-  const [gridCollapsed, setGridCollapsed] = useState(false)
-  const [isPaused, setPaused]             = useState(false)
+  const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>([])
+  const [selectedSkill, setSelectedSkill]   = useState<SkillInstance | null>(null)
+  const [gridCollapsed, setGridCollapsed]   = useState(false)
+  const [isPaused, setPaused]               = useState(false)
 
   // Seed the register map from mock units; keyed by stable id so re-registration is idempotent.
   const [registeredTicks, setRegisteredTicks] = useState<Map<string, number>>(
@@ -112,8 +115,15 @@ export function BattleProvider({ children }: Props) {
     })
   }, [])
 
-  // scrollBounds: the tick range the timeline track covers.
-  // max is always at least tickValue + TIMELINE_FUTURE_RANGE so 300 ticks of future are always shown.
+  // tickValue: global battle clock — the minimum registered tick (next unit to act).
+  // Derived, not stored; advances automatically as units take actions.
+  const tickValue = useMemo(() => {
+    const ticks = [...registeredTicks.values()]
+    return ticks.length ? Math.min(...ticks) : 0
+  }, [registeredTicks])
+
+  // scrollBounds: tick range the timeline track covers.
+  // max is always at least tickValue + TIMELINE_FUTURE_RANGE so 300 ticks of future are visible.
   const scrollBounds = useMemo(() => {
     const ticks = [...registeredTicks.values()]
     const futureFloor = tickValue + TIMELINE_FUTURE_RANGE
@@ -122,10 +132,14 @@ export function BattleProvider({ children }: Props) {
       max: futureFloor,
     }
     return {
-      min: Math.max(0, Math.min(Math.min(...ticks), tickValue) - TIMELINE_BUFFER_TICKS),
+      min: Math.max(0, Math.min(...ticks, tickValue) - TIMELINE_BUFFER_TICKS),
       max: Math.max(Math.max(...ticks) + TIMELINE_BUFFER_TICKS, futureFloor),
     }
   }, [registeredTicks, tickValue])
+
+  const pushHistory = useCallback((entry: HistoryEntry) => {
+    setHistoryEntries((prev) => [...prev, entry])
+  }, [])
 
   const appendLog = useCallback((entry: Omit<LogEntry, 'id'>) => {
     setLog((prev) => [...prev, { ...entry, id: String(Date.now()) }])
@@ -141,10 +155,10 @@ export function BattleProvider({ children }: Props) {
 
   return (
     <BattleContext.Provider value={{
-      phase, turnNumber, tickValue, playerUnit, enemies, log,
+      phase, turnNumber, tickValue, playerUnit, enemies, log, historyEntries,
       selectedSkill, gridCollapsed, isPaused,
       registeredTicks, scrollBounds, registerTick, unregisterTick,
-      setTickValue, setPhase, appendLog, selectSkill, toggleGrid, setPaused,
+      pushHistory, setPhase, appendLog, selectSkill, toggleGrid, setPaused,
     }}>
       {children}
     </BattleContext.Provider>

@@ -10,7 +10,7 @@ import { SCREEN_REGISTRY, SCREEN_IDS } from '../navigation/screenRegistry'
 import { useBackButton } from '../input/useBackButton'
 import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import { BattleProvider, useBattleScreen } from './BattleContext'
-import type { Unit } from '../core/types'
+import { makeHistoryEntry } from '../core/battleHistory'
 import { ResourceBar } from '../components/ResourceBar'
 import {
   TIMELINE_PX_PER_TICK, TIMELINE_OVERLAY_PX,
@@ -30,12 +30,15 @@ function tickToTop(tick: number, maxTick: number): number {
 }
 
 // ── Timeline marker (SVG portrait + HP arc ring) ────────────────────────────
-interface TimelineMarkerProps { unit: Unit }
+interface TimelineMarkerProps {
+  name:       string
+  isAlly:     boolean
+  hpFraction: number   // 0–1; drives arc fill length
+}
 
-function TimelineMarker({ unit }: TimelineMarkerProps) {
-  const hpFraction = unit.maxHp > 0 ? unit.hp / unit.maxHp : 0
-  const circ       = 2 * Math.PI * 10
-  const ringColor  = unit.isAlly ? 'var(--accent-info)' : 'var(--accent-danger)'
+function TimelineMarker({ name, isAlly, hpFraction }: TimelineMarkerProps) {
+  const circ      = 2 * Math.PI * 10
+  const ringColor = isAlly ? 'var(--accent-info)' : 'var(--accent-danger)'
 
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden>
@@ -44,7 +47,7 @@ function TimelineMarker({ unit }: TimelineMarkerProps) {
       {/* HP track — always full ring, dim */}
       <circle cx="12" cy="12" r="10" fill="none"
         stroke="var(--bg-elevated)" strokeWidth="2" />
-      {/* HP fill arc — length encodes hp/maxHp */}
+      {/* HP fill arc — length encodes hpFraction */}
       <circle cx="12" cy="12" r="10" fill="none"
         stroke={ringColor} strokeWidth="2"
         strokeDasharray={`${hpFraction * circ} ${circ}`}
@@ -55,7 +58,7 @@ function TimelineMarker({ unit }: TimelineMarkerProps) {
       <text x="12" y="15.5" textAnchor="middle"
         fontSize="7" fill="var(--text-secondary)"
         fontFamily="var(--font-sans)">
-        {unit.name.charAt(0).toUpperCase()}
+        {name.charAt(0).toUpperCase()}
       </text>
     </svg>
   )
@@ -63,7 +66,7 @@ function TimelineMarker({ unit }: TimelineMarkerProps) {
 
 // ── Timeline strip ──────────────────────────────────────────────────────────
 function BattleTimeline() {
-  const { tickValue, playerUnit, enemies, scrollBounds } = useBattleScreen()
+  const { tickValue, playerUnit, enemies, scrollBounds, historyEntries } = useBattleScreen()
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const trackHeight = (scrollBounds.max - scrollBounds.min) * TIMELINE_PX_PER_TICK
@@ -132,13 +135,28 @@ function BattleTimeline() {
             />
           ))}
           <div className={styles.nowLine} style={{ top: tickToTop(tickValue, scrollBounds.max) }} />
+          {/* History ghosts — rendered first so live markers paint on top */}
+          {historyEntries.map((entry) => (
+            <div
+              key={entry.id}
+              className={`${styles.marker} ${styles.markerGhost}`}
+              style={{ top: tickToTop(entry.tick, scrollBounds.max) }}
+            >
+              <TimelineMarker name={entry.name} isAlly={entry.isAlly} hpFraction={0} />
+            </div>
+          ))}
+          {/* Live unit markers */}
           {allUnits.map((unit) => (
             <div
               key={unit.id}
               className={`${styles.marker} ${unit === playerUnit ? styles.markerActive : ''}`}
               style={{ top: tickToTop(unit.tickPosition, scrollBounds.max) }}
             >
-              <TimelineMarker unit={unit} />
+              <TimelineMarker
+                name={unit.name}
+                isAlly={unit.isAlly}
+                hpFraction={unit.maxHp > 0 ? unit.hp / unit.maxHp : 0}
+              />
             </div>
           ))}
         </div>
@@ -215,24 +233,24 @@ function PortraitPanel() {
 function ActionGrid() {
   const {
     phase, gridCollapsed, toggleGrid, appendLog,
-    tickValue, playerUnit, setTickValue, registerTick,
+    playerUnit, pushHistory, registerTick,
   } = useBattleScreen()
   const createHandler = useScrollAwarePointer()
   const disabled = phase !== 'player'
 
   const handleBasicAttack = () => {
-    if (disabled) return
-    const newTick = tickValue + 6
-    setTickValue(newTick)
-    if (playerUnit) registerTick(playerUnit.id, newTick)
+    if (disabled || !playerUnit) return
+    const fromTick = playerUnit.tickPosition
+    pushHistory(makeHistoryEntry(playerUnit.id, playerUnit.name, fromTick, playerUnit.isAlly))
+    registerTick(playerUnit.id, fromTick + 6)
     appendLog({ text: 'You used Basic Attack.', colour: 'var(--text-primary)' })
   }
 
   const handleEndTurn = () => {
-    if (disabled) return
-    const newTick = tickValue + 10
-    setTickValue(newTick)
-    if (playerUnit) registerTick(playerUnit.id, newTick)
+    if (disabled || !playerUnit) return
+    const fromTick = playerUnit.tickPosition
+    pushHistory(makeHistoryEntry(playerUnit.id, playerUnit.name, fromTick, playerUnit.isAlly))
+    registerTick(playerUnit.id, fromTick + 10)
     appendLog({ text: 'You ended your turn.' })
   }
 
