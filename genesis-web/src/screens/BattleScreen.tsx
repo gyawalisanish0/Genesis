@@ -13,7 +13,7 @@ import { BattleProvider, useBattleScreen } from './BattleContext'
 import { ResourceBar } from '../components/ResourceBar'
 import {
   TIMELINE_PX_PER_TICK, TIMELINE_OVERLAY_PX,
-  TIMELINE_NOW_FRACTION, TIMELINE_RECENTER_DELAY_MS,
+  TIMELINE_RECENTER_DELAY_MS,
 } from '../core/constants'
 import styles from './BattleScreen.module.css'
 
@@ -42,17 +42,23 @@ function BattleTimeline() {
     return marks
   }, [scrollBounds])
 
-  // Smooth-scroll "now" to TIMELINE_NOW_FRACTION from the top whenever tickValue or bounds change.
+  // Anchor point: now-line sits at the inner edge of the bottom overlay in all cases.
+  // target = nowTop - clientHeight + OVERLAY_PX  → now-line flush with the bottom overlay edge.
+  const mountedRef = useRef(false)
+
+  // On mount: instant snap. On tick advance: smooth slide up to the anchor.
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
-    const target = tickToTop(tickValue, scrollBounds.max)
-      - el.clientHeight * TIMELINE_NOW_FRACTION + TIMELINE_OVERLAY_PX
-    el.scrollTo({ top: target, behavior: 'smooth' })
+    const nowTop = tickToTop(tickValue, scrollBounds.max)
+    const target = nowTop - el.clientHeight + TIMELINE_OVERLAY_PX
+    const behavior = mountedRef.current ? 'smooth' : 'instant'
+    el.scrollTo({ top: target, behavior })
+    mountedRef.current = true
   }, [tickValue, scrollBounds])
 
-  // Auto-recenter: if the user scrolls the now-line out of the visible band,
-  // smooth-scroll back to center it after TIMELINE_RECENTER_DELAY_MS of idle.
+  // Auto-recenter: if the now-line scrolls out of the visible band, smooth-scroll
+  // back to the bottom-overlay anchor after TIMELINE_RECENTER_DELAY_MS of idle.
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
@@ -65,7 +71,7 @@ function BattleTimeline() {
       const bandBot = el!.scrollTop + el!.clientHeight - TIMELINE_OVERLAY_PX
       if (nowTop < bandTop || nowTop > bandBot) {
         timer = setTimeout(() => {
-          const target = nowTop - el!.clientHeight * TIMELINE_NOW_FRACTION + TIMELINE_OVERLAY_PX
+          const target = nowTop - el!.clientHeight + TIMELINE_OVERLAY_PX
           el!.scrollTo({ top: target, behavior: 'smooth' })
         }, TIMELINE_RECENTER_DELAY_MS)
       }
