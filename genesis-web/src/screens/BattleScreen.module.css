@@ -19,14 +19,14 @@
 }
 
 /* Dead-zone overlays — content scrolls physically behind these.
- * Height = 3rem (48dp) must match TIMELINE_OVERLAY_PX in constants.ts. */
+ * Height = 1.5rem (24dp) must match TIMELINE_OVERLAY_PX in constants.ts. */
 .timelineWrap::before,
 .timelineWrap::after {
   content: '';
   position: absolute;
   left: 0;
   right: 0;
-  height: 3rem;
+  height: 1.5rem;
   background: var(--bg-deep);
   pointer-events: none;
   z-index: 1;
