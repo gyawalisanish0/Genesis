@@ -86,6 +86,7 @@
   height: 1px;
   background: var(--accent-genesis);
   transform: translateY(-50%);
+  transition: top var(--motion-timeline);
 }
 
 /* Unit marker — positions the SVG portrait on its tick; SVG owns size/color. */
