@@ -80,8 +80,8 @@ export function BattleProvider({ children }: Props) {
   const [phase, setPhase]               = useState<TurnPhase>('player')
   const [turnNumber]                    = useState(1)
   const [tickValue, setTickValue]       = useState(0)
-  const [playerUnit]                    = useState<Unit | null>(MOCK_PLAYER)
-  const [enemies]                       = useState<Unit[]>(MOCK_ENEMIES)
+  const [playerUnit, setPlayerUnit]     = useState<Unit | null>(MOCK_PLAYER)
+  const [enemies, setEnemies]           = useState<Unit[]>(MOCK_ENEMIES)
   const [log, setLog]                   = useState<LogEntry[]>([
     { id: '0', text: 'Battle started. Your turn.', colour: 'var(--accent-genesis)' },
   ])
@@ -99,6 +99,9 @@ export function BattleProvider({ children }: Props) {
 
   const registerTick = useCallback((id: string, tick: number) => {
     setRegisteredTicks((prev) => new Map(prev).set(id, tick))
+    // Keep the unit's tickPosition in sync so its marker tracks the now-line.
+    setPlayerUnit((prev) => prev?.id === id ? { ...prev, tickPosition: tick } : prev)
+    setEnemies((prev) => prev.map((e) => e.id === id ? { ...e, tickPosition: tick } : e))
   }, [])
 
   const unregisterTick = useCallback((id: string) => {
