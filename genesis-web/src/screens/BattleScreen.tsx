@@ -2,7 +2,7 @@
 // Layout: 28dp timeline strip (left) + main area (right).
 // Child components read from BattleContext via useBattleScreen().
 
-import { useRef, useEffect, useMemo, useState } from 'react'
+import React, { useRef, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ScreenShell } from '../navigation/ScreenShell'
 import { useScreen } from '../navigation/useScreen'
@@ -67,7 +67,7 @@ function TimelineMarker({ name, isAlly, hpFraction }: TimelineMarkerProps) {
 // ── Timeline strip ──────────────────────────────────────────────────────────
 function BattleTimeline() {
   const { tickValue, playerUnit, enemies, scrollBounds, historyEntries } = useBattleScreen()
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const trackHeight = (scrollBounds.max - scrollBounds.min) * TIMELINE_PX_PER_TICK
 
@@ -78,12 +78,10 @@ function BattleTimeline() {
     return marks
   }, [scrollBounds])
 
-  // Track the container's real rendered height via ResizeObserver.
-  // clientHeight reads 0 on mount because the browser hasn't resolved height:100%
-  // in time for the first useEffect run. ResizeObserver fires after layout is done.
+  // Measure wrap height via ResizeObserver — clientHeight is 0 on mount.
   const [containerHeight, setContainerHeight] = useState(0)
   useEffect(() => {
-    const el = scrollRef.current
+    const el = containerRef.current
     if (!el) return
     const ro = new ResizeObserver((entries) => {
       setContainerHeight(entries[0].contentRect.height)
@@ -92,88 +90,101 @@ function BattleTimeline() {
     return () => ro.disconnect()
   }, [])
 
-  // Anchor: now-line at the top edge of the bottom overlay (offset = 0).
-  // Initial mount only: strip starts 5px above the anchor so the now-line
-  // sits just inside the overlay — snap is instant, advances use the anchor.
+  const [offset, setOffset] = useState(0)
+  const [animated, setAnimated] = useState(false)
   const mountedRef = useRef(false)
 
+  // anchorY: viewport Y where the now-line should sit (top edge of bottom overlay).
+  // Snap instantly on first measurement; animate on all subsequent tick advances.
   useEffect(() => {
-    const el = scrollRef.current
-    if (!el || containerHeight === 0) return
-    const nowTop   = tickToTop(tickValue, scrollBounds.max)
-    const target   = nowTop - containerHeight + TIMELINE_OVERLAY_PX - 10
-    const behavior = mountedRef.current ? 'smooth' : 'instant'
-    el.scrollTo({ top: target, behavior })
-    mountedRef.current = true
+    if (containerHeight === 0) return
+    const anchorY = containerHeight - TIMELINE_OVERLAY_PX - 10
+    const nowTop  = tickToTop(tickValue, scrollBounds.max)
+    setOffset(anchorY - nowTop)
+    if (!mountedRef.current) {
+      mountedRef.current = true
+      setAnimated(true)
+    }
   }, [tickValue, scrollBounds, containerHeight])
 
-  // Auto-recenter: if the now-line scrolls out of the visible band, smooth-scroll
-  // back to the bottom-overlay anchor after TIMELINE_RECENTER_DELAY_MS of idle.
-  useEffect(() => {
-    const el = scrollRef.current
-    if (!el || containerHeight === 0) return
-    let timer: ReturnType<typeof setTimeout> | null = null
+  // Drag-to-pan state
+  const dragStartY     = useRef(0)
+  const dragBaseOffset = useRef(0)
+  const recenterTimer  = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-    function onScroll() {
-      if (timer) clearTimeout(timer)
+  // Clean up any pending recenter timer on unmount.
+  useEffect(() => () => {
+    if (recenterTimer.current) clearTimeout(recenterTimer.current)
+  }, [])
+
+  function handleDragStart(e: React.PointerEvent<HTMLDivElement>) {
+    if (recenterTimer.current) clearTimeout(recenterTimer.current)
+    dragStartY.current     = e.clientY
+    dragBaseOffset.current = offset
+    setAnimated(false)
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+
+  function handleDragMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!e.currentTarget.hasPointerCapture(e.pointerId)) return
+    setOffset(dragBaseOffset.current + (e.clientY - dragStartY.current))
+  }
+
+  function handleDragEnd() {
+    setAnimated(true)
+    if (recenterTimer.current) clearTimeout(recenterTimer.current)
+    recenterTimer.current = setTimeout(() => {
+      const anchorY = containerHeight - TIMELINE_OVERLAY_PX - 10
       const nowTop  = tickToTop(tickValue, scrollBounds.max)
-      const bandTop = el!.scrollTop + TIMELINE_OVERLAY_PX - 10
-      const bandBot = el!.scrollTop + containerHeight - TIMELINE_OVERLAY_PX + 10
-      if (nowTop < bandTop || nowTop > bandBot) {
-        timer = setTimeout(() => {
-          const target = nowTop - containerHeight + TIMELINE_OVERLAY_PX - 10
-          el!.scrollTo({ top: target, behavior: 'smooth' })
-        }, TIMELINE_RECENTER_DELAY_MS)
-      }
-    }
-
-    el.addEventListener('scroll', onScroll, { passive: true })
-    return () => {
-      el.removeEventListener('scroll', onScroll)
-      if (timer) clearTimeout(timer)
-    }
-  }, [tickValue, scrollBounds, containerHeight])
+      setOffset(anchorY - nowTop)
+    }, TIMELINE_RECENTER_DELAY_MS)
+  }
 
   const allUnits = playerUnit ? [playerUnit, ...enemies] : enemies
 
   return (
-    <div className={styles.timelineWrap}>
-      <div className={styles.timeline} ref={scrollRef}>
-        <div className={styles.timelineTrack} style={{ height: trackHeight }}>
-          <div className={styles.timelineAxis} />
-          {tickMarkPositions.map((tick) => (
-            <div
-              key={tick}
-              className={`${styles.tickMark} ${tick % 50 === 0 ? styles.tickMarkMajor : ''}`}
-              style={{ top: tickToTop(tick, scrollBounds.max) }}
+    <div className={styles.timelineWrap} ref={containerRef}>
+      <div
+        className={`${styles.timelineTrack} ${animated ? styles.timelineTrackAnimated : ''}`}
+        style={{ height: trackHeight, transform: `translateY(${offset}px)` }}
+        onPointerDown={handleDragStart}
+        onPointerMove={handleDragMove}
+        onPointerUp={() => handleDragEnd()}
+        onPointerCancel={() => handleDragEnd()}
+      >
+        <div className={styles.timelineAxis} />
+        {tickMarkPositions.map((tick) => (
+          <div
+            key={tick}
+            className={`${styles.tickMark} ${tick % 50 === 0 ? styles.tickMarkMajor : ''}`}
+            style={{ top: tickToTop(tick, scrollBounds.max) }}
+          />
+        ))}
+        <div className={styles.nowLine} style={{ top: tickToTop(tickValue, scrollBounds.max) }} />
+        {/* History ghosts — rendered first so live markers paint on top */}
+        {historyEntries.map((entry) => (
+          <div
+            key={entry.id}
+            className={`${styles.marker} ${styles.markerGhost}`}
+            style={{ top: tickToTop(entry.tick, scrollBounds.max) }}
+          >
+            <TimelineMarker name={entry.name} isAlly={entry.isAlly} hpFraction={0} />
+          </div>
+        ))}
+        {/* Live unit markers */}
+        {allUnits.map((unit) => (
+          <div
+            key={unit.id}
+            className={`${styles.marker} ${unit === playerUnit ? styles.markerActive : ''}`}
+            style={{ top: tickToTop(unit.tickPosition, scrollBounds.max) }}
+          >
+            <TimelineMarker
+              name={unit.name}
+              isAlly={unit.isAlly}
+              hpFraction={unit.maxHp > 0 ? unit.hp / unit.maxHp : 0}
             />
-          ))}
-          <div className={styles.nowLine} style={{ top: tickToTop(tickValue, scrollBounds.max) }} />
-          {/* History ghosts — rendered first so live markers paint on top */}
-          {historyEntries.map((entry) => (
-            <div
-              key={entry.id}
-              className={`${styles.marker} ${styles.markerGhost}`}
-              style={{ top: tickToTop(entry.tick, scrollBounds.max) }}
-            >
-              <TimelineMarker name={entry.name} isAlly={entry.isAlly} hpFraction={0} />
-            </div>
-          ))}
-          {/* Live unit markers */}
-          {allUnits.map((unit) => (
-            <div
-              key={unit.id}
-              className={`${styles.marker} ${unit === playerUnit ? styles.markerActive : ''}`}
-              style={{ top: tickToTop(unit.tickPosition, scrollBounds.max) }}
-            >
-              <TimelineMarker
-                name={unit.name}
-                isAlly={unit.isAlly}
-                hpFraction={unit.maxHp > 0 ? unit.hp / unit.maxHp : 0}
-              />
-            </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
     </div>
   )

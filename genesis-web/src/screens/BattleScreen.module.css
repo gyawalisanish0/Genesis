@@ -16,6 +16,7 @@
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
+  background: var(--bg-elevated);
 }
 
 /* Dead-zone overlays — content scrolls physically behind these.
@@ -34,23 +35,15 @@
 .timelineWrap::before { top: 0; }
 .timelineWrap::after  { bottom: 0; }
 
-/* Scrollable strip — fills the wrap; content slides under the overlays. */
-.timeline {
+/* Track — absolutely positioned; height set inline; shifted via transform. */
+.timelineTrack {
+  position: absolute;
+  top: 0;
   width: 100%;
-  height: 100%;
-  background: var(--bg-elevated);
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-width: none;       /* Firefox */
-  overscroll-behavior: none;   /* no rubber-band past track edges */
 }
 
-.timeline::-webkit-scrollbar { display: none; }  /* Chrome / Safari */
-
-/* Inner scrollable canvas — height set inline from dynamic registered tick range */
-.timelineTrack {
-  position: relative;
-  width: 100%;
+.timelineTrackAnimated {
+  transition: transform var(--motion-timeline);
 }
 
 .timelineAxis {
@@ -86,7 +79,6 @@
   height: 1px;
   background: var(--accent-genesis);
   transform: translateY(-50%);
-  transition: top var(--motion-timeline);
 }
 
 /* Unit marker — positions the SVG portrait on its tick; SVG owns size/color. */
