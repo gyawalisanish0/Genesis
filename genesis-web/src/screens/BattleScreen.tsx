@@ -101,7 +101,7 @@ function BattleTimeline() {
     const el = scrollRef.current
     if (!el || containerHeight === 0) return
     const nowTop   = tickToTop(tickValue, scrollBounds.max)
-    const target   = nowTop - containerHeight + TIMELINE_OVERLAY_PX - 5
+    const target   = nowTop - containerHeight + TIMELINE_OVERLAY_PX - 10
     const behavior = mountedRef.current ? 'smooth' : 'instant'
     el.scrollTo({ top: target, behavior })
     mountedRef.current = true
@@ -121,7 +121,7 @@ function BattleTimeline() {
       const bandBot = el!.scrollTop + containerHeight - TIMELINE_OVERLAY_PX
       if (nowTop < bandTop || nowTop > bandBot) {
         timer = setTimeout(() => {
-          const target = nowTop - containerHeight + TIMELINE_OVERLAY_PX - 5
+          const target = nowTop - containerHeight + TIMELINE_OVERLAY_PX - 10
           el!.scrollTo({ top: target, behavior: 'smooth' })
         }, TIMELINE_RECENTER_DELAY_MS)
       }
