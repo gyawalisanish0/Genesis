@@ -17,12 +17,15 @@ const cache = {
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
-// Base URL from Vite — './' in Capacitor builds, '/' in standard dev/prod.
-// Using BASE_URL ensures fetch works in both browser and native webview.
+// Base URL from Vite. Normalize to always end with '/' so path concatenation
+// is safe regardless of how the base is passed (e.g. GitHub Pages CI passes
+// --base /Genesis without a trailing slash, causing '/Genesis'+'data/...' to
+// produce '/Genesisdata/...' instead of '/Genesis/data/...').
 const BASE = import.meta.env.BASE_URL
+const BASE_NORMALIZED = BASE.endsWith('/') ? BASE : `${BASE}/`
 
 async function fetchJson(path: string): Promise<unknown> {
-  const url = `${BASE}${path}`
+  const url = `${BASE_NORMALIZED}${path}`
   console.debug('[DataService] fetch', url, '(BASE=', JSON.stringify(BASE), ')')
   const res = await fetch(url)
   if (!res.ok) throw new Error(`DataService: failed to fetch ${url} (${res.status})`)
