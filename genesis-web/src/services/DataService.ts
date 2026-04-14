@@ -23,6 +23,7 @@ const BASE = import.meta.env.BASE_URL
 
 async function fetchJson(path: string): Promise<unknown> {
   const url = `${BASE}${path}`
+  console.debug('[DataService] fetch', url, '(BASE=', JSON.stringify(BASE), ')')
   const res = await fetch(url)
   if (!res.ok) throw new Error(`DataService: failed to fetch ${url} (${res.status})`)
   return res.json()

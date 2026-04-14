@@ -209,7 +209,8 @@ export interface LevelUpgrade {
 // ── Script schemas ───────────────────────────────────────────────────────────
 
 /**
- * Skill definition — the JSON file under public/data/skills/<id>.json.
+ * Skill definition — the JSON array under public/data/characters/{id}/skills.json.
+ * Skills are character-exclusive; there is no global data/skills/ directory.
  * This is the contract v0.1.0 shape. Replaces core/types.ts:SkillDef in
  * Wave B.
  */
