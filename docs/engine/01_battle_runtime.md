@@ -19,6 +19,16 @@ const [playerData, enemyData] = await Promise.all([
 ])
 ```
 
+`loadCharacterWithSkills(id)` fires two parallel requests per character:
+
+| Request | Path | Returns |
+|---|---|---|
+| 1 | `data/characters/{id}/main.json` | `CharacterDef` |
+| 2 | `data/characters/{id}/skills.json` | `SkillDef[]` |
+
+Skills are **character-exclusive**: `SkillDef` objects live inside the character's
+own subfolder and are not shared across characters (see content contract decision #6).
+
 Each character is built into a runtime `Unit` via `createUnit()`, and its
 starting tick position is assigned by `calculateStartingTick(stats.speed, className)`.
 Skills are wrapped into `SkillInstance` objects via `createSkillInstance(skillDef)`.
@@ -284,7 +294,8 @@ src/
 │       ├── HitChanceEvaluator.ts  # calculateFinalChance, shiftProbabilities
 │       └── DiceResolver.ts        # roll, applyOutcome, calculateTumblingDelay
 ├── services/
-│   └── DataService.ts             # loadCharacter, loadSkill, loadCharacterWithSkills (+ cache)
+│   └── DataService.ts             # loadCharacterIndex, loadCharacter, loadCharacterSkillDefs,
+│                                  #   loadCharacterWithSkills, loadMode (+ per-type cache)
 └── screens/
     ├── BattleContext.tsx           # BattleContextValue + BattleProvider
     └── BattleScreen.tsx            # UI consumers — BattleTimeline, ActionGrid, etc.

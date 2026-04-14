@@ -28,8 +28,9 @@ Related documents:
 | 3 | `when` field | **Object form** — `{ "event": "...", ...params }`; parameterised events carry their config inside the `when` block |
 | 4 | Conditions | **First-class `condition` field** on every effect, separate from `when`; fires the effect only if the condition evaluates true |
 | 5 | Targeting | **Top-level skill target + per-effect override** — skill declares a default `targeting` block; individual effects may override |
+| 6 | Skill ownership | **Character-exclusive** — `SkillDef` objects live inside `characters/{id}/skills.json`; there is no global `data/skills/` directory. A skill belongs to exactly one character. Cross-character skill grants (items, passives) reference the skill by `id` but do not duplicate its definition |
 
-These five decisions are frozen. Any proposed change to them is a contract
+These six decisions are frozen. Any proposed change to them is a contract
 revision, not a bugfix.
 
 ---
@@ -487,7 +488,12 @@ Corresponding content layout:
 
 ```
 public/data/
-├── skills/
+├── characters/
+│   ├── index.json               # ["warrior_001", "hunter_001", …] — discovery list
+│   ├── {id}/                    # one subfolder per character
+│   │   ├── main.json            # CharacterDef — stats, class, rarity, passive ref
+│   │   ├── skills.json          # SkillDef[] — full definitions, character-owned (decision #6)
+│   │   └── growth/              # progression/XP curves (TBD — placeholder only)
 ├── statuses/
 ├── passives/
 ├── items/
@@ -495,7 +501,6 @@ public/data/
 │   └── genesis/
 │       ├── equipment/
 │       └── relics/
-├── characters/
 └── modes/
 ```
 

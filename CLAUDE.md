@@ -97,7 +97,14 @@ Genesis/
 │   ├── capacitor.config.ts
 │   ├── android/                  # Capacitor-generated Android project
 │   ├── public/
-│   │   ├── data/                 # JSON game content (characters, skills, modes…)
+│   │   ├── data/                 # JSON game content
+│   │   │   ├── characters/       # index.json + one subfolder per character
+│   │   │   │   ├── index.json    # ["warrior_001", …] — character discovery list
+│   │   │   │   └── {id}/         # e.g. warrior_001/
+│   │   │   │       ├── main.json # CharacterDef (stats, class, rarity, …)
+│   │   │   │       ├── skills.json # SkillDef[] — all skills owned by this character
+│   │   │   │       └── growth/   # (placeholder) progression/XP curves — TBD
+│   │   │   └── modes/            # ModeDef files (story.json, ranked.json, …)
 │   │   └── images/               # 3x PNG assets (primary density)
 │   └── src/
 │       ├── core/                 # Pure TS game logic — zero UI imports
