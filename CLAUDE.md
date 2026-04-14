@@ -219,19 +219,17 @@ Without scroll detection, scrolling inside a list accidentally triggers button t
 **Use `useScrollAwarePointer` hook** from `src/utils/useScrollAwarePointer.ts`:
 
 ```tsx
-import { useRef } from 'react'
 import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 
 export function MyScreen() {
-  const scrollContainer = useRef<HTMLDivElement>(null)
-  const createHandler = useScrollAwarePointer(scrollContainer)
+  const createHandler = useScrollAwarePointer()
 
   return (
-    <div ref={scrollContainer} style={{ overflowY: 'auto' }}>
+    <div style={{ overflowY: 'auto' }}>
       <button onPointerDown={createHandler({
-        onTap: () => { /* fires on quick tap, no scroll */ },
-        onHold: () => { /* fires after LONG_PRESS_DURATION_MS */ },
-        onScroll: () => { /* fires if user scrolls >SCROLL_DETECT_THRESHOLD_PX */ }
+        onTap:   () => doSelect(),           // fires on quick tap, no movement
+        onHold:  () => showContextMenu(),    // fires after LONG_PRESS_DURATION_MS
+        onScroll: () => cancelSelection(),   // fires if pointer moves >= SCROLL_DETECT_THRESHOLD_PX
       })}>
         Select
       </button>
@@ -241,10 +239,13 @@ export function MyScreen() {
 ```
 
 #### When to Apply
-- ✅ **ALWAYS** if your interactive element is inside a container with `overflow-y: auto`
+- ✅ **ALWAYS** if your interactive element is inside a scrollable container
 - ✅ **ALWAYS** in list/grid screens (PreBattleStepTeam, RosterScreen, SettingsScreen, etc.)
 - ❌ **NOT NEEDED** if your element is in a non-scrolling context (menus, fixed nav, overlays)
 - ❌ **NOT NEEDED** for sliders, range inputs (they have their own scroll semantics)
+
+The hook detects gesture intent via **pointer movement delta** (not scroll position), so it works
+correctly on any element — scrollable container or not. No `ref` is required.
 
 #### Hook Options Breakdown
 - `onTap()` — User pressed and released quickly without scrolling. **Most common action.**

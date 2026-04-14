@@ -9,9 +9,10 @@ import type { SkillDef } from '../core/effects/types'
 // ── In-memory cache ───────────────────────────────────────────────────────────
 
 const cache = {
-  characters:     new Map<string, CharacterDef>(),
+  characterIndex:  null as string[] | null,
+  characters:      new Map<string, CharacterDef>(),
   characterSkills: new Map<string, SkillDef[]>(),  // keyed by characterId
-  modes:          new Map<string, ModeDef>(),
+  modes:           new Map<string, ModeDef>(),
 }
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
@@ -31,7 +32,10 @@ async function fetchJson(path: string): Promise<unknown> {
 
 /** Returns the list of all available character IDs from the characters index. */
 export async function loadCharacterIndex(): Promise<string[]> {
-  return fetchJson('data/characters/index.json') as Promise<string[]>
+  if (cache.characterIndex) return cache.characterIndex
+  const raw = await fetchJson('data/characters/index.json')
+  cache.characterIndex = raw as string[]
+  return cache.characterIndex
 }
 
 export async function loadCharacter(id: string): Promise<CharacterDef> {
@@ -76,6 +80,7 @@ export async function loadCharacterWithSkills(id: string): Promise<{
 
 /** Test utility — clears all cached data between test cases. */
 export function clearCache(): void {
+  cache.characterIndex = null
   cache.characters.clear()
   cache.characterSkills.clear()
   cache.modes.clear()
