@@ -21,8 +21,6 @@ export interface CharacterDef {
   apRegenRate: number
   passive:     string | null
   skillPath:   string
-  /** IDs of skills this character equips at the start of a battle. */
-  skills?:     string[]
 }
 
 export interface LevelUpgrade {

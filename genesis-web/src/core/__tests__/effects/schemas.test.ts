@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { skillDefSchema } from '../../effects/schemas'
-import slashJson       from '../../../../public/data/skills/slash_001.json'
-import arcaneBoltJson  from '../../../../public/data/skills/arcane_bolt_001.json'
+import slashSkills      from '../../../../public/data/characters/warrior_001/skills.json'
+import arcaneBoltSkills from '../../../../public/data/characters/hunter_001/skills.json'
+
+const slashJson      = slashSkills[0]
+const arcaneBoltJson = arcaneBoltSkills[0]
 
 describe('skillDefSchema', () => {
   it('accepts the rewritten Slash skill', () => {
