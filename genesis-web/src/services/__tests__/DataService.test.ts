@@ -56,7 +56,8 @@ describe('DataService', () => {
       const fetchMock = mockOk(WARRIOR)
       vi.stubGlobal('fetch', fetchMock)
       await loadCharacter('warrior_001')
-      expect(fetchMock).toHaveBeenCalledWith('/data/characters/warrior_001.json')
+      // URL is BASE_URL + path; BASE_URL is './' per vite.config base setting
+      expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('data/characters/warrior_001.json'))
     })
 
     it('caches — second call does not refetch', async () => {

@@ -167,6 +167,14 @@ export function BattleProvider({ children }: Props) {
         }
       } catch (err) {
         console.error('BattleContext: failed to load battle data', err)
+        if (!cancelled) {
+          setLog([{
+            id: 'err',
+            text: `Failed to load battle data: ${err instanceof Error ? err.message : String(err)}`,
+            colour: 'var(--accent-danger)',
+          }])
+          setIsLoading(false)
+        }
       }
     }
     load()

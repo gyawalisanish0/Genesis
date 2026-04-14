@@ -16,9 +16,14 @@ const cache = {
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
+// Base URL from Vite — './' in Capacitor builds, '/' in standard dev/prod.
+// Using BASE_URL ensures fetch works in both browser and native webview.
+const BASE = import.meta.env.BASE_URL
+
 async function fetchJson(path: string): Promise<unknown> {
-  const res = await fetch(path)
-  if (!res.ok) throw new Error(`DataService: failed to fetch ${path} (${res.status})`)
+  const url = `${BASE}${path}`
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`DataService: failed to fetch ${url} (${res.status})`)
   return res.json()
 }
 
@@ -27,7 +32,7 @@ async function fetchJson(path: string): Promise<unknown> {
 export async function loadCharacter(id: string): Promise<CharacterDef> {
   const cached = cache.characters.get(id)
   if (cached) return cached
-  const raw = await fetchJson(`/data/characters/${id}.json`)
+  const raw = await fetchJson(`data/characters/${id}.json`)
   const def = raw as CharacterDef
   cache.characters.set(id, def)
   return def
@@ -36,7 +41,7 @@ export async function loadCharacter(id: string): Promise<CharacterDef> {
 export async function loadSkill(id: string): Promise<SkillDef> {
   const cached = cache.skills.get(id)
   if (cached) return cached
-  const raw = await fetchJson(`/data/skills/${id}.json`)
+  const raw = await fetchJson(`data/skills/${id}.json`)
   const def = raw as SkillDef
   cache.skills.set(id, def)
   return def
@@ -45,7 +50,7 @@ export async function loadSkill(id: string): Promise<SkillDef> {
 export async function loadMode(id: string): Promise<ModeDef> {
   const cached = cache.modes.get(id)
   if (cached) return cached
-  const raw = await fetchJson(`/data/modes/${id}.json`)
+  const raw = await fetchJson(`data/modes/${id}.json`)
   const def = raw as ModeDef
   cache.modes.set(id, def)
   return def
