@@ -62,6 +62,14 @@ describe('DataService', () => {
       expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('data/characters/index.json'))
     })
 
+    it('caches — second call does not refetch', async () => {
+      const fetchMock = mockOk(CHARACTER_INDEX)
+      vi.stubGlobal('fetch', fetchMock)
+      await loadCharacterIndex()
+      await loadCharacterIndex()
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    })
+
     it('throws on HTTP error', async () => {
       vi.stubGlobal('fetch', mockErr(404))
       await expect(loadCharacterIndex()).rejects.toThrow('DataService: failed to fetch')
