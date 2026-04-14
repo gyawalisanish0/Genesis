@@ -1,0 +1,33 @@
+[
+  {
+    "type": "skill",
+    "id": "slash_001",
+    "name": "Slash",
+    "tuCost": 8,
+    "apCost": 20,
+    "tags": ["physical", "melee"],
+    "maxLevel": 5,
+    "targeting": {
+      "selector": "enemy",
+      "range": "melee"
+    },
+    "resolution": {
+      "baseChance": 1.0
+    },
+    "effects": [
+      {
+        "id": "dmg",
+        "when": { "event": "onCast" },
+        "type": "damage",
+        "amount": { "stat": "strength", "percent": 80 },
+        "damageType": "physical"
+      }
+    ],
+    "levelUpgrades": [
+      { "level": 2, "patch": { "effects.dmg.amount.percent": 90  } },
+      { "level": 3, "patch": { "effects.dmg.amount.percent": 100 } },
+      { "level": 4, "patch": { "effects.dmg.amount.percent": 115 } },
+      { "level": 5, "patch": { "effects.dmg.amount.percent": 130 } }
+    ]
+  }
+]

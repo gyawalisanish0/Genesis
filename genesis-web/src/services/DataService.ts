@@ -9,9 +9,9 @@ import type { SkillDef } from '../core/effects/types'
 // ── In-memory cache ───────────────────────────────────────────────────────────
 
 const cache = {
-  characters: new Map<string, CharacterDef>(),
-  skills:     new Map<string, SkillDef>(),
-  modes:      new Map<string, ModeDef>(),
+  characters:     new Map<string, CharacterDef>(),
+  characterSkills: new Map<string, SkillDef[]>(),  // keyed by characterId
+  modes:          new Map<string, ModeDef>(),
 }
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
@@ -29,22 +29,28 @@ async function fetchJson(path: string): Promise<unknown> {
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
+/** Returns the list of all available character IDs from the characters index. */
+export async function loadCharacterIndex(): Promise<string[]> {
+  return fetchJson('data/characters/index.json') as Promise<string[]>
+}
+
 export async function loadCharacter(id: string): Promise<CharacterDef> {
   const cached = cache.characters.get(id)
   if (cached) return cached
-  const raw = await fetchJson(`data/characters/${id}.json`)
+  const raw = await fetchJson(`data/characters/${id}/main.json`)
   const def = raw as CharacterDef
   cache.characters.set(id, def)
   return def
 }
 
-export async function loadSkill(id: string): Promise<SkillDef> {
-  const cached = cache.skills.get(id)
+/** Returns all SkillDef objects owned by a character. */
+export async function loadCharacterSkillDefs(id: string): Promise<SkillDef[]> {
+  const cached = cache.characterSkills.get(id)
   if (cached) return cached
-  const raw = await fetchJson(`data/skills/${id}.json`)
-  const def = raw as SkillDef
-  cache.skills.set(id, def)
-  return def
+  const raw = await fetchJson(`data/characters/${id}/skills.json`)
+  const defs = raw as SkillDef[]
+  cache.characterSkills.set(id, defs)
+  return defs
 }
 
 export async function loadMode(id: string): Promise<ModeDef> {
@@ -56,19 +62,21 @@ export async function loadMode(id: string): Promise<ModeDef> {
   return def
 }
 
-/** Load a character definition together with all skills listed in its `skills` field. */
+/** Load a character definition together with all of its skill definitions. */
 export async function loadCharacterWithSkills(id: string): Promise<{
   characterDef: CharacterDef
   skillDefs:    SkillDef[]
 }> {
-  const characterDef = await loadCharacter(id)
-  const skillDefs = await Promise.all((characterDef.skills ?? []).map(loadSkill))
+  const [characterDef, skillDefs] = await Promise.all([
+    loadCharacter(id),
+    loadCharacterSkillDefs(id),
+  ])
   return { characterDef, skillDefs }
 }
 
 /** Test utility — clears all cached data between test cases. */
 export function clearCache(): void {
   cache.characters.clear()
-  cache.skills.clear()
+  cache.characterSkills.clear()
   cache.modes.clear()
 }
