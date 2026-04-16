@@ -17,7 +17,7 @@
   justify-content: space-between;
   padding: var(--s-xs) var(--s-sm);
   border-left: 3px solid transparent; /* overridden inline for the actor row */
-  animation: rowSlideIn 200ms ease-out both;
+  animation: rowSlideIn 750ms ease-out both;
 }
 
 @keyframes rowSlideIn {
@@ -34,7 +34,7 @@
   gap: var(--s-sm);
   padding: var(--s-xs) var(--s-sm);
   border-left: 3px solid transparent; /* overridden inline with accent colour */
-  animation: rowSlideIn 200ms ease-out both;
+  animation: rowSlideIn 750ms ease-out both;
   min-height: 3.5rem;  /* 56dp */
 }
 
