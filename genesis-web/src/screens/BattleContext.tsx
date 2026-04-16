@@ -8,7 +8,7 @@ import {
 } from 'react'
 import type { Unit, StatusEffect } from '../core/types'
 import type { SkillInstance, BattleState as EngineBattleState, EffectContext } from '../core/effects/types'
-import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS } from '../core/constants'
+import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, ENEMY_AI_DELAY_MS } from '../core/constants'
 import { createUnit, isAlive, setTickPosition } from '../core/unit'
 import { calculateStartingTick, advanceTick, calculateApGained } from '../core/combat/TickCalculator'
 import { calculateFinalChance, shiftProbabilities } from '../core/combat/HitChanceEvaluator'
@@ -28,23 +28,26 @@ export interface DiceResult {
   animKey: number       // incremented on each show; React key for animation retrigger
 }
 
+export interface TurnDisplayUnit {
+  name:        string
+  className:   string
+  rarity:      number
+  hp:          number
+  maxHp:       number
+  ap:          number
+  maxAp:       number
+  statusSlots: StatusEffect[]
+}
+
 export interface TurnDisplay {
-  actor: {
-    name:        string
-    className:   string
-    rarity:      number
-    hp:          number
-    maxHp:       number
-    ap:          number
-    maxAp:       number
-    statusSlots: StatusEffect[]
-  } | null
-  // null = player-controlled unit; actor row is omitted from the panel
-  skillName: string
-  tuCost:    number
-  target:    string   // unit display name, or "Multiple Targets"
-  isAlly:    boolean  // drives accent colour: true = blue, false = red
-  animKey:   number   // incremented each show; used as React key to retrigger animation
+  actor:      TurnDisplayUnit | null  // null = player-controlled; actor row omitted
+  skillName:  string
+  tuCost:     number
+  apCost:     number
+  skillLevel: number
+  target:     TurnDisplayUnit
+  isAlly:     boolean  // drives accent colour: true = blue, false = red
+  animKey:    number   // incremented each show; used as React key to retrigger animation
 }
 
 export interface LogEntry {
@@ -392,12 +395,25 @@ export function BattleProvider({ children }: Props) {
     registerTick(playerUnit.id, advanceTick(fromTick, skill.tuCost + tumbleDelay))
 
     // Confirmation display — shown after resolution so player sees what was cast.
+    // Use post-attack target state from the snap so HP reflects the hit.
+    const postTarget = snap.get(target.id) ?? target
     showTurnDisplay({
-      actor:     null,          // player-controlled; actor row omitted
-      skillName: skill.name,
-      tuCost:    skill.tuCost,
-      target:    target.name,
-      isAlly:    true,
+      actor:      null,          // player-controlled; actor row omitted
+      skillName:  skill.name,
+      tuCost:     skill.tuCost,
+      apCost:     skill.apCost,
+      skillLevel: skillInst.currentLevel,
+      target: {
+        name:        postTarget.name,
+        className:   postTarget.className,
+        rarity:      postTarget.rarity,
+        hp:          postTarget.hp,
+        maxHp:       postTarget.maxHp,
+        ap:          postTarget.ap,
+        maxAp:       postTarget.maxAp,
+        statusSlots: postTarget.statusSlots,
+      },
+      isAlly: true,
     })
 
     // Victory check — read updated enemies from snap.
@@ -415,11 +431,13 @@ export function BattleProvider({ children }: Props) {
     if (!activeEnemies.length) return
 
     // Telegraph: show turn display immediately so the player can read what's
-    // coming during the 700ms AI delay before the action fires.
+    // coming during the AI delay before the action fires.
     const firstEnemy    = activeEnemies[0]
     const previewSkills = unitSkillsMapRef.current.get(firstEnemy.id) ?? []
     if (previewSkills.length > 0) {
-      const previewSkill = getCachedSkill(previewSkills[0])
+      const previewSkillInst = previewSkills[0]
+      const previewSkill     = getCachedSkill(previewSkillInst)
+      const previewTarget    = playerUnitRef.current
       showTurnDisplay({
         actor: {
           name:        firstEnemy.name,
@@ -431,10 +449,24 @@ export function BattleProvider({ children }: Props) {
           maxAp:       firstEnemy.maxAp,
           statusSlots: firstEnemy.statusSlots,
         },
-        skillName: previewSkill.name,
-        tuCost:    previewSkill.tuCost,
-        target:    playerUnitRef.current?.name ?? 'Player',
-        isAlly:    false,
+        skillName:  previewSkill.name,
+        tuCost:     previewSkill.tuCost,
+        apCost:     previewSkill.apCost,
+        skillLevel: previewSkillInst.currentLevel,
+        target: previewTarget ? {
+          name:        previewTarget.name,
+          className:   previewTarget.className,
+          rarity:      previewTarget.rarity,
+          hp:          previewTarget.hp,
+          maxHp:       previewTarget.maxHp,
+          ap:          previewTarget.ap,
+          maxAp:       previewTarget.maxAp,
+          statusSlots: previewTarget.statusSlots,
+        } : {
+          name: 'Player', className: '—', rarity: 1,
+          hp: 0, maxHp: 1, ap: 0, maxAp: 1, statusSlots: [],
+        },
+        isAlly: false,
       })
     }
 
@@ -471,7 +503,7 @@ export function BattleProvider({ children }: Props) {
           appendLog({ text: 'Defeat! You have been slain.', colour: 'var(--accent-danger)' })
         }
       }
-    }, 700)
+    }, ENEMY_AI_DELAY_MS)
 
     return () => clearTimeout(timer)
   }, [phase, activeUnitIds, showTurnDisplay]) // refs keep callbacks current; phase + activeUnitIds gate the trigger

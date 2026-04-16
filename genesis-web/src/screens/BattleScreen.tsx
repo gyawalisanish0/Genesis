@@ -204,24 +204,27 @@ function BattleTimeline() {
 
 // ── Turn display panel ──────────────────────────────────────────────────────
 // Shows the active unit, their skill, and target in sequence.
-// Enemy turn: animates in BEFORE the action fires (telegraph during 700ms delay).
+// Enemy turn: animates in BEFORE the action fires (telegraph during AI delay).
 // Player turn: animates in AFTER the action resolves (confirmation summary).
 // Auto-dismisses 2s after the action completes. Actor row hidden for player.
 function TurnDisplayPanel() {
   const { turnDisplay } = useBattleScreen()
   if (!turnDisplay) return null
 
-  const { actor, skillName, tuCost, target, isAlly } = turnDisplay
-  const accent      = isAlly ? 'var(--accent-info)' : 'var(--accent-danger)'
-  const skillDelay  = actor ? '150ms' : '0ms'
-  const targetDelay = actor ? '300ms' : '150ms'
+  const { actor, skillName, tuCost, apCost, skillLevel, target, isAlly } = turnDisplay
+  const actorAccent  = isAlly ? 'var(--accent-info)' : 'var(--accent-danger)'
+  const targetAccent = isAlly ? 'var(--accent-danger)' : 'var(--accent-info)'
+  // Stagger: actor 0ms → skill 250ms → target 500ms (proportional to 750ms anim).
+  // When no actor row (player action), shift everything 250ms earlier.
+  const skillDelay  = actor ? '250ms' : '0ms'
+  const targetDelay = actor ? '500ms' : '250ms'
 
   return (
     <div className={turnStyles.turnDisplay}>
       {actor && (
         <div className={turnStyles.actorRow}
-             style={{ borderLeftColor: accent, animationDelay: '0ms' }}>
-          <div className={turnStyles.actorPortrait} style={{ borderColor: accent }}>
+             style={{ borderLeftColor: actorAccent, animationDelay: '0ms' }}>
+          <div className={turnStyles.actorPortrait} style={{ borderColor: actorAccent }}>
             {actor.name.charAt(0).toUpperCase()}
           </div>
           <div className={turnStyles.actorInfo}>
@@ -253,10 +256,38 @@ function TurnDisplayPanel() {
       )}
       <div className={turnStyles.turnRow} style={{ animationDelay: skillDelay }}>
         <span className={turnStyles.skillName}>{skillName}</span>
-        <span className={turnStyles.skillTu}>TU {tuCost}</span>
+        <span className={turnStyles.skillTu}>TU {tuCost} · AP {apCost} · Lv {skillLevel}</span>
       </div>
-      <div className={turnStyles.turnRow} style={{ animationDelay: targetDelay }}>
-        <span className={turnStyles.target}>→ {target}</span>
+      <div className={turnStyles.actorRow}
+           style={{ borderLeftColor: targetAccent, animationDelay: targetDelay }}>
+        <div className={turnStyles.actorPortrait} style={{ borderColor: targetAccent }}>
+          {target.name.charAt(0).toUpperCase()}
+        </div>
+        <div className={turnStyles.actorInfo}>
+          <div className={turnStyles.actorHeader}>
+            <span className={turnStyles.actorName}>{target.name}</span>
+            <span className={turnStyles.actorMeta}>
+              {target.className} · {'★'.repeat(target.rarity)}
+            </span>
+          </div>
+          <div className={turnStyles.actorBarRow}>
+            <span className={turnStyles.actorBarLabel}>HP</span>
+            <ResourceBar variant="hp" value={target.hp} max={target.maxHp} />
+            <span className={turnStyles.actorBarValue}>{target.hp}/{target.maxHp}</span>
+          </div>
+          <div className={turnStyles.actorBarRow}>
+            <span className={turnStyles.actorBarLabel}>AP</span>
+            <ResourceBar variant="ap" value={target.ap} max={target.maxAp} />
+            <span className={turnStyles.actorBarValue}>{target.ap}/{target.maxAp}</span>
+          </div>
+          {target.statusSlots.length > 0 && (
+            <div className={turnStyles.actorStatusRow}>
+              {target.statusSlots.map((s) => (
+                <span key={s.id} className={turnStyles.statusChip}>{s.name}</span>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
