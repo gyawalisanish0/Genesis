@@ -43,7 +43,8 @@ export const TIMELINE_BUFFER_TICKS     = 15    // extra ticks beyond the outermo
 export const TIMELINE_OVERLAY_PX       = 24    // dead-zone overlay height at each strip edge (1.5rem @ 16px base — must match CSS)
 export const TIMELINE_FUTURE_RANGE     = 300   // ticks always kept visible ahead of the current tick
 export const TIMELINE_NOW_FRACTION     = 0.75  // now-line sits at 75% from the strip top
-export const TIMELINE_RECENTER_DELAY_MS = 1500 // ms of scroll-idle before auto-recenter fires
+export const TIMELINE_RECENTER_DELAY_MS  = 1500 // ms of scroll-idle before auto-recenter fires
+export const TURN_DISPLAY_DISMISS_MS     = 2000 // ms after action resolves before turn panel auto-clears
 
 // Input timing thresholds (milliseconds / px)
 export const HOVER_THROTTLE_MS         = 100

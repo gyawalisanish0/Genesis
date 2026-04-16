@@ -16,6 +16,7 @@ import {
   TIMELINE_RECENTER_DELAY_MS,
 } from '../core/constants'
 import styles from './BattleScreen.module.css'
+import turnStyles from './TurnDisplayPanel.module.css'
 
 // ── Timeline helpers ─────────────────────────────────────────────────────────
 
@@ -189,20 +190,37 @@ function BattleTimeline() {
   )
 }
 
-// ── Opponent info card ──────────────────────────────────────────────────────
-function OpponentCard() {
-  const { phase, enemies } = useBattleScreen()
-  const visible = phase === 'enemy'
-  const enemy   = enemies[0] ?? null
+// ── Turn display panel ──────────────────────────────────────────────────────
+// Shows the active unit, their skill, and target in sequence.
+// Enemy turn: animates in BEFORE the action fires (telegraph during 700ms delay).
+// Player turn: animates in AFTER the action resolves (confirmation summary).
+// Auto-dismisses 2s after the action completes. Actor row hidden for player.
+function TurnDisplayPanel() {
+  const { turnDisplay } = useBattleScreen()
+  if (!turnDisplay) return null
+
+  const { actor, skillName, tuCost, target, isAlly } = turnDisplay
+  const accent      = isAlly ? 'var(--accent-info)' : 'var(--accent-danger)'
+  const skillDelay  = actor ? '150ms' : '0ms'
+  const targetDelay = actor ? '300ms' : '150ms'
 
   return (
-    <div className={`${styles.opponentCard} ${visible ? styles.opponentCardVisible : ''}`} aria-hidden={!visible}>
-      <div className={styles.opponentPortrait}>{enemy ? enemy.name.charAt(0) : 'E'}</div>
-      <div className={styles.opponentInfo}>
-        <span className={styles.opponentName}>{enemy?.name ?? 'Enemy'}</span>
-        <span className={styles.opponentClass}>{enemy ? `${enemy.className} · ${'★'.repeat(enemy.rarity)}` : '—'}</span>
-        <ResourceBar variant="hp" value={enemy?.hp ?? 0}    max={enemy?.maxHp ?? 1} />
-        <ResourceBar variant="ap" value={enemy?.ap ?? 0}    max={enemy?.maxAp ?? 1} />
+    <div className={turnStyles.turnDisplay}>
+      {actor && (
+        <div className={turnStyles.turnRow}
+             style={{ borderLeftColor: accent, animationDelay: '0ms' }}>
+          <span className={turnStyles.actorName}>{actor.name}</span>
+          <span className={turnStyles.actorMeta}>
+            {actor.className} · {'★'.repeat(actor.rarity)}
+          </span>
+        </div>
+      )}
+      <div className={turnStyles.turnRow} style={{ animationDelay: skillDelay }}>
+        <span className={turnStyles.skillName}>{skillName}</span>
+        <span className={turnStyles.skillTu}>TU {tuCost}</span>
+      </div>
+      <div className={turnStyles.turnRow} style={{ animationDelay: targetDelay }}>
+        <span className={turnStyles.target}>→ {target}</span>
       </div>
     </div>
   )
@@ -333,7 +351,7 @@ function PauseOverlay() {
 
 // ── Battle layout ───────────────────────────────────────────────────────────
 function BattleLayout() {
-  const { isPaused, setPaused, isLoading } = useBattleScreen()
+  const { isPaused, setPaused, isLoading, turnDisplay } = useBattleScreen()
   useScreen()
   // Back toggles pause. LEAVE BATTLE in the overlay handles navigation out.
   useBackButton(() => setPaused(!isPaused))
@@ -353,7 +371,7 @@ function BattleLayout() {
       {isPaused && <PauseOverlay />}
       <BattleTimeline />
       <div className={styles.main}>
-        <OpponentCard />
+        <TurnDisplayPanel key={turnDisplay?.animKey ?? 0} />
         <ActionLog />
         <StatusSlots />
         <div className={styles.bottom}>

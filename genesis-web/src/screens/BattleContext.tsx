@@ -8,7 +8,7 @@ import {
 } from 'react'
 import type { Unit } from '../core/types'
 import type { SkillInstance, BattleState as EngineBattleState, EffectContext } from '../core/effects/types'
-import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE } from '../core/constants'
+import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS } from '../core/constants'
 import { createUnit, isAlive, setTickPosition } from '../core/unit'
 import { calculateStartingTick, advanceTick, calculateApGained } from '../core/combat/TickCalculator'
 import { calculateFinalChance, shiftProbabilities } from '../core/combat/HitChanceEvaluator'
@@ -22,6 +22,16 @@ import type { HistoryEntry } from '../core/battleHistory'
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type TurnPhase = 'player' | 'enemy' | 'resolving'
+
+export interface TurnDisplay {
+  actor: { name: string; className: string; rarity: number } | null
+  // null = player-controlled unit; actor row is omitted from the panel
+  skillName: string
+  tuCost:    number
+  target:    string   // unit display name, or "Multiple Targets"
+  isAlly:    boolean  // drives accent colour: true = blue, false = red
+  animKey:   number   // incremented each show; used as React key to retrigger animation
+}
 
 export interface LogEntry {
   id:      string
@@ -43,6 +53,8 @@ interface BattleContextValue {
   gridCollapsed:   boolean
   isPaused:        boolean
   isLoading:       boolean
+  // Turn display panel
+  turnDisplay:     TurnDisplay | null
   // Timeline
   registeredTicks: Map<string, number>
   scrollBounds:    { min: number; max: number }
@@ -109,6 +121,11 @@ export function BattleProvider({ children }: Props) {
   const [unitSkillsMap, setUnitSkillsMap] = useState<Map<string, SkillInstance[]>>(
     () => new Map(),
   )
+
+  // Turn display panel — ephemeral, set immediately before/after each action
+  const [turnDisplay, setTurnDisplay]   = useState<TurnDisplay | null>(null)
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const animKeyRef      = useRef(0)
 
   // ── Other battle state ─────────────────────────────────────────────────────
   const [phase, setPhase]             = useState<TurnPhase>('resolving')
@@ -179,6 +196,25 @@ export function BattleProvider({ children }: Props) {
     }
     load()
     return () => { cancelled = true }
+  }, [])
+
+  // ── Turn display helpers ───────────────────────────────────────────────────
+
+  // Shows the action panel and schedules its auto-dismiss.
+  // Clears any pending dismiss so a new action replaces the previous display.
+  const showTurnDisplay = useCallback((d: Omit<TurnDisplay, 'animKey'>) => {
+    if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current)
+    animKeyRef.current += 1
+    setTurnDisplay({ ...d, animKey: animKeyRef.current })
+    dismissTimerRef.current = setTimeout(
+      () => setTurnDisplay(null),
+      TURN_DISPLAY_DISMISS_MS,
+    )
+  }, [])
+
+  // Cleanup pending dismiss on unmount.
+  useEffect(() => () => {
+    if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current)
   }, [])
 
   // ── Timeline mechanics ─────────────────────────────────────────────────────
@@ -316,10 +352,19 @@ export function BattleProvider({ children }: Props) {
     pushHistory(makeHistoryEntry(playerUnit.id, playerUnit.name, fromTick, playerUnit.isAlly))
     registerTick(playerUnit.id, advanceTick(fromTick, skill.tuCost + tumbleDelay))
 
+    // Confirmation display — shown after resolution so player sees what was cast.
+    showTurnDisplay({
+      actor:     null,          // player-controlled; actor row omitted
+      skillName: skill.name,
+      tuCost:    skill.tuCost,
+      target:    target.name,
+      isAlly:    true,
+    })
+
     // Victory check — read updated enemies from snap.
     const allDead = enemies.every((e) => !isAlive(snap.get(e.id) ?? e))
     if (allDead) appendLog({ text: 'Victory! All enemies defeated.', colour: 'var(--accent-genesis)' })
-  }, [playerUnit, enemies, phase, runAttack, pushHistory, registerTick, appendLog])
+  }, [playerUnit, enemies, phase, runAttack, pushHistory, registerTick, appendLog, showTurnDisplay])
 
   // ── Enemy AI ───────────────────────────────────────────────────────────────
 
@@ -329,6 +374,21 @@ export function BattleProvider({ children }: Props) {
       (e) => activeUnitIds.has(e.id) && isAlive(e),
     )
     if (!activeEnemies.length) return
+
+    // Telegraph: show turn display immediately so the player can read what's
+    // coming during the 700ms AI delay before the action fires.
+    const firstEnemy    = activeEnemies[0]
+    const previewSkills = unitSkillsMapRef.current.get(firstEnemy.id) ?? []
+    if (previewSkills.length > 0) {
+      const previewSkill = getCachedSkill(previewSkills[0])
+      showTurnDisplay({
+        actor:     { name: firstEnemy.name, className: firstEnemy.className, rarity: firstEnemy.rarity },
+        skillName: previewSkill.name,
+        tuCost:    previewSkill.tuCost,
+        target:    playerUnitRef.current?.name ?? 'Player',
+        isAlly:    false,
+      })
+    }
 
     const timer = setTimeout(() => {
       const currentPlayer  = playerUnitRef.current
@@ -366,7 +426,7 @@ export function BattleProvider({ children }: Props) {
     }, 700)
 
     return () => clearTimeout(timer)
-  }, [phase, activeUnitIds]) // refs keep callbacks current; phase + activeUnitIds gate the trigger
+  }, [phase, activeUnitIds, showTurnDisplay]) // refs keep callbacks current; phase + activeUnitIds gate the trigger
 
   // ── Misc actions ───────────────────────────────────────────────────────────
 
@@ -384,6 +444,7 @@ export function BattleProvider({ children }: Props) {
       phase, turnNumber, tickValue, activeUnitIds,
       playerUnit, enemies, log, historyEntries,
       selectedSkill, gridCollapsed, isPaused, isLoading,
+      turnDisplay,
       registeredTicks, scrollBounds,
       getUnitSkills, executeSkill,
       registerTick, unregisterTick, pushHistory,

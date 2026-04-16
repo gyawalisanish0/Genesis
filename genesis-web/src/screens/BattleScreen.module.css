@@ -114,58 +114,6 @@
   overflow: hidden;
 }
 
-/* ── Opponent info card ─────────────────────────────────────────────── */
-.opponentCard {
-  display: flex;
-  align-items: center;
-  gap: var(--s-sm);
-  padding: var(--s-sm) var(--s-sm);
-  background: var(--bg-panel);
-  border-bottom: 1px solid var(--bg-elevated);
-  height: 0;
-  opacity: 0;
-  overflow: hidden;
-  transition: height 150ms ease, opacity 150ms ease;
-  flex-shrink: 0;
-}
-
-.opponentCardVisible {
-  height: 5.125rem;  /* ~82 dp — portrait + bars */
-  opacity: 1;
-}
-
-.opponentPortrait {
-  width: 4rem;
-  height: 4rem;
-  border-radius: 50%;
-  background: var(--bg-elevated);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  color: var(--text-muted);
-  flex-shrink: 0;
-  border: 2px solid var(--rarity-3);
-}
-
-.opponentInfo {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.opponentName {
-  font-size: var(--t-subheading-size);
-  font-weight: var(--t-subheading-weight);
-  color: var(--text-primary);
-}
-
-.opponentClass {
-  font-size: var(--t-micro-size);
-  color: var(--text-secondary);
-}
-
 /* ── Action log ─────────────────────────────────────────────────────── */
 .log {
   flex: 1;
