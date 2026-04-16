@@ -1,0 +1,55 @@
+/* Full-area overlay — sits above battle content, below the pause overlay.
+ * pointer-events: none so the overlay never blocks taps on the battle UI. */
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 40;
+}
+
+/* Burst container — animated; colour applied inline via style.color. */
+.burst {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-xs);
+  animation: outcomeSlam 2s ease-out forwards;
+}
+
+/* Large outcome label */
+.outcomeName {
+  font-size: 3.5rem;
+  font-weight: 900;
+  font-family: var(--font-sans);
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-shadow: 0 0 2.5rem currentColor, 0 0 0.5rem currentColor;
+  color: inherit;
+}
+
+/* Thin accent line below the name — reinforces the colour */
+.accentLine {
+  width: 4rem;
+  height: 2px;
+  background: currentColor;
+  border-radius: var(--r-pill);
+  opacity: 0.6;
+}
+
+@keyframes outcomeSlam {
+  /* slam in */
+  0%   { opacity: 0; transform: scale(0.4);  filter: blur(8px); }
+  12%  { opacity: 1; transform: scale(1.25); filter: blur(0);   }
+  /* settle */
+  22%  {             transform: scale(0.95);                    }
+  32%  {             transform: scale(1.05);                    }
+  40%  {             transform: scale(1.0);                     }
+  /* hold */
+  65%  { opacity: 1; transform: scale(1.0);                     }
+  /* fade out */
+  100% { opacity: 0; transform: scale(1.02);                    }
+}

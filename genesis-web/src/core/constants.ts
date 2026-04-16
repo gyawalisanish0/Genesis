@@ -45,6 +45,7 @@ export const TIMELINE_FUTURE_RANGE     = 300   // ticks always kept visible ahea
 export const TIMELINE_NOW_FRACTION     = 0.75  // now-line sits at 75% from the strip top
 export const TIMELINE_RECENTER_DELAY_MS  = 1500 // ms of scroll-idle before auto-recenter fires
 export const TURN_DISPLAY_DISMISS_MS     = 2000 // ms after action resolves before turn panel auto-clears
+export const DICE_RESULT_DISMISS_MS      = 2000 // ms dice outcome burst is visible (matches animation duration)
 
 // Input timing thresholds (milliseconds / px)
 export const HOVER_THROTTLE_MS         = 100

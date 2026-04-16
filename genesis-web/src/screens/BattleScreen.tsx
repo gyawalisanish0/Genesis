@@ -10,6 +10,7 @@ import { SCREEN_REGISTRY, SCREEN_IDS } from '../navigation/screenRegistry'
 import { useBackButton } from '../input/useBackButton'
 import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import { BattleProvider, useBattleScreen } from './BattleContext'
+import type { DiceOutcome } from '../core/combat/DiceResolver'
 import { ResourceBar } from '../components/ResourceBar'
 import {
   TIMELINE_PX_PER_TICK, TIMELINE_OVERLAY_PX,
@@ -17,6 +18,17 @@ import {
 } from '../core/constants'
 import styles from './BattleScreen.module.css'
 import turnStyles from './TurnDisplayPanel.module.css'
+import diceStyles from './DiceResultOverlay.module.css'
+
+// ── Dice outcome colour map (existing design tokens — no new tokens) ─────────
+
+const OUTCOME_COLORS: Record<DiceOutcome, string> = {
+  Boosted:  'var(--accent-gold)',
+  Success:  'var(--accent-heal)',
+  Tumbling: 'var(--accent-danger)',
+  GuardUp:  'var(--accent-info)',
+  Evasion:  'var(--accent-evasion)',
+}
 
 // ── Timeline helpers ─────────────────────────────────────────────────────────
 
@@ -349,9 +361,30 @@ function PauseOverlay() {
   )
 }
 
+// ── Dice result overlay ─────────────────────────────────────────────────────
+// Full-area centred burst that slams in, holds, and fades over 2s.
+// Mounted with key={animKey} so each new roll triggers a fresh CSS animation.
+function DiceResultOverlay() {
+  const { diceResult } = useBattleScreen()
+  if (!diceResult) return null
+
+  const color = OUTCOME_COLORS[diceResult.outcome]
+
+  return (
+    <div className={diceStyles.overlay}>
+      <div className={diceStyles.burst} style={{ color }}>
+        <span className={diceStyles.outcomeName}>
+          {diceResult.outcome.toUpperCase()}
+        </span>
+        <div className={diceStyles.accentLine} />
+      </div>
+    </div>
+  )
+}
+
 // ── Battle layout ───────────────────────────────────────────────────────────
 function BattleLayout() {
-  const { isPaused, setPaused, isLoading, turnDisplay } = useBattleScreen()
+  const { isPaused, setPaused, isLoading, turnDisplay, diceResult } = useBattleScreen()
   useScreen()
   // Back toggles pause. LEAVE BATTLE in the overlay handles navigation out.
   useBackButton(() => setPaused(!isPaused))
@@ -369,6 +402,7 @@ function BattleLayout() {
   return (
     <div className={styles.root}>
       {isPaused && <PauseOverlay />}
+      <DiceResultOverlay key={diceResult?.animKey ?? 0} />
       <BattleTimeline />
       <div className={styles.main}>
         <TurnDisplayPanel key={turnDisplay?.animKey ?? 0} />
