@@ -103,8 +103,8 @@ They vary per device — never hardcode them.
 |---|---|---|
 | Boosted | `$accent-gold` | `#F59E0B` |
 | Success | `$accent-heal` | `#10B981` |
-| Tumbling | `$accent-warn` | `#F97316` |
-| Guard Up | `#94A3B8` | (slate) |
+| Tumbling | `$accent-danger` | `#EF4444` |
+| Guard Up | `$accent-info` | `#3B82F6` |
 | Evasion | `$accent-evasion` | `#06B6D4` |
 
 ### Rarity Colours
@@ -288,7 +288,7 @@ Splash
 | Screen transition | 300 ms | ease-out | Push / pop between screens |
 | Modal in | 250 ms | ease-out | Bottom sheet slide-up |
 | Modal out | 200 ms | ease-in | Bottom sheet slide-down |
-| Dice result | 600 ms | spring | Outcome text pop |
+| Dice result | 2 s | ease-out (`outcomeSlam`) | Outcome text burst: slam-in → settle → hold → fade |
 | Damage number | 800 ms | ease-out | Float-up and fade |
 | Timeline scroll | 200 ms | ease-in-out | Marker reposition |
 | Button press | 80 ms | ease-in | Scale 0.95 feedback |
