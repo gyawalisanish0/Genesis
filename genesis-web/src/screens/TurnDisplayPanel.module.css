@@ -25,16 +25,102 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Actor row ────────────────────────────────────────────────────── */
+/* ── Actor row — expanded layout: portrait left, stats right ─────── */
+
+/* Replaces turnRow for the actor: taller, two-column flex. */
+.actorRow {
+  display: flex;
+  align-items: center;
+  gap: var(--s-sm);
+  padding: var(--s-xs) var(--s-sm);
+  border-left: 3px solid transparent; /* overridden inline with accent colour */
+  animation: rowSlideIn 200ms ease-out both;
+  min-height: 3.5rem;  /* 56dp */
+}
+
+/* 32dp circular portrait showing the unit's initial */
+.actorPortrait {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  border: 2px solid var(--bg-card);  /* overridden inline with accent colour */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+/* Fills remaining width after the portrait */
+.actorInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;  /* prevent long names from overflowing */
+}
+
+/* Name (left) + class · rarity (right) on one line */
+.actorHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-xs);
+}
+
 .actorName {
   font-size: var(--t-label-size);
   font-weight: var(--t-label-weight);
   color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .actorMeta {
   font-size: var(--t-micro-size);
   color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* HP / AP rows: label | bar (flex:1) | number */
+.actorBarRow {
+  display: flex;
+  align-items: center;
+  gap: var(--s-xs);
+}
+
+.actorBarLabel {
+  font-size: var(--t-micro-size);
+  color: var(--text-muted);
+  width: 1rem;
+  flex-shrink: 0;
+}
+
+.actorBarValue {
+  font-size: var(--t-micro-size);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Status chips — only rendered when unit has active effects */
+.actorStatusRow {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+  margin-top: 0.125rem;
+}
+
+.statusChip {
+  font-size: var(--t-micro-size);
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  border-radius: var(--r-pill);
+  padding: 0 0.25rem;
 }
 
 /* ── Skill row ────────────────────────────────────────────────────── */

@@ -219,12 +219,36 @@ function TurnDisplayPanel() {
   return (
     <div className={turnStyles.turnDisplay}>
       {actor && (
-        <div className={turnStyles.turnRow}
+        <div className={turnStyles.actorRow}
              style={{ borderLeftColor: accent, animationDelay: '0ms' }}>
-          <span className={turnStyles.actorName}>{actor.name}</span>
-          <span className={turnStyles.actorMeta}>
-            {actor.className} · {'★'.repeat(actor.rarity)}
-          </span>
+          <div className={turnStyles.actorPortrait} style={{ borderColor: accent }}>
+            {actor.name.charAt(0).toUpperCase()}
+          </div>
+          <div className={turnStyles.actorInfo}>
+            <div className={turnStyles.actorHeader}>
+              <span className={turnStyles.actorName}>{actor.name}</span>
+              <span className={turnStyles.actorMeta}>
+                {actor.className} · {'★'.repeat(actor.rarity)}
+              </span>
+            </div>
+            <div className={turnStyles.actorBarRow}>
+              <span className={turnStyles.actorBarLabel}>HP</span>
+              <ResourceBar variant="hp" value={actor.hp} max={actor.maxHp} />
+              <span className={turnStyles.actorBarValue}>{actor.hp}/{actor.maxHp}</span>
+            </div>
+            <div className={turnStyles.actorBarRow}>
+              <span className={turnStyles.actorBarLabel}>AP</span>
+              <ResourceBar variant="ap" value={actor.ap} max={actor.maxAp} />
+              <span className={turnStyles.actorBarValue}>{actor.ap}/{actor.maxAp}</span>
+            </div>
+            {actor.statusSlots.length > 0 && (
+              <div className={turnStyles.actorStatusRow}>
+                {actor.statusSlots.map((s) => (
+                  <span key={s.id} className={turnStyles.statusChip}>{s.name}</span>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
       <div className={turnStyles.turnRow} style={{ animationDelay: skillDelay }}>

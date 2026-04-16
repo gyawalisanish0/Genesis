@@ -6,7 +6,7 @@ import {
   createContext, useContext, useState, useCallback,
   useMemo, useEffect, useRef, type ReactNode,
 } from 'react'
-import type { Unit } from '../core/types'
+import type { Unit, StatusEffect } from '../core/types'
 import type { SkillInstance, BattleState as EngineBattleState, EffectContext } from '../core/effects/types'
 import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS } from '../core/constants'
 import { createUnit, isAlive, setTickPosition } from '../core/unit'
@@ -29,7 +29,16 @@ export interface DiceResult {
 }
 
 export interface TurnDisplay {
-  actor: { name: string; className: string; rarity: number } | null
+  actor: {
+    name:        string
+    className:   string
+    rarity:      number
+    hp:          number
+    maxHp:       number
+    ap:          number
+    maxAp:       number
+    statusSlots: StatusEffect[]
+  } | null
   // null = player-controlled unit; actor row is omitted from the panel
   skillName: string
   tuCost:    number
@@ -412,7 +421,16 @@ export function BattleProvider({ children }: Props) {
     if (previewSkills.length > 0) {
       const previewSkill = getCachedSkill(previewSkills[0])
       showTurnDisplay({
-        actor:     { name: firstEnemy.name, className: firstEnemy.className, rarity: firstEnemy.rarity },
+        actor: {
+          name:        firstEnemy.name,
+          className:   firstEnemy.className,
+          rarity:      firstEnemy.rarity,
+          hp:          firstEnemy.hp,
+          maxHp:       firstEnemy.maxHp,
+          ap:          firstEnemy.ap,
+          maxAp:       firstEnemy.maxAp,
+          statusSlots: firstEnemy.statusSlots,
+        },
         skillName: previewSkill.name,
         tuCost:    previewSkill.tuCost,
         target:    playerUnitRef.current?.name ?? 'Player',
