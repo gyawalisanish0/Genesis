@@ -1,0 +1,55 @@
+/* Turn display panel — three sequentially animated rows above the battle log.
+ * Rows animate in via staggered animation-delay set inline per row.
+ * The panel is unmounted (returns null) when no action is in progress. */
+
+.turnDisplay {
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--bg-elevated);
+  flex-shrink: 0;
+}
+
+/* Each row slides down from above and fades in.
+ * animation-delay is applied inline so actor/skill/target stagger correctly.
+ * fill-mode 'both' ensures opacity:0 is held during the delay period. */
+.turnRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-xs) var(--s-sm);
+  border-left: 3px solid transparent; /* overridden inline for the actor row */
+  animation: rowSlideIn 200ms ease-out both;
+}
+
+@keyframes rowSlideIn {
+  from { opacity: 0; transform: translateY(-0.5rem); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Actor row ────────────────────────────────────────────────────── */
+.actorName {
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  color: var(--text-primary);
+}
+
+.actorMeta {
+  font-size: var(--t-micro-size);
+  color: var(--text-secondary);
+}
+
+/* ── Skill row ────────────────────────────────────────────────────── */
+.skillName {
+  font-size: var(--t-label-size);
+  color: var(--text-primary);
+}
+
+.skillTu {
+  font-size: var(--t-micro-size);
+  color: var(--text-muted);
+}
+
+/* ── Target row ───────────────────────────────────────────────────── */
+.target {
+  font-size: var(--t-micro-size);
+  color: var(--text-secondary);
+}
