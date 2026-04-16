@@ -3,9 +3,11 @@
 ## Purpose
 
 The core gameplay screen. Displays the vertical tick timeline on the left edge,
-an opponent info card at top-right, a scrollable action log in the centre, the
-player's status effects, a portrait panel, and a collapsible action grid.
-Every interaction the player takes during a battle flows through this screen.
+a turn display panel at top-right (telegraphs incoming enemy actions and confirms
+player actions), a scrollable action log in the centre, the player's status
+effects, a portrait panel, and a collapsible action grid. A full-screen dice
+result overlay bursts on every skill resolution. Every interaction the player
+takes during a battle flows through this screen.
 
 ---
 
@@ -32,10 +34,9 @@ Main area : 332 dp wide (x=28 to x=360)
 
 ```
 ┌──┬─────────────────────────────────────────┐  y=0
-│TL│  Opponent Info Card (rarity bg tint)    │  130dp  hidden on player turn
-│TL│  name · class · portrait · HP · AP      │
-│TL│  rarity colour · LVL badge · TU value   │
-│TL├─────────────────────────────────────────┤  y=130
+│TL│  Turn Display Panel  (0–3 animated rows │  ~22dp/row; absent when idle
+│TL│  actor · skill name · target)           │
+│TL├─────────────────────────────────────────┤  y=0–66
 │TL│                                         │
 │TL│  Action Log Box  (scrollable)           │  fills remaining space
 │TL│                                         │
@@ -50,6 +51,11 @@ Main area : 332 dp wide (x=28 to x=360)
 │  │  AP ██░░ CAP/MAP    │                  │
 │  │                     │    [#1 toggle]   │  54dp  collapse button row
 └──┴─────────────────────────────────────────┘  y=640
+
+╔══════════════════════════════════════════════╗  ← DiceResultOverlay
+║            BOOSTED  (text burst)             ║    position:absolute, centred
+║           ─────────────────────             ║    z-index 40; pointer-events:none
+╚══════════════════════════════════════════════╝    visible ~2s per action
 ```
 
 Left TL strip: 28 dp wide · full height · vertical tick axis, ally/enemy markers  
@@ -63,10 +69,11 @@ Skill columns: (332 − 8) / 2 = 162 dp each, 8 dp gap between columns
 | Zone | Height | Visibility |
 |---|---|---|
 | Timeline strip | full height 640 dp | Always visible — 28 dp left column |
-| Opponent info card | 130 dp | Visible only during enemy turn |
-| Action log | fills remainder | Expands when opponent card hidden |
+| Turn display panel | 22 dp × row count (1–3 rows) | Visible while an action is in progress; unmounts when idle |
+| Action log | fills remainder | Grows when turn panel is absent |
 | Status slots pill | 44 dp | Always visible |
 | Bottom area | 246 dp | Portrait + stats always; action grid collapsible |
+| Dice result overlay | full area (position:absolute) | ~2 s per action; pointer-events:none |
 
 ---
 
@@ -133,32 +140,78 @@ shown as empty (hpFraction = 0) on ghosts.
 
 ---
 
-### Opponent Info Card (332 × 130 dp)
+### Turn Display Panel (332 × variable dp)
 
-Hidden (`height=0`, `opacity=0`) during the player's turn. Appears with a 0.15 s
-fade when the enemy takes their turn.
+Sits above the action log. Unmounts entirely when no action is in progress
+(returns `null`) — the action log expands to fill the freed space.
 
-| Component | Size (dp) | Properties |
+Each row slides down from above and fades in via `rowSlideIn` (200 ms
+ease-out, `fill-mode: both`). Rows stagger: actor at 0 ms, skill at 150 ms,
+target at 300 ms. When the actor row is omitted, delays shift down so skill
+fires at 0 ms and target at 150 ms.
+
+**When shown:**
+
+| Trigger | Actor row | Notes |
 |---|---|---|
-| Card bg | 332 × 130 | Rarity tint bg (see rarity colours below); `$r-md` |
-| Portrait | 64 × 64 | Circle; 8 dp left pad; vertically centred |
-| Name | 200 × 18 | `$t-subheading` `$text-primary`; x=80, y=top+16 |
-| Class label | 120 × 14 | `$t-micro` `$text-secondary`; below name |
-| Rarity badge | auto × 16 | Coloured pill; rarity name `$t-micro` |
-| HP bar | 200 × 10 | `ResourceBar HP`; x=80, below class label |
-| AP bar | 200 × 8 | `ResourceBar AP`; below HP |
-| TU value | 40 × 14 | "TU: N" `$t-micro` `$text-muted`; bottom-right |
-| LVL badge | 36 × 14 | "LVL N" `$t-micro` `$accent-gold` pill |
+| Enemy begins turn | Enemy name + class + rarity stars | Telegraphed **before** action fires during the 700 ms AI delay |
+| Player executes skill | _(omitted)_ | Shown **after** action resolves as a confirmation |
 
-**Rarity bg tints:**
+**Rows:**
 
-| Rarity | Colour |
-|---|---|
-| Common | `#6B7280` 30% overlay |
-| Uncommon | `#22C55E` 20% overlay |
-| Rare | `#3B82F6` 20% overlay |
-| Epic | `#A855F7` 20% overlay |
-| Legendary | `#F59E0B` 20% overlay |
+| Row | Content | Accent |
+|---|---|---|
+| Actor (enemy only) | Name · Class · ★★★ rarity | 3 dp left border: `$accent-info` (ally) / `$accent-danger` (enemy) |
+| Skill | Skill name (left) · TU cost (right) | — |
+| Target | `→ Target name` or `→ Multiple Targets` | — |
+
+Auto-dismisses 2 s after the action completes (`TURN_DISPLAY_DISMISS_MS`).
+A new action replaces the previous display immediately — the dismiss timer resets.
+
+**Implementation files:** `BattleContext.tsx` (`TurnDisplay` interface,
+`showTurnDisplay` helper) · `TurnDisplayPanel.module.css` (`rowSlideIn`
+keyframe) · `BattleScreen.tsx` (`TurnDisplayPanel` component, keyed by
+`animKey` to force CSS animation retrigger).
+
+---
+
+### Dice Result Overlay (full area, position:absolute)
+
+A full-screen centred outcome text burst that fires on every `runAttack` call
+(both player and enemy actions). Implemented as `DiceResultOverlay` in
+`BattleScreen.tsx`, rendered at `z-index: 40` inside `.root`
+(`position: relative`). `pointer-events: none` — never blocks battle taps.
+
+**Outcomes and colours:**
+
+| Outcome | Token | Hex |
+|---|---|---|
+| Boosted | `--accent-gold` | `#F59E0B` |
+| Success | `--accent-heal` | `#10B981` |
+| Tumbling | `--accent-danger` | `#EF4444` |
+| GuardUp | `--accent-info` | `#3B82F6` |
+| Evasion | `--accent-evasion` | `#06B6D4` |
+
+**`outcomeSlam` keyframe (2 s, `animation-fill-mode: forwards`):**
+
+```
+0%   opacity 0 · scale(0.4) · blur(8px)   ← slam-in start
+12%  opacity 1 · scale(1.25) · blur(0)    ← peak overshoot
+22%            · scale(0.95)              ← bounce back
+32%            · scale(1.05)              ← micro bounce
+40%            · scale(1.0)              ← settle
+65%  opacity 1 · scale(1.0)              ← hold
+100% opacity 0 · scale(1.02)             ← fade out
+```
+
+Auto-dismisses at 2 s (`DICE_RESULT_DISMISS_MS`). Rapid successive actions
+cancel the previous dismiss timer — each new roll replaces the burst
+immediately. React `key={animKey}` forces full unmount/remount to retrigger
+the CSS animation even when the outcome is unchanged.
+
+**Implementation files:** `BattleContext.tsx` (`DiceResult` interface,
+`showDiceResult` helper, called from `runAttack`) · `DiceResultOverlay.module.css`
+· `BattleScreen.tsx` (`DiceResultOverlay` component, `OUTCOME_COLORS` map).
 
 ---
 
@@ -331,10 +384,11 @@ When opened from a specific chip, shows that status at the top.
 ## Enemy Turn State
 
 When an enemy acts:
-- Opponent info card fades in (0.15 s) showing the acting enemy's details
-- All 6 action buttons `disabled=True`, opacity 20%
-- Log entry appended: "Enemy Name is acting…"
-- After enemy action resolves, player turn state is restored
+- **Telegraph** — `TurnDisplayPanel` appears immediately (actor + skill + target rows) **before** the 700 ms AI delay fires, so the player can read the incoming action
+- **Dice result overlay** — `DiceResultOverlay` bursts with the outcome name and colour during/after resolution
+- All action buttons `disabled`, opacity 20%
+- Log entry appended with outcome and damage
+- After resolution the turn panel auto-dismisses after 2 s (`TURN_DISPLAY_DISMISS_MS`)
 
 ---
 
@@ -342,7 +396,10 @@ When an enemy acts:
 
 | Element | Token / duration | Trigger |
 |---|---|---|
-| Opponent card | height/opacity 0 ↔ visible, 150 ms ease | Turn switch |
+| Turn display panel rows | `rowSlideIn` 200 ms ease-out, staggered 0/150/300 ms | Action start |
+| Turn display panel dismiss | unmount after `TURN_DISPLAY_DISMISS_MS` (2 s) | Action resolved |
+| Dice result overlay | `outcomeSlam` 2 s ease-out forwards | Every `runAttack` |
+| Dice result dismiss | unmount after `DICE_RESULT_DISMISS_MS` (2 s) | Timer after roll |
 | Now-line position | `--motion-timeline` (200 ms ease-in-out) | `tickValue` advance |
 | Unit marker position | `--motion-timeline` (200 ms ease-in-out) | `registerTick` |
 | Active marker pulse | `markerPulse` keyframe, 1.5 s ease-in-out infinite | Unit at now-line |

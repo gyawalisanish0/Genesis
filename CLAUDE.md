@@ -144,6 +144,9 @@ Genesis/
 │       │   ├── MainMenuScreen.tsx
 │       │   ├── PreBattleScreen.tsx  # split into PreBattleStep{Mode,Team,Items}
 │       │   ├── BattleScreen.tsx
+│       │   ├── BattleContext.tsx    # screen-local context: TurnDisplay + DiceResult interfaces, showTurnDisplay/showDiceResult helpers
+│       │   ├── TurnDisplayPanel.module.css
+│       │   ├── DiceResultOverlay.module.css
 │       │   ├── BattleResultScreen.tsx
 │       │   ├── RosterScreen.tsx
 │       │   └── SettingsScreen.tsx
@@ -184,6 +187,15 @@ Each layer may only import from layers to its left.
   if (Capacitor.isNativePlatform()) { /* native-only code */ }
   ```
 - Accessed as module-level singletons
+- **`DataService` path construction** — `import.meta.env.BASE_URL` must be
+  normalized to always end with `/` before concatenating data paths. Vite's
+  `--base` flag (used in GitHub Pages CI) produces `/RepoName` without a
+  trailing slash, which would silently misroute fetches:
+  ```typescript
+  const BASE = import.meta.env.BASE_URL
+  const BASE_NORMALIZED = BASE.endsWith('/') ? BASE : `${BASE}/`
+  // fetch: `${BASE_NORMALIZED}data/characters/...`
+  ```
 
 ### `scenes/`
 - Phaser 3 scenes only — no React imports
@@ -340,8 +352,9 @@ All game content is in `public/data/`. No content is hardcoded in TypeScript.
 
 ### Path convention
 ```
-public/data/characters/warrior_001.json
-public/data/skills/slash_001.json
+public/data/characters/index.json              # character discovery list
+public/data/characters/{id}/main.json          # CharacterDef (stats, class, rarity…)
+public/data/characters/{id}/skills.json        # SkillDef[] for that character
 public/data/modes/story.json
 ```
 
