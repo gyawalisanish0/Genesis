@@ -8,11 +8,11 @@ import {
 } from 'react'
 import type { Unit } from '../core/types'
 import type { SkillInstance, BattleState as EngineBattleState, EffectContext } from '../core/effects/types'
-import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS } from '../core/constants'
+import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS } from '../core/constants'
 import { createUnit, isAlive, setTickPosition } from '../core/unit'
 import { calculateStartingTick, advanceTick, calculateApGained } from '../core/combat/TickCalculator'
 import { calculateFinalChance, shiftProbabilities } from '../core/combat/HitChanceEvaluator'
-import { roll, calculateTumblingDelay } from '../core/combat/DiceResolver'
+import { roll, calculateTumblingDelay, type DiceOutcome } from '../core/combat/DiceResolver'
 import { applyEffect } from '../core/effects/applyEffect'
 import { createSkillInstance, getCachedSkill } from '../core/engines/skill/SkillInstance'
 import { loadCharacterWithSkills } from '../services/DataService'
@@ -22,6 +22,11 @@ import type { HistoryEntry } from '../core/battleHistory'
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type TurnPhase = 'player' | 'enemy' | 'resolving'
+
+export interface DiceResult {
+  outcome: DiceOutcome  // 'Boosted' | 'Success' | 'Tumbling' | 'GuardUp' | 'Evasion'
+  animKey: number       // incremented on each show; React key for animation retrigger
+}
 
 export interface TurnDisplay {
   actor: { name: string; className: string; rarity: number } | null
@@ -53,6 +58,8 @@ interface BattleContextValue {
   gridCollapsed:   boolean
   isPaused:        boolean
   isLoading:       boolean
+  // Dice result overlay
+  diceResult:      DiceResult | null
   // Turn display panel
   turnDisplay:     TurnDisplay | null
   // Timeline
@@ -126,6 +133,11 @@ export function BattleProvider({ children }: Props) {
   const [turnDisplay, setTurnDisplay]   = useState<TurnDisplay | null>(null)
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const animKeyRef      = useRef(0)
+
+  // Dice result overlay — shown simultaneously with action resolution
+  const [diceResult, setDiceResult]     = useState<DiceResult | null>(null)
+  const diceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const diceKeyRef   = useRef(0)
 
   // ── Other battle state ─────────────────────────────────────────────────────
   const [phase, setPhase]             = useState<TurnPhase>('resolving')
@@ -217,6 +229,23 @@ export function BattleProvider({ children }: Props) {
     if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current)
   }, [])
 
+  // Shows the dice outcome burst and schedules its auto-dismiss.
+  // Clears any pending dismiss so a rapid new roll replaces the previous display.
+  const showDiceResult = useCallback((outcome: DiceOutcome) => {
+    if (diceTimerRef.current) clearTimeout(diceTimerRef.current)
+    diceKeyRef.current += 1
+    setDiceResult({ outcome, animKey: diceKeyRef.current })
+    diceTimerRef.current = setTimeout(
+      () => setDiceResult(null),
+      DICE_RESULT_DISMISS_MS,
+    )
+  }, [])
+
+  // Cleanup pending dice dismiss on unmount.
+  useEffect(() => () => {
+    if (diceTimerRef.current) clearTimeout(diceTimerRef.current)
+  }, [])
+
   // ── Timeline mechanics ─────────────────────────────────────────────────────
 
   const registerTick = useCallback((id: string, tick: number) => {
@@ -300,6 +329,7 @@ export function BattleProvider({ children }: Props) {
     const skill       = getCachedSkill(skillInst)
     const finalChance = calculateFinalChance(caster.stats.precision, skill.resolution?.baseChance ?? 1.0)
     const diceOutcome = roll(shiftProbabilities(finalChance))
+    showDiceResult(diceOutcome)
     const evaded      = diceOutcome === 'Evasion'
     const tumbleDelay = diceOutcome === 'Tumbling' ? calculateTumblingDelay() : 0
 
@@ -332,7 +362,7 @@ export function BattleProvider({ children }: Props) {
     appendLog({ text: msg, colour: color })
 
     return { tumbleDelay }
-  }, [tickValue, appendLog])
+  }, [tickValue, appendLog, showDiceResult])
 
   /** Player presses a skill button. */
   const executeSkill = useCallback((skillInst: SkillInstance) => {
@@ -444,7 +474,7 @@ export function BattleProvider({ children }: Props) {
       phase, turnNumber, tickValue, activeUnitIds,
       playerUnit, enemies, log, historyEntries,
       selectedSkill, gridCollapsed, isPaused, isLoading,
-      turnDisplay,
+      diceResult, turnDisplay,
       registeredTicks, scrollBounds,
       getUnitSkills, executeSkill,
       registerTick, unregisterTick, pushHistory,

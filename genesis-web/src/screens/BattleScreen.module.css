@@ -1,6 +1,7 @@
 /* Full-bleed battle layout. No safe-area padding (ScreenShell uses 'top-only'). */
 
 .root {
+  position: relative;   /* constrains DiceResultOverlay and PauseOverlay to screen bounds */
   display: flex;
   width: 100%;
   height: 100%;
