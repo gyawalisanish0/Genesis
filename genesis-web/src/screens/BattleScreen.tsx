@@ -345,7 +345,7 @@ function ActionGrid() {
   const {
     phase, gridCollapsed, toggleGrid, appendLog,
     playerUnit, pushHistory, registerTick,
-    getUnitSkills, executeSkill,
+    getUnitSkills, selectedSkill, selectSkill,
   } = useBattleScreen()
   const createHandler = useScrollAwarePointer()
   const disabled = phase !== 'player'
@@ -354,6 +354,7 @@ function ActionGrid() {
 
   const handleEndTurn = () => {
     if (disabled || !playerUnit) return
+    selectSkill(null)
     const fromTick = playerUnit.tickPosition
     pushHistory({ id: `${playerUnit.id}-${fromTick}-end`, unitId: playerUnit.id, name: playerUnit.name, tick: fromTick, isAlly: playerUnit.isAlly })
     registerTick(playerUnit.id, fromTick + 10)
@@ -374,15 +375,22 @@ function ActionGrid() {
           </div>
           <div className={styles.skillRows}>
             {slots.map((skillInst, i) => {
-              const hasSkill = skillInst !== null
-              const tuCost   = hasSkill ? skillInst.cachedCosts.tuCost : null
-              const name     = hasSkill ? skillInst.baseDef.name : '—'
+              const hasSkill  = skillInst !== null
+              const isSelected = hasSkill && selectedSkill?.defId === skillInst.defId
+              const tuCost    = hasSkill ? skillInst.cachedCosts.tuCost : null
+              const name      = hasSkill ? skillInst.baseDef.name : '—'
               return (
                 <button
                   key={i}
-                  className={`${styles.skillBtn} ${(!hasSkill || disabled) ? styles.skillBtnDisabled : ''}`}
+                  className={[
+                    styles.skillBtn,
+                    (!hasSkill || disabled) ? styles.skillBtnDisabled : '',
+                    isSelected               ? styles.skillBtnSelected : '',
+                  ].join(' ')}
                   disabled={!hasSkill || disabled}
-                  onPointerDown={hasSkill ? createHandler({ onTap: () => executeSkill(skillInst) }) : undefined}
+                  onPointerDown={hasSkill ? createHandler({ onTap: () => {
+                    selectSkill(isSelected ? null : skillInst)
+                  }}) : undefined}
                 >
                   <span className={styles.skillName}>{name}</span>
                   <span className={styles.skillLvl}>Lv {skillInst?.currentLevel ?? '—'}</span>
@@ -398,6 +406,42 @@ function ActionGrid() {
         {gridCollapsed ? '▲' : '▼'}
       </button>
     </div>
+  )
+}
+
+// ── Roll button ─────────────────────────────────────────────────────────────
+// Appears above the portrait when a skill is selected.
+// Triggers a 500ms "Rolling…" pulse before the dice fires, then clears the selection.
+function RollButton() {
+  const { selectedSkill, phase, executeSkill, selectSkill } = useBattleScreen()
+  const createHandler = useScrollAwarePointer()
+  const [isRolling, setIsRolling] = useState(false)
+  const rollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => () => {
+    if (rollTimerRef.current) clearTimeout(rollTimerRef.current)
+  }, [])
+
+  if (!selectedSkill || phase !== 'player') return null
+
+  const handleRoll = () => {
+    if (isRolling) return
+    setIsRolling(true)
+    rollTimerRef.current = setTimeout(() => {
+      executeSkill(selectedSkill)
+      selectSkill(null)
+      setIsRolling(false)
+    }, 500)
+  }
+
+  return (
+    <button
+      className={`${styles.rollBtn} ${isRolling ? styles.rollBtnRolling : ''}`}
+      onPointerDown={createHandler({ onTap: handleRoll })}
+      disabled={isRolling}
+    >
+      {isRolling ? 'Rolling…' : 'ROLL'}
+    </button>
   )
 }
 
@@ -504,7 +548,10 @@ function BattleLayout() {
         <ActionLog />
         <StatusSlots />
         <div className={styles.bottom}>
-          <PortraitPanel />
+          <div className={styles.portraitCol}>
+            <RollButton />
+            <PortraitPanel />
+          </div>
           <ActionGrid />
         </div>
       </div>
