@@ -26,9 +26,10 @@ function buildModeDef(id: string): ModeDef {
 const STEP_LABELS = ['MODE', 'TEAM', 'ITEMS'] as const
 
 function PreBattleWizard() {
-  const { step, setStep, canContinue, selectedModeId } = usePreBattleScreen()
+  const { step, setStep, canContinue, selectedModeId, selectedTeam } = usePreBattleScreen()
   const { navigateTo } = useScreen()
-  const setSelectedMode = useGameStore((s) => s.setSelectedMode)
+  const setSelectedMode    = useGameStore((s) => s.setSelectedMode)
+  const setSelectedTeamIds = useGameStore((s) => s.setSelectedTeamIds)
 
   // handleBack is registered with the global input registry so the hardware back
   // button and the on-screen ← button always invoke the same wizard-step logic.
@@ -42,7 +43,7 @@ function PreBattleWizard() {
     if (step < 2) { setStep((step + 1) as WizardStep); return }
     // Step 3 confirm — write to global store and enter battle.
     if (selectedModeId) setSelectedMode(buildModeDef(selectedModeId))
-    // TODO: build Unit objects from selectedTeam via createUnit() and write to store
+    setSelectedTeamIds(selectedTeam.map((c) => c.id))
     navigateTo(SCREEN_IDS.BATTLE)
   }
 

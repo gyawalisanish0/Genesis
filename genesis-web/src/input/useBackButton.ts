@@ -16,6 +16,10 @@ export function useBackButton(handler: () => void): () => void {
   useEffect(() => {
     // Register a stable wrapper — handler stays current via ref without re-registration.
     registerBackHandler(() => handlerRef.current())
+    // Push sentinel at the current URL so browser back stays on this hash;
+    // no hash change means only popstate fires (not hashchange), letting the
+    // capture-phase listener in ScreenContext intercept it cleanly.
+    window.history.pushState(null, '')
     return () => { unregisterBackHandler() }
   }, [])  // intentionally empty — ref keeps this current
 

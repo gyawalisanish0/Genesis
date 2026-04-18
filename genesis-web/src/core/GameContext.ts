@@ -7,9 +7,10 @@ import { DEFAULT_SETTINGS } from './constants'
 
 interface GameStore {
   // Pre-battle selections
-  selectedMode:  ModeDef | null
-  selectedTeam:  Unit[]
-  enemies:       Unit[]
+  selectedMode:    ModeDef | null
+  selectedTeam:    Unit[]
+  selectedTeamIds: string[]   // character IDs confirmed at pre-battle step 3
+  enemies:         Unit[]
 
   // Post-battle
   battleResult:  BattleResult | null
@@ -20,6 +21,7 @@ interface GameStore {
   // Actions
   setSelectedMode(mode: ModeDef): void
   setSelectedTeam(team: Unit[]): void
+  setSelectedTeamIds(ids: string[]): void
   setEnemies(enemies: Unit[]): void
   setBattleResult(result: BattleResult): void
   updateSetting<K extends keyof AppSettings>(key: K, value: AppSettings[K]): void
@@ -27,20 +29,22 @@ interface GameStore {
 }
 
 export const useGameStore = create<GameStore>((set) => ({
-  selectedMode: null,
-  selectedTeam: [],
-  enemies:      [],
-  battleResult: null,
-  settings:     { ...DEFAULT_SETTINGS },
+  selectedMode:    null,
+  selectedTeam:    [],
+  selectedTeamIds: [],
+  enemies:         [],
+  battleResult:    null,
+  settings:        { ...DEFAULT_SETTINGS },
 
-  setSelectedMode:  (mode)    => set({ selectedMode: mode }),
-  setSelectedTeam:  (team)    => set({ selectedTeam: team }),
-  setEnemies:       (enemies) => set({ enemies }),
-  setBattleResult:  (result)  => set({ battleResult: result }),
+  setSelectedMode:    (mode)    => set({ selectedMode: mode }),
+  setSelectedTeam:    (team)    => set({ selectedTeam: team }),
+  setSelectedTeamIds: (ids)     => set({ selectedTeamIds: ids }),
+  setEnemies:         (enemies) => set({ enemies }),
+  setBattleResult:    (result)  => set({ battleResult: result }),
 
   updateSetting: (key, value) =>
     set((s) => ({ settings: { ...s.settings, [key]: value } })),
 
   resetBattle: () =>
-    set({ selectedMode: null, selectedTeam: [], enemies: [], battleResult: null }),
+    set({ selectedMode: null, selectedTeam: [], selectedTeamIds: [], enemies: [], battleResult: null }),
 }))
