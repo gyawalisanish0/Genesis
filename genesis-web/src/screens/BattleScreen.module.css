@@ -158,6 +158,41 @@
   flex-shrink: 0;
 }
 
+/* ── Portrait column (Roll button + portrait stacked) ───────────────── */
+.portraitCol {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+/* Roll button — spans the full portrait width, sits above the portrait circle. */
+.rollBtn {
+  width: 100%;
+  height: 3rem;
+  border: none;
+  border-bottom: 1px solid var(--bg-deep);
+  background: var(--accent-genesis);
+  color: var(--bg-deep);
+  font-family: var(--font-sans);
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  letter-spacing: 0.12rem;
+  cursor: pointer;
+  transition: opacity var(--motion-button), transform var(--motion-button);
+}
+
+.rollBtn:active:not(:disabled) { transform: scale(0.97); }
+
+.rollBtnRolling {
+  cursor: not-allowed;
+  animation: rollPulse 0.4s ease-in-out infinite;
+}
+
+@keyframes rollPulse {
+  0%, 100% { opacity: 1;    }
+  50%       { opacity: 0.5; }
+}
+
 /* ── Portrait panel ─────────────────────────────────────────────────── */
 .portrait {
   width: 8.125rem;  /* 130 dp */
@@ -278,6 +313,12 @@
 .skillBtn:active:not(:disabled) { transform: scale(0.95); }
 
 .skillBtnDisabled { opacity: 0.2; cursor: default; }
+
+.skillBtnSelected {
+  border-color: var(--accent-genesis);
+  background: var(--bg-elevated);
+  box-shadow: 0 0 0 1px var(--accent-genesis) inset;
+}
 
 .skillName { grid-area: name; font-size: var(--t-label-size); color: var(--text-primary); text-align: left; }
 .skillLvl  { grid-area: lvl;  font-size: var(--t-micro-size); color: var(--accent-gold); text-align: right; }
