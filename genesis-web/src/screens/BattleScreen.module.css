@@ -344,3 +344,55 @@
 }
 
 .pauseBtn:active { transform: scale(0.97); }
+
+/* ── No-team warning overlay ────────────────────────────────────────── */
+.noTeamOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-deep);
+  z-index: 60;
+}
+
+.noTeamCard {
+  width: min(18rem, 80%);
+  padding: var(--s-lg);
+  background: var(--bg-panel);
+  border-radius: var(--r-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-md);
+  text-align: center;
+}
+
+.noTeamTitle {
+  font-size: var(--t-subheading-size);
+  font-weight: var(--t-subheading-weight);
+  color: var(--accent-danger);
+  letter-spacing: 0.1rem;
+}
+
+.noTeamMsg {
+  font-size: var(--t-body-size);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.noTeamBtn {
+  width: 100%;
+  height: var(--touch-min);
+  border: none;
+  border-radius: var(--r-md);
+  font-family: var(--font-sans);
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  cursor: pointer;
+  background: var(--accent-genesis);
+  color: var(--bg-deep);
+  transition: transform var(--motion-button);
+}
+
+.noTeamBtn:active { transform: scale(0.97); }

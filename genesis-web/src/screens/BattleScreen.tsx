@@ -10,6 +10,7 @@ import { SCREEN_REGISTRY, SCREEN_IDS } from '../navigation/screenRegistry'
 import { useBackButton } from '../input/useBackButton'
 import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import { BattleProvider, useBattleScreen } from './BattleContext'
+import { useGameStore } from '../core/GameContext'
 import type { DiceOutcome } from '../core/combat/DiceResolver'
 import { ResourceBar } from '../components/ResourceBar'
 import {
@@ -437,9 +438,32 @@ function DiceResultOverlay() {
   )
 }
 
+// ── No-team warning ─────────────────────────────────────────────────────────
+function NoTeamWarning() {
+  const navigate = useNavigate()
+  const createHandler = useScrollAwarePointer()
+  return (
+    <div className={styles.noTeamOverlay}>
+      <div className={styles.noTeamCard}>
+        <span className={styles.noTeamTitle}>NO TEAM SELECTED</span>
+        <p className={styles.noTeamMsg}>
+          You haven't selected any characters. Go back and build your team before starting.
+        </p>
+        <button
+          className={styles.noTeamBtn}
+          onPointerDown={createHandler({ onTap: () => navigate(SCREEN_REGISTRY[SCREEN_IDS.PRE_BATTLE].path) })}
+        >
+          SELECT TEAM
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── Battle layout ───────────────────────────────────────────────────────────
 function BattleLayout() {
   const { isPaused, setPaused, isLoading, turnDisplay, diceResult } = useBattleScreen()
+  const selectedTeamIds = useGameStore((s) => s.selectedTeamIds)
   const lastBackRef = useRef(0)
   useScreen()
   // Bounded pause loop: back → pause, back → resume. Never navigates away.
@@ -458,6 +482,14 @@ function BattleLayout() {
         <span style={{ color: 'var(--text-secondary)', fontSize: 'var(--t-label-size)' }}>
           Loading battle…
         </span>
+      </div>
+    )
+  }
+
+  if (!selectedTeamIds.length) {
+    return (
+      <div className={styles.root}>
+        <NoTeamWarning />
       </div>
     )
   }

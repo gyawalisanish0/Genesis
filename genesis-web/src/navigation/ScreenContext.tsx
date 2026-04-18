@@ -99,8 +99,6 @@ export function ScreenProvider({ children }: Props) {
   // and invoke the handler — preventing React Router from navigating away.
   // When no handler is registered, propagation is untouched and routing works normally.
   useEffect(() => {
-    window.history.pushState(null, '') // sentinel: gives the first back press something to pop
-
     function handlePopstate(e: PopStateEvent) {
       if (hasBackHandler()) {
         e.stopImmediatePropagation()

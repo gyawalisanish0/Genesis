@@ -18,6 +18,7 @@ import { createSkillInstance, getCachedSkill } from '../core/engines/skill/Skill
 import { loadCharacterWithSkills } from '../services/DataService'
 import { makeHistoryEntry } from '../core/battleHistory'
 import type { HistoryEntry } from '../core/battleHistory'
+import { useGameStore } from '../core/GameContext'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -175,11 +176,18 @@ export function BattleProvider({ children }: Props) {
 
   // ── Load battle data ───────────────────────────────────────────────────────
   useEffect(() => {
+    // If no team was confirmed at pre-battle, skip loading — BattleScreen will show a warning.
+    const { selectedTeamIds } = useGameStore.getState()
+    if (!selectedTeamIds.length) {
+      setIsLoading(false)
+      return
+    }
+
     let cancelled = false
     async function load() {
       try {
         const [playerData, enemyData] = await Promise.all([
-          loadCharacterWithSkills('warrior_001'),
+          loadCharacterWithSkills(selectedTeamIds[0]),
           loadCharacterWithSkills('hunter_001'),
         ])
 
