@@ -88,7 +88,7 @@ interface BattleContextValue {
   appendLog:       (entry: Omit<LogEntry, 'id'>) => void
   selectSkill:     (skill: SkillInstance | null) => void
   toggleGrid:      () => void
-  setPaused:       (v: boolean) => void
+  setPaused:       (v: boolean | ((prev: boolean) => boolean)) => void
 }
 
 const BattleContext = createContext<BattleContextValue | null>(null)

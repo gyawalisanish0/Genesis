@@ -14,7 +14,7 @@ import type { DiceOutcome } from '../core/combat/DiceResolver'
 import { ResourceBar } from '../components/ResourceBar'
 import {
   TIMELINE_PX_PER_TICK, TIMELINE_OVERLAY_PX,
-  TIMELINE_RECENTER_DELAY_MS,
+  TIMELINE_RECENTER_DELAY_MS, BACK_DEBOUNCE_MS,
 } from '../core/constants'
 import styles from './BattleScreen.module.css'
 import turnStyles from './TurnDisplayPanel.module.css'
@@ -440,9 +440,17 @@ function DiceResultOverlay() {
 // ── Battle layout ───────────────────────────────────────────────────────────
 function BattleLayout() {
   const { isPaused, setPaused, isLoading, turnDisplay, diceResult } = useBattleScreen()
+  const lastBackRef = useRef(0)
   useScreen()
-  // Back toggles pause. LEAVE BATTLE in the overlay handles navigation out.
-  useBackButton(() => setPaused(!isPaused))
+  // Bounded pause loop: back → pause, back → resume. Never navigates away.
+  // Guards: (1) no-op during load, (2) 300ms debounce, (3) functional update avoids stale closure.
+  useBackButton(() => {
+    if (isLoading) return
+    const now = Date.now()
+    if (now - lastBackRef.current < BACK_DEBOUNCE_MS) return
+    lastBackRef.current = now
+    setPaused((prev) => !prev)
+  })
 
   if (isLoading) {
     return (
