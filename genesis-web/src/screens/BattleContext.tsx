@@ -148,8 +148,11 @@ export function BattleProvider({ children }: Props) {
 
   // Dice result overlay — shown simultaneously with action resolution
   const [diceResult, setDiceResult]     = useState<DiceResult | null>(null)
-  const diceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const diceKeyRef   = useRef(0)
+  const diceTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const diceKeyRef      = useRef(0)
+  const diceResultRef   = useRef<DiceResult | null>(null)   // ref copy — keeps enemy AI current without adding diceResult to its deps
+  const diceShowTimeRef = useRef<number>(0)                 // Date.now() when the last dice animation started
+  const applyTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null) // deferred state-apply timer
 
   // ── Other battle state ─────────────────────────────────────────────────────
   const [phase, setPhase]             = useState<TurnPhase>('resolving')
@@ -226,13 +229,19 @@ export function BattleProvider({ children }: Props) {
 
   // Shows the action panel and schedules its auto-dismiss.
   // Clears any pending dismiss so a new action replaces the previous display.
-  const showTurnDisplay = useCallback((d: Omit<TurnDisplay, 'animKey'>) => {
+  // dismissAfter defaults to TURN_DISPLAY_DISMISS_MS; enemy telegraph passes a
+  // longer value (ENEMY_AI_DELAY_MS + DICE_RESULT_DISMISS_MS) to keep the panel
+  // visible through the full AI delay + dice animation sequence.
+  const showTurnDisplay = useCallback((
+    d: Omit<TurnDisplay, 'animKey'>,
+    dismissAfter = TURN_DISPLAY_DISMISS_MS,
+  ) => {
     if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current)
     animKeyRef.current += 1
     setTurnDisplay({ ...d, animKey: animKeyRef.current })
     dismissTimerRef.current = setTimeout(
       () => setTurnDisplay(null),
-      TURN_DISPLAY_DISMISS_MS,
+      dismissAfter,
     )
   }, [])
 
@@ -246,6 +255,7 @@ export function BattleProvider({ children }: Props) {
   const showDiceResult = useCallback((outcome: DiceOutcome) => {
     if (diceTimerRef.current) clearTimeout(diceTimerRef.current)
     diceKeyRef.current += 1
+    diceShowTimeRef.current = Date.now()   // record start so enemy AI can compute remaining time
     setDiceResult({ outcome, animKey: diceKeyRef.current })
     diceTimerRef.current = setTimeout(
       () => setDiceResult(null),
@@ -256,6 +266,11 @@ export function BattleProvider({ children }: Props) {
   // Cleanup pending dice dismiss on unmount.
   useEffect(() => () => {
     if (diceTimerRef.current) clearTimeout(diceTimerRef.current)
+  }, [])
+
+  // Cleanup deferred state-apply timer on unmount.
+  useEffect(() => () => {
+    if (applyTimerRef.current) clearTimeout(applyTimerRef.current)
   }, [])
 
   // ── Timeline mechanics ─────────────────────────────────────────────────────
@@ -330,6 +345,7 @@ export function BattleProvider({ children }: Props) {
   useEffect(() => { playerUnitRef.current = playerUnit },    [playerUnit])
   useEffect(() => { enemiesRef.current = enemies },          [enemies])
   useEffect(() => { unitSkillsMapRef.current = unitSkillsMap }, [unitSkillsMap])
+  useEffect(() => { diceResultRef.current = diceResult },   [diceResult])
 
   /** Execute one attack: caster hits target using the given SkillInstance. */
   const runAttack = useCallback((
@@ -422,6 +438,15 @@ export function BattleProvider({ children }: Props) {
   }, [playerUnit, enemies, phase, runAttack, pushHistory, registerTick, appendLog, showTurnDisplay])
 
   // ── Enemy AI ───────────────────────────────────────────────────────────────
+  //
+  // Sequencing (full chain):
+  //   1. Wait for any player dice animation to finish (remainingDice ms).
+  //   2. Show enemy telegraph for ENEMY_AI_DELAY_MS + DICE_RESULT_DISMISS_MS total.
+  //   3. After ENEMY_AI_DELAY_MS, fire attack → dice animation starts.
+  //   4. After another DICE_RESULT_DISMISS_MS, commit HP/tick state changes.
+  //
+  // diceResult is intentionally NOT in deps. We read it via diceResultRef so the
+  // effect doesn't restart when the enemy's own dice fires during step 3.
 
   useEffect(() => {
     if (phase !== 'enemy') return
@@ -430,47 +455,55 @@ export function BattleProvider({ children }: Props) {
     )
     if (!activeEnemies.length) return
 
-    // Telegraph: show turn display immediately so the player can read what's
-    // coming during the AI delay before the action fires.
-    const firstEnemy    = activeEnemies[0]
-    const previewSkills = unitSkillsMapRef.current.get(firstEnemy.id) ?? []
-    if (previewSkills.length > 0) {
-      const previewSkillInst = previewSkills[0]
-      const previewSkill     = getCachedSkill(previewSkillInst)
-      const previewTarget    = playerUnitRef.current
-      showTurnDisplay({
-        actor: {
-          name:        firstEnemy.name,
-          className:   firstEnemy.className,
-          rarity:      firstEnemy.rarity,
-          hp:          firstEnemy.hp,
-          maxHp:       firstEnemy.maxHp,
-          ap:          firstEnemy.ap,
-          maxAp:       firstEnemy.maxAp,
-          statusSlots: firstEnemy.statusSlots,
-        },
-        skillName:  previewSkill.name,
-        tuCost:     previewSkill.tuCost,
-        apCost:     previewSkill.apCost,
-        skillLevel: previewSkillInst.currentLevel,
-        target: previewTarget ? {
-          name:        previewTarget.name,
-          className:   previewTarget.className,
-          rarity:      previewTarget.rarity,
-          hp:          previewTarget.hp,
-          maxHp:       previewTarget.maxHp,
-          ap:          previewTarget.ap,
-          maxAp:       previewTarget.maxAp,
-          statusSlots: previewTarget.statusSlots,
-        } : {
-          name: 'Player', className: '—', rarity: 1,
-          hp: 0, maxHp: 1, ap: 0, maxAp: 1, statusSlots: [],
-        },
-        isAlly: false,
-      })
-    }
+    // Compute remaining player-dice animation time (0 if no active dice).
+    const remainingDice = diceResultRef.current !== null
+      ? Math.max(0, DICE_RESULT_DISMISS_MS - (Date.now() - diceShowTimeRef.current))
+      : 0
 
-    const timer = setTimeout(() => {
+    // Step 1 + 2: after player dice clears, show telegraph.
+    const telegraphTimer = setTimeout(() => {
+      const firstEnemy    = activeEnemies[0]
+      const previewSkills = unitSkillsMapRef.current.get(firstEnemy.id) ?? []
+      if (previewSkills.length > 0) {
+        const previewSkillInst = previewSkills[0]
+        const previewSkill     = getCachedSkill(previewSkillInst)
+        const previewTarget    = playerUnitRef.current
+        showTurnDisplay(
+          {
+            actor: {
+              name:        firstEnemy.name,
+              className:   firstEnemy.className,
+              rarity:      firstEnemy.rarity,
+              hp:          firstEnemy.hp,
+              maxHp:       firstEnemy.maxHp,
+              ap:          firstEnemy.ap,
+              maxAp:       firstEnemy.maxAp,
+              statusSlots: firstEnemy.statusSlots,
+            },
+            skillName:  previewSkill.name,
+            tuCost:     previewSkill.tuCost,
+            apCost:     previewSkill.apCost,
+            skillLevel: previewSkillInst.currentLevel,
+            target: previewTarget ? {
+              name:        previewTarget.name,
+              className:   previewTarget.className,
+              rarity:      previewTarget.rarity,
+              hp:          previewTarget.hp,
+              maxHp:       previewTarget.maxHp,
+              ap:          previewTarget.ap,
+              maxAp:       previewTarget.maxAp,
+              statusSlots: previewTarget.statusSlots,
+            } : { name: 'Player', className: '—', rarity: 1, hp: 0, maxHp: 1, ap: 0, maxAp: 1, statusSlots: [] },
+            isAlly: false,
+          },
+          // Stay visible through the full delay + dice animation window.
+          ENEMY_AI_DELAY_MS + DICE_RESULT_DISMISS_MS,
+        )
+      }
+    }, remainingDice)
+
+    // Step 3: after telegraph delay, fire the attack (dice starts here).
+    const actionTimer = setTimeout(() => {
       const currentPlayer  = playerUnitRef.current
       const currentEnemies = enemiesRef.current
       const currentSkills  = unitSkillsMapRef.current
@@ -479,6 +512,7 @@ export function BattleProvider({ children }: Props) {
       for (const enemy of activeEnemies) {
         const enemySkills = currentSkills.get(enemy.id) ?? []
         if (!enemySkills.length) {
+          // No skill — advance tick immediately; no dice, no deferral needed.
           const fromTick = enemy.tickPosition
           pushHistory(makeHistoryEntry(enemy.id, enemy.name, fromTick, enemy.isAlly))
           registerTick(enemy.id, advanceTick(fromTick, 10))
@@ -488,25 +522,33 @@ export function BattleProvider({ children }: Props) {
 
         const skillInst = enemySkills[0]
         const snap      = makeSnapshot(currentPlayer, currentEnemies)
+        // runAttack fires showDiceResult internally — dice animation starts now.
         const { tumbleDelay } = runAttack(enemy, currentPlayer, skillInst, snap)
 
-        setPlayerUnit(snap.get(currentPlayer.id) ?? currentPlayer)
-        setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
+        // Step 4: defer HP/tick commits until the dice animation ends.
+        applyTimerRef.current = setTimeout(() => {
+          setPlayerUnit(snap.get(currentPlayer.id) ?? currentPlayer)
+          setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
 
-        const skill    = getCachedSkill(skillInst)
-        const fromTick = enemy.tickPosition
-        pushHistory(makeHistoryEntry(enemy.id, enemy.name, fromTick, enemy.isAlly))
-        registerTick(enemy.id, advanceTick(fromTick, skill.tuCost + tumbleDelay))
+          const skill    = getCachedSkill(skillInst)
+          const fromTick = enemy.tickPosition
+          pushHistory(makeHistoryEntry(enemy.id, enemy.name, fromTick, enemy.isAlly))
+          registerTick(enemy.id, advanceTick(fromTick, skill.tuCost + tumbleDelay))
 
-        const updatedPlayer = snap.get(currentPlayer.id) ?? currentPlayer
-        if (!isAlive(updatedPlayer)) {
-          appendLog({ text: 'Defeat! You have been slain.', colour: 'var(--accent-danger)' })
-        }
+          const updatedPlayer = snap.get(currentPlayer.id) ?? currentPlayer
+          if (!isAlive(updatedPlayer)) {
+            appendLog({ text: 'Defeat! You have been slain.', colour: 'var(--accent-danger)' })
+          }
+        }, DICE_RESULT_DISMISS_MS)
       }
-    }, ENEMY_AI_DELAY_MS)
+    }, remainingDice + ENEMY_AI_DELAY_MS)
 
-    return () => clearTimeout(timer)
-  }, [phase, activeUnitIds, showTurnDisplay]) // refs keep callbacks current; phase + activeUnitIds gate the trigger
+    return () => {
+      clearTimeout(telegraphTimer)
+      clearTimeout(actionTimer)
+      if (applyTimerRef.current) clearTimeout(applyTimerRef.current)
+    }
+  }, [phase, activeUnitIds, showTurnDisplay]) // refs keep callbacks current; diceResult intentionally excluded
 
   // ── Misc actions ───────────────────────────────────────────────────────────
 

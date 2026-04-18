@@ -16,7 +16,7 @@ import { useLocation } from 'react-router-dom'
 import { App as CapApp } from '@capacitor/app'
 import type { ScreenConfig, SafeInsets } from '../core/screen-types'
 import { SCREEN_REGISTRY } from './screenRegistry'
-import { invokeBackHandler } from '../input/backButtonRegistry'
+import { invokeBackHandler, hasBackHandler } from '../input/backButtonRegistry'
 
 // Fallback insets when env() is unavailable (Android notification bar ~24px,
 // home gesture bar ~48px).
@@ -92,6 +92,26 @@ export function ScreenProvider({ children }: Props) {
     })
     return () => { sub.then((h) => h.remove()) }
   }, []) // intentionally empty — input registry is module-level
+
+  // Intercept the browser's back button (popstate) on web.
+  // Capture phase fires before React Router's bubble-phase listener.
+  // When a screen has registered a back handler, we re-push a sentinel state
+  // and invoke the handler — preventing React Router from navigating away.
+  // When no handler is registered, propagation is untouched and routing works normally.
+  useEffect(() => {
+    window.history.pushState(null, '') // sentinel: gives the first back press something to pop
+
+    function handlePopstate(e: PopStateEvent) {
+      if (hasBackHandler()) {
+        e.stopImmediatePropagation()
+        window.history.pushState(null, '') // re-push sentinel to keep URL stable
+        invokeBackHandler()
+      }
+    }
+
+    window.addEventListener('popstate', handlePopstate, { capture: true })
+    return () => window.removeEventListener('popstate', handlePopstate, { capture: true })
+  }, []) // intentionally empty — registry is module-level
 
   return (
     <ScreenContext.Provider value={{ screen, safeInsets }}>
