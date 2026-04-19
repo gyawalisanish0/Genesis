@@ -18,7 +18,7 @@ export function calculateFinalChance(precision: number, baseChance: number): num
 export function shiftProbabilities(finalChance: number): DiceProbabilities {
   const base = { ...DICE_BASE_PROBABILITIES }
   const positivePool = base.Boosted + base.Success
-  const negativePool = base.Tumbling + base.GuardUp + base.Evasion
+  const negativePool = base.Tumbling + base.GuardUp + base.Evasion + base.Fail
 
   // Cap ratio so newPositive never exceeds 1.0 (which would give negative negPool)
   const maxRatio = positivePool > 0 ? 1.0 / positivePool : 1.0
@@ -35,5 +35,6 @@ export function shiftProbabilities(finalChance: number): DiceProbabilities {
     Tumbling: base.Tumbling * negFrac,
     GuardUp:  base.GuardUp  * negFrac,
     Evasion:  base.Evasion  * negFrac,
+    Fail:     base.Fail     * negFrac,
   }
 }

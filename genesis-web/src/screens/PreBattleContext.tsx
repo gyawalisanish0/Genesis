@@ -55,7 +55,7 @@ export function PreBattleProvider({ children }: Props) {
   const canContinue =
     (step === 0 && selectedModeId !== null) ||
     (step === 1 && selectedTeam.length >= 1) ||
-    (step === 2)
+    (step === 2 && selectedTeam.length >= 1)  // START BATTLE requires a selected character
 
   return (
     <PreBattleContext.Provider value={{

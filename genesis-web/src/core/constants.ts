@@ -13,11 +13,12 @@ export const CLASS_TICK_RANGES: Readonly<Record<string, [number, number]>> = {
 
 // Base outcome probabilities at 100% final hit chance
 export const DICE_BASE_PROBABILITIES = {
-  Boosted:  0.15,
-  Success:  0.45,
+  Boosted:  0.10,
+  Success:  0.40,
   Tumbling: 0.10,
   GuardUp:  0.20,
   Evasion:  0.10,
+  Fail:     0.10,
 } as const
 
 export const BOOSTED_MULTIPLIER  = 1.5    // damage × 1.5 on Boosted

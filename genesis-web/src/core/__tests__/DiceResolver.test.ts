@@ -11,7 +11,7 @@ describe('roll', () => {
   })
 
   it('returns Success when only Success has probability', () => {
-    const onlySuccess = { Boosted: 0, Success: 1, Tumbling: 0, GuardUp: 0, Evasion: 0 }
+    const onlySuccess = { Boosted: 0, Success: 1, Tumbling: 0, GuardUp: 0, Evasion: 0, Fail: 0 }
     for (let i = 0; i < 20; i++) expect(roll(onlySuccess)).toBe('Success')
   })
 })

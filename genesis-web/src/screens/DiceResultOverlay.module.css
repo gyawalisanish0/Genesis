@@ -20,15 +20,25 @@
   animation: outcomeSlam 4s ease-out forwards;
 }
 
-/* Large outcome label */
+/* Outcome label — halved from 3.5rem to leave room for the message line */
 .outcomeName {
-  font-size: 3.5rem;
+  font-size: 1.75rem;
   font-weight: 900;
   font-family: var(--font-sans);
   letter-spacing: 0.08em;
   line-height: 1;
   text-shadow: 0 0 2.5rem currentColor, 0 0 0.5rem currentColor;
   color: inherit;
+}
+
+/* Short outcome description shown below the accent line */
+.outcomeMsg {
+  font-size: var(--t-body-size);
+  color: inherit;
+  opacity: 0.85;
+  text-align: center;
+  max-width: 14rem;
+  line-height: 1.4;
 }
 
 /* Thin accent line below the name — reinforces the colour */

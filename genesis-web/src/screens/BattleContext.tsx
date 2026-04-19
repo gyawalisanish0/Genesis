@@ -25,7 +25,8 @@ import { useGameStore } from '../core/GameContext'
 export type TurnPhase = 'player' | 'enemy' | 'resolving'
 
 export interface DiceResult {
-  outcome: DiceOutcome  // 'Boosted' | 'Success' | 'Tumbling' | 'GuardUp' | 'Evasion'
+  outcome: DiceOutcome  // 'Boosted' | 'Success' | 'Tumbling' | 'GuardUp' | 'Evasion' | 'Fail'
+  message: string       // short flavour description shown below the outcome name
   animKey: number       // incremented on each show; React key for animation retrigger
 }
 
@@ -118,13 +119,39 @@ function snapshotToBattleState(snap: Map<string, Unit>): EngineBattleState {
   }
 }
 
-// ── Outcome log helpers ───────────────────────────────────────────────────────
+// ── Outcome helpers ───────────────────────────────────────────────────────────
 
-function outcomeColour(outcome: string, evaded: boolean): string {
-  if (evaded)                    return 'var(--text-muted)'
-  if (outcome === 'Boosted')     return 'var(--accent-gold)'
-  if (outcome === 'Tumbling')    return 'var(--accent-danger)'
-  return 'var(--text-primary)'
+function outcomeColour(outcome: DiceOutcome): string {
+  switch (outcome) {
+    case 'Boosted':  return 'var(--accent-gold)'
+    case 'Tumbling': return 'var(--accent-danger)'
+    case 'Evasion':  return 'var(--accent-evasion)'
+    case 'Fail':     return 'var(--text-muted)'
+    case 'GuardUp':  return 'var(--accent-info)'
+    default:         return 'var(--text-primary)'  // Success
+  }
+}
+
+function buildOutcomeMessage(
+  outcome: DiceOutcome,
+  actorName: string,
+  targetName: string,
+  tumbleDelay: number,
+): string {
+  switch (outcome) {
+    case 'Boosted':
+      return `${actorName} gets +50% skill value boost until next turn`
+    case 'Success':
+      return `${actorName} successfully hits`
+    case 'GuardUp':
+      return `${actorName} hits and gains 35% damage reduction for next attack`
+    case 'Evasion':
+      return `${targetName} evaded`
+    case 'Tumbling':
+      return `${actorName} hits with half effectiveness, tumbled for ${tumbleDelay} ticks`
+    case 'Fail':
+      return `${actorName} misses`
+  }
 }
 
 // ── Provider ──────────────────────────────────────────────────────────────────
@@ -260,11 +287,11 @@ export function BattleProvider({ children }: Props) {
 
   // Shows the dice outcome burst and schedules its auto-dismiss.
   // Clears any pending dismiss so a rapid new roll replaces the previous display.
-  const showDiceResult = useCallback((outcome: DiceOutcome) => {
+  const showDiceResult = useCallback((outcome: DiceOutcome, message: string) => {
     if (diceTimerRef.current) clearTimeout(diceTimerRef.current)
     diceKeyRef.current += 1
     diceShowTimeRef.current = Date.now()   // record start so enemy AI can compute remaining time
-    setDiceResult({ outcome, animKey: diceKeyRef.current })
+    setDiceResult({ outcome, message, animKey: diceKeyRef.current })
     diceTimerRef.current = setTimeout(
       () => setDiceResult(null),
       DICE_RESULT_DISMISS_MS,
@@ -365,9 +392,10 @@ export function BattleProvider({ children }: Props) {
     const skill       = getCachedSkill(skillInst)
     const finalChance = calculateFinalChance(caster.stats.precision, skill.resolution?.baseChance ?? 1.0)
     const diceOutcome = roll(shiftProbabilities(finalChance))
-    showDiceResult(diceOutcome)
-    const evaded      = diceOutcome === 'Evasion'
     const tumbleDelay = diceOutcome === 'Tumbling' ? calculateTumblingDelay() : 0
+    const noDamage    = diceOutcome === 'Evasion' || diceOutcome === 'Fail'
+
+    showDiceResult(diceOutcome, buildOutcomeMessage(diceOutcome, caster.name, target.name, tumbleDelay))
 
     const battle = snapshotToBattleState(snap)
     // AP regen for the caster based on ticks elapsed since last action.
@@ -380,7 +408,7 @@ export function BattleProvider({ children }: Props) {
 
     const ctx: EffectContext = {
       caster,
-      target: evaded ? undefined : target,
+      target: noDamage ? undefined : target,
       battle,
       source: 'skill',
       event:  { event: 'onCast' },
@@ -391,11 +419,11 @@ export function BattleProvider({ children }: Props) {
       if (effect.when.event === 'onCast') applyEffect(effect, ctx)
     }
 
-    const color = outcomeColour(diceOutcome, evaded)
-    const msg   = evaded
-      ? `${target.name} evaded ${skill.name}!`
-      : `${caster.name} → ${skill.name} on ${target.name} [${diceOutcome}]`
-    appendLog({ text: msg, colour: color })
+    const logMsg =
+      diceOutcome === 'Evasion' ? `${target.name} evaded ${skill.name}!` :
+      diceOutcome === 'Fail'    ? `${caster.name} missed with ${skill.name}!` :
+      `${caster.name} → ${skill.name} on ${target.name} [${diceOutcome}]`
+    appendLog({ text: logMsg, colour: outcomeColour(diceOutcome) })
 
     return { tumbleDelay }
   }, [tickValue, appendLog, showDiceResult])

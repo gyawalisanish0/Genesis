@@ -25,11 +25,12 @@ describe('shiftProbabilities', () => {
 
   it('at finalChance=1.0 matches base probabilities', () => {
     const shifted = shiftProbabilities(1.0)
-    expect(shifted.Boosted).toBeCloseTo(0.15)
-    expect(shifted.Success).toBeCloseTo(0.45)
+    expect(shifted.Boosted).toBeCloseTo(0.10)
+    expect(shifted.Success).toBeCloseTo(0.40)
     expect(shifted.Tumbling).toBeCloseTo(0.10)
     expect(shifted.GuardUp).toBeCloseTo(0.20)
     expect(shifted.Evasion).toBeCloseTo(0.10)
+    expect(shifted.Fail).toBeCloseTo(0.10)
   })
 
   it('higher chance increases positive pool', () => {
