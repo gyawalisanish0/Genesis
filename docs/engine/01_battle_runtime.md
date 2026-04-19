@@ -10,12 +10,19 @@ global Zustand store (`GameContext`) until the battle ends.
 
 ## Data loading
 
-On mount, `BattleProvider` loads two characters plus their skills from `DataService`:
+On mount, `BattleProvider` reads the team from the global Zustand store
+(`GameContext.selectedTeamIds`) and loads characters from `DataService`. If
+`selectedTeamIds` is empty (direct URL access with no team selected),
+`isLoading` is set to `false` immediately and `playerUnit` remains `null` —
+`BattleScreen` detects this and redirects to the Pre-Battle screen.
 
 ```ts
+const { selectedTeamIds } = useGameStore.getState()
+if (!selectedTeamIds.length) { setIsLoading(false); return }
+
 const [playerData, enemyData] = await Promise.all([
-  loadCharacterWithSkills('warrior_001'),   // Iron Warden — player
-  loadCharacterWithSkills('hunter_001'),    // Swift Veil — enemy
+  loadCharacterWithSkills(selectedTeamIds[0]),  // first selected character — player
+  loadCharacterWithSkills('hunter_001'),         // Swift Veil — enemy (hardcoded for now)
 ])
 ```
 
@@ -98,7 +105,7 @@ expands to cover all registered positions plus a 15-tick buffer at each end and
 | `phase` | `TurnPhase` | `'player' \| 'enemy' \| 'resolving'` — **auto-derived** from `activeUnitIds` (see §Phase auto-derivation) |
 | `turnNumber` | `number` | Incrementing session counter (per-session metric, not a round system) |
 | `log` | `LogEntry[]` | Combat event log entries |
-| `selectedSkill` | `SkillInstance \| null` | Currently highlighted skill |
+| `selectedSkill` | `SkillInstance \| null` | Skill tapped by the player (highlighted); `null` if none selected |
 | `gridCollapsed` | `boolean` | Action grid collapse state |
 | `isPaused` | `boolean` | Pause overlay visible |
 
@@ -177,10 +184,20 @@ unregisterTick(id: string)
 
 ## Skill execution
 
+### Roll button UX
+
+The player's action grid uses a two-step select → roll flow:
+
+1. **Tap a skill** → `selectSkill(skillInst)` — the skill button gains an accent border; the ROLL button appears above the player portrait. Tapping the same skill again deselects it.
+2. **Tap ROLL** → 250 ms "Rolling…" pulse animation → `executeSkill(selectedSkill)` fires → `selectSkill(null)` clears selection.
+3. **Tapping End/Skip** also clears any selected skill.
+
+Selection is auto-cleared after each roll and at the start of every enemy turn.
+
 ### `executeSkill(skillInstance: SkillInstance)`
 
-Called by the player's action grid. Resolves the full combat pipeline for a
-single player action:
+Called after the player taps ROLL with a skill selected. Resolves the full
+combat pipeline for a single player action:
 
 ```
 1. Guard: phase === 'player', playerUnit alive, at least one living enemy
@@ -189,7 +206,7 @@ single player action:
      finalChance = calculateFinalChance(caster.stats.precision, skill.resolution?.baseChance ?? 1.0)
      diceOutcome = roll(shiftProbabilities(finalChance))
 4. Compute AP regen: calculateApGained(skill.tuCost, caster.apRegenRate) → add to caster
-5. Build EffectContext; set ctx.target = undefined on Evasion (no recipients)
+5. Build EffectContext; set ctx.target = undefined on Evasion or Fail (no damage dealt)
 6. Apply each effect where effect.when.event === 'onCast' via applyEffect()
 7. Sync snapshot back to React state: setPlayerUnit, setEnemies
 8. Append outcome log entry (coloured by dice result)
@@ -197,32 +214,75 @@ single player action:
 10. If all enemies hp === 0: append victory message
 ```
 
-**Dice outcomes** affect tick advancement and log colour only — damage is
-always the resolved `ValueExpr` amount (dice multipliers are a Wave C addition):
+**Dice outcomes** — six outcomes, always summing to 1.0 after `shiftProbabilities`:
 
-| Outcome | Tick advance modifier | Log colour |
-|---|---|---|
-| Boosted | +0 | `accent-gold` |
-| Success | +0 | `text-primary` |
-| Tumbling | +`calculateTumblingDelay()` (1–5) | `accent-danger` |
-| GuardUp | +0 | `text-primary` |
-| Evasion | +0 (no damage dealt) | `text-muted` |
+| Outcome | Base % | Tick modifier | Log colour | Notes |
+|---|---|---|---|---|
+| Boosted  | 10% | +0 | `accent-gold`    | Caster gets +50% skill value boost |
+| Success  | 40% | +0 | `text-primary`   | Normal hit |
+| GuardUp  | 20% | +0 | `accent-info`    | Hit + 35% damage reduction for caster's next received attack |
+| Evasion  | 10% | +0 | `accent-evasion` | Target evaded; no damage (`ctx.target = undefined`) |
+| Tumbling | 10% | +`calculateTumblingDelay()` (1–5) | `accent-danger` | Half effectiveness; caster delayed |
+| Fail     | 10% | +0 | `text-muted`     | Caster misses; no damage (`ctx.target = undefined`) |
+
+`DiceResult` carries three fields: `outcome`, `message` (flavour text built by
+`buildOutcomeMessage(outcome, actorName, targetName, tumbleDelay)`), and
+`animKey` (React key for animation retrigger). The message is displayed in the
+`DiceResultOverlay` below the outcome name.
 
 ---
 
-## Enemy AI
+## Enemy AI — sequential timing
 
-When `phase` changes to `'enemy'`, a `useEffect` schedules a 700 ms timer
-(for pacing) that runs each active enemy through the same execution path:
+When `phase` changes to `'enemy'`, a `useEffect` runs a strict four-stage
+sequential chain so the player can read the incoming action before it lands:
 
-1. Find active enemies: `enemies.filter(e => activeUnitIds.has(e.id) && isAlive(e))`
-2. Look up the enemy's skills via the `unitSkillsMapRef` (live ref — always current)
-3. **No skills**: register a 10-tick wait; log "is gathering strength…"
-4. **Has skills**: pick slot `[0]`, target `playerUnit`, run `runAttack()`
-5. Sync updated state back to React; check for defeat (`playerUnit.hp === 0`)
+```
+T + 0 ms                   phase → 'enemy'; remainingDice computed
+T + remainingDice          telegraphTimer fires → showTurnDisplay (telegraph)
+T + remainingDice + 2000   actionTimer fires → runAttack → showDiceResult (enemy dice)
+T + remainingDice + 6000   applyTimerRef fires → setPlayerUnit / setEnemies / registerTick
+                           telegraph also auto-dismisses at this point
+```
 
-The timer callback reads from **live refs** (`playerUnitRef`, `enemiesRef`,
-`unitSkillsMapRef`) to avoid stale closure values during the 700 ms window.
+`remainingDice` — if a player dice animation is still running when the enemy
+phase starts, the chain is delayed by the time remaining on that animation
+(`DICE_RESULT_DISMISS_MS − (Date.now() − diceShowTimeRef.current)`); otherwise `0`.
+
+**Stage 1 — telegraph** (`telegraphTimer`, fires after `remainingDice`)
+
+`showTurnDisplay` is called with `dismissAfter = ENEMY_AI_DELAY_MS +
+DICE_RESULT_DISMISS_MS` (6000 ms total), so the panel stays visible through
+both the AI delay and the full enemy dice animation. Displays the enemy name,
+class, skill name, TU cost, and target.
+
+**Stage 2 — fire attack** (`actionTimer`, fires after `remainingDice + ENEMY_AI_DELAY_MS`)
+
+For each active enemy:
+1. Look up skills via `unitSkillsMapRef` (live ref — always current, no stale closure)
+2. **No skills**: advance tick by 10 immediately; log "is gathering strength…"
+3. **Has skills**: pick slot `[0]`, target `playerUnit`, call `runAttack()` (which
+   fires `showDiceResult` internally — enemy dice animation starts now)
+4. Schedule `applyTimerRef` to fire `DICE_RESULT_DISMISS_MS` (4000 ms) later
+
+**Stage 3 — apply state** (`applyTimerRef`, fires after dice animation ends)
+
+`setPlayerUnit` and `setEnemies` are committed here — HP bars and tick markers
+update only after the enemy dice burst finishes. Then `registerTick` advances the
+enemy's marker. If the player's HP reaches 0, a defeat log entry is appended.
+
+**Why `diceResult` is NOT in the effect's deps array**: `diceResultRef` keeps the
+current dice result current via a sync `useEffect`, so the enemy AI effect reads
+it without listing `diceResult` as a dependency — which would restart the whole
+timing chain whenever the enemy's own dice fires mid-turn.
+
+**Constants** (all in `src/core/constants.ts`):
+
+| Constant | Value | Purpose |
+|---|---|---|
+| `ENEMY_AI_DELAY_MS` | 2000 ms | Delay between telegraph and enemy action |
+| `DICE_RESULT_DISMISS_MS` | 4000 ms | Dice burst duration; also defers state apply |
+| `TURN_DISPLAY_DISMISS_MS` | 2000 ms | Auto-dismiss for player-action turn panel |
 
 ---
 
@@ -292,7 +352,7 @@ src/
 │   └── combat/
 │       ├── TickCalculator.ts      # calculateStartingTick, advanceTick, calculateApGained
 │       ├── HitChanceEvaluator.ts  # calculateFinalChance, shiftProbabilities
-│       └── DiceResolver.ts        # roll, applyOutcome, calculateTumblingDelay
+│       └── DiceResolver.ts        # roll, applyOutcome, calculateTumblingDelay, resolveEvasionCounter
 ├── services/
 │   └── DataService.ts             # loadCharacterIndex, loadCharacter, loadCharacterSkillDefs,
 │                                  #   loadCharacterWithSkills, loadMode (+ per-type cache)

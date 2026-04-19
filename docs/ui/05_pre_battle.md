@@ -192,8 +192,23 @@ Same as `03_roster.md` card but:
 | Step 1 — mode selected | CONTINUE enabled; selected card highlighted |
 | Step 2 — 0 units | CONTINUE disabled; team slots show empty state |
 | Step 2 — ≥1 unit | CONTINUE enabled |
-| Step 3 — default | All slots empty; CONTINUE always enabled (items optional) |
+| Step 3 — 0 units | START BATTLE disabled (`canContinue` requires `selectedTeam.length ≥ 1`) |
+| Step 3 — ≥1 unit | START BATTLE enabled |
 | Step 3 — picker open | Bottom sheet overlays; background dims |
+
+### Battle entry guard
+
+`PreBattleContext.canContinue` enforces team selection at every step:
+- Step 0: mode selected
+- Step 1: ≥1 character selected
+- Step 2 (START BATTLE): ≥1 character selected
+
+On CONTINUE from Step 2, `setSelectedTeamIds(selectedTeam.map(c => c.id))` writes
+the selection to the global Zustand store before navigating to Battle.
+
+If a player navigates directly to `/battle` with no team (via URL or stale deep link),
+`BattleProvider` detects `selectedTeamIds.length === 0`, sets `isLoading = false`
+with `playerUnit = null`, and `BattleScreen` redirects silently to Pre-Battle.
 
 ---
 

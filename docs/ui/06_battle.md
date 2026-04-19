@@ -16,7 +16,18 @@ takes during a battle flows through this screen.
 | | Screen |
 |---|---|
 | **Entry from** | Pre-Battle (Step 3 CONTINUE) |
-| **Exit to** | Battle Result (win/loss) · Main Menu (forfeit) |
+| **Exit to** | Battle Result (win/loss) · Main Menu (forfeit via pause menu) |
+
+**Battle entry guard:** if `BattleScreen` mounts with no team selected
+(`playerUnit === null` after loading), it silently redirects to Pre-Battle.
+This guards against direct URL access.
+
+**Back button (in-battle strict pause loop):**
+- First back press → pause overlay appears (`isPaused = true`)
+- Second back press → resumes battle (`isPaused = false`)
+- Navigation out is only possible via the **LEAVE BATTLE** button in the pause menu
+- 300 ms debounce prevents accidental double-fires
+- Works on both native (Capacitor `App backButton`) and web (browser back via `popstate` capture-phase interceptor in `ScreenContext`)
 
 ---
 
@@ -43,13 +54,13 @@ Main area : 332 dp wide (x=28 to x=360)
 │TL├─────────────────────────────────────────┤  y=var
 │TL│  ╭──[■]──[■]──[■]──╮  Status Slots     │  44dp
 │TL├─────────────────────────────────────────┤
-│  │ [Turn N] [Tick: N]  │      End/Skip     │  48dp  action row 1
-│  │                     │─────────┼────────│
-│  │  ◉ portrait circle  │  Skill1 │ Skill2 │  72dp  skill row 1
-│  │  LVL   CXP/NLU      │─────────┼────────│
-│  │  HP ████ CHP/MHP    │  Skill3 │ Skill4 │  72dp  skill row 2
-│  │  AP ██░░ CAP/MAP    │                  │
-│  │                     │    [#1 toggle]   │  54dp  collapse button row
+│  │ [ROLL (if skill)]   │      End/Skip     │  48dp  action row 1  ← ROLL btn visible when skill selected
+│  │─────────────────────│─────────┼────────│
+│  │ [Turn N] [Tick: N]  │  Skill1 │ Skill2 │  72dp  skill row 1
+│  │  ◉ portrait circle  │─────────┼────────│
+│  │  LVL   CXP/NLU      │  Skill3 │ Skill4 │  72dp  skill row 2
+│  │  HP ████ CHP/MHP    │                  │
+│  │  AP ██░░ CAP/MAP    │    [#1 toggle]   │  54dp  collapse button row
 └──┴─────────────────────────────────────────┘  y=640
 
 ╔══════════════════════════════════════════════╗  ← DiceResultOverlay
@@ -154,7 +165,7 @@ fires at 0 ms and target at 150 ms.
 
 | Trigger | Actor row | Notes |
 |---|---|---|
-| Enemy begins turn | Enemy name + class + rarity stars | Telegraphed **before** action fires during the 700 ms AI delay |
+| Enemy begins turn | Enemy name + class + rarity stars | Telegraphed **before** action fires; panel stays 6 s (covers 2 s AI delay + 4 s dice) |
 | Player executes skill | _(omitted)_ | Shown **after** action resolves as a confirmation |
 
 **Rows:**
@@ -182,17 +193,37 @@ A full-screen centred outcome text burst that fires on every `runAttack` call
 `BattleScreen.tsx`, rendered at `z-index: 40` inside `.root`
 (`position: relative`). `pointer-events: none` — never blocks battle taps.
 
-**Outcomes and colours:**
+**Outcomes and colours (6 total):**
 
 | Outcome | Token | Hex |
 |---|---|---|
-| Boosted | `--accent-gold` | `#F59E0B` |
-| Success | `--accent-heal` | `#10B981` |
-| Tumbling | `--accent-danger` | `#EF4444` |
-| GuardUp | `--accent-info` | `#3B82F6` |
-| Evasion | `--accent-evasion` | `#06B6D4` |
+| Boosted  | `--accent-gold`    | `#F59E0B` |
+| Success  | `--accent-heal`    | `#10B981` |
+| GuardUp  | `--accent-info`    | `#3B82F6` |
+| Evasion  | `--accent-evasion` | `#06B6D4` |
+| Tumbling | `--accent-danger`  | `#EF4444` |
+| Fail     | `--text-muted`     | dimmed text |
 
-**`outcomeSlam` keyframe (2 s, `animation-fill-mode: forwards`):**
+**Layout inside the burst:**
+
+```
+    [OUTCOME NAME]          ← .outcomeName — 1.75rem; colour from OUTCOME_COLORS
+    ─────────────           ← accent divider line
+    [flavour message]       ← .outcomeMsg — body size; inherited colour, 85% opacity
+```
+
+The flavour message is built by `buildOutcomeMessage(outcome, actorName, targetName, tumbleDelay)`:
+
+| Outcome | Message |
+|---|---|
+| Boosted  | `{actor} gets +50% skill value boost until next turn` |
+| Success  | `{actor} successfully hits` |
+| GuardUp  | `{actor} hits and gains 35% damage reduction for next attack` |
+| Evasion  | `{target} evaded` |
+| Tumbling | `{actor} hits with half effectiveness, tumbled for N ticks` |
+| Fail     | `{actor} misses` |
+
+**`outcomeSlam` keyframe (4 s, `animation-fill-mode: forwards`):**
 
 ```
 0%   opacity 0 · scale(0.4) · blur(8px)   ← slam-in start
@@ -204,14 +235,15 @@ A full-screen centred outcome text burst that fires on every `runAttack` call
 100% opacity 0 · scale(1.02)             ← fade out
 ```
 
-Auto-dismisses at 2 s (`DICE_RESULT_DISMISS_MS`). Rapid successive actions
+Auto-dismisses at 4 s (`DICE_RESULT_DISMISS_MS`). Rapid successive actions
 cancel the previous dismiss timer — each new roll replaces the burst
 immediately. React `key={animKey}` forces full unmount/remount to retrigger
 the CSS animation even when the outcome is unchanged.
 
 **Implementation files:** `BattleContext.tsx` (`DiceResult` interface,
-`showDiceResult` helper, called from `runAttack`) · `DiceResultOverlay.module.css`
-· `BattleScreen.tsx` (`DiceResultOverlay` component, `OUTCOME_COLORS` map).
+`showDiceResult(outcome, message)` helper, `buildOutcomeMessage()`, called from
+`runAttack`) · `DiceResultOverlay.module.css` · `BattleScreen.tsx`
+(`DiceResultOverlay` component, `OUTCOME_COLORS` map).
 
 ---
 
@@ -246,7 +278,24 @@ Horizontally centred pill row showing the player's active status effects.
 
 ---
 
-### Player Portrait Panel (left column, 130 × 246 dp)
+### Player Portrait Column (left column, 130 × 246 dp)
+
+The portrait column stacks the ROLL button above the portrait panel.
+
+#### ROLL Button (full column width × 48 dp)
+
+Visible **only** when the player has selected a skill (`selectedSkill !== null`).
+Sits above the portrait circle and below the action row.
+
+| State | Visual |
+|---|---|
+| Normal | `$accent-genesis` background; "ROLL" label; `$t-label` |
+| Rolling (250 ms) | `rollPulse` opacity animation; "Rolling…" label |
+
+Tapping ROLL triggers a 250 ms pulse, then fires `executeSkill(selectedSkill)` and
+`selectSkill(null)`.
+
+#### Portrait Panel
 
 | Component | Size (dp) | Properties |
 |---|---|---|
@@ -302,11 +351,15 @@ Column width: (202 − 8) / 2 = 97 dp per column; 8 dp gap.
 | State | Visual change |
 |---|---|
 | Available | Full opacity; normal border |
+| Selected | `$accent-genesis` border 2 dp + inset shadow; ROLL button appears above portrait |
 | Insufficient AP | 50% opacity; border tinted `$accent-danger` |
 | Empty | 30% opacity; name label shows "—" |
-| Tap selected | `$accent-genesis` border 2 dp; scale 0.97 → proceeds to target |
 | Long-press | Opens `SkillDetailPopup` (read-only, no upgrade action) |
 | Enemy turn | `disabled=True`; 20% opacity |
+
+**Tap to select / deselect**: tapping an available skill calls `selectSkill(skillInst)`.
+Tapping the already-selected skill calls `selectSkill(null)`. After ROLL or End/Skip,
+selection is cleared automatically.
 
 #### End / Skip (full width × 48 dp)
 
@@ -383,12 +436,18 @@ When opened from a specific chip, shows that status at the top.
 
 ## Enemy Turn State
 
-When an enemy acts:
-- **Telegraph** — `TurnDisplayPanel` appears immediately (actor + skill + target rows) **before** the 700 ms AI delay fires, so the player can read the incoming action
-- **Dice result overlay** — `DiceResultOverlay` bursts with the outcome name and colour during/after resolution
-- All action buttons `disabled`, opacity 20%
-- Log entry appended with outcome and damage
-- After resolution the turn panel auto-dismisses after 2 s (`TURN_DISPLAY_DISMISS_MS`)
+When an enemy acts, four stages fire in strict sequence:
+
+| Stage | When | What happens |
+|---|---|---|
+| 1 — Telegraph | After remaining player dice ends | `TurnDisplayPanel` shows enemy actor + skill + target; panel stays for 6 s total |
+| 2 — Attack | Telegraph + 2 s (`ENEMY_AI_DELAY_MS`) | `runAttack()` fires; `DiceResultOverlay` bursts for 4 s |
+| 3 — State apply | Attack + 4 s (`DICE_RESULT_DISMISS_MS`) | HP bars and tick positions update **after** dice animation ends |
+| 4 — Phase advance | Immediately after state apply | `registerTick` fires → `tickValue` auto-advances → `phase → 'player'` |
+
+- All action buttons `disabled`, opacity 20% while `phase === 'enemy'`
+- Log entry appended with outcome and damage at attack time
+- Telegraph panel auto-dismisses 6 s after it appears (aligned with dice end)
 
 ---
 
@@ -397,13 +456,15 @@ When an enemy acts:
 | Element | Token / duration | Trigger |
 |---|---|---|
 | Turn display panel rows | `rowSlideIn` 200 ms ease-out, staggered 0/150/300 ms | Action start |
-| Turn display panel dismiss | unmount after `TURN_DISPLAY_DISMISS_MS` (2 s) | Action resolved |
-| Dice result overlay | `outcomeSlam` 2 s ease-out forwards | Every `runAttack` |
-| Dice result dismiss | unmount after `DICE_RESULT_DISMISS_MS` (2 s) | Timer after roll |
+| Turn display panel dismiss | unmount after `TURN_DISPLAY_DISMISS_MS` (2 s) player / 6 s enemy | Action resolved |
+| Dice result overlay | `outcomeSlam` 4 s ease-out forwards | Every `runAttack` |
+| Dice result dismiss | unmount after `DICE_RESULT_DISMISS_MS` (4 s) | Timer after roll |
+| Roll button pulse | `rollPulse` 250 ms opacity, "Rolling…" label | ROLL tapped |
 | Now-line position | `--motion-timeline` (200 ms ease-in-out) | `tickValue` advance |
 | Unit marker position | `--motion-timeline` (200 ms ease-in-out) | `registerTick` |
 | Active marker pulse | `markerPulse` keyframe, 1.5 s ease-in-out infinite | Unit at now-line |
 | History ghost appear | instant (rendered on action) | Action taken |
+| Skill slot selected | `$accent-genesis` border + inset shadow | Skill tapped |
 | Skill slot tap | scale 0.95, `--motion-button` (80 ms ease-in) | Button press |
 | Skill grid collapse | height 0 ↔ full, 200 ms | Collapse toggle |
 | HP / AP bars | width tween, `--motion-bar` (400 ms ease-out) | Damage / regen |
