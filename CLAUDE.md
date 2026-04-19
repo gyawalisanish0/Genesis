@@ -99,70 +99,77 @@ Genesis/
 │   ├── public/
 │   │   ├── data/                 # JSON game content
 │   │   │   ├── characters/       # index.json + one subfolder per character
-│   │   │   │   ├── index.json    # ["warrior_001", …] — character discovery list
-│   │   │   │   └── {id}/         # e.g. warrior_001/
-│   │   │   │       ├── main.json # CharacterDef (stats, class, rarity, …)
-│   │   │   │       ├── skills.json # SkillDef[] — all skills owned by this character
-│   │   │   │       └── growth/   # (placeholder) progression/XP curves — TBD
-│   │   │   └── modes/            # ModeDef files (story.json, ranked.json, …)
+│   │   │   │   ├── index.json    # ["warrior_001", "hunter_001"]
+│   │   │   │   ├── warrior_001/  # Iron Warden (Warrior, Rarity 3)
+│   │   │   │   │   ├── main.json   # CharacterDef
+│   │   │   │   │   └── skills.json # SkillDef[] — Slash (physical, melee)
+│   │   │   │   └── hunter_001/   # Swift Veil (Hunter, Rarity 2)
+│   │   │   │       ├── main.json
+│   │   │   │       └── skills.json # Arcane Bolt (energy, ranged)
+│   │   │   └── modes/            # story.json, ranked.json
 │   │   └── images/               # 3x PNG assets (primary density)
 │   └── src/
 │       ├── core/                 # Pure TS game logic — zero UI imports
-│       │   ├── types.ts
-│       │   ├── constants.ts
-│       │   ├── screen-types.ts
-│       │   ├── unit.ts
+│       │   ├── types.ts          # StatBlockDef, CharacterDef, SkillDef, Unit, ModeDef, AppSettings, BattleResult
+│       │   ├── constants.ts      # All numeric constants: tick ranges, dice params, timing thresholds
+│       │   ├── screen-types.ts   # ScreenId, ScreenConfig, SafeAreaMode, ScreenLifecycleHooks
+│       │   ├── unit.ts           # Immutable Unit factory + mutation helpers (createUnit, takeDamage, healUnit, …)
 │       │   ├── battleHistory.ts  # HistoryEntry type + makeHistoryEntry factory
-│       │   ├── GameContext.ts    # Zustand store
+│       │   ├── GameContext.ts    # Zustand store: selectedMode, selectedTeam, selectedTeamIds, enemies, battleResult, settings
 │       │   ├── combat/
-│       │   │   ├── TickCalculator.ts
-│       │   │   ├── HitChanceEvaluator.ts
-│       │   │   ├── DiceResolver.ts
+│       │   │   ├── TickCalculator.ts     # calculateStartingTick, advanceTick, calculateApGained
+│       │   │   ├── HitChanceEvaluator.ts # calculateFinalChance, shiftProbabilities (5-outcome table)
+│       │   │   ├── DiceResolver.ts       # roll, applyOutcome, calculateTumblingDelay, resolveEvasionCounter
 │       │   │   └── index.ts
-│       │   ├── effects/          # Effect handler registry + builtins
-│       │   │   ├── types.ts
-│       │   │   ├── applyEffect.ts
-│       │   │   ├── resolveValue.ts
-│       │   │   ├── conditions.ts
-│       │   │   ├── patch.ts
-│       │   │   └── builtins/     # registerBuiltins() + 6 registered handlers
-│       │   ├── engines/skill/    # createSkillInstance, getCachedSkill, levelUpSkill
-│       │   └── __tests__/
+│       │   ├── effects/          # Effect engine — open hook system for skills/items/passives
+│       │   │   ├── types.ts      # 15 effect discriminated union, ValueExpr, WhenClause, EffectContext
+│       │   │   ├── applyEffect.ts        # Dispatch: rescope target → evaluate condition → call handler
+│       │   │   ├── resolveValue.ts       # ValueExpr → number (flat, stat-%, sum)
+│       │   │   ├── conditions.ts         # Recursive boolean gates (chance, HP/AP, status, dice, not/all/any)
+│       │   │   ├── patch.ts              # Named-key level-upgrade patching (dot-delimited paths)
+│       │   │   ├── targetSelector.ts     # Single/multi/filtered target resolution
+│       │   │   └── builtins/     # 6 registered handlers: damage, heal, gainAp, spendAp, tickShove, modifyStat
+│       │   └── engines/skill/    # createSkillInstance, getCachedSkill, levelUpSkill, invalidateCache
 │       ├── navigation/           # Screen routing, safe-area, back-button
-│       │   ├── screenRegistry.ts
-│       │   ├── ScreenContext.tsx
-│       │   ├── ScreenShell.tsx
-│       │   └── useScreen.ts
+│       │   ├── screenRegistry.ts # SCREEN_IDS constants + SCREEN_REGISTRY map (7 screens)
+│       │   ├── ScreenContext.tsx  # ScreenProvider: pathname→config, safe-area env() read, Capacitor + popstate back-button
+│       │   ├── ScreenShell.tsx   # Safe-area padding wrapper (full / top-only / none)
+│       │   └── useScreen.ts      # Hook: { screen, safeInsets, navigateTo }; registers onEnter/onLeave hooks
+│       ├── input/                # Hardware + browser back-button coordination
+│       │   ├── backButtonRegistry.ts  # Module-level singleton: register/unregister/invoke one handler at a time
+│       │   └── useBackButton.ts       # Hook: registers handler, pushes URL-sentinel for web popstate interception
 │       ├── services/             # Side-effectful singletons; Capacitor allowed
-│       │   ├── DataService.ts    # JSON loader with in-memory cache
-│       │   ├── DisplayService.ts # (planned) StatusBar / fullscreen control
+│       │   ├── DataService.ts    # JSON loader: loadCharacter, loadCharacterSkillDefs, loadMode, loadCharacterWithSkills (cached)
 │       │   └── __tests__/
-│       ├── scenes/               # (planned) Phaser scenes — Phaser imports only
-│       │   └── BattleScene.ts    # (planned)
-│       ├── screens/              # React screen components
-│       │   ├── SplashScreen.tsx
-│       │   ├── MainMenuScreen.tsx
-│       │   ├── PreBattleScreen.tsx  # split into PreBattleStep{Mode,Team,Items}
-│       │   ├── BattleScreen.tsx
-│       │   ├── BattleContext.tsx    # screen-local context: TurnDisplay + DiceResult interfaces, showTurnDisplay/showDiceResult helpers
+│       ├── utils/
+│       │   └── useScrollAwarePointer.ts  # Tap / hold / scroll gesture discriminator (pointer-delta based)
+│       ├── screens/              # React screen components (one .tsx + one .module.css each)
+│       │   ├── SplashScreen.tsx          # Simulated load progress → auto-navigate to main menu
+│       │   ├── MainMenuScreen.tsx        # PLAY / ROSTER / SETTINGS nav; quit confirm on back
+│       │   ├── PreBattleScreen.tsx       # 3-step wizard shell + back button
+│       │   ├── PreBattleContext.tsx      # Wizard state: step, selectedModeId, selectedTeam, canContinue
+│       │   ├── PreBattleStepMode.tsx     # Step 0 — mode selection (story / ranked / draft)
+│       │   ├── PreBattleStepTeam.tsx     # Step 1 — character roster pick (1–2 units)
+│       │   ├── PreBattleStepItems.tsx    # Step 2 — equipment slots (stub)
+│       │   ├── BattleScreen.tsx          # Battle layout: timeline strip, portrait col, action grid, overlays
+│       │   ├── BattleContext.tsx         # Screen-local context: phase, units, timeline, dice/turn display, sequential AI timing, no-team guard
 │       │   ├── TurnDisplayPanel.module.css
 │       │   ├── DiceResultOverlay.module.css
-│       │   ├── BattleResultScreen.tsx
-│       │   ├── RosterScreen.tsx
-│       │   └── SettingsScreen.tsx
+│       │   ├── BattleResultScreen.tsx    # Victory/defeat banner, rewards, unit results, battle stats
+│       │   ├── RosterScreen.tsx          # Character grid with class + rarity + name filters
+│       │   └── SettingsScreen.tsx        # Audio / display / notification / account settings
 │       ├── components/           # Reusable React widgets
+│       │   ├── PrimaryButton.tsx         # Variants: primary / secondary / danger / ghost
+│       │   ├── ResourceBar.tsx           # Animated HP / AP / XP bar (400ms tween)
+│       │   └── UnitPortrait.tsx          # Portrait circle: rarity-coloured border, 4 sizes, greyscale option
 │       ├── styles/
-│       │   └── tokens.css        # CSS custom properties (design system)
-│       ├── App.tsx               # React Router root + ScreenProvider
-│       └── main.tsx              # Vite entry point
+│       │   └── tokens.css        # Full design-token set (colours, typography, spacing, radius, motion, safe-area)
+│       ├── App.tsx               # HashRouter + ScreenProvider + 7-route declaration
+│       └── main.tsx              # Vite entry: registerBuiltins() → React root
 ```
 
-> **Note:** `scenes/` is a reserved directory — the architecture depends on it
-> but it has not yet been created. `services/` exists and contains `DataService`.
-> `DisplayService` and all Phaser scenes are still planned. Any code requiring
-> a new service or Phaser scene must add the directory and module rather than
-> bypassing the layer. The legacy Python/Kivy prototype has been removed from
-> this repository.
+> **Planned / not yet created:** `scenes/` (Phaser 3 battle canvas), `services/DisplayService.ts`
+> (StatusBar / fullscreen). Any code requiring these must add the directory and module — do not bypass the layer.
 
 ---
 
@@ -215,10 +222,12 @@ Each layer may only import from layers to its left.
 
 ## Input Handling
 
-- **Menus / screens**: standard React `onClick` / `onPointerDown` handlers
-- **Battle canvas**: Phaser input system (`this.input.on('pointerdown', ...)`)
-- **Android back button**: handled by `ScreenProvider` via Capacitor — one listener, never re-registered
-- All timing thresholds (long-press, double-tap, swipe) are constants in `src/core/constants.ts`
+- **Menus / screens**: standard React `onPointerDown` handlers (via `useScrollAwarePointer`)
+- **Battle canvas**: Phaser input system (`this.input.on('pointerdown', ...)`) — planned; not yet wired
+- **Back button — native (Android/iOS)**: Capacitor `App.addListener('backButton', …)` in `ScreenProvider`, dispatches to `backButtonRegistry`. One listener, never re-registered.
+- **Back button — web browser**: `popstate` capture-phase listener in `ScreenProvider` intercepts browser back before React Router. `useBackButton` pushes a URL-stable sentinel (`window.history.pushState(null, '')` at the current hash) so no `hashchange` fires; only `popstate` fires and is intercepted cleanly.
+- **Back button in battle**: `useBackButton` registers a bounded pause loop — back → pause, back → resume. Guards: skip during load, 300 ms debounce, functional `setPaused(prev => !prev)` to avoid stale closure.
+- All timing thresholds (long-press, double-tap, swipe, debounce) are constants in `src/core/constants.ts`
 
 ### **CRITICAL: Scroll-Aware Pointer Detection (Session Rule)**
 
@@ -375,12 +384,36 @@ Each file includes a `type` field identifying its schema.
 
 ### Design tokens (defined in `tokens.css`)
 ```css
---bg-deep, --bg-panel, --bg-card, --bg-elevated
---accent-genesis, --accent-gold, --accent-danger, --accent-heal
---text-primary, --text-secondary, --text-muted
---rarity-1 … --rarity-5
+/* Backgrounds */
+--bg-deep, --bg-panel, --bg-card, --bg-elevated, --bg-overlay
+
+/* Accents */
+--accent-genesis   /* primary purple — selection, focus, Roll button */
+--accent-gold      /* Boosted outcome, legendary rarity */
+--accent-info      /* AP bars, ally highlights */
+--accent-heal      /* Success outcome, heal effects */
+--accent-warn      /* Tumbling / GuardUp outcome */
+--accent-danger    /* HP bars, damage, defeat */
+--accent-evasion   /* Evasion outcome */
+
+/* Text */
+--text-primary, --text-secondary, --text-muted, --text-on-accent
+
+/* Rarity */
+--rarity-1 … --rarity-6  /* rarity-7 is a gradient, applied inline */
+
+/* Safe-area insets */
 --safe-top, --safe-bottom, --safe-left, --safe-right
---touch-min
+
+/* Touch */
+--touch-min   /* 3rem (48 dp) — minimum tap target */
+
+/* Motion */
+--motion-screen    /* 300ms ease-out — screen push/pop */
+--motion-modal     /* 250ms ease-out — modal slide-up */
+--motion-bar       /* 400ms ease-out — HP/AP bar tween */
+--motion-button    /* 80ms ease-in  — button press */
+--motion-timeline  /* 200ms ease-in-out — timeline marker */
 ```
 
 ---
