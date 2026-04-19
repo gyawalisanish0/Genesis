@@ -152,7 +152,7 @@ Genesis/
 │       │   ├── PreBattleStepTeam.tsx     # Step 1 — character roster pick (1–2 units)
 │       │   ├── PreBattleStepItems.tsx    # Step 2 — equipment slots (stub)
 │       │   ├── BattleScreen.tsx          # Battle layout: timeline strip, portrait col, action grid, overlays
-│       │   ├── BattleContext.tsx         # Screen-local context: phase, units, timeline, dice/turn display, sequential AI timing, no-team guard
+│       │   ├── BattleContext.tsx         # Screen-local context: phase, units, timeline, DiceResult+message, 6-outcome dice, sequential AI timing
 │       │   ├── TurnDisplayPanel.module.css
 │       │   ├── DiceResultOverlay.module.css
 │       │   ├── BattleResultScreen.tsx    # Victory/defeat banner, rewards, unit results, battle stats
@@ -226,7 +226,7 @@ Each layer may only import from layers to its left.
 - **Battle canvas**: Phaser input system (`this.input.on('pointerdown', ...)`) — planned; not yet wired
 - **Back button — native (Android/iOS)**: Capacitor `App.addListener('backButton', …)` in `ScreenProvider`, dispatches to `backButtonRegistry`. One listener, never re-registered.
 - **Back button — web browser**: `popstate` capture-phase listener in `ScreenProvider` intercepts browser back before React Router. `useBackButton` pushes a URL-stable sentinel (`window.history.pushState(null, '')` at the current hash) so no `hashchange` fires; only `popstate` fires and is intercepted cleanly.
-- **Back button in battle**: `useBackButton` registers a bounded pause loop — back → pause, back → resume. Guards: skip during load, 300 ms debounce, functional `setPaused(prev => !prev)` to avoid stale closure.
+- **Back button in battle**: `useBackButton` registers a strict bounded pause loop — back → pause, back → resume. No navigation escape via back; only the LEAVE BATTLE button in the pause menu exits. Guards: skip during load, 300 ms debounce, functional `setPaused(prev => !prev)` to avoid stale closure.
 - All timing thresholds (long-press, double-tap, swipe, debounce) are constants in `src/core/constants.ts`
 
 ### **CRITICAL: Scroll-Aware Pointer Detection (Session Rule)**
