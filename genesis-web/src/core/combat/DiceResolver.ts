@@ -13,7 +13,7 @@ import {
 } from '../constants'
 import type { DiceProbabilities } from './HitChanceEvaluator'
 
-export type DiceOutcome = 'Boosted' | 'Success' | 'Tumbling' | 'GuardUp' | 'Evasion'
+export type DiceOutcome = 'Boosted' | 'Success' | 'Tumbling' | 'GuardUp' | 'Evasion' | 'Fail'
 
 export interface OutcomeResult {
   output:          number   // final damage or healing value
@@ -60,6 +60,8 @@ export function applyOutcome(outcome: DiceOutcome, rawOutput: number): OutcomeRe
       }
     case 'Evasion':
       return { output: 0, tumbleDelay: 0, guardMitigation: 0, evaded: true }
+    case 'Fail':
+      return { output: 0, tumbleDelay: 0, guardMitigation: 0, evaded: false }
     default: // 'Success'
       return { output: rawOutput, tumbleDelay: 0, guardMitigation: 0, evaded: false }
   }

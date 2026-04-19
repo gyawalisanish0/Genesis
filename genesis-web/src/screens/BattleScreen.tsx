@@ -10,7 +10,6 @@ import { SCREEN_REGISTRY, SCREEN_IDS } from '../navigation/screenRegistry'
 import { useBackButton } from '../input/useBackButton'
 import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import { BattleProvider, useBattleScreen } from './BattleContext'
-import { useGameStore } from '../core/GameContext'
 import type { DiceOutcome } from '../core/combat/DiceResolver'
 import { ResourceBar } from '../components/ResourceBar'
 import {
@@ -29,6 +28,7 @@ const OUTCOME_COLORS: Record<DiceOutcome, string> = {
   Tumbling: 'var(--accent-danger)',
   GuardUp:  'var(--accent-info)',
   Evasion:  'var(--accent-evasion)',
+  Fail:     'var(--text-muted)',
 }
 
 // ── Timeline helpers ─────────────────────────────────────────────────────────
@@ -431,7 +431,7 @@ function RollButton() {
       executeSkill(selectedSkill)
       selectSkill(null)
       setIsRolling(false)
-    }, 500)
+    }, 250)
   }
 
   return (
@@ -477,28 +477,9 @@ function DiceResultOverlay() {
           {diceResult.outcome.toUpperCase()}
         </span>
         <div className={diceStyles.accentLine} />
-      </div>
-    </div>
-  )
-}
-
-// ── No-team warning ─────────────────────────────────────────────────────────
-function NoTeamWarning() {
-  const navigate = useNavigate()
-  const createHandler = useScrollAwarePointer()
-  return (
-    <div className={styles.noTeamOverlay}>
-      <div className={styles.noTeamCard}>
-        <span className={styles.noTeamTitle}>NO TEAM SELECTED</span>
-        <p className={styles.noTeamMsg}>
-          You haven't selected any characters. Go back and build your team before starting.
-        </p>
-        <button
-          className={styles.noTeamBtn}
-          onPointerDown={createHandler({ onTap: () => navigate(SCREEN_REGISTRY[SCREEN_IDS.PRE_BATTLE].path) })}
-        >
-          SELECT TEAM
-        </button>
+        {diceResult.message && (
+          <span className={diceStyles.outcomeMsg}>{diceResult.message}</span>
+        )}
       </div>
     </div>
   )
@@ -506,10 +487,17 @@ function NoTeamWarning() {
 
 // ── Battle layout ───────────────────────────────────────────────────────────
 function BattleLayout() {
-  const { isPaused, setPaused, isLoading, turnDisplay, diceResult } = useBattleScreen()
-  const selectedTeamIds = useGameStore((s) => s.selectedTeamIds)
+  const { isPaused, setPaused, isLoading, playerUnit, turnDisplay, diceResult } = useBattleScreen()
+  const navigate = useNavigate()
   const lastBackRef = useRef(0)
   useScreen()
+
+  // Redirect silently to pre-battle if no team was confirmed (direct URL access, etc.).
+  useEffect(() => {
+    if (!isLoading && !playerUnit) {
+      navigate(SCREEN_REGISTRY[SCREEN_IDS.PRE_BATTLE].path, { replace: true })
+    }
+  }, [isLoading, playerUnit, navigate])
   // Bounded pause loop: back → pause, back → resume. Never navigates away.
   // Guards: (1) no-op during load, (2) 300ms debounce, (3) functional update avoids stale closure.
   useBackButton(() => {
@@ -526,14 +514,6 @@ function BattleLayout() {
         <span style={{ color: 'var(--text-secondary)', fontSize: 'var(--t-label-size)' }}>
           Loading battle…
         </span>
-      </div>
-    )
-  }
-
-  if (!selectedTeamIds.length) {
-    return (
-      <div className={styles.root}>
-        <NoTeamWarning />
       </div>
     )
   }
