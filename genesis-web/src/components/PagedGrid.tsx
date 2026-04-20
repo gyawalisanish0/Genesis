@@ -43,12 +43,12 @@ export function PagedGrid<T>({ items, cols, rows, renderItem, emptyText = 'No it
     <div className={`${styles.root} ${className ?? ''}`}>
       <div
         className={styles.grid}
-        style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
+        style={{ '--pagedgrid-cols': String(cols) } as React.CSSProperties}
         onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}
       >
         {items.length === 0
-          ? <p className={styles.empty} style={{ gridColumn: `1 / ${cols + 1}` }}>{emptyText}</p>
+          ? <p className={styles.empty}>{emptyText}</p>
           : pageItems.map((item, i) => renderItem(item, pageOffset + i))
         }
       </div>
