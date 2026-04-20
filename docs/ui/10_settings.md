@@ -36,30 +36,30 @@ Side pad   : 16 dp
 │                                          │
 │  AUDIO                                   │  24dp   section header
 │  ┌────────────────────────────────────┐  │
-│  │ Music Volume      [════════░░]  80 │  │  48dp   slider row
-│  │ SFX Volume        [═══════░░░]  70 │  │  48dp
-│  │ Mute All                    [ ●  ]│  │  48dp   toggle
+│  │ Music Volume      [════════░░]  80 │  │  40dp   slider row
+│  │ SFX Volume        [═══════░░░]  70 │  │  40dp
+│  │ Mute All                    [ ●  ]│  │  40dp   toggle
 │  └────────────────────────────────────┘  │
 │                                          │
 │  DISPLAY                                 │  24dp   section header
 │  ┌────────────────────────────────────┐  │
-│  │ Reduce Animations           [ ○  ]│  │  48dp   toggle
-│  │ Show Damage Numbers         [ ●  ]│  │  48dp
-│  │ Timeline Zoom     [═══░░░░░░]  30 │  │  48dp   slider
+│  │ Reduce Animations           [ ○  ]│  │  40dp   toggle
+│  │ Show Damage Numbers         [ ●  ]│  │  40dp
+│  │ Timeline Zoom     [═══░░░░░░]  30 │  │  40dp   slider
 │  └────────────────────────────────────┘  │
 │                                          │
 │  NOTIFICATIONS                           │  24dp   section header
 │  ┌────────────────────────────────────┐  │
-│  │ Battle Reminders            [ ●  ]│  │  48dp
-│  │ New Content Alerts          [ ○  ]│  │  48dp
+│  │ Battle Reminders            [ ●  ]│  │  40dp
+│  │ New Content Alerts          [ ○  ]│  │  40dp
 │  └────────────────────────────────────┘  │
 │                                          │
 │  ACCOUNT                                 │  24dp   section header
 │  ┌────────────────────────────────────┐  │
-│  │ Sync / Cloud Save                 →│  │  48dp   nav row
-│  │ Restore Purchases                 →│  │  48dp
-│  │ Privacy Policy                    →│  │  48dp
-│  │ Terms of Service                  →│  │  48dp
+│  │ Sync / Cloud Save                 →│  │  40dp   nav row
+│  │ Restore Purchases                 →│  │  40dp
+│  │ Privacy Policy                    →│  │  40dp
+│  │ Terms of Service                  →│  │  40dp
 │  └────────────────────────────────────┘  │
 │                                          │
 │  Genesis  v0.1.0  ·  Build 001           │  32dp   version footer
@@ -75,11 +75,11 @@ All content is a **single scrollable column** below the sticky header.
 | Zone | Y | Height | Content |
 |---|---|---|---|
 | Header | 0 | 56 | Back button + "SETTINGS" title |
-| Audio section | 56 | 168 | Music · SFX sliders + Mute toggle |
-| Display section | 224 | 168 | Animations · Damage numbers toggles + Timeline zoom |
-| Notifications | 392 | 120 | Two notification toggles |
-| Account | 512 | 200 | Four nav rows |
-| Version footer | 712+ | 32 | App version + build (scrollable) |
+| Audio section | 56 | 144 | Music · SFX sliders + Mute toggle (3 × 40dp rows + section header) |
+| Display section | 200 | 144 | Animations · Damage numbers toggles + Timeline zoom |
+| Notifications | 344 | 104 | Two notification toggles |
+| Account | 448 | 176 | Four nav rows |
+| Version footer | 624+ | 32 | App version + build |
 
 ---
 
@@ -108,8 +108,8 @@ All content is a **single scrollable column** below the sticky header.
 
 | Component | Size (dp) | Position | Properties |
 |---|---|---|---|
-| Row bg | 328 × 48 | 16, y | `$bg-card` `$r-md`; 16dp horizontal padding |
-| Label | 140 × 16 | 16, y+16 | `$t-body` `$text-primary` |
+| Row bg | 328 × 40 | 16, y | `$bg-card` `$r-md`; 16dp horizontal padding |
+| Label | 140 × 16 | 16, y+12 | `$t-body` `$text-primary` |
 | Slider track | 120 × 4 | 164, y+22 | `$bg-elevated` `$r-pill` |
 | Slider fill | dynamic × 4 | 164, y+22 | `$accent-genesis` |
 | Thumb | 24 × 24 | track-fill-end − 12, y+10 | `$accent-genesis` circle; touch target padded to 48×48 |
@@ -124,10 +124,10 @@ All content is a **single scrollable column** below the sticky header.
 
 | Component | Size (dp) | Position | Properties |
 |---|---|---|---|
-| Row bg | 328 × 48 | 16, y | `$bg-card` `$r-md` |
-| Label | 240 × 16 | 32, y+16 | `$t-body` `$text-primary` |
-| Toggle track | 44 × 24 | 268, y+12 | `$r-pill`; on: `$accent-genesis`; off: `$bg-elevated` |
-| Toggle thumb | 20 × 20 | track-x+2 (off) or track-x+22 (on), y+14 | White circle; animates 150ms ease |
+| Row bg | 328 × 40 | 16, y | `$bg-card` `$r-md` |
+| Label | 240 × 16 | 32, y+12 | `$t-body` `$text-primary` |
+| Toggle track | 44 × 24 | 268, y+8 | `$r-pill`; on: `$accent-genesis`; off: `$bg-elevated` |
+| Toggle thumb | 20 × 20 | track-x+2 (off) or track-x+22 (on), y+10 | White circle; animates 150ms ease |
 
 Touch target for toggle: 48 × 48 dp (extends beyond visible track).
 
@@ -140,7 +140,7 @@ Touch target for toggle: 48 × 48 dp (extends beyond visible track).
 
 | Component | Size (dp) | Properties |
 |---|---|---|
-| Row bg | 328 × 48 | `$bg-card` `$r-md`; `$bg-elevated` on press |
+| Row bg | 328 × 40 | `$bg-card` `$r-md`; `$bg-elevated` on press |
 | Label | 280 × 16 | `$t-body` `$text-primary` |
 | Chevron | 16 × 16 | `→` or `›`; `$text-muted`; right edge 12dp |
 

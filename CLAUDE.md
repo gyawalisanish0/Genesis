@@ -143,8 +143,10 @@ Genesis/
 │       │   └── __tests__/
 │       ├── utils/
 │       │   └── useScrollAwarePointer.ts  # Tap / hold / scroll gesture discriminator (pointer-delta based)
+│       ├── hooks/                # Shared React hooks (data fetching, UI state)
+│       │   └── useRosterData.ts          # Loads character index + all CharacterDef via DataService (cached)
 │       ├── screens/              # React screen components (one .tsx + one .module.css each)
-│       │   ├── SplashScreen.tsx          # Simulated load progress → auto-navigate to main menu
+│       │   ├── SplashScreen.tsx          # Real DataService preload (characters + modes) → auto-navigate to main menu
 │       │   ├── MainMenuScreen.tsx        # PLAY / ROSTER / SETTINGS nav; quit confirm on back
 │       │   ├── PreBattleScreen.tsx       # 3-step wizard shell + back button
 │       │   ├── PreBattleContext.tsx      # Wizard state: step, selectedModeId, selectedTeam, canContinue
@@ -161,10 +163,12 @@ Genesis/
 │       ├── components/           # Reusable React widgets
 │       │   ├── PrimaryButton.tsx         # Variants: primary / secondary / danger / ghost
 │       │   ├── ResourceBar.tsx           # Animated HP / AP / XP bar (400ms tween)
-│       │   └── UnitPortrait.tsx          # Portrait circle: rarity-coloured border, 4 sizes, greyscale option
+│       │   ├── UnitPortrait.tsx          # Portrait circle: rarity-coloured border, 4 sizes, greyscale option
+│       │   └── PagedGrid.tsx             # Generic paged grid: cols×rows, pointer swipe, arrows, dots, page counter
 │       ├── styles/
 │       │   └── tokens.css        # Full design-token set (colours, typography, spacing, radius, motion, safe-area)
-│       ├── App.tsx               # HashRouter + ScreenProvider + 7-route declaration
+│       ├── App.tsx               # 9:16 viewport wrapper + HashRouter + ScreenProvider + 7-route declaration
+│       ├── App.module.css        # CSS clamp: 9:16 portrait lock with black letterbox on desktop
 │       └── main.tsx              # Vite entry: registerBuiltins() → React root
 ```
 
@@ -378,7 +382,8 @@ Each file includes a `type` field identifying its schema.
 - **Minimum touch target**: 48px × 48px (`var(--touch-min)`)
 - **Safe-area insets via CSS env()**: `env(safe-area-inset-top)` or `var(--safe-top)`
   — never hardcode inset values
-- **Portrait-only** — no landscape media queries; layout targets 360 × 640 px viewport
+- **Portrait-only** — no landscape media queries; physical target 1080 × 1920 px (Full HD portrait, xxhdpi); CSS viewport 360 × 640 dp at 3× DPR
+- **9:16 aspect ratio lock** — `App.module.css` clamps the inner viewport to `min(100vw, calc(100vh*9/16))` × `min(100vh, calc(100vw*16/9))`; black letterbox on desktop; full-bleed on mobile
 - **Layout in CSS modules** — do not set layout properties via React `style` prop
   unless the value is dynamic (e.g. calculated from game state)
 
@@ -425,7 +430,7 @@ Genesis runs edge-to-edge on mobile — system bars are hidden during gameplay.
 - **Capacitor StatusBar plugin** hides the status bar on app launch
 - **`DisplayService`** is the only module that calls Capacitor display APIs
 - **`env(safe-area-inset-*)` CSS variables** provide notch / gesture bar offsets
-- **Desktop** runs in a 360 × 640 browser window; `env()` returns zero, layout works identically
+- **Desktop** runs with a 9:16 CSS clamp (App.module.css); black letterbox bars fill the sides; `env()` safe-area insets return zero, layout works identically
 
 ---
 
@@ -479,6 +484,31 @@ PreBattleScreen.tsx  →  PreBattleScreen.tsx  +  PreBattleStepMode.tsx
 **Commit messages**: imperative mood, present tense.
 - Good: `Add TickCalculator port`
 - Bad: `added tick stuff`
+
+---
+
+## Session Protocol
+
+**Before implementing any task, Claude must ask follow-up questions when requirements are not fully specified.**
+
+This applies to all changes regardless of size — new features, bug fixes, refactors, and doc updates.
+
+### When to ask
+
+- Any UX/UI change where visual outcome, interaction, or layout is not fully described
+- Any data or logic change where the expected behaviour has more than one valid interpretation
+- Any task involving new files, new components, or new screens
+- Any task that touches more than one file and the scope is not fully clear
+
+### What to ask
+
+Use the `AskUserQuestion` tool with targeted multiple-choice options. Good questions surface the key tradeoff or ambiguity — they don't ask "what do you want?" but rather "here are the two valid approaches, which one?".
+
+### What not to ask
+
+- Don't ask about things that are already specified in this file, the README, or the task description
+- Don't ask for approval of the implementation plan — propose it, then ask only where there is genuine ambiguity
+- Don't ask more than 4 questions per task
 
 ---
 

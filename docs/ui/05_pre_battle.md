@@ -96,22 +96,27 @@ Side pad   : 16 dp
 
 ```
 ├──────────────────────────────────────────┤  y=56
-│  SELECT YOUR TEAM   (mode max: 3 units)  │  32dp
-├──────────────────────────────────────────┤  y=88
-│ ┌────────┐  ┌────────┐  ┌────────┐       │
-│ │[slot 1]│  │[slot 2]│  │[slot 3]│       │  96dp  selected team row
-│ │  name  │  │  name  │  │  + add │       │
-│ └────────┘  └────────┘  └────────┘       │
-├──────────────────────────────────────────┤  y=184
-│ [All][Hunter][Ranger]…  filter tabs      │  40dp
-├──────────────────────────────────────────┤  y=224
-│  ┌──────────────┐  ┌──────────────┐      │
-│  │  [portrait]  │  │  [portrait]  │      │  128dp  card row 1
-│  │  Iron Warden │  │  Swift Veil  │      │
-│  │  ★★★         │  │  ★★          │      │
-│  └──────────────┘  └──────────────┘      │
-│  ┌──────────────┐  ┌──────────────┐      │  128dp  card row 2
-│         (scrollable grid)                │
+│  SELECT YOUR TEAM   (2 max)              │  24dp  section title
+├──────────────────────────────────────────┤  y=80
+│ ┌─────────────────┐  ┌─────────────────┐ │
+│ │[slot 1: md port]│  │[slot 2: + add]  │ │  80dp  team slots
+│ │  Iron Warden  ✕ │  │       +         │ │
+│ └─────────────────┘  └─────────────────┘ │
+├──────────────────────────────────────────┤  y=168 (approx)
+│ ┌──┐┌──┐┌──┐┌──┐┌──┐                    │
+│ │  ││  ││  ││  ││  │   row 1             │  5-column paged grid
+│ └──┘└──┘└──┘└──┘└──┘                    │  (~4 rows per page)
+│ ┌──┐┌──┐┌──┐┌──┐┌──┐                    │
+│ │  ││  ││  ││  ││  │   row 2             │
+│ └──┘└──┘└──┘└──┘└──┘                    │
+│ ┌──┐┌──┐┌──┐┌──┐┌──┐                    │
+│ │  ││  ││  ││  ││  │   row 3             │
+│ └──┘└──┘└──┘└──┘└──┘                    │
+│ ┌──┐┌──┐┌──┐┌──┐┌──┐                    │
+│ │  ││  ││  ││  ││  │   row 4             │
+│ └──┘└──┘└──┘└──┘└──┘                    │
+├──────────────────────────────────────────┤
+│    ‹     ● ○     1/2     ›               │  48dp  pagination
 └──────────────────────────────────────────┘
 ```
 
@@ -119,17 +124,30 @@ Side pad   : 16 dp
 
 | Component | Size (dp) | Properties |
 |---|---|---|
-| Slot bg | 96 × 88 | `$bg-card` `$r-md`; empty: dashed `$bg-elevated` border |
-| Portrait | 64 × 64 | `UnitPortrait md`; centered; tap to remove unit |
-| Name | 88 × 14 | `$t-micro` `$text-secondary`; centered; truncate |
+| Slot bg | flex × 80 | `$bg-card` `$r-md`; empty: dashed `$bg-elevated` border |
+| Portrait | 64 × 64 | `UnitPortrait md`; centered |
+| Name | 100% × 14 | `$t-micro` `$text-secondary`; centered; truncate |
 | Remove badge | 20 × 20 | `×` icon `$r-pill` `$accent-danger`; top-right corner |
-| Empty state | — | `+` icon 32dp `$text-muted`; "Add Unit" `$t-micro` |
+| Empty state | — | `+` icon 32dp `$text-muted` |
 
-### Roster Cards in Step 2
+### Roster Cards in Step 2 (compact 5×4)
 
-Same as `03_roster.md` card but:
-- Already-selected cards show a checkmark overlay `$accent-genesis`
-- Full-team state: unselected cards dim 50%
+```
+┌──────┐  ~60 × 78 dp (aspect 1:1.3)
+│[port]│  40×40dp portrait (UnitPortrait sm)
+│ Name │  0.5rem  $text-primary (truncated)
+│  ✓   │  $accent-genesis badge (selected only)
+└──────┘
+```
+
+| Component | Size (dp) | Properties |
+|---|---|---|
+| Card bg | ~60 × 78 (1:1.3 aspect) | `$bg-card` `$r-sm`; selected: `$accent-genesis` border 2dp; dimmed 35% when team full |
+| Portrait | 40 × 40 | `UnitPortrait sm`; centered |
+| Name | full-width | 0.5rem, `$text-primary`; truncate |
+| Checkmark | 14 × 14 | `$r-pill` `$accent-genesis` bg; top-right; visible only when selected |
+
+Characters loaded from `DataService` via `useRosterData` hook; no mock data.
 
 ---
 
