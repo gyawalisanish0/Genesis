@@ -9,7 +9,7 @@ import {
 import type { Unit, StatusEffect } from '../core/types'
 import type { SkillInstance, BattleState as EngineBattleState, EffectContext } from '../core/effects/types'
 import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, ENEMY_AI_DELAY_MS } from '../core/constants'
-import { createUnit, isAlive, setTickPosition } from '../core/unit'
+import { createUnit, isAlive, setTickPosition, incrementActionCount } from '../core/unit'
 import { calculateStartingTick, advanceTick, calculateApGained } from '../core/combat/TickCalculator'
 import { calculateFinalChance, shiftProbabilities } from '../core/combat/HitChanceEvaluator'
 import { roll, calculateTumblingDelay, type DiceOutcome } from '../core/combat/DiceResolver'
@@ -61,7 +61,7 @@ export interface LogEntry {
 interface BattleContextValue {
   // State
   phase:           TurnPhase
-  turnNumber:      number
+  turnNumber:      number   // derived: playerUnit.actionCount + 1
   tickValue:       number
   activeUnitIds:   Set<string>
   playerUnit:      Unit | null
@@ -83,6 +83,7 @@ interface BattleContextValue {
   getUnitSkills:   (unitId: string) => SkillInstance[]
   // Actions
   executeSkill:    (skill: SkillInstance) => void
+  skipTurn:        () => void
   registerTick:    (id: string, tick: number) => void
   unregisterTick:  (id: string) => void
   pushHistory:     (entry: HistoryEntry) => void
@@ -177,14 +178,14 @@ export function BattleProvider({ children }: Props) {
   // Dice result overlay — shown simultaneously with action resolution
   const [diceResult, setDiceResult]     = useState<DiceResult | null>(null)
   const diceTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const diceKeyRef      = useRef(0)
-  const diceResultRef   = useRef<DiceResult | null>(null)   // ref copy — keeps enemy AI current without adding diceResult to its deps
-  const diceShowTimeRef = useRef<number>(0)                 // Date.now() when the last dice animation started
-  const applyTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null) // deferred state-apply timer
+  const diceKeyRef         = useRef(0)
+  const diceResultRef      = useRef<DiceResult | null>(null)   // ref copy — keeps enemy AI current without adding diceResult to its deps
+  const diceShowTimeRef    = useRef<number>(0)                 // Date.now() when the last dice animation started
+  const applyTimerRef      = useRef<ReturnType<typeof setTimeout> | null>(null) // enemy deferred state-apply timer
+  const playerApplyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null) // player deferred state-apply timer
 
   // ── Other battle state ─────────────────────────────────────────────────────
   const [phase, setPhase]             = useState<TurnPhase>('resolving')
-  const [turnNumber]                  = useState(1)
   const [log, setLog]                 = useState<LogEntry[]>([
     { id: '0', text: 'Loading battle…', colour: 'var(--text-muted)' },
   ])
@@ -303,9 +304,10 @@ export function BattleProvider({ children }: Props) {
     if (diceTimerRef.current) clearTimeout(diceTimerRef.current)
   }, [])
 
-  // Cleanup deferred state-apply timer on unmount.
+  // Cleanup deferred state-apply timers on unmount.
   useEffect(() => () => {
     if (applyTimerRef.current) clearTimeout(applyTimerRef.current)
+    if (playerApplyTimerRef.current) clearTimeout(playerApplyTimerRef.current)
   }, [])
 
   // ── Timeline mechanics ─────────────────────────────────────────────────────
@@ -428,7 +430,7 @@ export function BattleProvider({ children }: Props) {
     return { tumbleDelay }
   }, [tickValue, appendLog, showDiceResult])
 
-  /** Player presses a skill button. */
+  /** Player presses ROLL with a skill selected. */
   const executeSkill = useCallback((skillInst: SkillInstance) => {
     if (!playerUnit || phase !== 'player') return
     const target = enemies.find(isAlive)
@@ -437,20 +439,17 @@ export function BattleProvider({ children }: Props) {
     const snap = makeSnapshot(playerUnit, enemies)
     const { tumbleDelay } = runAttack(playerUnit, target, skillInst, snap)
 
-    // Sync engine state back to React.
-    setPlayerUnit(snap.get(playerUnit.id) ?? playerUnit)
-    setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
-
     const skill    = getCachedSkill(skillInst)
     const fromTick = playerUnit.tickPosition
-    pushHistory(makeHistoryEntry(playerUnit.id, playerUnit.name, fromTick, playerUnit.isAlly))
-    registerTick(playerUnit.id, advanceTick(fromTick, skill.tuCost + tumbleDelay))
+    const nextTick = advanceTick(fromTick, skill.tuCost + tumbleDelay)
 
-    // Confirmation display — shown after resolution so player sees what was cast.
-    // Use post-attack target state from the snap so HP reflects the hit.
+    // Ghost marker appears immediately at the old position.
+    pushHistory(makeHistoryEntry(playerUnit.id, playerUnit.name, fromTick, playerUnit.isAlly))
+
+    // Confirmation panel shows immediately using snap values (HP reflects hit).
     const postTarget = snap.get(target.id) ?? target
     showTurnDisplay({
-      actor:      null,          // player-controlled; actor row omitted
+      actor:      null,
       skillName:  skill.name,
       tuCost:     skill.tuCost,
       apCost:     skill.apCost,
@@ -468,9 +467,18 @@ export function BattleProvider({ children }: Props) {
       isAlly: true,
     })
 
-    // Victory check — read updated enemies from snap.
-    const allDead = enemies.every((e) => !isAlive(snap.get(e.id) ?? e))
-    if (allDead) appendLog({ text: 'Victory! All enemies defeated.', colour: 'var(--accent-genesis)' })
+    // Defer HP bars + timeline marker jump until dice animation ends.
+    // This creates a clean "dice resolves → world updates" sequence.
+    if (playerApplyTimerRef.current) clearTimeout(playerApplyTimerRef.current)
+    playerApplyTimerRef.current = setTimeout(() => {
+      const updatedPlayer = incrementActionCount(snap.get(playerUnit.id) ?? playerUnit)
+      setPlayerUnit(updatedPlayer)
+      setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
+      registerTick(playerUnit.id, nextTick)
+
+      const allDead = enemies.every((e) => !isAlive(snap.get(e.id) ?? e))
+      if (allDead) appendLog({ text: 'Victory! All enemies defeated.', colour: 'var(--accent-genesis)' })
+    }, DICE_RESULT_DISMISS_MS)
   }, [playerUnit, enemies, phase, runAttack, pushHistory, registerTick, appendLog, showTurnDisplay])
 
   // ── Enemy AI ───────────────────────────────────────────────────────────────
@@ -588,6 +596,17 @@ export function BattleProvider({ children }: Props) {
 
   // ── Misc actions ───────────────────────────────────────────────────────────
 
+  /** Player skips their turn — no dice, immediate timeline update. */
+  const skipTurn = useCallback(() => {
+    if (!playerUnit || phase !== 'player') return
+    setSelectedSkill(null)
+    const fromTick = playerUnit.tickPosition
+    pushHistory(makeHistoryEntry(playerUnit.id, playerUnit.name, fromTick, playerUnit.isAlly))
+    setPlayerUnit(incrementActionCount(playerUnit))
+    registerTick(playerUnit.id, fromTick + 10)
+    appendLog({ text: 'You skipped your turn.' })
+  }, [playerUnit, phase, pushHistory, registerTick, appendLog])
+
   const selectSkill = useCallback((skill: SkillInstance | null) => setSelectedSkill(skill), [])
   const toggleGrid  = useCallback(() => setGridCollapsed((v) => !v), [])
 
@@ -599,12 +618,14 @@ export function BattleProvider({ children }: Props) {
 
   return (
     <BattleContext.Provider value={{
-      phase, turnNumber, tickValue, activeUnitIds,
+      phase,
+      turnNumber: (playerUnit?.actionCount ?? 0) + 1,
+      tickValue, activeUnitIds,
       playerUnit, enemies, log, historyEntries,
       selectedSkill, gridCollapsed, isPaused, isLoading,
       diceResult, turnDisplay,
       registeredTicks, scrollBounds,
-      getUnitSkills, executeSkill,
+      getUnitSkills, executeSkill, skipTurn,
       registerTick, unregisterTick, pushHistory,
       setPhase, appendLog, selectSkill, toggleGrid, setPaused,
     }}>
