@@ -121,17 +121,23 @@ Higher caster `precision` + skill `baseChance` shifts probability toward Boosted
 The outcome name and a short flavour message are displayed in the DiceResultOverlay burst (4 s animation).
 
 **Sequential AI timing**
-1. Player dice plays (4 s animation).
+1. Player dice plays (4 s animation); HP bars and timeline update only after it ends.
 2. Enemy telegraph appears (stays visible 6 s total).
 3. After 2 s, enemy fires → enemy dice plays (4 s).
 4. HP / tick state commits only after enemy dice ends.
 
 **Roll button UX**
-- Tap a skill to select it (genesis-accent highlight border).
-- Tap again to deselect.
+- Tap a skill to select it (genesis-accent highlight border). Tap again to deselect.
 - ROLL button appears above the player portrait while a skill is selected.
 - Tapping ROLL triggers a 250 ms "Rolling…" pulse, then fires the attack.
-- Selection auto-clears after rolling; End/Skip also clears selection.
+- HP bars, turn counter, and timeline marker update together after the 4 s dice animation ends.
+- End/Skip (`skipTurn`) updates everything immediately — no dice wait.
+- Selection auto-clears after rolling or skipping.
+
+**Turn counter**
+- Each unit has a runtime `actionCount` field (on `Unit`, future-scalable).
+- The HUD displays `playerUnit.actionCount + 1` as "Turn N".
+- Increments on Roll (deferred with state apply) and immediately on Skip.
 
 ### Effects Engine
 
@@ -173,7 +179,7 @@ Modes: `story` (narrative, no respawn), `ranked` (competitive).
 
 | Component | Description |
 |---|---|
-| `ResourceBar` | Animated HP / AP / XP bar with 400 ms tween; `hp` / `ap` / `xp` variants |
+| `ResourceBar` | Animated HP / AP / XP bar with 400 ms tween; `hp` / `ap` / `xp` variants; numeric "N/MAX" label shown in battle HUD |
 | `UnitPortrait` | Portrait circle with rarity-coloured border; 4 sizes; greyscale for defeated |
 | `PrimaryButton` | `primary` / `secondary` / `danger` / `ghost` variants |
 
