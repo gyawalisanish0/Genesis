@@ -201,6 +201,8 @@ A `when` clause is always an object keyed on `event`, with optional
 parameters specific to that event.
 
 ```ts
+type DiceOutcome = 'Boosted' | 'Success' | 'GuardUp' | 'Evasion' | 'Tumbling' | 'Fail'
+
 type WhenClause =
   | { event: "onCast" }
   | { event: "onDiceRoll"; outcome?: DiceOutcome }
@@ -525,11 +527,12 @@ contract version, update this document first, then update `core/` to match.
 
 ## Contract version
 
-**v0.2.0** — engine implementation live.
+**v0.3.0** — 6-outcome dice system live.
 
 `core/effects/` and `core/engines/skill/` are implemented. Six primitives are
 registered (`damage`, `heal`, `gainAp`, `spendAp`, `tickShove`, `modifyStat`).
 `DataService` loads and caches characters and skills. `BattleContext` wires the
-full execution pipeline (dice → `applyEffect` → state sync). Remaining
-primitives (`applyStatus`, `shiftProbability`, `rerollDice`, `forceOutcome`,
-`triggerSkill`) and the status / passive engines are still planned.
+full execution pipeline (dice → `applyEffect` → state sync). `DiceOutcome` now
+has 6 members: `Boosted`, `Success`, `GuardUp`, `Evasion`, `Tumbling`, `Fail`.
+Remaining primitives (`applyStatus`, `shiftProbability`, `rerollDice`,
+`forceOutcome`, `triggerSkill`) and the status / passive engines are still planned.

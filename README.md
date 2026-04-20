@@ -106,16 +106,19 @@ core → services → components → screens → App
 - `calculateStartingTick` uses class-specific ranges (Hunter 1–6 → Guardian 10–20) and a speed stat to set opening position.
 - `advanceTick(fromTick, tuCost)` queues the unit's next action after skill use.
 
-**Dice resolution — 5 outcomes**
-| Outcome | Effect |
-|---|---|
-| Boosted | Damage × 1.5 |
-| Success | Damage × 1.0 |
-| Tumbling | Damage × 0.5 + attacker delayed 1–5 ticks |
-| GuardUp | Full damage + 10% converted to mitigation |
-| Evasion | 0 damage; evasion counter chain (15% base, diminishing) |
+**Dice resolution — 6 outcomes**
+| Outcome | Base % | Effect |
+|---|---|---|
+| Boosted | 10% | `{actor} gets +50% skill value boost until next turn` |
+| Success | 40% | `{actor} successfully hits` |
+| GuardUp | 20% | `{actor} hits and gains 35% damage reduction for next attack` |
+| Evasion | 10% | `{target} evaded` (counter chain planned) |
+| Tumbling | 10% | `{actor} hits with half effectiveness, tumbled for N ticks` |
+| Fail | 10% | `{actor} misses` |
 
-Outcome probabilities shift based on caster `precision` and skill `baseChance`.
+Higher caster `precision` + skill `baseChance` shifts probability toward Boosted/Success; lower shifts toward Tumbling/GuardUp/Evasion/Fail. Table always sums to 1.0.
+
+The outcome name and a short flavour message are displayed in the DiceResultOverlay burst (4 s animation).
 
 **Sequential AI timing**
 1. Player dice plays (4 s animation).
@@ -127,7 +130,7 @@ Outcome probabilities shift based on caster `precision` and skill `baseChance`.
 - Tap a skill to select it (genesis-accent highlight border).
 - Tap again to deselect.
 - ROLL button appears above the player portrait while a skill is selected.
-- Tapping ROLL triggers a 500 ms "Rolling…" pulse, then fires the attack.
+- Tapping ROLL triggers a 250 ms "Rolling…" pulse, then fires the attack.
 - Selection auto-clears after rolling; End/Skip also clears selection.
 
 ### Effects Engine
@@ -151,11 +154,11 @@ Open hook system — skills drive behaviour, `core/` provides scaffolding.
 - `ScreenProvider` reads `env(safe-area-inset-*)` once after first paint.
 - **Native back (Android/iOS):** Capacitor listener → `backButtonRegistry` → screen handler.
 - **Web back (browser):** `popstate` capture-phase interceptor + URL-stable sentinel prevents React Router from seeing the event when a handler is registered.
-- **In-battle back:** bounded pause loop — back → pause overlay, back again → resume. 300 ms debounce guard.
+- **In-battle back:** strict bounded pause loop — back → pause overlay, back again → resume. No navigation escape via back; only the LEAVE BATTLE button in the pause menu exits. 300 ms debounce guard.
 
-### No-Team Guard
+### Battle Entry Guard
 
-If the player navigates directly to the battle URL without completing pre-battle team selection, `BattleContext` skips data loading and `BattleScreen` shows a "NO TEAM SELECTED" overlay with a "SELECT TEAM" button.
+The START BATTLE button at pre-battle step 2 is disabled until at least one character is selected (enforced in `PreBattleContext.canContinue`). Direct URL access to `/battle` with no team silently redirects to pre-battle.
 
 ### Game Content
 
