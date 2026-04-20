@@ -328,14 +328,26 @@ function StatusSlots() {
 // ── Player portrait panel ───────────────────────────────────────────────────
 function PortraitPanel() {
   const { turnNumber, tickValue, playerUnit } = useBattleScreen()
+  const hp    = playerUnit?.hp    ?? 0
+  const maxHp = playerUnit?.maxHp ?? 1
+  const ap    = playerUnit?.ap    ?? 0
+  const maxAp = playerUnit?.maxAp ?? 1
   return (
     <div className={styles.portrait}>
       <span className={styles.turnLabel}>Turn {turnNumber}</span>
       <span className={styles.tickLabel}>Tick: {tickValue}</span>
       <div className={styles.portraitCircle}>{playerUnit?.name.charAt(0) ?? 'P'}</div>
       <span className={styles.lvlBadge}>{playerUnit ? `${playerUnit.className} ★${playerUnit.rarity}` : 'LVL 1'}</span>
-      <div className={styles.barRow}><span className={styles.barLabel}>HP</span><ResourceBar variant="hp" value={playerUnit?.hp ?? 0}  max={playerUnit?.maxHp ?? 1} /></div>
-      <div className={styles.barRow}><span className={styles.barLabel}>AP</span><ResourceBar variant="ap" value={playerUnit?.ap ?? 0}  max={playerUnit?.maxAp ?? 1} /></div>
+      <div className={styles.barRow}>
+        <span className={styles.barLabel}>HP</span>
+        <ResourceBar variant="hp" value={hp} max={maxHp} />
+        <span className={styles.barValue}>{hp}/{maxHp}</span>
+      </div>
+      <div className={styles.barRow}>
+        <span className={styles.barLabel}>AP</span>
+        <ResourceBar variant="ap" value={ap} max={maxAp} />
+        <span className={styles.barValue}>{ap}/{maxAp}</span>
+      </div>
     </div>
   )
 }
@@ -343,23 +355,13 @@ function PortraitPanel() {
 // ── Action grid ─────────────────────────────────────────────────────────────
 function ActionGrid() {
   const {
-    phase, gridCollapsed, toggleGrid, appendLog,
-    playerUnit, pushHistory, registerTick,
-    getUnitSkills, selectedSkill, selectSkill,
+    phase, gridCollapsed, toggleGrid,
+    playerUnit, getUnitSkills, selectedSkill, selectSkill, skipTurn,
   } = useBattleScreen()
   const createHandler = useScrollAwarePointer()
   const disabled = phase !== 'player'
 
   const playerSkills = playerUnit ? getUnitSkills(playerUnit.id) : []
-
-  const handleEndTurn = () => {
-    if (disabled || !playerUnit) return
-    selectSkill(null)
-    const fromTick = playerUnit.tickPosition
-    pushHistory({ id: `${playerUnit.id}-${fromTick}-end`, unitId: playerUnit.id, name: playerUnit.name, tick: fromTick, isAlly: playerUnit.isAlly })
-    registerTick(playerUnit.id, fromTick + 10)
-    appendLog({ text: 'You skipped your turn.' })
-  }
 
   // Pad skill list to always show 4 slots.
   const slots = Array.from({ length: 4 }, (_, i) => playerSkills[i] ?? null)
@@ -369,7 +371,7 @@ function ActionGrid() {
       {!gridCollapsed && (
         <>
           <div className={styles.actionRow}>
-            <button className={`${styles.actionBtn} ${styles.actionBtnEnd}`} onPointerDown={createHandler({ onTap: handleEndTurn })} disabled={disabled}>
+            <button className={`${styles.actionBtn} ${styles.actionBtnEnd}`} onPointerDown={createHandler({ onTap: skipTurn })} disabled={disabled}>
               <span className={styles.actionBtnName}>End/Skip</span>
             </button>
           </div>

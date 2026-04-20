@@ -82,13 +82,16 @@
   transform: translateY(-50%);
 }
 
-/* Unit marker — positions the SVG portrait on its tick; SVG owns size/color. */
+/* Unit marker — positions the SVG portrait on its tick; SVG owns size/color.
+ * top transition: elastic spring fires when registerTick advances the marker
+ * after the dice animation ends, creating a satisfying world-update feel. */
 .marker {
   position: absolute;
   left: 50%;
   transform: translate(-50%, -50%);
   display: flex;
   border-radius: 50%;  /* needed for markerActive box-shadow pulse */
+  transition: top 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .markerActive {
@@ -131,6 +134,12 @@
   line-height: var(--t-micro-lh);
   padding: 0.125rem 0;
   margin: 0;
+  animation: logEntryIn 200ms ease-out both;
+}
+
+@keyframes logEntryIn {
+  from { opacity: 0; transform: translateX(-0.375rem); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 
 /* ── Status slots pill ──────────────────────────────────────────────── */
@@ -181,7 +190,10 @@
   transition: opacity var(--motion-button), transform var(--motion-button);
 }
 
-.rollBtn:active:not(:disabled) { transform: scale(0.97); }
+.rollBtn:active:not(:disabled) {
+  transform: scale(0.95);
+  transition: opacity var(--motion-button), transform 60ms ease-in;
+}
 
 .rollBtnRolling {
   cursor: not-allowed;
@@ -241,6 +253,15 @@
   flex-shrink: 0;
 }
 
+.barValue {
+  font-size: var(--t-micro-size);
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 2.5rem;
+  text-align: right;
+}
+
 /* ── Action grid ────────────────────────────────────────────────────── */
 .actionGrid {
   flex: 1;
@@ -267,10 +288,15 @@
   align-items: center;
   justify-content: center;
   font-family: var(--font-sans);
-  transition: transform var(--motion-button);
+  /* Spring release: overshoots slightly before settling at scale(1). */
+  transition: transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.actionBtn:active:not(:disabled) { transform: scale(0.95); }
+/* Fast press-in overrides the spring for the press direction only. */
+.actionBtn:active:not(:disabled) {
+  transform: scale(0.93);
+  transition: transform 60ms ease-in;
+}
 .actionBtn:disabled { opacity: 0.2; }
 
 .actionBtnBasic  { background: var(--bg-elevated); }
@@ -306,11 +332,14 @@
   gap: 0.125rem;
   font-family: var(--font-sans);
   min-height: 4.5rem;  /* 72 dp */
-  transition: border-color var(--motion-button), transform var(--motion-button);
+  transition: border-color var(--motion-button), transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
   align-content: space-between;
 }
 
-.skillBtn:active:not(:disabled) { transform: scale(0.95); }
+.skillBtn:active:not(:disabled) {
+  transform: scale(0.93);
+  transition: border-color var(--motion-button), transform 60ms ease-in;
+}
 
 .skillBtnDisabled { opacity: 0.2; cursor: default; }
 

@@ -90,6 +90,7 @@ export interface Unit {
   ap:           number
   apRegenRate:  number
   tickPosition: number
+  actionCount:  number   // runtime metric: how many actions this unit has taken
   skills:       SkillInstance[]
   statusSlots:  StatusEffect[]
   isAlly:       boolean

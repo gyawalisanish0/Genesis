@@ -17,10 +17,15 @@ export function createUnit(def: CharacterDef, isAlly: boolean): Unit {
     ap:           0,           // AP starts empty each battle
     apRegenRate:  def.apRegenRate,
     tickPosition: 0,
+    actionCount:  0,
     skills:       [],
     statusSlots:  [],
     isAlly,
   }
+}
+
+export function incrementActionCount(unit: Unit): Unit {
+  return { ...unit, actionCount: unit.actionCount + 1 }
 }
 
 export function takeDamage(unit: Unit, amount: number): Unit {
