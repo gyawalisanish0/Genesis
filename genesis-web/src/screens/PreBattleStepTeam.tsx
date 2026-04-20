@@ -3,24 +3,17 @@
 
 import { usePreBattleScreen } from './PreBattleContext'
 import { UnitPortrait } from '../components/UnitPortrait'
+import { PagedGrid } from '../components/PagedGrid'
 import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
+import { useRosterData } from '../hooks/useRosterData'
 import styles from './PreBattleStepTeam.module.css'
-
-// TODO: replace with DataService.getCharacters() when implemented.
-const ROSTER = [
-  { id: 'warrior_001', name: 'Iron Warden',   className: 'Warrior',   rarity: 3, maxHp: 1200, hp: 980 },
-  { id: 'hunter_001',  name: 'Swift Veil',    className: 'Hunter',    rarity: 2, maxHp: 800,  hp: 800 },
-  { id: 'caster_001',  name: 'Ember Sage',    className: 'Caster',    rarity: 4, maxHp: 600,  hp: 420 },
-  { id: 'ranger_001',  name: 'Dusk Arrow',    className: 'Ranger',    rarity: 2, maxHp: 900,  hp: 900 },
-  { id: 'guardian_001',name: 'Stone Bastion', className: 'Guardian',  rarity: 5, maxHp: 1600, hp: 1600 },
-  { id: 'enchanter_001',name:'Dream Weave',   className: 'Enchanter', rarity: 3, maxHp: 700,  hp: 550 },
-]
 
 const TEAM_MAX = 2
 
 export function PreBattleStepTeam() {
   const { selectedTeam, toggleTeamMember } = usePreBattleScreen()
   const createScrollAwareHandler = useScrollAwarePointer()
+  const { characters, isLoading, error } = useRosterData()
   const teamFull = selectedTeam.length >= TEAM_MAX
 
   return (
@@ -47,24 +40,40 @@ export function PreBattleStepTeam() {
         })}
       </div>
 
-      {/* Roster grid */}
-      <div className={styles.grid}>
-        {ROSTER.map((char) => {
-          const selected = selectedTeam.some((c) => c.id === char.id)
-          const dimmed   = teamFull && !selected
-          return (
-            <button
-              key={char.id}
-              className={`${styles.card} ${selected ? styles.cardSelected : ''} ${dimmed ? styles.cardDimmed : ''}`}
-              onPointerDown={createScrollAwareHandler({ onTap: () => toggleTeamMember(char) })}
-            >
-              <UnitPortrait name={char.name} rarity={char.rarity} size="lg" />
-              <span className={styles.cardName}>{char.name}</span>
-              <span className={styles.cardMeta}>{'★'.repeat(char.rarity)}</span>
-              {selected && <span className={styles.checkmark}>✓</span>}
-            </button>
-          )
-        })}
+      {/* Character grid — 5×4 paged */}
+      <div className={styles.gridWrapper}>
+        {isLoading && <p className={styles.statusMsg}>Loading…</p>}
+        {error     && <p className={styles.statusMsg}>{error}</p>}
+        {!isLoading && !error && (
+          <PagedGrid
+            items={characters}
+            cols={5}
+            rows={4}
+            emptyText="No characters available"
+            renderItem={(char) => {
+              const selected = selectedTeam.some((c) => c.id === char.id)
+              const dimmed   = teamFull && !selected
+              return (
+                <button
+                  key={char.id}
+                  className={`${styles.card} ${selected ? styles.cardSelected : ''} ${dimmed ? styles.cardDimmed : ''}`}
+                  onPointerDown={createScrollAwareHandler({ onTap: () => toggleTeamMember({
+                    id:        char.id,
+                    name:      char.name,
+                    className: char.className,
+                    rarity:    char.rarity,
+                    maxHp:     char.maxHp,
+                    hp:        char.maxHp,
+                  }) })}
+                >
+                  <UnitPortrait name={char.name} rarity={char.rarity} size="sm" />
+                  <span className={styles.cardName}>{char.name}</span>
+                  {selected && <span className={styles.checkmark}>✓</span>}
+                </button>
+              )
+            }}
+          />
+        )}
       </div>
     </div>
   )

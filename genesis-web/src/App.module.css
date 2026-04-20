@@ -1,0 +1,20 @@
+/* 9:16 portrait aspect-ratio lock.
+ * On mobile: fills the screen naturally (no letterbox).
+ * On desktop / landscape: centers a 9:16 column with black bars. */
+
+.viewport {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  overflow: hidden;
+}
+
+.viewportInner {
+  width: min(100vw, calc(100vh * 9 / 16));
+  height: min(100vh, calc(100vw * 16 / 9));
+  position: relative;
+  overflow: hidden;
+}

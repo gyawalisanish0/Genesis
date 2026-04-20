@@ -61,7 +61,7 @@
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.125rem;
-  padding: var(--s-sm) 0 var(--s-xs);
+  padding: 0.375rem 0 0.25rem;
   margin: 0;
 }
 
@@ -84,7 +84,7 @@
   align-items: center;
   gap: var(--s-sm);
   padding: 0 var(--s-md);
-  min-height: 3rem;  /* 48 dp */
+  min-height: 2.5rem;  /* 40 dp */
   cursor: pointer;
   transition: background var(--motion-button);
   user-select: none;
