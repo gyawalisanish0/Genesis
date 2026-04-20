@@ -3,8 +3,17 @@
 ## Purpose
 
 First frame the player sees on cold launch. Loads all JSON definitions via
-`DataService.load_all()` in the background while displaying the logo and a
+`loadAllGameData()` (which calls `loadCharacterIndex`, `loadCharacter` for every
+character id, and `loadMode` for story + ranked) while displaying the logo and a
 progress indicator. Transitions automatically to Main Menu on completion.
+
+### Loading sequence
+
+| Step | Progress | Operation |
+|---|---|---|
+| Start | 10% | `loadCharacterIndex()` — fetches `data/characters/index.json` |
+| Characters | 30% → 70% | `Promise.all(ids.map(loadCharacter))` — all `CharacterDef` in parallel |
+| Modes | 70% → 100% | `Promise.all([loadMode('story'), loadMode('ranked')])` |
 
 ---
 
@@ -100,9 +109,9 @@ Layout : full-bleed (no safe-zone insets — logo-only screen)
 
 | State | Description |
 |---|---|
-| Loading | Progress bar animating; no touch interaction |
-| Complete | Bar hits 100%, 300 ms pause, then screen fades out to Main Menu |
-| Error | Progress bar stops; brief error message replaces tagline (`$accent-danger`); retry hint shown |
+| Loading | Progress bar animates through 10% → 30% → 70% → 100% as each DataService batch completes |
+| Complete | Bar hits 100%, 400 ms pause, then auto-navigates to Main Menu |
+| Error | Progress bar stops; error message replaces tagline (`$accent-danger`); retry hint shown |
 
 ---
 

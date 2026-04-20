@@ -3,7 +3,8 @@
 A turn-based tactical mobile game built with React, TypeScript, and Capacitor.
 
 **Target platforms:** Android and iOS (primary), desktop browser (secondary)  
-**UI paradigm:** Mobile-first, touch-native, portrait-only  
+**UI paradigm:** Mobile-first, touch-native, portrait-only, 9:16 aspect ratio locked  
+**Physical resolution:** 1080 × 1920 px (Full HD portrait, xxhdpi) — CSS viewport 360 × 640 dp at 3× DPR  
 **Version:** 0.1.0
 
 ---
@@ -55,9 +56,10 @@ Genesis/
         ├── navigation/         # Screen routing, safe-area, back-button
         ├── input/              # Back-button registry + useBackButton hook
         ├── services/           # DataService (JSON loader + cache)
+        ├── hooks/              # Shared React hooks (useRosterData, …)
         ├── utils/              # useScrollAwarePointer gesture hook
         ├── screens/            # One .tsx + .module.css per screen
-        ├── components/         # Reusable widgets
+        ├── components/         # Reusable widgets (PagedGrid, UnitPortrait, …)
         └── styles/             # tokens.css design system
 ```
 
@@ -91,12 +93,12 @@ core → services → components → screens → App
 
 | Screen | Status | Description |
 |---|---|---|
-| Splash | ✅ | Simulated load progress bar → auto-navigates to main menu |
+| Splash | ✅ | Real DataService preloading (characters + modes) → auto-navigates to main menu |
 | Main Menu | ✅ | PLAY / ROSTER / SETTINGS navigation; quit confirm on back |
-| Pre-Battle Wizard | ✅ | 3-step flow: Mode → Team → Items (stub) |
+| Pre-Battle Wizard | ✅ | 3-step flow: Mode → Team (5×4 paged grid) → Items (stub) |
 | Battle | ✅ | Full turn loop, timeline, skill grid, dice, AI, overlays |
 | Battle Result | ✅ | Victory/defeat banner, XP, unit results, battle stats |
-| Roster | ✅ | Character grid; class + rarity + name filters |
+| Roster | ✅ | 3×3 paged grid; compact cards; class + rarity + name filters; real DataService data |
 | Settings | ✅ | Audio, display, notification, account sections |
 
 ### Combat System

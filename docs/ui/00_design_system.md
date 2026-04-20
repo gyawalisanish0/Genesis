@@ -245,6 +245,32 @@ States:
 
 ---
 
+### PagedGrid
+
+Generic paged grid used by Roster (3×3) and Team Select (5×4). Configurable columns × rows.
+
+```
+┌────┐ ┌────┐ ┌────┐
+│card│ │card│ │card│   row 1
+└────┘ └────┘ └────┘
+┌────┐ ┌────┐ ┌────┐
+│card│ │card│ │card│   row 2
+└────┘ └────┘ └────┘
+┌────┐ ┌────┐ ┌────┐
+│card│ │card│ │card│   row 3
+└────┘ └────┘ └────┘
+  ‹  ● ○ ○  1/3  ›     pagination row (hidden when ≤1 page)
+```
+
+| Component | Properties |
+|---|---|
+| Arrow buttons `‹` / `›` | `var(--touch-min)` (48dp) tap target; disabled opacity 0.3 at first/last page |
+| Dot indicators | 6dp circles; active dot `$accent-genesis`; inactive `$bg-elevated` |
+| Page counter | `$t-micro` `$text-muted`; format "N/M" |
+| Swipe | Pointer delta ≥ 40px left/right triggers page change |
+
+---
+
 ### TimelineMarker
 ```
  ╭────╮

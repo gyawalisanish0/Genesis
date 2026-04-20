@@ -33,22 +33,25 @@ Side pad   : 16 dp
 ┌──────────────────────────────────────────┐  y=0
 │  ← [back]   ROSTER          [🔍 search] │  56dp      header
 ├──────────────────────────────────────────┤  y=56
-│ [All][Hunter][Ranger][Caster][Warrior]…  │  48dp      class filter tabs (scrollable)
-├──────────────────────────────────────────┤  y=104
-│ Rarity: [All][★][★★][★★★][★★★★][★★★★★] │  40dp      rarity filter chips
-├──────────────────────────────────────────┤  y=144
-│ ┌─────────────┐  ┌─────────────┐         │
-│ │  [portrait] │  │  [portrait] │         │  row 1
-│ │  Iron Warden│  │  Swift Veil │         │  192dp per row
-│ │  Warrior ★★★│  │  Hunter ★★  │         │
-│ │  [EQUIPPED] │  │             │         │
-│ └─────────────┘  └─────────────┘         │
+│ [All][Hunter][Ranger][Caster][Warrior]…  │  40dp      class filter tabs (scrollable)
+├──────────────────────────────────────────┤  y=96
+│ Rarity: [All][★][★★][★★★][★★★★][★★★★★] │  36dp      rarity filter chips
+├──────────────────────────────────────────┤  y=132
+│ ┌──────┐ ┌──────┐ ┌──────┐               │
+│ │[port]│ │[port]│ │[port]│   row 1        │  3-column paged grid
+│ │ Name │ │ Name │ │ Name │               │  (~108dp per card)
+│ │Class │ │Class │ │Class │               │
+│ │ ★★★  │ │ ★★   │ │ ★★★★ │               │
+│ └──────┘ └──────┘ └──────┘               │
+│ ┌──────┐ ┌──────┐ ┌──────┐               │
+│ │[port]│ │[port]│ │[port]│   row 2        │
+│ │ …    │ │ …    │ │ …    │               │
+│ └──────┘ └──────┘ └──────┘               │
+│ ┌──────┐ ┌──────┐ ┌──────┐               │
+│ │[port]│ │[port]│ │[port]│   row 3        │
+│ └──────┘ └──────┘ └──────┘               │
 ├──────────────────────────────────────────┤
-│ ┌─────────────┐  ┌─────────────┐         │
-│ │  [portrait] │  │  [🔒 locked]│         │  row 2
-│ │  …          │  │  ???        │         │  192dp per row
-│ └─────────────┘  └─────────────┘         │
-│        (scrollable grid continues)       │
+│   ‹     ● ○ ○     1/3     ›              │  48dp      pagination (hidden ≤9 chars)
 └──────────────────────────────────────────┘  y=640
 ```
 
@@ -59,9 +62,10 @@ Side pad   : 16 dp
 | Zone | Y | Height | Content |
 |---|---|---|---|
 | Header | 0 | 56 | Back button · "ROSTER" title · search icon |
-| Class filter | 56 | 48 | Horizontal scroll tab row — one tab per class + "All" |
-| Rarity filter | 104 | 40 | Horizontal scroll chip row — rarity stars + "All" |
-| Card grid | 144 | 496 | 2-column scrollable grid of character cards |
+| Class filter | 56 | 40 | Horizontal scroll tab row — one tab per class + "All" (reduced from 48dp) |
+| Rarity filter | 96 | 36 | Horizontal scroll chip row — rarity stars + "All" |
+| Card grid (PagedGrid) | 132 | 460 | 3×3 paged grid — 9 cards per page; swipe or arrows to paginate |
+| Pagination | 592 | 48 | Arrow buttons + dot indicators + "N/M" counter (hidden when ≤9 total) |
 
 ---
 
@@ -80,43 +84,38 @@ Side pad   : 16 dp
 
 | Component | Size (dp) | Properties |
 |---|---|---|
-| Tab bar | 360 × 48 | `$bg-panel`; horizontal scroll; bottom border 1dp `$bg-elevated` |
-| Each tab | min 72 × 40 | `$t-label`; active: `$accent-genesis` text + 2dp bottom indicator; inactive: `$text-muted` |
+| Tab bar | 360 × 40 | `$bg-panel`; horizontal scroll; bottom border 1dp `$bg-elevated` |
+| Each tab | min 56 × 32 | `$t-micro`; active: `$accent-genesis` text + 2dp bottom indicator; inactive: `$text-muted` |
 | Tab labels | — | "All" · "Hunter" · "Ranger" · "Caster" · "Warrior" · "Enchanter" · "Guardian" |
 
 ### Rarity Filter
 
 | Component | Size (dp) | Properties |
 |---|---|---|
-| Chip bar | 360 × 40 | `$bg-deep`; horizontal scroll; `$s-md` left padding |
-| Each chip | 40 × 28 | `$r-pill`; inactive `$bg-elevated`; active `$accent-genesis` fill; star count `$t-micro` |
+| Chip bar | 360 × 36 | `$bg-deep`; horizontal scroll; `$s-sm` left padding |
+| Each chip | 32 × 24 | `$r-pill`; inactive `$bg-elevated`; active `$accent-genesis` fill; star count `$t-micro` |
 
-### Character Card
+### Character Card (compact 3×3)
 
 ```
-┌───────────────────────────────┐  156 × 192 dp
-│  ╔═══════════════════════╗    │
-│  ║   [portrait 96×96]   ║    │  96dp portrait (centered)
-│  ╚═══════════════════════╝    │
-│  Iron Warden                  │  $t-subheading
-│  Warrior  · ★★★              │  $t-label  $text-secondary
-│  ████████████░░  HP 1200      │  HP bar 6dp
-│  [EQUIPPED]                   │  status chip (optional)
-└───────────────────────────────┘
+┌────────┐  ~108 × 125 dp (aspect 1:1.2)
+│[port sm│  40×40dp portrait (centered)
+│ 40×40] │
+│  Name  │  $t-micro  $text-primary
+│  Class │  $t-micro  $text-muted
+│  ★★★   │  $t-micro  $accent-gold
+└────────┘
 ```
 
 | Component | Size (dp) | Properties |
 |---|---|---|
-| Card bg | 156 × 192 | `$bg-card` `$r-md`; rarity-coloured left border 3dp |
-| Portrait | 96 × 96 | `UnitPortrait lg`; centered horizontally; top pad 12dp |
-| Name label | 140 × 20 | `$t-subheading`, `$text-primary`; 8dp from portrait bottom |
-| Class · rarity | 140 × 16 | `$t-label`, `$text-secondary` |
-| HP bar | 140 × 6 | `ResourceBar HP` |
-| Status chip | 72 × 20 | `$r-sm` `$accent-genesis` bg; "EQUIPPED" / "IN BATTLE" `$t-micro` `$text-on-accent` |
-| Locked overlay | 156 × 192 | `$bg-deep` 80% opacity; 🔒 icon 40dp centered; "???" name |
+| Card bg | ~108 × 125 (1:1.2 aspect) | `$bg-card` `$r-md` |
+| Portrait | 40 × 40 | `UnitPortrait sm`; centered horizontally |
+| Name label | full-width | `$t-micro`, `$text-primary`; truncate with ellipsis |
+| Class | full-width | `$t-micro`, `$text-muted` |
+| Rarity stars | full-width | `$t-micro`, `$accent-gold`; letter-spacing tight |
 
-Card gap: `$s-sm` (8 dp) both axes.
-Grid side padding: 16 dp → usable width 328 dp → 2 × 156 dp + 8 dp gap + 8 dp remaining (4 dp each side).
+Card gap: `$s-xs` (4 dp) both axes. Grid padding: 8 dp. Data loaded from `DataService` via `useRosterData` hook.
 
 ---
 
@@ -136,15 +135,25 @@ When search icon is tapped the header transitions:
 
 ---
 
+## Data Source
+
+Characters are loaded dynamically from `DataService` via the `useRosterData` hook:
+1. `loadCharacterIndex()` → `string[]` of character IDs
+2. `Promise.all(ids.map(loadCharacter))` → `CharacterDef[]`
+
+Both calls use the in-memory cache — subsequent renders are instant. A loading state is shown while the first fetch is in progress.
+
+---
+
 ## States
 
 | State | Description |
 |---|---|
-| Default | All owned characters, sorted by rarity desc then name |
+| Loading | Spinner/message while `useRosterData` awaits DataService |
+| Default | All real characters from index.json, shown in 3×3 paged grid |
 | Filtered | Class and/or rarity filters applied; empty state if none match |
 | Search active | Name-match filter overlaid on current class/rarity filter |
-| Empty | "No characters match" illustration + message centered in grid area |
-| Pre-Battle mode | Cards have a selection checkbox; "Select up to N" hint in header |
+| Empty | "No characters match" message centered in grid area |
 
 ---
 
