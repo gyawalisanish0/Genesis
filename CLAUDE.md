@@ -113,12 +113,12 @@ Genesis/
 │       │   ├── types.ts          # StatBlockDef, CharacterDef, SkillDef, Unit, ModeDef, AppSettings, BattleResult
 │       │   ├── constants.ts      # All numeric constants: tick ranges, dice params, timing thresholds
 │       │   ├── screen-types.ts   # ScreenId, ScreenConfig, SafeAreaMode, ScreenLifecycleHooks
-│       │   ├── unit.ts           # Immutable Unit factory + mutation helpers (createUnit, takeDamage, healUnit, …)
+│       │   ├── unit.ts           # Immutable Unit factory + mutation helpers (createUnit, takeDamage, healUnit, incrementActionCount, …)
 │       │   ├── battleHistory.ts  # HistoryEntry type + makeHistoryEntry factory
 │       │   ├── GameContext.ts    # Zustand store: selectedMode, selectedTeam, selectedTeamIds, enemies, battleResult, settings
 │       │   ├── combat/
 │       │   │   ├── TickCalculator.ts     # calculateStartingTick, advanceTick, calculateApGained
-│       │   │   ├── HitChanceEvaluator.ts # calculateFinalChance, shiftProbabilities (5-outcome table)
+│       │   │   ├── HitChanceEvaluator.ts # calculateFinalChance, shiftProbabilities (6-outcome table)
 │       │   │   ├── DiceResolver.ts       # roll, applyOutcome, calculateTumblingDelay, resolveEvasionCounter
 │       │   │   └── index.ts
 │       │   ├── effects/          # Effect engine — open hook system for skills/items/passives
@@ -152,7 +152,7 @@ Genesis/
 │       │   ├── PreBattleStepTeam.tsx     # Step 1 — character roster pick (1–2 units)
 │       │   ├── PreBattleStepItems.tsx    # Step 2 — equipment slots (stub)
 │       │   ├── BattleScreen.tsx          # Battle layout: timeline strip, portrait col, action grid, overlays
-│       │   ├── BattleContext.tsx         # Screen-local context: phase, units, timeline, DiceResult+message, 6-outcome dice, sequential AI timing
+│       │   ├── BattleContext.tsx         # Screen-local context: phase, units, timeline, DiceResult+message, 6-outcome dice, sequential AI timing, deferred player state apply, skipTurn
 │       │   ├── TurnDisplayPanel.module.css
 │       │   ├── DiceResultOverlay.module.css
 │       │   ├── BattleResultScreen.tsx    # Victory/defeat banner, rewards, unit results, battle stats

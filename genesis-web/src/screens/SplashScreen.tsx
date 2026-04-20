@@ -1,21 +1,23 @@
 // Splash / loading screen.
-// Loads game data in the background, shows progress, then auto-navigates.
+// Loads real game data via DataService, shows progress, then auto-navigates.
 
 import { useEffect, useState } from 'react'
 import { ScreenShell } from '../navigation/ScreenShell'
 import { useScreen } from '../navigation/useScreen'
 import { SCREEN_IDS } from '../navigation/screenRegistry'
+import { loadCharacterIndex, loadCharacter, loadMode } from '../services/DataService'
 import styles from './SplashScreen.module.css'
 
 const APP_VERSION = '0.1.0'
 
-// Simulates DataService.loadAll() — replace with real implementation when ready.
-async function simulateLoad(onProgress: (pct: number) => void): Promise<void> {
-  const steps = [20, 45, 65, 80, 95, 100]
-  for (const pct of steps) {
-    await new Promise<void>((res) => setTimeout(res, 250))
-    onProgress(pct)
-  }
+async function loadAllGameData(onProgress: (pct: number) => void): Promise<void> {
+  onProgress(10)
+  const ids = await loadCharacterIndex()
+  onProgress(30)
+  await Promise.all(ids.map(loadCharacter))
+  onProgress(70)
+  await Promise.all([loadMode('story'), loadMode('ranked')])
+  onProgress(100)
 }
 
 export function SplashScreen() {
@@ -25,7 +27,7 @@ export function SplashScreen() {
   const [done, setDone] = useState(false)
 
   useEffect(() => {
-    simulateLoad(setProgress)
+    loadAllGameData(setProgress)
       .then(() => {
         setDone(true)
         setTimeout(() => navigateTo(SCREEN_IDS.MAIN_MENU), 400)

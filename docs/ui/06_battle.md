@@ -299,15 +299,16 @@ Tapping ROLL triggers a 250 ms pulse, then fires `executeSkill(selectedSkill)` a
 
 | Component | Size (dp) | Properties |
 |---|---|---|
-| Turn counter | auto × 20 | "Turn N" `$t-micro` `$text-secondary` |
+| Turn counter | auto × 20 | "Turn N" `$t-micro` `$text-secondary`; N = `playerUnit.actionCount + 1`; updates after dice ends |
 | Tick value | auto × 20 | "Tick: N" `$t-micro` `$text-muted` |
 | Portrait circle | 100 × 100 | `$accent-genesis` ring 3 dp; placeholder image |
-| LVL label | auto × 16 | "LVL N" `$t-micro` `$accent-gold` |
-| XP label | auto × 14 | "CXP/NLU" `$t-micro` `$text-muted` |
-| HP label | 12 × 12 | "HP" `$t-micro` |
-| HP bar | 100 × 8 | `ResourceBar HP`; value right-aligned |
-| AP label | 12 × 12 | "AP" `$t-micro` |
-| AP bar | 100 × 6 | `ResourceBar AP`; value right-aligned |
+| Class/rarity badge | auto × 16 | `ClassName ★N` `$t-micro` `$accent-gold` |
+| HP row | full width | Label "HP" + `ResourceBar hp` + `"N/MAX"` value `$t-micro` `$text-muted` |
+| AP row | full width | Label "AP" + `ResourceBar ap` + `"N/MAX"` value `$t-micro` `$text-muted` |
+
+HP/AP numerals and the turn counter all update simultaneously when `playerUnit` state
+commits after the dice animation (via `playerApplyTimerRef`). On End/Skip they update
+immediately since there is no dice animation.
 
 ---
 
@@ -453,20 +454,21 @@ When an enemy acts, four stages fire in strict sequence:
 
 ## Animations Summary
 
-| Element | Token / duration | Trigger |
+| Element | Duration / easing | Trigger |
 |---|---|---|
-| Turn display panel rows | `rowSlideIn` 200 ms ease-out, staggered 0/150/300 ms | Action start |
+| Turn display panel rows | `rowSlideIn` 400 ms `cubic-bezier(0.34,1.25,0.64,1)` + scale(0.96→1), staggered 0/250/500 ms | Action start |
 | Turn display panel dismiss | unmount after `TURN_DISPLAY_DISMISS_MS` (2 s) player / 6 s enemy | Action resolved |
 | Dice result overlay | `outcomeSlam` 4 s ease-out forwards | Every `runAttack` |
 | Dice result dismiss | unmount after `DICE_RESULT_DISMISS_MS` (4 s) | Timer after roll |
 | Roll button pulse | `rollPulse` 250 ms opacity, "Rolling…" label | ROLL tapped |
+| Roll / action / skill button press | 60 ms `ease-in` press-down → 280 ms `cubic-bezier(0.34,1.56,0.64,1)` spring release | Pointer down/up |
 | Now-line position | `--motion-timeline` (200 ms ease-in-out) | `tickValue` advance |
-| Unit marker position | `--motion-timeline` (200 ms ease-in-out) | `registerTick` |
+| Unit marker position | 500 ms `cubic-bezier(0.34,1.56,0.64,1)` elastic spring | `registerTick` after dice ends |
 | Active marker pulse | `markerPulse` keyframe, 1.5 s ease-in-out infinite | Unit at now-line |
 | History ghost appear | instant (rendered on action) | Action taken |
 | Skill slot selected | `$accent-genesis` border + inset shadow | Skill tapped |
-| Skill slot tap | scale 0.95, `--motion-button` (80 ms ease-in) | Button press |
 | Skill grid collapse | height 0 ↔ full, 200 ms | Collapse toggle |
-| HP / AP bars | width tween, `--motion-bar` (400 ms ease-out) | Damage / regen |
+| HP / AP bars | width tween, `--motion-bar` (400 ms ease-out) | Damage / regen — fires after dice |
+| Log entry appear | `logEntryIn` 200 ms ease-out (left-slide fade-in) | New log entry appended |
 | Log scroll | smooth scroll to bottom | New log entry |
 | Timeline track position | `transform: translateY`, `--motion-timeline` (200 ms ease-in-out) | tick advance, drag release + recenter |

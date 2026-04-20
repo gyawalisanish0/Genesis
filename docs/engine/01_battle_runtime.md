@@ -62,6 +62,8 @@ and does not render the timeline or action grid.
 | `enemies` | `Unit[]` | All enemy units in the battle |
 | `isLoading` | `boolean` | `true` while `DataService` is fetching; `false` once the battle is ready |
 
+`Unit.actionCount` (declared in `core/types.ts`) tracks how many actions each unit has taken during the session. It is incremented by `incrementActionCount()` (`core/unit.ts`) inside the deferred apply for rolls and immediately inside `skipTurn()`. Enemy action counts are incremented in `applyTimerRef` after their dice animations. The field is intentionally on `Unit` rather than stored separately so any future system (XP scaling, passive triggers, telemetry) can read it without additional context lookups.
+
 `registerTick` keeps `unit.tickPosition` in sync with the tick map automatically
 (see §Tick registration API).
 
@@ -103,7 +105,7 @@ expands to cover all registered positions plus a 15-tick buffer at each end and
 | Field | Type | Description |
 |---|---|---|
 | `phase` | `TurnPhase` | `'player' \| 'enemy' \| 'resolving'` — **auto-derived** from `activeUnitIds` (see §Phase auto-derivation) |
-| `turnNumber` | `number` | Incrementing session counter (per-session metric, not a round system) |
+| `turnNumber` | `number` | **Derived** from `playerUnit.actionCount + 1`; updates automatically whenever `playerUnit` state changes (i.e. after dice animation ends) |
 | `log` | `LogEntry[]` | Combat event log entries |
 | `selectedSkill` | `SkillInstance \| null` | Skill tapped by the player (highlighted); `null` if none selected |
 | `gridCollapsed` | `boolean` | Action grid collapse state |
@@ -190,7 +192,7 @@ The player's action grid uses a two-step select → roll flow:
 
 1. **Tap a skill** → `selectSkill(skillInst)` — the skill button gains an accent border; the ROLL button appears above the player portrait. Tapping the same skill again deselects it.
 2. **Tap ROLL** → 250 ms "Rolling…" pulse animation → `executeSkill(selectedSkill)` fires → `selectSkill(null)` clears selection.
-3. **Tapping End/Skip** also clears any selected skill.
+3. **Tapping End/Skip** → `skipTurn()` fires immediately (no dice, no deferred wait).
 
 Selection is auto-cleared after each roll and at the start of every enemy turn.
 
@@ -208,10 +210,30 @@ combat pipeline for a single player action:
 4. Compute AP regen: calculateApGained(skill.tuCost, caster.apRegenRate) → add to caster
 5. Build EffectContext; set ctx.target = undefined on Evasion or Fail (no damage dealt)
 6. Apply each effect where effect.when.event === 'onCast' via applyEffect()
-7. Sync snapshot back to React state: setPlayerUnit, setEnemies
-8. Append outcome log entry (coloured by dice result)
-9. pushHistory(…) → registerTick(player.id, fromTick + skill.tuCost + tumbleDelay)
-10. If all enemies hp === 0: append victory message
+7. pushHistory(…) — ghost appears at old position immediately
+8. showTurnDisplay(…) — confirmation panel shows immediately using snap values
+9. Defer via playerApplyTimerRef (DICE_RESULT_DISMISS_MS = 4s):
+   a. setPlayerUnit with incrementActionCount(snap player)
+   b. setEnemies from snap
+   c. registerTick(player.id, fromTick + skill.tuCost + tumbleDelay)
+   d. victory check → log if all enemies dead
+```
+
+HP bars, tick numerals, turn counter, and timeline marker all update together
+once the dice burst fades — never before.
+
+### `skipTurn()`
+
+Called when the player taps End/Skip. No dice animation; all state updates
+are immediate:
+
+```
+1. Guard: phase === 'player', playerUnit not null
+2. selectSkill(null)
+3. pushHistory(…)
+4. setPlayerUnit with incrementActionCount(playerUnit) — turn counter increments now
+5. registerTick(player.id, fromTick + 10) — timeline updates immediately
+6. appendLog('You skipped your turn.')
 ```
 
 **Dice outcomes** — six outcomes, always summing to 1.0 after `shiftProbabilities`:
