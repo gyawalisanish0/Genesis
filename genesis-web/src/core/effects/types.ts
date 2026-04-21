@@ -41,6 +41,8 @@ export type Tag =
   | 'special'
   | 'awakened'
   | 'misc'
+  | 'counter'        // standard reactive counter — triggers on Evasion
+  | 'uniqueCounter'  // character-specific counter with custom effects; same dice + chain rules
 
 // ── ValueExpr — the only mini-syntax ─────────────────────────────────────────
 

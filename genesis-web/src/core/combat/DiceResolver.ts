@@ -7,9 +7,9 @@ import {
   GUARD_UP_MITIGATION,
   TUMBLING_DELAY_MIN,
   TUMBLING_DELAY_MAX,
-  EVASION_COUNTER_BASE,
-  EVASION_COUNTER_STEP,
-  EVASION_COUNTER_MIN,
+  COUNTER_BASE,
+  COUNTER_STEP,
+  COUNTER_MIN,
 } from '../constants'
 import type { DiceProbabilities } from './HitChanceEvaluator'
 
@@ -75,11 +75,11 @@ export function calculateTumblingDelay(): number {
   )
 }
 
-// Evasion counter chance diminishes with each recursion depth.
-export function resolveEvasionCounter(depth: number): boolean {
+// Counter chain — chance diminishes with each recursion depth.
+export function resolveCounterRoll(depth: number): boolean {
   const chance = Math.max(
-    EVASION_COUNTER_MIN,
-    EVASION_COUNTER_BASE - depth * EVASION_COUNTER_STEP,
+    COUNTER_MIN,
+    COUNTER_BASE - depth * COUNTER_STEP,
   )
   return Math.random() < chance
 }
