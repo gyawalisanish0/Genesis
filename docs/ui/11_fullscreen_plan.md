@@ -23,15 +23,16 @@ overlaps cameras, notches, or gesture handles.
 
 The implementation uses a **game-engine style CSS transform scale**:
 
-1. The inner viewport is fixed at **360 px wide** (CSS dp base).
-2. `useViewportScale` computes a uniform scale factor each frame.
-3. `App.tsx` applies the scale as `transform: scale(N)` on the inner container.
-4. `DisplayService.initFullScreen()` hides system bars on launch.
-5. `tokens.css` safe-area vars divide by `--app-scale` to stay physically correct.
+1. `.viewport` uses `position: fixed; inset: 0` — pins to viewport corners with no arithmetic (avoids `100vw/100vh` vs `window.innerWidth/Height` mismatch on some browsers).
+2. The inner viewport is fixed at **360 px wide** (CSS dp base).
+3. `useViewportScale` computes a uniform scale factor; listens to `resize`, `orientationchange`, and `visualViewport.resize`.
+4. `App.tsx` applies the scale as `transform: scale(N)` on the inner container.
+5. `DisplayService.initFullScreen()` hides system bars on launch.
+6. `tokens.css` safe-area vars divide by `--app-scale` to stay physically correct.
 
 ```
 ┌─ browser / device window ─────────────────────────────────────────┐
-│  .viewport (100vw × 100vh, black background)                       │
+│  .viewport (position:fixed; inset:0 — pins to viewport corners)    │
 │  ┌─ .viewportInner ────────────────────────────────────────────┐   │
 │  │  width: 360px  height: innerHeight px                        │   │
 │  │  transform: scale(N)  transform-origin: center              │   │
@@ -55,11 +56,11 @@ the inner box.
 
 | File | Purpose |
 |---|---|
-| `src/utils/useViewportScale.ts` | Computes `scale` + `innerHeight`; updates on resize / orientationchange |
+| `src/utils/useViewportScale.ts` | Computes `scale` + `innerHeight`; updates on `resize`, `orientationchange`, `visualViewport.resize` |
 | `src/services/DisplayService.ts` | Hides system bars on launch (Capacitor native + web Fullscreen API) |
 | `src/screens/SplashScreen.tsx` | `isBrowserTab()` detection; tap gate in browser mode |
 | `src/App.tsx` | Applies scale transform inline; calls `initFullScreen`; sets `--app-scale` CSS var |
-| `src/App.module.css` | Outer black wrapper + inner container with `transform-origin` + `will-change` |
+| `src/App.module.css` | Outer black wrapper — `position: fixed; inset: 0` pins to viewport corners; inner container with `transform-origin` + `will-change` |
 | `src/styles/tokens.css` | `--app-scale: 1` fallback; safe-area vars use `calc(env(...) / var(--app-scale))` |
 | `public/manifest.json` | PWA manifest — `display: standalone`, portrait, `#0a0a14` theme |
 | `capacitor.config.ts` | `StatusBar.overlaysWebView: true` — WebView bleeds under status bar before JS |
@@ -133,7 +134,7 @@ const innerHeight = Math.round(h / scale)
 - `FALLBACK_HEIGHT = 640` — landscape reference height (9:16); also serves as JSDOM guard (`window.innerHeight || 640`)
 - Every portrait device fills edge-to-edge with no letterbox; taller phones get more vertical canvas
 - Desktop/landscape: constrained to a centred portrait column with black bars
-- Listens to `resize` and `orientationchange`
+- Listens to `window resize`, `orientationchange`, and `visualViewport resize` (fires when the mobile URL bar shows/hides — `window resize` does not fire in that case)
 
 | Device | orientation | scale | canvas dp |
 |---|---|---|---|
