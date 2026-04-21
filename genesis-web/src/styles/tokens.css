@@ -100,8 +100,8 @@
   --app-scale: 1;
 
   /* ── Safe-area insets (overridden by CSS env() on real devices) ──────── */
-  --safe-top:    calc(env(safe-area-inset-top,    1.5rem) / var(--app-scale));
-  --safe-bottom: calc(env(safe-area-inset-bottom, 3rem)   / var(--app-scale));
+  --safe-top:    calc(env(safe-area-inset-top,    0rem) / var(--app-scale));
+  --safe-bottom: calc(env(safe-area-inset-bottom, 0rem) / var(--app-scale));
   --safe-left:   calc(env(safe-area-inset-left,   0rem)   / var(--app-scale));
   --safe-right:  calc(env(safe-area-inset-right,  0rem)   / var(--app-scale));
 }

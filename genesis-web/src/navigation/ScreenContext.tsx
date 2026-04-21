@@ -36,10 +36,10 @@ function readCssSafeInsets(): SafeInsets {
   document.body.appendChild(el)
   const s = getComputedStyle(el)
   const result: SafeInsets = {
-    top:    parseFloat(s.paddingTop)    || FALLBACK_INSETS.top,
-    bottom: parseFloat(s.paddingBottom) || FALLBACK_INSETS.bottom,
-    left:   parseFloat(s.paddingLeft)   || FALLBACK_INSETS.left,
-    right:  parseFloat(s.paddingRight)  || FALLBACK_INSETS.right,
+    top:    parseFloat(s.paddingTop)    || 0,
+    bottom: parseFloat(s.paddingBottom) || 0,
+    left:   parseFloat(s.paddingLeft)   || 0,
+    right:  parseFloat(s.paddingRight)  || 0,
   }
   document.body.removeChild(el)
   return result

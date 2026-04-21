@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 
 const BASE_WIDTH      = 360
-const FALLBACK_HEIGHT = 640  // JSDOM guard only — not a design constraint
+const FALLBACK_HEIGHT = 640  // JSDOM guard + landscape reference; not a portrait design constraint
 
 interface ViewportScale {
   scale:       number
@@ -11,8 +11,12 @@ interface ViewportScale {
 function compute(): ViewportScale {
   const w = window.innerWidth  || BASE_WIDTH
   const h = window.innerHeight || FALLBACK_HEIGHT
-  // Width-first: always fill the full screen width; height adapts to the device.
-  const scale = w / BASE_WIDTH
+  // Portrait orientation (phones, tall tablets): fill the full screen width.
+  // Landscape orientation (desktop, rotated tablet): constrain to a portrait
+  // 9:16 column centered with black letterbox — prevents an unusably short canvas.
+  const scale = w <= h
+    ? w / BASE_WIDTH
+    : Math.min(w / BASE_WIDTH, h / FALLBACK_HEIGHT)
   return { scale, innerHeight: Math.round(h / scale) }
 }
 
