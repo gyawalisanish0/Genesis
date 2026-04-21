@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 
-const BASE_WIDTH  = 360
-const BASE_HEIGHT = 640
+const BASE_WIDTH      = 360
+const FALLBACK_HEIGHT = 640  // JSDOM guard only — not a design constraint
 
 interface ViewportScale {
   scale:       number
@@ -10,8 +10,9 @@ interface ViewportScale {
 
 function compute(): ViewportScale {
   const w = window.innerWidth  || BASE_WIDTH
-  const h = window.innerHeight || BASE_HEIGHT
-  const scale = Math.min(w / BASE_WIDTH, h / BASE_HEIGHT)
+  const h = window.innerHeight || FALLBACK_HEIGHT
+  // Width-first: always fill the full screen width; height adapts to the device.
+  const scale = w / BASE_WIDTH
   return { scale, innerHeight: Math.round(h / scale) }
 }
 
