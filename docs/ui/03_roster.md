@@ -117,6 +117,8 @@ Side pad   : 16 dp
 
 Card gap: `$s-xs` (4 dp) both axes. Grid padding: 8 dp. Data loaded from `DataService` via `useRosterData` hook.
 
+Partial rows (e.g. 2 characters in a 3-col grid) are centered automatically — cards never cluster to the left edge.
+
 ---
 
 ## Inline Search State

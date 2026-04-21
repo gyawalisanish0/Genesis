@@ -149,6 +149,8 @@ Side pad   : 16 dp
 
 Characters loaded from `DataService` via `useRosterData` hook; no mock data.
 
+Partial rows are centered automatically — with only 2 characters available both cards appear centered rather than left-aligned.
+
 ---
 
 ## Step 3 — Genesis Items

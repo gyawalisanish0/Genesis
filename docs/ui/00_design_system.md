@@ -249,10 +249,17 @@ States:
 
 Generic paged grid used by Roster (3×3) and Team Select (5×4). Configurable columns × rows.
 
+**Layout:** Flexbox with `justify-content: center`. Partial rows (fewer items than the column
+count) are automatically centered — cards never cluster to the left edge.
+Each cell width is computed from `--pagedgrid-cols` via:
+`flex-basis: calc((100% - (cols - 1) × gap) / cols)`
+
 ```
-┌────┐ ┌────┐ ┌────┐
-│card│ │card│ │card│   row 1
-└────┘ └────┘ └────┘
+Full page (3 cols, 9 cards):          Partial page (3 cols, 2 cards):
+
+┌────┐ ┌────┐ ┌────┐                     ┌────┐ ┌────┐
+│card│ │card│ │card│   row 1             │card│ │card│   centered
+└────┘ └────┘ └────┘                     └────┘ └────┘
 ┌────┐ ┌────┐ ┌────┐
 │card│ │card│ │card│   row 2
 └────┘ └────┘ └────┘
@@ -268,6 +275,7 @@ Generic paged grid used by Roster (3×3) and Team Select (5×4). Configurable co
 | Dot indicators | 6dp circles; active dot `$accent-genesis`; inactive `$bg-elevated` |
 | Page counter | `$t-micro` `$text-muted`; format "N/M" |
 | Swipe | Pointer delta ≥ 40px left/right triggers page change |
+| Partial rows | Centered horizontally via `justify-content: center` — no left-clustering |
 
 ---
 
