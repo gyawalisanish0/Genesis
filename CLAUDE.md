@@ -140,9 +140,11 @@ Genesis/
 │       │   └── useBackButton.ts       # Hook: registers handler, pushes URL-sentinel for web popstate interception
 │       ├── services/             # Side-effectful singletons; Capacitor allowed
 │       │   ├── DataService.ts    # JSON loader: loadCharacter, loadCharacterSkillDefs, loadMode, loadCharacterWithSkills (cached)
+│       │   ├── DisplayService.ts # Full-screen + StatusBar: Capacitor StatusBar.hide() on native; Fullscreen API on web
 │       │   └── __tests__/
 │       ├── utils/
-│       │   └── useScrollAwarePointer.ts  # Tap / hold / scroll gesture discriminator (pointer-delta based)
+│       │   ├── useScrollAwarePointer.ts  # Tap / hold / scroll gesture discriminator (pointer-delta based)
+│       │   └── useViewportScale.ts       # scale = min(w/360, h/640); innerHeight = screenH/scale; updates on resize
 │       ├── hooks/                # Shared React hooks (data fetching, UI state)
 │       │   └── useRosterData.ts          # Loads character index + all CharacterDef via DataService (cached)
 │       ├── screens/              # React screen components (one .tsx + one .module.css each)
@@ -166,14 +168,14 @@ Genesis/
 │       │   ├── UnitPortrait.tsx          # Portrait circle: rarity-coloured border, 4 sizes, greyscale option
 │       │   └── PagedGrid.tsx             # Generic paged grid: cols×rows, pointer swipe, arrows, dots, page counter
 │       ├── styles/
-│       │   └── tokens.css        # Full design-token set (colours, typography, spacing, radius, motion, safe-area)
-│       ├── App.tsx               # 9:16 viewport wrapper + HashRouter + ScreenProvider + 7-route declaration
-│       ├── App.module.css        # CSS clamp: 9:16 portrait lock with black letterbox on desktop
+│       │   └── tokens.css        # Full design-token set (colours, typography, spacing, radius, motion, safe-area, --app-scale)
+│       ├── App.tsx               # Transform-scale viewport + HashRouter + ScreenProvider + 7-route declaration
+│       ├── App.module.css        # Outer wrapper (black letterbox); inner container uses CSS transform scale
 │       └── main.tsx              # Vite entry: registerBuiltins() → React root
 ```
 
-> **Planned / not yet created:** `scenes/` (Phaser 3 battle canvas), `services/DisplayService.ts`
-> (StatusBar / fullscreen). Any code requiring these must add the directory and module — do not bypass the layer.
+> **Planned / not yet created:** `scenes/` (Phaser 3 battle canvas).
+> Any code requiring this must add the directory and module — do not bypass the layer.
 
 ---
 
@@ -383,9 +385,9 @@ Each file includes a `type` field identifying its schema.
 - **Safe-area insets via CSS env()**: `env(safe-area-inset-top)` or `var(--safe-top)`
   — never hardcode inset values
 - **Portrait-only** — no landscape media queries; physical target 1080 × 1920 px (Full HD portrait, xxhdpi); CSS viewport 360 × 640 dp at 3× DPR
-- **9:16 aspect ratio lock** — `App.module.css` clamps the inner viewport to `min(100vw, calc(100vh*9/16))` × `min(100vh, calc(100vw*16/9))`; black letterbox on desktop; full-bleed on mobile
+- **Transform-scale viewport** — `useViewportScale` computes `scale = Math.min(w/360, h/640)`; `App.tsx` applies `transform: scale(N)` + `width: 360px` + `height: innerHeightpx` inline on the inner container. Mobile fills screen fully; desktop gets black letterbox. The `--app-scale` CSS custom property is set on `documentElement` so tokens.css can divide `env(safe-area-inset-*)` values to keep them physically correct inside the transform.
 - **Layout in CSS modules** — do not set layout properties via React `style` prop
-  unless the value is dynamic (e.g. calculated from game state)
+  unless the value is dynamic (e.g. calculated from game state — scale, innerHeight)
 
 ### Design tokens (defined in `tokens.css`)
 ```css
@@ -427,10 +429,13 @@ Each file includes a `type` field identifying its schema.
 
 Genesis runs edge-to-edge on mobile — system bars are hidden during gameplay.
 
-- **Capacitor StatusBar plugin** hides the status bar on app launch
-- **`DisplayService`** is the only module that calls Capacitor display APIs
-- **`env(safe-area-inset-*)` CSS variables** provide notch / gesture bar offsets
-- **Desktop** runs with a 9:16 CSS clamp (App.module.css); black letterbox bars fill the sides; `env()` safe-area insets return zero, layout works identically
+- **`DisplayService.initFullScreen()`** is called once in `App.tsx` on mount — it is the only module that calls Capacitor display APIs
+  - **Native (Capacitor)**: `StatusBar.setOverlaysWebView({ overlay: true })` + `StatusBar.hide()` — hides the status bar and makes the WebView bleed under it
+  - **Web**: registers a `{ once: true }` `pointerdown` listener that calls `document.documentElement.requestFullscreen()` on the first user tap (requires a user gesture)
+- **`useViewportScale` hook** computes `scale = Math.min(w/360, h/640)` and `innerHeight = screenH/scale`; `App.tsx` applies these as inline `transform: scale(N)` + dimensions on the inner container
+- **`--app-scale` CSS custom property** — `App.tsx` writes `document.documentElement.style.setProperty('--app-scale', scale)` after every resize; `tokens.css` divides `env(safe-area-inset-*)` by `var(--app-scale)` so safe-area padding stays physically correct inside the transform
+- **`env(safe-area-inset-*)` CSS variables** — always consumed via `var(--safe-top)` etc. from `tokens.css`; never hardcoded
+- **Desktop** runs with black letterbox bars filling the unused area; `env()` safe-area insets return zero, layout works identically
 
 ---
 

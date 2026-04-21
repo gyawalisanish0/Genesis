@@ -41,8 +41,11 @@ export downscaled copies for lower density buckets.
   ▓▓▓ = safe-area inset — backgrounds bleed here; buttons must not
 ```
 
-Inset values are **read at runtime** from `display_service.get_safe_insets()`.
-They vary per device — never hardcode them.
+Inset values are **read at runtime** via CSS `env(safe-area-inset-*)` exposed as
+`var(--safe-top)`, `var(--safe-bottom)`, `var(--safe-left)`, `var(--safe-right)` in
+`src/styles/tokens.css`. These CSS vars automatically divide by `var(--app-scale)` so
+they remain physically correct when the viewport is scaled by `useViewportScale`.
+Never hardcode inset values — always use the `var(--safe-*)` tokens.
 
 ### Reference Insets (fallback when platform cannot report)
 
