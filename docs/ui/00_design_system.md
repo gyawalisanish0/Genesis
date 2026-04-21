@@ -59,16 +59,18 @@ Inset values are **read at runtime** via CSS `env(safe-area-inset-*)` exposed as
 they remain physically correct when the viewport is scaled by `useViewportScale`.
 Never hardcode inset values — always use the `var(--safe-*)` tokens.
 
-### Reference Insets (fallback when platform cannot report)
+### Reference Insets (ASCII schematic values only)
 
-| Inset | Default dp | Note |
+These values appear in screen schematics for layout illustration. They are **not** CSS fallbacks — `tokens.css` uses `0rem` as the fallback so no phantom padding appears on browsers/desktop without physical insets. Actual insets are always reported by `env(safe-area-inset-*)` on real devices.
+
+| Inset | Schematic dp | Typical device range |
 |---|---|---|
-| Top | 24 dp | Camera / status bar region |
-| Bottom | 48 dp | Gesture bar / home indicator |
+| Top | 24 dp | 24–59 dp (camera / status bar) |
+| Bottom | 48 dp | 20–34 dp (gesture bar / home indicator) |
 | Left | 0 dp | Portrait — no side insets |
 | Right | 0 dp | Portrait — no side insets |
 
-### Content Zone (using reference insets)
+### Content Zone (using schematic insets)
 
 | Property | dp | Note |
 |---|---|---|
@@ -79,7 +81,7 @@ Never hardcode inset values — always use the `var(--safe-*)` tokens.
 | Content width | 336 dp | 360 − 12 − 12 |
 
 > Screen docs use these reference insets for ASCII schematics.
-> Actual runtime values will vary per device.
+> Actual runtime values vary per device and are always read dynamically.
 
 ---
 

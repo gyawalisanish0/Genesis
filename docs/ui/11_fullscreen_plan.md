@@ -120,22 +120,30 @@ context (PWA / fullscreen API already active) to avoid double-registration.
 ## `useViewportScale`
 
 ```ts
-const scale = w / BASE_WIDTH          // width-first: always fill screen width
+// Portrait (w ≤ h): fill the full screen width — phones and tall tablets.
+// Landscape (w > h): letterbox to a 9:16 column — prevents an unusably short
+// canvas on desktop or rotated tablet.
+const scale = w <= h
+  ? w / BASE_WIDTH
+  : Math.min(w / BASE_WIDTH, h / FALLBACK_HEIGHT)
 const innerHeight = Math.round(h / scale)
 ```
 
 - `BASE_WIDTH = 360` — the CSS design base; defines what 1 rem equals
-- `FALLBACK_HEIGHT = 640` — used only as a JSDOM guard (`window.innerHeight || 640`); not a design constraint
-- Every portrait device fills edge-to-edge: taller phones get more vertical canvas, tablets get a more compact but fully-filled canvas
+- `FALLBACK_HEIGHT = 640` — landscape reference height (9:16); also serves as JSDOM guard (`window.innerHeight || 640`)
+- Every portrait device fills edge-to-edge with no letterbox; taller phones get more vertical canvas
+- Desktop/landscape: constrained to a centred portrait column with black bars
 - Listens to `resize` and `orientationchange`
 
-| Device | scale | canvas dp |
-|---|---|---|
-| 360×640 (9:16) | 1.0 | 360×640 |
-| 390×844 (iPhone 14) | 1.08 | 360×779 |
-| 360×800 (20:9) | 1.0 | 360×800 |
-| 412×915 (Pixel 6) | 1.14 | 360×800 |
-| 768×1024 (tablet portrait) | 2.13 | 360×480 |
+| Device | orientation | scale | canvas dp |
+|---|---|---|---|
+| 360×640 (9:16) | portrait | 1.0 | 360×640 |
+| 390×844 (iPhone 14) | portrait | 1.08 | 360×779 |
+| 360×800 (20:9) | portrait | 1.0 | 360×800 |
+| 412×915 (Pixel 6) | portrait | 1.14 | 360×803 |
+| 768×1024 (tablet portrait) | portrait | 2.13 | 360×480 |
+| 1920×1080 (desktop) | landscape | 1.69 | 360×640 |
+| 1280×800 (laptop) | landscape | 1.25 | 360×640 |
 
 ---
 
@@ -177,25 +185,29 @@ Inside `transform: scale(N)` it appears `N×` too large. Fix in `tokens.css`:
 :root {
   --app-scale: 1;  /* updated at runtime by App.tsx */
 
-  --safe-top:    calc(env(safe-area-inset-top,    1.5rem) / var(--app-scale));
-  --safe-bottom: calc(env(safe-area-inset-bottom, 3rem)   / var(--app-scale));
-  --safe-left:   calc(env(safe-area-inset-left,   0rem)   / var(--app-scale));
-  --safe-right:  calc(env(safe-area-inset-right,  0rem)   / var(--app-scale));
+  --safe-top:    calc(env(safe-area-inset-top,    0rem) / var(--app-scale));
+  --safe-bottom: calc(env(safe-area-inset-bottom, 0rem) / var(--app-scale));
+  --safe-left:   calc(env(safe-area-inset-left,   0rem) / var(--app-scale));
+  --safe-right:  calc(env(safe-area-inset-right,  0rem) / var(--app-scale));
 }
 ```
 
 All screens use `var(--safe-top)` etc. via `ScreenShell` — no screen changes needed.
 
+The `env()` fallback is `0rem` on all four sides. Non-zero fallbacks would create phantom padding on browsers/devices that don't support `env()` or have no physical inset (desktop). On real devices `env()` always returns the correct physical value.
+
+`ScreenContext.readCssSafeInsets()` mirrors this: it reads computed style from a temporary element and returns the raw number without any non-zero fallback — `parseFloat(value) || 0` — so JS-side inset values are also zero on desktop.
+
 ---
 
-## Reference Insets (fallback values)
+## Reference Insets (runtime values on real devices)
 
-| Inset | Default | Note |
+| Inset | Typical value | Note |
 |---|---|---|
-| Top | 1.5 rem (24 dp) | Camera / status bar region |
-| Bottom | 3 rem (48 dp) | Gesture bar / home indicator |
-| Left | 0 rem | Portrait — no side insets |
-| Right | 0 rem | Portrait — no side insets |
+| Top | 24–59 dp | Camera cutout / status bar (device-reported via env()) |
+| Bottom | 20–34 dp | Gesture bar / home indicator (device-reported via env()) |
+| Left | 0 dp | Portrait — no side insets |
+| Right | 0 dp | Portrait — no side insets |
 
 ---
 

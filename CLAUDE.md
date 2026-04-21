@@ -145,7 +145,7 @@ Genesis/
 │       │   └── __tests__/
 │       ├── utils/
 │       │   ├── useScrollAwarePointer.ts  # Tap / hold / scroll gesture discriminator (pointer-delta based)
-│       │   └── useViewportScale.ts       # scale = min(w/360, h/640); innerHeight = screenH/scale; updates on resize
+│       │   └── useViewportScale.ts       # portrait: scale=w/360; landscape: scale=min(w/360,h/640); innerHeight=h/scale; updates on resize/orientationchange
 │       ├── hooks/                # Shared React hooks (data fetching, UI state)
 │       │   └── useRosterData.ts          # Loads character index + all CharacterDef via DataService (cached)
 │       ├── screens/              # React screen components (one .tsx + one .module.css each)
@@ -386,7 +386,7 @@ Each file includes a `type` field identifying its schema.
 - **Safe-area insets via CSS env()**: `env(safe-area-inset-top)` or `var(--safe-top)`
   — never hardcode inset values
 - **Portrait-only** — no landscape media queries; physical target 1080 × 1920 px (Full HD portrait, xxhdpi); CSS viewport 360 × 640 dp at 3× DPR
-- **Transform-scale viewport** — `useViewportScale` computes `scale = w/360` (width-first — always fills screen width; height adapts freely to the device's aspect ratio); `App.tsx` applies `transform: scale(N)` + `width: 360px` + `height: innerHeightpx` inline on the inner container. Every portrait screen fills edge-to-edge with no letterbox. The `--app-scale` CSS custom property is set on `documentElement` so tokens.css can divide `env(safe-area-inset-*)` values to keep them physically correct inside the transform.
+- **Transform-scale viewport** — `useViewportScale` computes the scale factor adaptively: portrait (`w ≤ h`) uses `scale = w/360` (width-first, fills screen edge-to-edge); landscape (`w > h`) uses `scale = Math.min(w/360, h/640)` (letterbox — prevents an unusably short canvas on desktop). `App.tsx` applies `transform: scale(N)` + `width: 360px` + `height: innerHeightpx` inline on the inner container. The `--app-scale` CSS custom property is set on `documentElement` so tokens.css can divide `env(safe-area-inset-*)` values to keep them physically correct inside the transform.
 - **Layout in CSS modules** — do not set layout properties via React `style` prop
   unless the value is dynamic (e.g. calculated from game state — scale, innerHeight)
 
@@ -445,7 +445,7 @@ Genesis runs edge-to-edge on mobile — system bars are hidden during gameplay.
 - **`SplashScreen.isBrowserTab()`** detects whether the app is running as a plain browser tab (not native, not PWA standalone). Only in this context does the splash screen show the "TAP ANYWHERE TO ENTER" gate and defer navigation until the tap.
 - **`capacitor.config.ts` `StatusBar.overlaysWebView: true`** — applied when native projects are synced; makes the WebView bleed under the status bar before JS runs (prevents cold-launch flash)
 - **`public/manifest.json`** — `display: standalone`, `orientation: portrait`, colours match `--bg-deep`. Replace placeholder icon with proper 192×192 + 512×512 square PNGs when assets are ready.
-- **`useViewportScale` hook** computes `scale = Math.min(w/360, h/640)` and `innerHeight = screenH/scale`; `App.tsx` applies these as inline `transform: scale(N)` + dimensions on the inner container
+- **`useViewportScale` hook** computes `scale` adaptively (portrait: `w/360`; landscape: `Math.min(w/360, h/640)`) and `innerHeight = h/scale`; `App.tsx` applies these as inline `transform: scale(N)` + dimensions on the inner container
 - **`--app-scale` CSS custom property** — `App.tsx` writes `document.documentElement.style.setProperty('--app-scale', scale)` after every resize; `tokens.css` divides `env(safe-area-inset-*)` by `var(--app-scale)` so safe-area padding stays physically correct inside the transform
 - **`env(safe-area-inset-*)` CSS variables** — always consumed via `var(--safe-top)` etc. from `tokens.css`; never hardcoded
 - **Desktop** runs with black letterbox bars filling the unused area; `env()` safe-area insets return zero, layout works identically
