@@ -27,9 +27,12 @@ export function useViewportScale(): ViewportScale {
     const update = () => setState(compute())
     window.addEventListener('resize', update)
     window.addEventListener('orientationchange', update)
+    // visualViewport fires on mobile when the URL bar shows/hides (window.resize does not).
+    window.visualViewport?.addEventListener('resize', update)
     return () => {
       window.removeEventListener('resize', update)
       window.removeEventListener('orientationchange', update)
+      window.visualViewport?.removeEventListener('resize', update)
     }
   }, [])
 

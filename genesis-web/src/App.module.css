@@ -5,8 +5,11 @@
  * On desktop / non-9:16: black letterbox fills unused area. */
 
 .viewport {
-  width: 100vw;
-  height: 100vh;
+  /* position: fixed + inset: 0 pins to viewport corners directly — no dependency
+   * on 100vw/100vh which can mismatch window.innerWidth/Height on some browsers,
+   * and no dependency on the html/body height chain. */
+  position: fixed;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
