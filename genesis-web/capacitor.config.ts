@@ -11,7 +11,8 @@ const config: CapacitorConfig = {
   plugins: {
     StatusBar: {
       style: 'Dark',
-      backgroundColor: '#110f18',
+      overlaysWebView: true,       // WebView bleeds under status bar before JS runs
+      backgroundColor: '#0a0a14', // matches --bg-deep token
     },
     SplashScreen: {
       // We render our own splash screen in React

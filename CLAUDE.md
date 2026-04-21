@@ -97,6 +97,7 @@ Genesis/
 │   ├── capacitor.config.ts
 │   ├── android/                  # Capacitor-generated Android project
 │   ├── public/
+│   │   ├── manifest.json         # PWA manifest: standalone mode, portrait, theme colour
 │   │   ├── data/                 # JSON game content
 │   │   │   ├── characters/       # index.json + one subfolder per character
 │   │   │   │   ├── index.json    # ["warrior_001", "hunter_001"]
@@ -429,13 +430,33 @@ Each file includes a `type` field identifying its schema.
 
 Genesis runs edge-to-edge on mobile — system bars are hidden during gameplay.
 
-- **`DisplayService.initFullScreen()`** is called once in `App.tsx` on mount — it is the only module that calls Capacitor display APIs
-  - **Native (Capacitor)**: `StatusBar.setOverlaysWebView({ overlay: true })` + `StatusBar.hide()` — hides the status bar and makes the WebView bleed under it
-  - **Web**: registers a `{ once: true }` `pointerdown` listener that calls `document.documentElement.requestFullscreen()` on the first user tap (requires a user gesture)
+### Three fullscreen delivery paths
+
+| Context | Mechanism |
+|---|---|
+| Capacitor native | `DisplayService.initFullScreen()` calls `StatusBar.setOverlaysWebView(true)` + `StatusBar.hide()` on mount |
+| PWA installed (home screen) | `public/manifest.json` with `display: standalone` — browser chrome absent; no API call needed |
+| Plain browser tab | `DisplayService` registers a `{ once: true, capture: true }` `pointerdown` listener; `SplashScreen` holds navigation until that first tap |
+
+### Key rules
+
+- **`DisplayService.initFullScreen()`** is called once in `App.tsx` on mount — it is the **only** module that calls Capacitor display APIs
+  - On web, it skips the listener registration if already in standalone/fullscreen mode (`matchMedia` check)
+- **`SplashScreen.isBrowserTab()`** detects whether the app is running as a plain browser tab (not native, not PWA standalone). Only in this context does the splash screen show the "TAP ANYWHERE TO ENTER" gate and defer navigation until the tap.
+- **`capacitor.config.ts` `StatusBar.overlaysWebView: true`** — applied when native projects are synced; makes the WebView bleed under the status bar before JS runs (prevents cold-launch flash)
+- **`public/manifest.json`** — `display: standalone`, `orientation: portrait`, colours match `--bg-deep`. Replace placeholder icon with proper 192×192 + 512×512 square PNGs when assets are ready.
 - **`useViewportScale` hook** computes `scale = Math.min(w/360, h/640)` and `innerHeight = screenH/scale`; `App.tsx` applies these as inline `transform: scale(N)` + dimensions on the inner container
 - **`--app-scale` CSS custom property** — `App.tsx` writes `document.documentElement.style.setProperty('--app-scale', scale)` after every resize; `tokens.css` divides `env(safe-area-inset-*)` by `var(--app-scale)` so safe-area padding stays physically correct inside the transform
 - **`env(safe-area-inset-*)` CSS variables** — always consumed via `var(--safe-top)` etc. from `tokens.css`; never hardcoded
 - **Desktop** runs with black letterbox bars filling the unused area; `env()` safe-area insets return zero, layout works identically
+
+### Deferred native steps (after `npx cap add android/ios`)
+
+| Platform | File | Change |
+|---|---|---|
+| Android | `android/app/src/main/java/.../MainActivity.kt` | `onWindowFocusChanged`: `WindowInsetsControllerCompat.hide(systemBars())` + `BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE` |
+| Android | `android/app/src/main/res/values/styles.xml` | `windowTranslucentStatus=true` + `windowLayoutInDisplayCutoutMode=shortEdges` to prevent cold-launch flash |
+| iOS | `ios/App/App/Info.plist` | `UIStatusBarHidden=true`, `UIRequiresFullScreen=true`, `UIViewControllerBasedStatusBarAppearance=NO` |
 
 ---
 
