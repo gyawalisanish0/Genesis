@@ -22,7 +22,8 @@ progress indicator. Transitions automatically to Main Menu on completion.
 | | Screen |
 |---|---|
 | **Entry** | App cold start only |
-| **Exit** | Auto → Main Menu (on load complete) |
+| **Exit** | Auto → Main Menu (on load complete, Capacitor / PWA standalone) |
+| **Exit** | First tap → Main Menu (browser tab mode; same tap fires `requestFullscreen`) |
 
 ---
 
@@ -110,8 +111,21 @@ Layout : full-bleed (no safe-zone insets — logo-only screen)
 | State | Description |
 |---|---|
 | Loading | Progress bar animates through 10% → 30% → 70% → 100% as each DataService batch completes |
-| Complete | Bar hits 100%, 400 ms pause, then auto-navigates to Main Menu |
+| Complete — native / standalone | Bar hits 100%; 400 ms pause; auto-navigates to Main Menu |
+| Complete — browser tab | Bar hits 100%; "TAP ANYWHERE TO ENTER" prompt appears (`$accent-genesis`, pulsing); navigation deferred until first tap |
+| Browser tap | User taps anywhere → `requestFullscreen()` fires (via `DisplayService` capture listener) + navigates to Main Menu |
 | Error | Progress bar stops; error message replaces tagline (`$accent-danger`); retry hint shown |
+
+### Context detection
+
+`SplashScreen` uses `isBrowserTab()` to decide which completion path to take:
+
+```
+Capacitor.isNativePlatform() === true  →  native path (auto-navigate)
+matchMedia('(display-mode: standalone)')  →  PWA installed (auto-navigate)
+matchMedia('(display-mode: fullscreen)')  →  fullscreen already active (auto-navigate)
+otherwise  →  browser tab (show tap gate)
+```
 
 ---
 

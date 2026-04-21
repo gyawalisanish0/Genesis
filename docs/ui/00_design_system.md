@@ -19,6 +19,14 @@ ever visible. The physical target is 1080 × 1920 px portrait (Full HD).
 | dp canvas | **360 × 640 dp** |
 | Asset design size | 1080 × 1920 px (3×); export 1× and 2× fallbacks |
 
+### Fullscreen delivery paths
+
+| Context | Mechanism | Notes |
+|---|---|---|
+| Capacitor native (Android/iOS) | `StatusBar.hide()` + `setOverlaysWebView(true)` via `DisplayService` | Hides status bar before first JS frame; nav bar hidden via native `onWindowFocusChanged` (deferred to after `npx cap add android`) |
+| PWA installed (home screen) | `display: standalone` in `public/manifest.json` | No browser chrome; no Fullscreen API needed; `SplashScreen` detects this and auto-navigates |
+| Plain browser tab | `requestFullscreen()` on first tap via `DisplayService` listener | `SplashScreen` shows "TAP ANYWHERE TO ENTER" gate after loading; first tap fires fullscreen + navigates |
+
 Always write layout in **dp**. Design and slice assets at 1080 × 1920 px then
 export downscaled copies for lower density buckets.
 

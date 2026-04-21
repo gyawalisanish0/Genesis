@@ -1,7 +1,10 @@
 // Splash / loading screen.
-// Loads real game data via DataService, shows progress, then auto-navigates.
+// Loads real game data via DataService, shows progress, then navigates.
+// In a plain browser tab: holds navigation until user taps (fires fullscreen gate).
+// In Capacitor / PWA standalone: auto-navigates after 400ms as before.
 
 import { useEffect, useState } from 'react'
+import { Capacitor } from '@capacitor/core'
 import { ScreenShell } from '../navigation/ScreenShell'
 import { useScreen } from '../navigation/useScreen'
 import { SCREEN_IDS } from '../navigation/screenRegistry'
@@ -20,17 +23,33 @@ async function loadAllGameData(onProgress: (pct: number) => void): Promise<void>
   onProgress(100)
 }
 
+// Returns true only when running as a plain browser tab (not Capacitor, not PWA standalone).
+// These contexts already provide fullscreen-like environments so no tap gate is needed.
+function isBrowserTab(): boolean {
+  if (Capacitor.isNativePlatform()) return false
+  if (window.matchMedia('(display-mode: standalone)').matches) return false
+  if (window.matchMedia('(display-mode: fullscreen)').matches) return false
+  return true
+}
+
 export function SplashScreen() {
   const { navigateTo } = useScreen()
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
+  const [readyToEnter, setReadyToEnter] = useState(false)
 
   useEffect(() => {
     loadAllGameData(setProgress)
       .then(() => {
         setDone(true)
-        setTimeout(() => navigateTo(SCREEN_IDS.MAIN_MENU), 400)
+        if (isBrowserTab()) {
+          // Hold navigation — first tap fires requestFullscreen (via DisplayService listener)
+          // then navigates to main menu on the same gesture.
+          setReadyToEnter(true)
+        } else {
+          setTimeout(() => navigateTo(SCREEN_IDS.MAIN_MENU), 400)
+        }
       })
       .catch((err: unknown) => {
         setError(err instanceof Error ? err.message : 'Load failed')
@@ -39,7 +58,10 @@ export function SplashScreen() {
 
   return (
     <ScreenShell>
-      <div className={styles.root}>
+      <div
+        className={styles.root}
+        onPointerDown={readyToEnter ? () => navigateTo(SCREEN_IDS.MAIN_MENU) : undefined}
+      >
         <div className={styles.stars} aria-hidden />
 
         <div className={styles.logoZone}>
@@ -59,6 +81,10 @@ export function SplashScreen() {
           </div>
           <span className={styles.progressLabel}>{progress}%</span>
         </div>
+
+        {readyToEnter && (
+          <p className={styles.tapPrompt}>TAP ANYWHERE TO ENTER</p>
+        )}
 
         <footer className={styles.footer}>
           v{APP_VERSION} · © Genesis

@@ -117,6 +117,21 @@
   flex-shrink: 0;
 }
 
+/* ── Tap-to-enter prompt (browser tab mode only) ────────────────────── */
+.tapPrompt {
+  font-size: var(--t-micro-size);
+  color: var(--accent-genesis);
+  letter-spacing: 0.15em;
+  text-align: center;
+  animation: tapBlink 1.4s ease-in-out infinite;
+  margin-bottom: var(--s-xl);
+}
+
+@keyframes tapBlink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
 /* ── Footer ────────────────────────────────────────────────────────── */
 .footer {
   font-size: var(--t-micro-size);
