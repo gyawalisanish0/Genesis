@@ -1,5 +1,8 @@
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { ScreenProvider } from './navigation/ScreenContext'
+import { useEffect }                                        from 'react'
+import { HashRouter, Routes, Route, Navigate }             from 'react-router-dom'
+import { ScreenProvider }                                  from './navigation/ScreenContext'
+import { useViewportScale }                                from './utils/useViewportScale'
+import { initFullScreen }                                  from './services/DisplayService'
 
 import { SplashScreen }       from './screens/SplashScreen'
 import { MainMenuScreen }     from './screens/MainMenuScreen'
@@ -10,12 +13,28 @@ import { BattleResultScreen } from './screens/BattleResultScreen'
 import { SettingsScreen }     from './screens/SettingsScreen'
 import styles from './App.module.css'
 
-// Back-button handling, document title, and safe-area insets all live
-// in ScreenProvider. It must be a direct child of HashRouter (uses useLocation).
 export default function App() {
+  const { scale, innerHeight } = useViewportScale()
+
+  useEffect(() => {
+    initFullScreen().catch(() => {})
+  }, [])
+
+  // Expose scale to CSS so safe-area vars can self-correct (tokens.css divides env() by --app-scale).
+  useEffect(() => {
+    document.documentElement.style.setProperty('--app-scale', String(scale))
+  }, [scale])
+
   return (
     <div className={styles.viewport}>
-      <div className={styles.viewportInner}>
+      <div
+        className={styles.viewportInner}
+        style={{
+          width:     '360px',
+          height:    `${innerHeight}px`,
+          transform: `scale(${scale})`,
+        } as React.CSSProperties}
+      >
         <HashRouter>
           <ScreenProvider>
             <Routes>
