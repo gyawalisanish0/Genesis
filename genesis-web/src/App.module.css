@@ -1,6 +1,8 @@
-/* 9:16 portrait aspect-ratio lock.
- * On mobile: fills the screen naturally (no letterbox).
- * On desktop / landscape: centers a 9:16 column with black bars. */
+/* Game-engine style full-screen scaling.
+ * The inner viewport is fixed at 360 × dynamic dp;
+ * a CSS transform scales it to fill the physical screen exactly.
+ * On mobile: full bleed, no bars.
+ * On desktop / non-9:16: black letterbox fills unused area. */
 
 .viewport {
   width: 100vw;
@@ -13,8 +15,11 @@
 }
 
 .viewportInner {
-  width: min(100vw, calc(100vh * 9 / 16));
-  height: min(100vh, calc(100vw * 16 / 9));
+  /* Width and height are set inline from useViewportScale (360px × computed dp).
+   * transform: scale(N) is also set inline.
+   * GPU compositing hint keeps scaling smooth on mobile. */
   position: relative;
   overflow: hidden;
+  transform-origin: center center;
+  will-change: transform;
 }

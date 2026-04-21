@@ -94,9 +94,14 @@
   --motion-button:      80ms ease-in;    /* button press scale       */
   --motion-timeline:   200ms ease-in-out;/* timeline marker move     */
 
+  /* ── Scale factor set by App.tsx useViewportScale ───────────────────── */
+  /* Divide env() insets by --app-scale so they read correctly inside the  */
+  /* CSS transform; App.tsx writes the actual value via JS.                */
+  --app-scale: 1;
+
   /* ── Safe-area insets (overridden by CSS env() on real devices) ──────── */
-  --safe-top:    env(safe-area-inset-top,    1.5rem);  /* fallback 24 dp */
-  --safe-bottom: env(safe-area-inset-bottom, 3rem);    /* fallback 48 dp */
-  --safe-left:   env(safe-area-inset-left,   0rem);
-  --safe-right:  env(safe-area-inset-right,  0rem);
+  --safe-top:    calc(env(safe-area-inset-top,    1.5rem) / var(--app-scale));
+  --safe-bottom: calc(env(safe-area-inset-bottom, 3rem)   / var(--app-scale));
+  --safe-left:   calc(env(safe-area-inset-left,   0rem)   / var(--app-scale));
+  --safe-right:  calc(env(safe-area-inset-right,  0rem)   / var(--app-scale));
 }
