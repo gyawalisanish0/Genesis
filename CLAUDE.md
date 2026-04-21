@@ -386,7 +386,7 @@ Each file includes a `type` field identifying its schema.
 - **Safe-area insets via CSS env()**: `env(safe-area-inset-top)` or `var(--safe-top)`
   — never hardcode inset values
 - **Portrait-only** — no landscape media queries; physical target 1080 × 1920 px (Full HD portrait, xxhdpi); CSS viewport 360 × 640 dp at 3× DPR
-- **Transform-scale viewport** — `useViewportScale` computes `scale = Math.min(w/360, h/640)`; `App.tsx` applies `transform: scale(N)` + `width: 360px` + `height: innerHeightpx` inline on the inner container. Mobile fills screen fully; desktop gets black letterbox. The `--app-scale` CSS custom property is set on `documentElement` so tokens.css can divide `env(safe-area-inset-*)` values to keep them physically correct inside the transform.
+- **Transform-scale viewport** — `useViewportScale` computes `scale = w/360` (width-first — always fills screen width; height adapts freely to the device's aspect ratio); `App.tsx` applies `transform: scale(N)` + `width: 360px` + `height: innerHeightpx` inline on the inner container. Every portrait screen fills edge-to-edge with no letterbox. The `--app-scale` CSS custom property is set on `documentElement` so tokens.css can divide `env(safe-area-inset-*)` values to keep them physically correct inside the transform.
 - **Layout in CSS modules** — do not set layout properties via React `style` prop
   unless the value is dynamic (e.g. calculated from game state — scale, innerHeight)
 

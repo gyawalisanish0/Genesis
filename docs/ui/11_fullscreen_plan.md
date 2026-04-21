@@ -120,13 +120,22 @@ context (PWA / fullscreen API already active) to avoid double-registration.
 ## `useViewportScale`
 
 ```ts
-const scale = Math.min(w / 360, h / 640)
+const scale = w / BASE_WIDTH          // width-first: always fill screen width
 const innerHeight = Math.round(h / scale)
 ```
 
-- Fills the smaller axis exactly; black letterbox fills the rest on desktop
-- JSDOM-safe (`window.innerWidth || 360` guard)
+- `BASE_WIDTH = 360` — the CSS design base; defines what 1 rem equals
+- `FALLBACK_HEIGHT = 640` — used only as a JSDOM guard (`window.innerHeight || 640`); not a design constraint
+- Every portrait device fills edge-to-edge: taller phones get more vertical canvas, tablets get a more compact but fully-filled canvas
 - Listens to `resize` and `orientationchange`
+
+| Device | scale | canvas dp |
+|---|---|---|
+| 360×640 (9:16) | 1.0 | 360×640 |
+| 390×844 (iPhone 14) | 1.08 | 360×779 |
+| 360×800 (20:9) | 1.0 | 360×800 |
+| 412×915 (Pixel 6) | 1.14 | 360×800 |
+| 768×1024 (tablet portrait) | 2.13 | 360×480 |
 
 ---
 

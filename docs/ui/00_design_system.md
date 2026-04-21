@@ -16,8 +16,12 @@ ever visible. The physical target is 1080 × 1920 px portrait (Full HD).
 |---|---|
 | Physical target | 1080 × 1920 px (Full HD portrait) |
 | Density bucket | xxhdpi — 480 dpi — 1 dp = 3 px |
-| dp canvas | **360 × 640 dp** |
+| dp canvas width | **360 dp** (fixed — defines the rem base) |
+| dp canvas height | **device-adaptive** — equals physical screen height ÷ scale |
+| Design reference height | 640 dp (used in screen docs / ASCII schematics only) |
 | Asset design size | 1080 × 1920 px (3×); export 1× and 2× fallbacks |
+
+The inner canvas is **always 360 dp wide**. Height is not fixed — it equals the physical screen height divided by the scale factor, so every portrait device fills edge-to-edge with no letterbox. All screen layouts use flex so content zones expand or contract with the available height. The 640 dp figure appears in screen schematics as a reference; it is not enforced at runtime.
 
 ### Fullscreen delivery paths
 
