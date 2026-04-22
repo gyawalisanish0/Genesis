@@ -223,6 +223,8 @@ export interface SkillDef {
   description?:   string
   tuCost:         number
   apCost:         number
+  tickCooldown?:  number   // ticks that must elapse after use before skill is available
+  turnCooldown?:  number   // unit's own actions that must occur after use
   tags:           Tag[]
   maxLevel:       number
   targeting:      Targeting
@@ -299,8 +301,10 @@ export interface SkillInstance {
   baseDef:       Readonly<SkillDef>
   currentLevel:  number
   cachedEffects: Effect[]
-  cachedCosts:   { tuCost: number; apCost: number }
-  cacheVersion:  number
+  cachedCosts:           { tuCost: number; apCost: number }
+  cacheVersion:          number
+  cooldownReadyAtTick:   number  // 0 = ready; usable when unit.tickPosition >= this
+  cooldownReadyAtAction: number  // 0 = ready; usable when unit.actionCount  >= this
 }
 
 // ── Runtime: BattleState + EffectContext ────────────────────────────────────

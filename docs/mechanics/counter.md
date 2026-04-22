@@ -75,10 +75,64 @@ character-specific thematic skill rather than a generic reactive strike.
 
 ---
 
+## Counter Decision Window
+
+When the counter dice succeeds, what happens next depends on whose unit is
+countering:
+
+### Player counter (player unit evaded)
+A **Counter Opportunity** prompt appears in the battle screen:
+
+```
+┌────────────────────────┐
+│  Counter Opportunity!  │
+│  Parry Riposte  AP: 20 │
+│  [COUNTER]  [SKIP]     │
+└────────────────────────┘
+```
+
+- **COUNTER** — fires the counter-tagged skill immediately. AP is deducted from
+  the snapshot at confirm time.
+- **SKIP** — forfeits the opportunity; no AP is spent, no attack fires. This is
+  a deliberate strategic option (AP conservation, bait avoidance, etc.).
+
+### Enemy AI counter (enemy unit evaded)
+The AI evaluates its AP reserve before firing:
+
+```
+if enemy.ap − counterSkill.apCost >= AI_COUNTER_AP_RESERVE (20):
+    fire counter immediately
+else:
+    skip silently (preserve AP for own offensive turn)
+```
+
+`AI_COUNTER_AP_RESERVE = 20` is defined in `src/core/constants.ts`.
+
+---
+
+## Cooldown Interaction
+
+Counter reactions **bypass cooldown entirely** — for both player and enemy:
+
+- The counter-tagged skill is **never placed on cooldown** when used as a
+  reactive counter (neither `tickCooldown` nor `turnCooldown` is applied).
+- If the same skill is used on a **normal offensive turn** (via the action grid
+  + Roll button), cooldown applies as normal.
+- A counter reaction may fire even if the skill is currently on cooldown from
+  a prior normal use — the CD check is skipped for reactive counters.
+
+This keeps counter skills available as defensive tools even after the player
+spent them offensively, and preserves the strategic richness of having cooldown
+matter only for proactive use.
+
+---
+
 ## Free Action Semantics
 
 - **No TU cost** — the counter-attacker's `tickPosition` does not advance.
-- **AP cost** is paid at counter-fire time from the in-flight snapshot (`snap`).
+- **AP cost** is paid at the moment the counter fires (for AI) or when the
+  player confirms (for the choice prompt).
+- **No cooldown applied** — see Cooldown Interaction above.
 - The counter is not logged in the timeline strip; it appears only in the
   combat log and the DiceResult overlay.
 
@@ -90,8 +144,9 @@ character-specific thematic skill rather than a generic reactive strike.
 |---|---|
 | `src/core/combat/CounterResolver.ts` | `findCounterSkill`, `canCounter`, `isSingleTarget` — pure eligibility checks |
 | `src/core/combat/DiceResolver.ts` | `resolveCounterRoll(depth)` — returns bool |
-| `src/core/constants.ts` | `COUNTER_BASE`, `COUNTER_STEP`, `COUNTER_MIN`, `COUNTER_ANNOUNCE_MS` |
-| `src/screens/BattleContext.tsx` | `scheduleCounterChain` — animation sequencing + recursive chain |
+| `src/core/constants.ts` | `COUNTER_BASE`, `COUNTER_STEP`, `COUNTER_MIN`, `COUNTER_ANNOUNCE_MS`, `AI_COUNTER_AP_RESERVE` |
+| `src/screens/BattleContext.tsx` | `scheduleCounterChain`, `confirmCounter`, `skipCounter`, `pendingCounterDecision` |
+| `src/screens/BattleScreen.tsx` | `CounterPromptOverlay` — player choice UI |
 
 ---
 
@@ -104,6 +159,7 @@ character-specific thematic skill rather than a generic reactive strike.
   "name": "Parry Riposte",
   "tuCost": 0,
   "apCost": 20,
+  "tickCooldown": 20,
   "tags": ["counter", "physical", "melee"],
   "maxLevel": 1,
   "targeting": { "selector": "enemy", "range": "melee" },
@@ -125,5 +181,6 @@ Key fields:
 - `tuCost: 0` — free action
 - `tags` includes `"counter"` (or `"uniqueCounter"`)
 - `targeting.selector: "enemy"` — required for the counter to chain correctly
-- `resolution.baseChance` — used for the counter attack's own hit dice (separate
-  from the trigger Evasion roll; this is the counter's chance to hit the target)
+- `resolution.baseChance` — the counter attack's own hit dice chance
+- `tickCooldown` / `turnCooldown` — optional; applies only to **normal use**,
+  never to reactive counter use. See `docs/mechanics/cooldown.md`.

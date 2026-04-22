@@ -75,6 +75,15 @@ same pattern:
   (`findCounterSkill`, `canCounter`, `isSingleTarget`)
 - Counter dice: `max(0.01, 0.15 − depth × 0.02)` — diminishes with chain
   depth but never reaches zero. See `docs/mechanics/counter.md` for full spec.
+- **Player counter = active choice** — when counter roll succeeds for the player,
+  a prompt appears: [COUNTER] fires the skill, [SKIP] forfeits the opportunity
+  (AP conservation, bait avoidance). The decision is always with the player.
+- **Enemy AI counter = strategic skip** — the AI fires only if remaining AP
+  after cost would be ≥ `AI_COUNTER_AP_RESERVE` (20); otherwise it skips to
+  preserve AP for its offensive turn.
+- **Counter reactions bypass cooldown** — `counter`/`uniqueCounter` skills are
+  never placed on cooldown when used reactively. Cooldown applies only to
+  proactive (normal turn) use of those same skills.
 
 ---
 
@@ -134,7 +143,9 @@ Genesis/
 │       │   ├── combat/
 │       │   │   ├── TickCalculator.ts     # calculateStartingTick, advanceTick, calculateApGained
 │       │   │   ├── HitChanceEvaluator.ts # calculateFinalChance, shiftProbabilities (6-outcome table)
-│       │   │   ├── DiceResolver.ts       # roll, applyOutcome, calculateTumblingDelay, resolveEvasionCounter
+│       │   │   ├── DiceResolver.ts       # roll, applyOutcome, calculateTumblingDelay, resolveCounterRoll
+│       │   │   ├── CounterResolver.ts    # findCounterSkill, canCounter, isSingleTarget
+│       │   │   ├── CooldownResolver.ts   # isOnCooldown, ticksRemaining, turnsRemaining, applyCooldown
 │       │   │   └── index.ts
 │       │   ├── effects/          # Effect engine — open hook system for skills/items/passives
 │       │   │   ├── types.ts      # 15 effect discriminated union, ValueExpr, WhenClause, EffectContext
@@ -403,6 +414,19 @@ meaning (i.e. `BattleContext` inspects them) are:
 All other tags (`physical`, `energy`, `melee`, `ranged`, etc.) are
 informational — used by the UI and future filter logic, not by the combat
 engine.
+
+### Skill cooldown fields
+
+Skills may carry either or both optional cooldown fields:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `tickCooldown` | `number` (optional) | Ticks that must elapse on the skill owner's `tickPosition` after use. |
+| `turnCooldown` | `number` (optional) | Number of the **owner's own actions** (`actionCount`) that must occur after use. |
+
+Both fields are absent by default (no cooldown). Both must clear before a
+skill with dual cooldowns is usable again. Values are patchable via
+`levelUpgrades`. See `docs/mechanics/cooldown.md` for the full spec.
 
 ---
 

@@ -8,12 +8,13 @@ import {
 } from 'react'
 import type { Unit, StatusEffect } from '../core/types'
 import type { SkillInstance, BattleState as EngineBattleState, EffectContext } from '../core/effects/types'
-import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, ENEMY_AI_DELAY_MS, COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS } from '../core/constants'
+import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, ENEMY_AI_DELAY_MS, COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE } from '../core/constants'
 import { createUnit, isAlive, setTickPosition, incrementActionCount } from '../core/unit'
 import { calculateStartingTick, advanceTick, calculateApGained } from '../core/combat/TickCalculator'
 import { calculateFinalChance, shiftProbabilities } from '../core/combat/HitChanceEvaluator'
 import { roll, calculateTumblingDelay, resolveCounterRoll, type DiceOutcome } from '../core/combat/DiceResolver'
 import { findCounterSkill, canCounter, isSingleTarget } from '../core/combat/CounterResolver'
+import { isOnCooldown, applyCooldown } from '../core/combat/CooldownResolver'
 import { applyEffect } from '../core/effects/applyEffect'
 import { createSkillInstance, getCachedSkill } from '../core/engines/skill/SkillInstance'
 import { loadCharacterWithSkills } from '../services/DataService'
@@ -59,6 +60,14 @@ export interface LogEntry {
   colour?: string
 }
 
+export interface CounterDecision {
+  defender:       Unit
+  originalCaster: Unit
+  counterSkill:   SkillInstance
+  snap:           Map<string, Unit>
+  depth:          number
+}
+
 interface BattleContextValue {
   // State
   phase:           TurnPhase
@@ -77,6 +86,8 @@ interface BattleContextValue {
   diceResult:      DiceResult | null
   // Turn display panel
   turnDisplay:     TurnDisplay | null
+  // Counter choice prompt — set when player's counter roll succeeds
+  pendingCounterDecision: CounterDecision | null
   // Timeline
   registeredTicks: Map<string, number>
   scrollBounds:    { min: number; max: number }
@@ -85,6 +96,8 @@ interface BattleContextValue {
   // Actions
   executeSkill:    (skill: SkillInstance) => void
   skipTurn:        () => void
+  confirmCounter:  () => void
+  skipCounter:     () => void
   registerTick:    (id: string, tick: number) => void
   unregisterTick:  (id: string) => void
   pushHistory:     (entry: HistoryEntry) => void
@@ -194,6 +207,7 @@ export function BattleProvider({ children }: Props) {
   const [selectedSkill, setSelectedSkill]   = useState<SkillInstance | null>(null)
   const [gridCollapsed, setGridCollapsed]   = useState(false)
   const [isPaused, setPaused]               = useState(false)
+  const [pendingCounterDecision, setPendingCounterDecision] = useState<CounterDecision | null>(null)
 
   // Timeline tick registry — seeded from real unit positions after load.
   const [registeredTicks, setRegisteredTicks] = useState<Map<string, number>>(
@@ -452,7 +466,32 @@ export function BattleProvider({ children }: Props) {
   // latest callbacks without adding them to each other's dependency arrays.
   useEffect(() => { runAttackRef.current = runAttack }, [runAttack])
 
-  /** Animate a counter attempt and, on success, fire the counter attack. */
+  /** Player confirms the counter prompt — deducts AP and fires the counter attack. */
+  const confirmCounter = useCallback(() => {
+    if (!pendingCounterDecision) return
+    const { defender, originalCaster, counterSkill, snap, depth } = pendingCounterDecision
+    setPendingCounterDecision(null)
+
+    const defSnap = snap.get(defender.id) ?? defender
+    snap.set(defender.id, { ...defSnap, ap: defSnap.ap - counterSkill.cachedCosts.apCost })
+
+    // Brief pause so the overlay visually dismisses before the dice animation starts.
+    setTimeout(() => {
+      runAttackRef.current?.(defender, originalCaster, counterSkill, snap, depth + 1)
+      setTimeout(() => {
+        const currentPlayer = playerUnitRef.current
+        if (currentPlayer) setPlayerUnit(snap.get(currentPlayer.id) ?? currentPlayer)
+        setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
+      }, DICE_RESULT_DISMISS_MS)
+    }, 200)
+  }, [pendingCounterDecision])
+
+  /** Player skips the counter opportunity — no AP spent, no attack fired. */
+  const skipCounter = useCallback(() => {
+    setPendingCounterDecision(null)
+  }, [])
+
+  /** Animate a counter attempt and, on success, present a choice (player) or decide (enemy AI). */
   const scheduleCounterChain = useCallback((
     defender: Unit,
     originalCaster: Unit,
@@ -470,19 +509,30 @@ export function BattleProvider({ children }: Props) {
         succeeded ? `Counter! (${chancePercent}% chance)` : 'Counter blocked!',
       )
 
-      if (succeeded) {
-        const defSnap = snap.get(defender.id) ?? defender
-        snap.set(defender.id, { ...defSnap, ap: defSnap.ap - counterSkill.cachedCosts.apCost })
+      if (!succeeded) return
 
-        setTimeout(() => {
-          runAttackRef.current?.(defender, originalCaster, counterSkill, snap, depth + 1)
-          // Commit counter snap after its dice animation clears.
+      if (defender.isAlly) {
+        // Player counter — present choice prompt; AP deducted only on confirm.
+        // Counter reactions bypass cooldown: no applyCooldown here or in confirmCounter.
+        setPendingCounterDecision({ defender, originalCaster, counterSkill, snap, depth })
+      } else {
+        // Enemy AI counter — fire only if the AP reserve after cost is comfortable.
+        const defSnap   = snap.get(defender.id) ?? defender
+        const shouldFire = defSnap.ap - counterSkill.cachedCosts.apCost >= AI_COUNTER_AP_RESERVE
+
+        if (shouldFire) {
+          snap.set(defender.id, { ...defSnap, ap: defSnap.ap - counterSkill.cachedCosts.apCost })
+          // Counter reactions bypass cooldown: no applyCooldown called.
           setTimeout(() => {
-            const currentPlayer = playerUnitRef.current
-            if (currentPlayer) setPlayerUnit(snap.get(currentPlayer.id) ?? currentPlayer)
-            setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
+            runAttackRef.current?.(defender, originalCaster, counterSkill, snap, depth + 1)
+            setTimeout(() => {
+              const currentPlayer = playerUnitRef.current
+              if (currentPlayer) setPlayerUnit(snap.get(currentPlayer.id) ?? currentPlayer)
+              setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
+            }, DICE_RESULT_DISMISS_MS)
           }, DICE_RESULT_DISMISS_MS)
-        }, DICE_RESULT_DISMISS_MS)
+        }
+        // If not firing: the calling flow's deferred snap commit handles evasion state.
       }
     }, COUNTER_ANNOUNCE_MS)
   }, [showDiceResult])
@@ -492,13 +542,23 @@ export function BattleProvider({ children }: Props) {
   /** Player presses ROLL with a skill selected. */
   const executeSkill = useCallback((skillInst: SkillInstance) => {
     if (!playerUnit || phase !== 'player') return
+    if (isOnCooldown(playerUnit, skillInst)) return
     const target = enemies.find(isAlive)
     if (!target) return
 
+    const skill    = getCachedSkill(skillInst)
     const snap = makeSnapshot(playerUnit, enemies)
     const { tumbleDelay } = runAttack(playerUnit, target, skillInst, snap)
 
-    const skill    = getCachedSkill(skillInst)
+    // Apply cooldown immediately at cast time so the badge updates right away.
+    const withCooldown = applyCooldown(playerUnit, skillInst, skill)
+    setUnitSkillsMap((prev) => {
+      const next   = new Map(prev)
+      const skills = next.get(playerUnit.id) ?? []
+      next.set(playerUnit.id, skills.map((s) => s.defId === skillInst.defId ? withCooldown : s))
+      return next
+    })
+
     const fromTick = playerUnit.tickPosition
     const nextTick = advanceTick(fromTick, skill.tuCost + tumbleDelay)
 
@@ -538,7 +598,7 @@ export function BattleProvider({ children }: Props) {
       const allDead = enemies.every((e) => !isAlive(snap.get(e.id) ?? e))
       if (allDead) appendLog({ text: 'Victory! All enemies defeated.', colour: 'var(--accent-genesis)' })
     }, DICE_RESULT_DISMISS_MS)
-  }, [playerUnit, enemies, phase, runAttack, pushHistory, registerTick, appendLog, showTurnDisplay])
+  }, [playerUnit, enemies, phase, runAttack, pushHistory, registerTick, appendLog, showTurnDisplay, setUnitSkillsMap])
 
   // ── Enemy AI ───────────────────────────────────────────────────────────────
   //
@@ -566,7 +626,8 @@ export function BattleProvider({ children }: Props) {
     // Step 1 + 2: after player dice clears, show telegraph.
     const telegraphTimer = setTimeout(() => {
       const firstEnemy    = activeEnemies[0]
-      const previewSkills = unitSkillsMapRef.current.get(firstEnemy.id) ?? []
+      const previewSkills = (unitSkillsMapRef.current.get(firstEnemy.id) ?? [])
+        .filter((s) => !isOnCooldown(firstEnemy, s))
       if (previewSkills.length > 0) {
         const previewSkillInst = previewSkills[0]
         const previewSkill     = getCachedSkill(previewSkillInst)
@@ -613,9 +674,10 @@ export function BattleProvider({ children }: Props) {
       if (!currentPlayer || !isAlive(currentPlayer)) return
 
       for (const enemy of activeEnemies) {
-        const enemySkills = currentSkills.get(enemy.id) ?? []
-        if (!enemySkills.length) {
-          // No skill — advance tick immediately; no dice, no deferral needed.
+        const allEnemySkills    = currentSkills.get(enemy.id) ?? []
+        const availableSkills   = allEnemySkills.filter((s) => !isOnCooldown(enemy, s))
+        if (!availableSkills.length) {
+          // No skill available (none present, or all on cooldown) — gather strength.
           const fromTick = enemy.tickPosition
           pushHistory(makeHistoryEntry(enemy.id, enemy.name, fromTick, enemy.isAlly))
           registerTick(enemy.id, advanceTick(fromTick, 10))
@@ -623,17 +685,26 @@ export function BattleProvider({ children }: Props) {
           continue
         }
 
-        const skillInst = enemySkills[0]
+        const skillInst = availableSkills[0]
+        const skill     = getCachedSkill(skillInst)
         const snap      = makeSnapshot(currentPlayer, currentEnemies)
         // runAttack fires showDiceResult internally — dice animation starts now.
         const { tumbleDelay } = runAttack(enemy, currentPlayer, skillInst, snap)
+
+        // Apply cooldown immediately at cast time.
+        const withCooldown = applyCooldown(enemy, skillInst, skill)
+        setUnitSkillsMap((prev) => {
+          const next   = new Map(prev)
+          const skills = next.get(enemy.id) ?? []
+          next.set(enemy.id, skills.map((s) => s.defId === skillInst.defId ? withCooldown : s))
+          return next
+        })
 
         // Step 4: defer HP/tick commits until the dice animation ends.
         applyTimerRef.current = setTimeout(() => {
           setPlayerUnit(snap.get(currentPlayer.id) ?? currentPlayer)
           setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
 
-          const skill    = getCachedSkill(skillInst)
           const fromTick = enemy.tickPosition
           pushHistory(makeHistoryEntry(enemy.id, enemy.name, fromTick, enemy.isAlly))
           registerTick(enemy.id, advanceTick(fromTick, skill.tuCost + tumbleDelay))
@@ -682,9 +753,9 @@ export function BattleProvider({ children }: Props) {
       tickValue, activeUnitIds,
       playerUnit, enemies, log, historyEntries,
       selectedSkill, gridCollapsed, isPaused, isLoading,
-      diceResult, turnDisplay,
+      diceResult, turnDisplay, pendingCounterDecision,
       registeredTicks, scrollBounds,
-      getUnitSkills, executeSkill, skipTurn,
+      getUnitSkills, executeSkill, skipTurn, confirmCounter, skipCounter,
       registerTick, unregisterTick, pushHistory,
       setPhase, appendLog, selectSkill, toggleGrid, setPaused,
     }}>

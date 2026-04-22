@@ -36,6 +36,7 @@
     "name": "Parry Riposte",
     "tuCost": 0,
     "apCost": 20,
+    "tickCooldown": 20,
     "tags": ["counter", "physical", "melee"],
     "maxLevel": 1,
     "targeting": {
