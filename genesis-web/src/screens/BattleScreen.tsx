@@ -476,6 +476,43 @@ function PauseOverlay() {
   )
 }
 
+// ── Counter prompt overlay ───────────────────────────────────────────────────
+// Appears when counter roll succeeds for the player — choose to fire or skip.
+// Counter reactions bypass cooldown: whichever skill is offered fires freely.
+function CounterPromptOverlay() {
+  const { pendingCounterDecision, confirmCounter, skipCounter } = useBattleScreen()
+  const createHandler = useScrollAwarePointer()
+  if (!pendingCounterDecision) return null
+
+  const { counterSkill } = pendingCounterDecision
+  const skillName = counterSkill.baseDef.name
+  const apCost    = counterSkill.cachedCosts.apCost
+
+  return (
+    <div className={styles.counterPromptOverlay}>
+      <div className={styles.counterPromptCard}>
+        <span className={styles.counterPromptTitle}>Counter Opportunity!</span>
+        <span className={styles.counterPromptSkill}>{skillName}</span>
+        <span className={styles.counterPromptCost}>AP: {apCost}</span>
+        <div className={styles.counterPromptActions}>
+          <button
+            className={styles.counterPromptFire}
+            onPointerDown={createHandler({ onTap: confirmCounter })}
+          >
+            COUNTER
+          </button>
+          <button
+            className={styles.counterPromptSkip}
+            onPointerDown={createHandler({ onTap: skipCounter })}
+          >
+            SKIP
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Dice result overlay ─────────────────────────────────────────────────────
 // Full-area centred burst that slams in, holds, and fades over 2s.
 // Mounted with key={animKey} so each new roll triggers a fresh CSS animation.
@@ -536,6 +573,7 @@ function BattleLayout() {
   return (
     <div className={styles.root}>
       {isPaused && <PauseOverlay />}
+      <CounterPromptOverlay />
       <DiceResultOverlay key={diceResult?.animKey ?? 0} />
       <BattleTimeline />
       <div className={styles.main}>

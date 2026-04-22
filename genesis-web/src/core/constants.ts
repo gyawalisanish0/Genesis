@@ -30,10 +30,11 @@ export const TUMBLING_DELAY_MIN = 1
 export const TUMBLING_DELAY_MAX = 5
 
 // Counter chain — diminishing probability per recursion depth
-export const COUNTER_BASE         = 0.15  // 15% at depth 0
-export const COUNTER_STEP         = 0.02  // drops 2% per depth
-export const COUNTER_MIN          = 0.01  // never below 1%
-export const COUNTER_ANNOUNCE_MS  = 800   // pause before counter dice roll is displayed
+export const COUNTER_BASE            = 0.15  // 15% at depth 0
+export const COUNTER_STEP            = 0.02  // drops 2% per depth
+export const COUNTER_MIN             = 0.01  // never below 1%
+export const COUNTER_ANNOUNCE_MS     = 800   // pause before counter dice roll is displayed
+export const AI_COUNTER_AP_RESERVE   = 20    // enemy skips counter if remaining AP after cost < this
 
 // Unit limits
 export const MAX_SKILL_SLOTS = 4

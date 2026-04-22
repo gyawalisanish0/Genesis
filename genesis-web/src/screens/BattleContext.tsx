@@ -8,7 +8,7 @@ import {
 } from 'react'
 import type { Unit, StatusEffect } from '../core/types'
 import type { SkillInstance, BattleState as EngineBattleState, EffectContext } from '../core/effects/types'
-import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, ENEMY_AI_DELAY_MS, COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS } from '../core/constants'
+import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, ENEMY_AI_DELAY_MS, COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE } from '../core/constants'
 import { createUnit, isAlive, setTickPosition, incrementActionCount } from '../core/unit'
 import { calculateStartingTick, advanceTick, calculateApGained } from '../core/combat/TickCalculator'
 import { calculateFinalChance, shiftProbabilities } from '../core/combat/HitChanceEvaluator'
@@ -60,6 +60,14 @@ export interface LogEntry {
   colour?: string
 }
 
+export interface CounterDecision {
+  defender:       Unit
+  originalCaster: Unit
+  counterSkill:   SkillInstance
+  snap:           Map<string, Unit>
+  depth:          number
+}
+
 interface BattleContextValue {
   // State
   phase:           TurnPhase
@@ -78,6 +86,8 @@ interface BattleContextValue {
   diceResult:      DiceResult | null
   // Turn display panel
   turnDisplay:     TurnDisplay | null
+  // Counter choice prompt — set when player's counter roll succeeds
+  pendingCounterDecision: CounterDecision | null
   // Timeline
   registeredTicks: Map<string, number>
   scrollBounds:    { min: number; max: number }
@@ -86,6 +96,8 @@ interface BattleContextValue {
   // Actions
   executeSkill:    (skill: SkillInstance) => void
   skipTurn:        () => void
+  confirmCounter:  () => void
+  skipCounter:     () => void
   registerTick:    (id: string, tick: number) => void
   unregisterTick:  (id: string) => void
   pushHistory:     (entry: HistoryEntry) => void
@@ -195,6 +207,7 @@ export function BattleProvider({ children }: Props) {
   const [selectedSkill, setSelectedSkill]   = useState<SkillInstance | null>(null)
   const [gridCollapsed, setGridCollapsed]   = useState(false)
   const [isPaused, setPaused]               = useState(false)
+  const [pendingCounterDecision, setPendingCounterDecision] = useState<CounterDecision | null>(null)
 
   // Timeline tick registry — seeded from real unit positions after load.
   const [registeredTicks, setRegisteredTicks] = useState<Map<string, number>>(
@@ -453,7 +466,32 @@ export function BattleProvider({ children }: Props) {
   // latest callbacks without adding them to each other's dependency arrays.
   useEffect(() => { runAttackRef.current = runAttack }, [runAttack])
 
-  /** Animate a counter attempt and, on success, fire the counter attack. */
+  /** Player confirms the counter prompt — deducts AP and fires the counter attack. */
+  const confirmCounter = useCallback(() => {
+    if (!pendingCounterDecision) return
+    const { defender, originalCaster, counterSkill, snap, depth } = pendingCounterDecision
+    setPendingCounterDecision(null)
+
+    const defSnap = snap.get(defender.id) ?? defender
+    snap.set(defender.id, { ...defSnap, ap: defSnap.ap - counterSkill.cachedCosts.apCost })
+
+    // Brief pause so the overlay visually dismisses before the dice animation starts.
+    setTimeout(() => {
+      runAttackRef.current?.(defender, originalCaster, counterSkill, snap, depth + 1)
+      setTimeout(() => {
+        const currentPlayer = playerUnitRef.current
+        if (currentPlayer) setPlayerUnit(snap.get(currentPlayer.id) ?? currentPlayer)
+        setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
+      }, DICE_RESULT_DISMISS_MS)
+    }, 200)
+  }, [pendingCounterDecision])
+
+  /** Player skips the counter opportunity — no AP spent, no attack fired. */
+  const skipCounter = useCallback(() => {
+    setPendingCounterDecision(null)
+  }, [])
+
+  /** Animate a counter attempt and, on success, present a choice (player) or decide (enemy AI). */
   const scheduleCounterChain = useCallback((
     defender: Unit,
     originalCaster: Unit,
@@ -471,30 +509,30 @@ export function BattleProvider({ children }: Props) {
         succeeded ? `Counter! (${chancePercent}% chance)` : 'Counter blocked!',
       )
 
-      if (succeeded) {
-        const defSnap = snap.get(defender.id) ?? defender
-        snap.set(defender.id, { ...defSnap, ap: defSnap.ap - counterSkill.cachedCosts.apCost })
+      if (!succeeded) return
 
-        setTimeout(() => {
-          runAttackRef.current?.(defender, originalCaster, counterSkill, snap, depth + 1)
+      if (defender.isAlly) {
+        // Player counter — present choice prompt; AP deducted only on confirm.
+        // Counter reactions bypass cooldown: no applyCooldown here or in confirmCounter.
+        setPendingCounterDecision({ defender, originalCaster, counterSkill, snap, depth })
+      } else {
+        // Enemy AI counter — fire only if the AP reserve after cost is comfortable.
+        const defSnap   = snap.get(defender.id) ?? defender
+        const shouldFire = defSnap.ap - counterSkill.cachedCosts.apCost >= AI_COUNTER_AP_RESERVE
 
-          // Apply cooldown to the counter skill immediately after it fires.
-          const patchedCounter = getCachedSkill(counterSkill)
-          const counterWithCD  = applyCooldown(defender, counterSkill, patchedCounter)
-          setUnitSkillsMap((prev) => {
-            const next   = new Map(prev)
-            const skills = next.get(defender.id) ?? []
-            next.set(defender.id, skills.map((s) => s.defId === counterSkill.defId ? counterWithCD : s))
-            return next
-          })
-
-          // Commit counter snap after its dice animation clears.
+        if (shouldFire) {
+          snap.set(defender.id, { ...defSnap, ap: defSnap.ap - counterSkill.cachedCosts.apCost })
+          // Counter reactions bypass cooldown: no applyCooldown called.
           setTimeout(() => {
-            const currentPlayer = playerUnitRef.current
-            if (currentPlayer) setPlayerUnit(snap.get(currentPlayer.id) ?? currentPlayer)
-            setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
+            runAttackRef.current?.(defender, originalCaster, counterSkill, snap, depth + 1)
+            setTimeout(() => {
+              const currentPlayer = playerUnitRef.current
+              if (currentPlayer) setPlayerUnit(snap.get(currentPlayer.id) ?? currentPlayer)
+              setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
+            }, DICE_RESULT_DISMISS_MS)
           }, DICE_RESULT_DISMISS_MS)
-        }, DICE_RESULT_DISMISS_MS)
+        }
+        // If not firing: the calling flow's deferred snap commit handles evasion state.
       }
     }, COUNTER_ANNOUNCE_MS)
   }, [showDiceResult])
@@ -715,9 +753,9 @@ export function BattleProvider({ children }: Props) {
       tickValue, activeUnitIds,
       playerUnit, enemies, log, historyEntries,
       selectedSkill, gridCollapsed, isPaused, isLoading,
-      diceResult, turnDisplay,
+      diceResult, turnDisplay, pendingCounterDecision,
       registeredTicks, scrollBounds,
-      getUnitSkills, executeSkill, skipTurn,
+      getUnitSkills, executeSkill, skipTurn, confirmCounter, skipCounter,
       registerTick, unregisterTick, pushHistory,
       setPhase, appendLog, selectSkill, toggleGrid, setPaused,
     }}>

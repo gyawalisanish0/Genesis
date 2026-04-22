@@ -75,6 +75,15 @@ same pattern:
   (`findCounterSkill`, `canCounter`, `isSingleTarget`)
 - Counter dice: `max(0.01, 0.15 − depth × 0.02)` — diminishes with chain
   depth but never reaches zero. See `docs/mechanics/counter.md` for full spec.
+- **Player counter = active choice** — when counter roll succeeds for the player,
+  a prompt appears: [COUNTER] fires the skill, [SKIP] forfeits the opportunity
+  (AP conservation, bait avoidance). The decision is always with the player.
+- **Enemy AI counter = strategic skip** — the AI fires only if remaining AP
+  after cost would be ≥ `AI_COUNTER_AP_RESERVE` (20); otherwise it skips to
+  preserve AP for its offensive turn.
+- **Counter reactions bypass cooldown** — `counter`/`uniqueCounter` skills are
+  never placed on cooldown when used reactively. Cooldown applies only to
+  proactive (normal turn) use of those same skills.
 
 ---
 

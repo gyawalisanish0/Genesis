@@ -381,6 +381,77 @@
 
 .collapseBtn:active { background: var(--bg-card); }
 
+/* ── Counter prompt overlay ─────────────────────────────────────────── */
+.counterPromptOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-overlay);
+  z-index: 40;
+}
+
+.counterPromptCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--accent-genesis);
+  border-radius: var(--r-md);
+  padding: var(--s-md) calc(var(--s-md) * 1.5);
+  min-width: 12rem;
+}
+
+.counterPromptTitle {
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  color: var(--accent-genesis);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.counterPromptSkill {
+  font-size: var(--t-body-size);
+  color: var(--text-primary);
+}
+
+.counterPromptCost {
+  font-size: var(--t-micro-size);
+  color: var(--text-muted);
+}
+
+.counterPromptActions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.4rem;
+}
+
+.counterPromptFire,
+.counterPromptSkip {
+  min-height: var(--touch-min);
+  min-width: 5rem;
+  border-radius: var(--r-sm);
+  font-family: var(--font-sans);
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  border: none;
+  cursor: pointer;
+  transition: transform var(--motion-button);
+}
+
+.counterPromptFire {
+  background: var(--accent-genesis);
+  color: var(--text-on-accent);
+}
+
+.counterPromptSkip {
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  border: 1px solid var(--text-muted);
+}
+
 /* ── Pause overlay ──────────────────────────────────────────────────── */
 .pauseOverlay {
   position: absolute;

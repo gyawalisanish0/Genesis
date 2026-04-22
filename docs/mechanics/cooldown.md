@@ -83,6 +83,24 @@ button reflects cooldown state as soon as the player acts.
 
 ---
 
+## Counter Reaction Exemption
+
+**Counter reactions bypass cooldown entirely.** This is symmetric for both
+player and enemy:
+
+- When a `counter`- or `uniqueCounter`-tagged skill fires as a **reactive
+  counter** (triggered by Evasion), no cooldown is applied and no CD check is
+  performed — even if the skill is already on cooldown from a prior normal use.
+- When the same skill is used on a **normal offensive turn** (action grid +
+  Roll), cooldown applies as usual.
+
+This design keeps counter-tagged skills available as defensive tools regardless
+of their offensive CD state, while still gating their offensive use.
+
+See `docs/mechanics/counter.md` for the full counter mechanic specification.
+
+---
+
 ## UI
 
 When a skill is on cooldown its action-grid button is:
