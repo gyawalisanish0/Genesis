@@ -343,6 +343,19 @@
 
 .skillBtnDisabled { opacity: 0.2; cursor: default; }
 
+.skillBtnCooldown {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.skillCdBadge {
+  grid-column: 1 / -1;
+  font-size: 0.65rem;
+  color: var(--accent-warn);
+  text-align: center;
+  margin-top: 0.1rem;
+}
+
 .skillBtnSelected {
   border-color: var(--accent-genesis);
   background: var(--bg-elevated);

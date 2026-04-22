@@ -134,7 +134,9 @@ Genesis/
 │       │   ├── combat/
 │       │   │   ├── TickCalculator.ts     # calculateStartingTick, advanceTick, calculateApGained
 │       │   │   ├── HitChanceEvaluator.ts # calculateFinalChance, shiftProbabilities (6-outcome table)
-│       │   │   ├── DiceResolver.ts       # roll, applyOutcome, calculateTumblingDelay, resolveEvasionCounter
+│       │   │   ├── DiceResolver.ts       # roll, applyOutcome, calculateTumblingDelay, resolveCounterRoll
+│       │   │   ├── CounterResolver.ts    # findCounterSkill, canCounter, isSingleTarget
+│       │   │   ├── CooldownResolver.ts   # isOnCooldown, ticksRemaining, turnsRemaining, applyCooldown
 │       │   │   └── index.ts
 │       │   ├── effects/          # Effect engine — open hook system for skills/items/passives
 │       │   │   ├── types.ts      # 15 effect discriminated union, ValueExpr, WhenClause, EffectContext
@@ -403,6 +405,19 @@ meaning (i.e. `BattleContext` inspects them) are:
 All other tags (`physical`, `energy`, `melee`, `ranged`, etc.) are
 informational — used by the UI and future filter logic, not by the combat
 engine.
+
+### Skill cooldown fields
+
+Skills may carry either or both optional cooldown fields:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `tickCooldown` | `number` (optional) | Ticks that must elapse on the skill owner's `tickPosition` after use. |
+| `turnCooldown` | `number` (optional) | Number of the **owner's own actions** (`actionCount`) that must occur after use. |
+
+Both fields are absent by default (no cooldown). Both must clear before a
+skill with dual cooldowns is usable again. Values are patchable via
+`levelUpgrades`. See `docs/mechanics/cooldown.md` for the full spec.
 
 ---
 

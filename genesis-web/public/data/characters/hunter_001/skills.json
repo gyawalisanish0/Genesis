@@ -36,6 +36,7 @@
     "name": "Evasive Strike",
     "tuCost": 0,
     "apCost": 15,
+    "turnCooldown": 2,
     "tags": ["counter", "energy", "ranged"],
     "maxLevel": 1,
     "targeting": {

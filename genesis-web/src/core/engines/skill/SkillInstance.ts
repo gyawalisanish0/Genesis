@@ -30,12 +30,14 @@ const INITIAL_LEVEL = 1
 
 export function createSkillInstance(def: SkillDef): SkillInstance {
   return rebuildCache({
-    defId:         def.id,
-    baseDef:       def,
-    currentLevel:  INITIAL_LEVEL,
-    cachedEffects: [],
-    cachedCosts:   { tuCost: def.tuCost, apCost: def.apCost },
-    cacheVersion:  0,
+    defId:                 def.id,
+    baseDef:               def,
+    currentLevel:          INITIAL_LEVEL,
+    cachedEffects:         [],
+    cachedCosts:           { tuCost: def.tuCost, apCost: def.apCost },
+    cacheVersion:          0,
+    cooldownReadyAtTick:   0,
+    cooldownReadyAtAction: 0,
   })
 }
 

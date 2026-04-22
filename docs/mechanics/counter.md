@@ -127,3 +127,6 @@ Key fields:
 - `targeting.selector: "enemy"` — required for the counter to chain correctly
 - `resolution.baseChance` — used for the counter attack's own hit dice (separate
   from the trigger Evasion roll; this is the counter's chance to hit the target)
+- `tickCooldown` / `turnCooldown` — optional; counter skills may carry cooldowns
+  to prevent rapid chaining. Example: `"tickCooldown": 20` on Parry Riposte means
+  the warrior cannot counter again for 20 ticks. See `docs/mechanics/cooldown.md`.

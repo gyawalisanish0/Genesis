@@ -11,6 +11,7 @@ import { useBackButton } from '../input/useBackButton'
 import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import { BattleProvider, useBattleScreen } from './BattleContext'
 import type { DiceOutcome } from '../core/combat/DiceResolver'
+import { isOnCooldown, ticksRemaining, turnsRemaining } from '../core/combat/CooldownResolver'
 import { ResourceBar } from '../components/ResourceBar'
 import {
   TIMELINE_PX_PER_TICK, TIMELINE_OVERLAY_PX,
@@ -377,20 +378,25 @@ function ActionGrid() {
           </div>
           <div className={styles.skillRows}>
             {slots.map((skillInst, i) => {
-              const hasSkill  = skillInst !== null
+              const hasSkill   = skillInst !== null
               const isSelected = hasSkill && selectedSkill?.defId === skillInst.defId
-              const tuCost    = hasSkill ? skillInst.cachedCosts.tuCost : null
-              const name      = hasSkill ? skillInst.baseDef.name : '—'
+              const tuCost     = hasSkill ? skillInst.cachedCosts.tuCost : null
+              const name       = hasSkill ? skillInst.baseDef.name : '—'
+              const onCooldown = hasSkill && !!playerUnit && isOnCooldown(playerUnit, skillInst)
+              const tickCD     = onCooldown && playerUnit ? ticksRemaining(playerUnit, skillInst) : 0
+              const turnCD     = onCooldown && playerUnit ? turnsRemaining(playerUnit, skillInst) : 0
+              const isDisabled = !hasSkill || disabled || onCooldown
               return (
                 <button
                   key={i}
                   className={[
                     styles.skillBtn,
                     (!hasSkill || disabled) ? styles.skillBtnDisabled : '',
-                    isSelected               ? styles.skillBtnSelected : '',
+                    onCooldown              ? styles.skillBtnCooldown  : '',
+                    isSelected              ? styles.skillBtnSelected  : '',
                   ].join(' ')}
-                  disabled={!hasSkill || disabled}
-                  onPointerDown={hasSkill ? createHandler({ onTap: () => {
+                  disabled={isDisabled}
+                  onPointerDown={hasSkill && !onCooldown ? createHandler({ onTap: () => {
                     selectSkill(isSelected ? null : skillInst)
                   }}) : undefined}
                 >
@@ -398,6 +404,13 @@ function ActionGrid() {
                   <span className={styles.skillLvl}>Lv {skillInst?.currentLevel ?? '—'}</span>
                   <span className={styles.skillTu}>{tuCost !== null ? `TU: ${tuCost}` : 'TU: —'}</span>
                   <span className={styles.skillChrg}>{hasSkill ? `Lv${skillInst.baseDef.maxLevel}` : '×—'}</span>
+                  {onCooldown && (
+                    <span className={styles.skillCdBadge}>
+                      {tickCD > 0 ? `⏳${tickCD}t` : ''}
+                      {tickCD > 0 && turnCD > 0 ? ' ' : ''}
+                      {turnCD > 0 ? `⏳${turnCD}` : ''}
+                    </span>
+                  )}
                 </button>
               )
             })}
