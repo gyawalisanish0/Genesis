@@ -29,5 +29,31 @@
       { "level": 4, "patch": { "effects.dmg.amount.percent": 138 } },
       { "level": 5, "patch": { "effects.dmg.amount.percent": 155 } }
     ]
+  },
+  {
+    "type": "skill",
+    "id": "hunter_001_evasive_strike",
+    "name": "Evasive Strike",
+    "tuCost": 0,
+    "apCost": 15,
+    "tags": ["counter", "energy", "ranged"],
+    "maxLevel": 1,
+    "targeting": {
+      "selector": "enemy",
+      "range": "ranged"
+    },
+    "resolution": {
+      "baseChance": 0.75
+    },
+    "effects": [
+      {
+        "id": "hunter_001_evasive_strike_dmg",
+        "when": { "event": "onCast" },
+        "type": "damage",
+        "amount": { "stat": "power", "percent": 55 },
+        "damageType": "energy"
+      }
+    ],
+    "levelUpgrades": []
   }
 ]

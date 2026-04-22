@@ -8,11 +8,12 @@ import {
 } from 'react'
 import type { Unit, StatusEffect } from '../core/types'
 import type { SkillInstance, BattleState as EngineBattleState, EffectContext } from '../core/effects/types'
-import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, ENEMY_AI_DELAY_MS } from '../core/constants'
+import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, ENEMY_AI_DELAY_MS, COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS } from '../core/constants'
 import { createUnit, isAlive, setTickPosition, incrementActionCount } from '../core/unit'
 import { calculateStartingTick, advanceTick, calculateApGained } from '../core/combat/TickCalculator'
 import { calculateFinalChance, shiftProbabilities } from '../core/combat/HitChanceEvaluator'
-import { roll, calculateTumblingDelay, type DiceOutcome } from '../core/combat/DiceResolver'
+import { roll, calculateTumblingDelay, resolveCounterRoll, type DiceOutcome } from '../core/combat/DiceResolver'
+import { findCounterSkill, canCounter, isSingleTarget } from '../core/combat/CounterResolver'
 import { applyEffect } from '../core/effects/applyEffect'
 import { createSkillInstance, getCachedSkill } from '../core/engines/skill/SkillInstance'
 import { loadCharacterWithSkills } from '../services/DataService'
@@ -384,12 +385,19 @@ export function BattleProvider({ children }: Props) {
   useEffect(() => { unitSkillsMapRef.current = unitSkillsMap }, [unitSkillsMap])
   useEffect(() => { diceResultRef.current = diceResult },   [diceResult])
 
+  // Refs for mutual recursion between runAttack and scheduleCounterChain.
+  // Both useCallbacks reference each other only through these refs so neither
+  // has the other in its dependency array.
+  const runAttackRef            = useRef<((caster: Unit, target: Unit, skillInst: SkillInstance, snap: Map<string, Unit>, chainDepth?: number) => { tumbleDelay: number }) | null>(null)
+  const scheduleCounterChainRef = useRef<((defender: Unit, originalCaster: Unit, counterSkill: SkillInstance, snap: Map<string, Unit>, depth: number) => void) | null>(null)
+
   /** Execute one attack: caster hits target using the given SkillInstance. */
   const runAttack = useCallback((
     caster: Unit,
     target: Unit,
     skillInst: SkillInstance,
     snap: Map<string, Unit>,
+    chainDepth = 0,
   ): { tumbleDelay: number } => {
     const skill       = getCachedSkill(skillInst)
     const finalChance = calculateFinalChance(caster.stats.precision, skill.resolution?.baseChance ?? 1.0)
@@ -427,8 +435,59 @@ export function BattleProvider({ children }: Props) {
       `${caster.name} → ${skill.name} on ${target.name} [${diceOutcome}]`
     appendLog({ text: logMsg, colour: outcomeColour(diceOutcome) })
 
+    // Reactive counter: check if the evading unit can counter-attack.
+    if (diceOutcome === 'Evasion' && isSingleTarget(skill)) {
+      const defenderSnap   = snap.get(target.id) ?? target
+      const defenderSkills = unitSkillsMapRef.current.get(target.id) ?? []
+      const counterSkill   = findCounterSkill(defenderSkills)
+      if (counterSkill && canCounter(defenderSnap, counterSkill)) {
+        scheduleCounterChainRef.current?.(defenderSnap, caster, counterSkill, snap, chainDepth)
+      }
+    }
+
     return { tumbleDelay }
   }, [tickValue, appendLog, showDiceResult])
+
+  // Keep both refs current so the mutual-recursion closures always see the
+  // latest callbacks without adding them to each other's dependency arrays.
+  useEffect(() => { runAttackRef.current = runAttack }, [runAttack])
+
+  /** Animate a counter attempt and, on success, fire the counter attack. */
+  const scheduleCounterChain = useCallback((
+    defender: Unit,
+    originalCaster: Unit,
+    counterSkill: SkillInstance,
+    snap: Map<string, Unit>,
+    depth: number,
+  ): void => {
+    showDiceResult('Evasion', `${defender.name} attempts a counter!`)
+
+    setTimeout(() => {
+      const succeeded     = resolveCounterRoll(depth)
+      const chancePercent = Math.round(Math.max(COUNTER_MIN, COUNTER_BASE - depth * COUNTER_STEP) * 100)
+      showDiceResult(
+        succeeded ? 'Success' : 'Fail',
+        succeeded ? `Counter! (${chancePercent}% chance)` : 'Counter blocked!',
+      )
+
+      if (succeeded) {
+        const defSnap = snap.get(defender.id) ?? defender
+        snap.set(defender.id, { ...defSnap, ap: defSnap.ap - counterSkill.cachedCosts.apCost })
+
+        setTimeout(() => {
+          runAttackRef.current?.(defender, originalCaster, counterSkill, snap, depth + 1)
+          // Commit counter snap after its dice animation clears.
+          setTimeout(() => {
+            const currentPlayer = playerUnitRef.current
+            if (currentPlayer) setPlayerUnit(snap.get(currentPlayer.id) ?? currentPlayer)
+            setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
+          }, DICE_RESULT_DISMISS_MS)
+        }, DICE_RESULT_DISMISS_MS)
+      }
+    }, COUNTER_ANNOUNCE_MS)
+  }, [showDiceResult])
+
+  useEffect(() => { scheduleCounterChainRef.current = scheduleCounterChain }, [scheduleCounterChain])
 
   /** Player presses ROLL with a skill selected. */
   const executeSkill = useCallback((skillInst: SkillInstance) => {

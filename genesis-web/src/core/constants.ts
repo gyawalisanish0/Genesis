@@ -29,10 +29,11 @@ export const GUARD_UP_MITIGATION = 0.10   // 10% of raw output becomes mitigatio
 export const TUMBLING_DELAY_MIN = 1
 export const TUMBLING_DELAY_MAX = 5
 
-// Evasion counter chain — diminishing probability per recursion depth
-export const EVASION_COUNTER_BASE = 0.15  // 15% at depth 0
-export const EVASION_COUNTER_STEP = 0.05  // drops 5% per depth
-export const EVASION_COUNTER_MIN  = 0.01  // never below 1%
+// Counter chain — diminishing probability per recursion depth
+export const COUNTER_BASE         = 0.15  // 15% at depth 0
+export const COUNTER_STEP         = 0.02  // drops 2% per depth
+export const COUNTER_MIN          = 0.01  // never below 1%
+export const COUNTER_ANNOUNCE_MS  = 800   // pause before counter dice roll is displayed
 
 // Unit limits
 export const MAX_SKILL_SLOTS = 4

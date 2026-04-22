@@ -62,6 +62,20 @@ in count. The combat framework treats units as an open collection.
   etc.) is a runtime metric, not a round system. The rule is about
   initiative truth, not vocabulary
 
+### 4. Reactive mechanics use hooks, not hardcoded branches
+
+The counter mechanic is the canonical example: the framework detects Evasion
+and checks for a `counter`/`uniqueCounter`-tagged skill — it does **not**
+hardcode "warriors can counter" anywhere. New reactive mechanics follow the
+same pattern:
+
+- Tag the skill JSON with the relevant tag (`counter`, `uniqueCounter`, etc.)
+- The framework checks for that tag; skills define what happens
+- `core/combat/CounterResolver.ts` contains the eligibility helpers
+  (`findCounterSkill`, `canCounter`, `isSingleTarget`)
+- Counter dice: `max(0.01, 0.15 − depth × 0.02)` — diminishes with chain
+  depth but never reaches zero. See `docs/mechanics/counter.md` for full spec.
+
 ---
 
 
@@ -375,6 +389,20 @@ public/data/modes/story.json
 ```
 
 Each file includes a `type` field identifying its schema.
+
+### Skill tags — reactive mechanics
+
+Skills carry a `tags: string[]` array. Tags that carry framework-level
+meaning (i.e. `BattleContext` inspects them) are:
+
+| Tag | Effect |
+|---|---|
+| `counter` | Standard reactive counter. When the unit evades a single-target attack, this skill may fire as a free action (15% base chance, −2% per chain depth, min 1%). |
+| `uniqueCounter` | Same dice and chain rules as `counter`; indicates a character-specific reactive skill with custom effects. |
+
+All other tags (`physical`, `energy`, `melee`, `ranged`, etc.) are
+informational — used by the UI and future filter logic, not by the combat
+engine.
 
 ---
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { roll, applyOutcome, calculateTumblingDelay, resolveEvasionCounter } from '../combat/DiceResolver'
+import { roll, applyOutcome, calculateTumblingDelay, resolveCounterRoll } from '../combat/DiceResolver'
 import { DICE_BASE_PROBABILITIES, TUMBLING_DELAY_MIN, TUMBLING_DELAY_MAX } from '../constants'
 
 describe('roll', () => {
@@ -61,12 +61,12 @@ describe('calculateTumblingDelay', () => {
   })
 })
 
-describe('resolveEvasionCounter', () => {
+describe('resolveCounterRoll', () => {
   it('returns a boolean', () => {
-    expect(typeof resolveEvasionCounter(0)).toBe('boolean')
+    expect(typeof resolveCounterRoll(0)).toBe('boolean')
   })
 
   it('never crashes at high depth values', () => {
-    expect(() => resolveEvasionCounter(100)).not.toThrow()
+    expect(() => resolveCounterRoll(100)).not.toThrow()
   })
 })
