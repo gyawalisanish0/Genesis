@@ -36,6 +36,16 @@ export const COUNTER_MIN             = 0.01  // never below 1%
 export const COUNTER_ANNOUNCE_MS     = 800   // pause before counter dice roll is displayed
 export const AI_COUNTER_AP_RESERVE   = 20    // enemy skips counter if remaining AP after cost < this
 
+// Tick collision — occupancy cap + QTE parameters
+export const TICK_MAX_OCCUPANCY        = 4      // units per tick before D8 displacement triggers
+export const QTE_KNOB_RPM              = 90     // spinning knob rotations per minute (1.5 rps)
+export const QTE_TARGET_ZONE_DEG       = 60     // target arc width in degrees
+export const QTE_ROUNDS                = 3      // tap rounds each participant gets
+export const QTE_BAR_FILL_PER_HIT      = 0.18  // bar shift per successful tap
+export const QTE_BAR_ALLY_WEIGHT_BONUS = 0.05  // extra shift per additional same-team unit on the tick
+export const AI_QTE_ACCURACY           = 0.65  // probability AI lands in target zone
+export const QTE_AI_TAP_DELAY_MS       = 1200  // ms before AI taps each round
+
 // Unit limits
 export const MAX_SKILL_SLOTS = 4
 export const TEAM_SIZE_MAX   = 2

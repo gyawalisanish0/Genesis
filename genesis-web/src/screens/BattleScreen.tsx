@@ -10,6 +10,8 @@ import { SCREEN_REGISTRY, SCREEN_IDS } from '../navigation/screenRegistry'
 import { useBackButton } from '../input/useBackButton'
 import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import { BattleProvider, useBattleScreen } from './BattleContext'
+import { ClashQteOverlay } from './ClashQteOverlay'
+import { TeamCollisionOverlay } from './TeamCollisionOverlay'
 import type { DiceOutcome } from '../core/combat/DiceResolver'
 import { isOnCooldown, ticksRemaining, turnsRemaining } from '../core/combat/CooldownResolver'
 import { ResourceBar } from '../components/ResourceBar'
@@ -574,6 +576,8 @@ function BattleLayout() {
     <div className={styles.root}>
       {isPaused && <PauseOverlay />}
       <CounterPromptOverlay />
+      <ClashQteOverlay />
+      <TeamCollisionOverlay />
       <DiceResultOverlay key={diceResult?.animKey ?? 0} />
       <BattleTimeline />
       <div className={styles.main}>
