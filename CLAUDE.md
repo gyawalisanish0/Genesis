@@ -49,6 +49,9 @@ in count. The combat framework treats units as an open collection.
   `maxTeamSize?: number` (or similar) field on `ModeDef`. Absent = unlimited
 - A mode-imposed limit is an exception applied at the mode boundary, not a
   property of the combat system
+- `TICK_MAX_OCCUPANCY` is a **battle-engine** constant (max units per tick
+  slot before D8 displacement fires) — architecturally distinct from a
+  team-size cap; it applies to the tick stream itself, not to roster size
 
 ### 3. Tick stream is the only source of action ordering
 
@@ -146,6 +149,7 @@ Genesis/
 │       │   │   ├── DiceResolver.ts       # roll, applyOutcome, calculateTumblingDelay, resolveCounterRoll
 │       │   │   ├── CounterResolver.ts    # findCounterSkill, canCounter, isSingleTarget
 │       │   │   ├── CooldownResolver.ts   # isOnCooldown, ticksRemaining, turnsRemaining, applyCooldown
+│       │   │   ├── TickDisplacer.ts      # rollD8Displacement, resolveTickDisplacement (tick occupancy cap)
 │       │   │   └── index.ts
 │       │   ├── effects/          # Effect engine — open hook system for skills/items/passives
 │       │   │   ├── types.ts      # 15 effect discriminated union, ValueExpr, WhenClause, EffectContext
@@ -185,6 +189,10 @@ Genesis/
 │       │   ├── BattleContext.tsx         # Screen-local context: phase, units, timeline, DiceResult+message, 6-outcome dice, sequential AI timing, deferred player state apply, skipTurn
 │       │   ├── TurnDisplayPanel.module.css
 │       │   ├── DiceResultOverlay.module.css
+│       │   ├── ClashQteOverlay.tsx       # Cross-team clash QTE: spinning knob + tug-of-war bar
+│       │   ├── ClashQteOverlay.module.css
+│       │   ├── TeamCollisionOverlay.tsx  # Same-team Now/Later choice prompt for speed-tied allies
+│       │   ├── TeamCollisionOverlay.module.css
 │       │   ├── BattleResultScreen.tsx    # Victory/defeat banner, rewards, unit results, battle stats
 │       │   ├── RosterScreen.tsx          # Character grid with class + rarity + name filters
 │       │   └── SettingsScreen.tsx        # Audio / display / notification / account settings

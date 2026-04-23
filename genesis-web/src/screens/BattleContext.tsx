@@ -9,6 +9,7 @@ import {
 import type { Unit, StatusEffect } from '../core/types'
 import type { SkillInstance, BattleState as EngineBattleState, EffectContext } from '../core/effects/types'
 import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, ENEMY_AI_DELAY_MS, COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE } from '../core/constants'
+import { resolveTickDisplacement } from '../core/combat/TickDisplacer'
 import { createUnit, isAlive, setTickPosition, incrementActionCount } from '../core/unit'
 import { calculateStartingTick, advanceTick, calculateApGained } from '../core/combat/TickCalculator'
 import { calculateFinalChance, shiftProbabilities } from '../core/combat/HitChanceEvaluator'
@@ -68,6 +69,16 @@ export interface CounterDecision {
   depth:          number
 }
 
+export interface ClashState {
+  playerUnits: Unit[]
+  enemyUnits:  Unit[]
+}
+
+export interface TeamCollisionState {
+  units:   Unit[]
+  choices: Map<string, 'now' | 'later' | null>
+}
+
 interface BattleContextValue {
   // State
   phase:           TurnPhase
@@ -88,17 +99,22 @@ interface BattleContextValue {
   turnDisplay:     TurnDisplay | null
   // Counter choice prompt — set when player's counter roll succeeds
   pendingCounterDecision: CounterDecision | null
+  // Collision overlays
+  pendingClash:            ClashState | null
+  pendingTeamCollision:    TeamCollisionState | null
   // Timeline
   registeredTicks: Map<string, number>
   scrollBounds:    { min: number; max: number }
   // Skill access
   getUnitSkills:   (unitId: string) => SkillInstance[]
   // Actions
-  executeSkill:    (skill: SkillInstance) => void
-  skipTurn:        () => void
-  confirmCounter:  () => void
-  skipCounter:     () => void
-  registerTick:    (id: string, tick: number) => void
+  executeSkill:          (skill: SkillInstance) => void
+  skipTurn:              () => void
+  confirmCounter:        () => void
+  skipCounter:           () => void
+  resolveClash:          (winner: 'player' | 'enemy') => void
+  resolveTeamCollision:  (choices: Map<string, 'now' | 'later'>) => void
+  registerTick:          (id: string, tick: number) => void
   unregisterTick:  (id: string) => void
   pushHistory:     (entry: HistoryEntry) => void
   setPhase:        (p: TurnPhase) => void
@@ -208,11 +224,18 @@ export function BattleProvider({ children }: Props) {
   const [gridCollapsed, setGridCollapsed]   = useState(false)
   const [isPaused, setPaused]               = useState(false)
   const [pendingCounterDecision, setPendingCounterDecision] = useState<CounterDecision | null>(null)
+  const [pendingClash, setPendingClash]               = useState<ClashState | null>(null)
+  const [pendingTeamCollision, setPendingTeamCollision] = useState<TeamCollisionState | null>(null)
 
   // Timeline tick registry — seeded from real unit positions after load.
   const [registeredTicks, setRegisteredTicks] = useState<Map<string, number>>(
     () => new Map(),
   )
+
+  // Ref copy of registeredTicks so registerTick (a useCallback) can read
+  // current occupancy synchronously without a stale closure.
+  const registeredTicksRef = useRef<Map<string, number>>(new Map())
+  useEffect(() => { registeredTicksRef.current = registeredTicks }, [registeredTicks])
 
   // Global battle clock — starts at 0, auto-advances when all units have acted.
   const [tickValue, setTickValue] = useState(0)
@@ -328,9 +351,10 @@ export function BattleProvider({ children }: Props) {
   // ── Timeline mechanics ─────────────────────────────────────────────────────
 
   const registerTick = useCallback((id: string, tick: number) => {
-    setRegisteredTicks((prev) => new Map(prev).set(id, tick))
-    setPlayerUnit((prev) => prev?.id === id ? { ...prev, tickPosition: tick } : prev)
-    setEnemies((prev) => prev.map((e) => e.id === id ? { ...e, tickPosition: tick } : e))
+    const finalTick = resolveTickDisplacement(tick, registeredTicksRef.current, id)
+    setRegisteredTicks((prev) => new Map(prev).set(id, finalTick))
+    setPlayerUnit((prev) => prev?.id === id ? { ...prev, tickPosition: finalTick } : prev)
+    setEnemies((prev) => prev.map((e) => e.id === id ? { ...e, tickPosition: finalTick } : e))
   }, [])
 
   const unregisterTick = useCallback((id: string) => {
@@ -357,15 +381,41 @@ export function BattleProvider({ children }: Props) {
     return ids
   }, [registeredTicks, tickValue])
 
-  // Derive phase from active unit ids.
+  // Derive phase from active unit ids — with collision detection.
   useEffect(() => {
-    if (isLoading) return
-    if (playerUnit && activeUnitIds.has(playerUnit.id)) {
-      setPhase('player')
-    } else if (enemies.some((e) => activeUnitIds.has(e.id))) {
-      setPhase('enemy')
+    if (isLoading || activeUnitIds.size === 0) return
+    if (pendingClash || pendingTeamCollision) return  // already resolving a collision
+
+    const activePlayerUnits = playerUnit && activeUnitIds.has(playerUnit.id) ? [playerUnit] : []
+    const activeEnemyUnits  = enemies.filter((e) => activeUnitIds.has(e.id))
+    const hasClash          = activePlayerUnits.length > 0 && activeEnemyUnits.length > 0
+
+    if (hasClash) {
+      setPendingClash({ playerUnits: activePlayerUnits, enemyUnits: activeEnemyUnits })
+      return
     }
-  }, [activeUnitIds, playerUnit, enemies, isLoading])
+
+    // Multiple allied player units at the same tick — speed check or Now/Later prompt.
+    if (activePlayerUnits.length > 1) {
+      const bySpeed = [...activePlayerUnits].sort((a, b) => b.stats.speed - a.stats.speed)
+      if (bySpeed[0].stats.speed !== bySpeed[1].stats.speed) {
+        setPhase('player')  // fastest acts first, no prompt needed
+      } else {
+        const choices = new Map(activePlayerUnits.map((u) => [u.id, null as 'now' | 'later' | null]))
+        setPendingTeamCollision({ units: activePlayerUnits, choices })
+      }
+      return
+    }
+
+    // Multiple same-team enemies — AI resolves by speed, no player prompt.
+    if (activeEnemyUnits.length > 1) {
+      setPhase('enemy')
+      return
+    }
+
+    if (activePlayerUnits.length === 1) setPhase('player')
+    else if (activeEnemyUnits.length === 1) setPhase('enemy')
+  }, [activeUnitIds, playerUnit, enemies, isLoading, pendingClash, pendingTeamCollision])
 
   // Timeline scroll bounds.
   const scrollBounds = useMemo(() => {
@@ -490,6 +540,24 @@ export function BattleProvider({ children }: Props) {
   const skipCounter = useCallback(() => {
     setPendingCounterDecision(null)
   }, [])
+
+  /** Called by ClashQteOverlay when bar settles — 'player' = player side wins. */
+  const resolveClash = useCallback((winner: 'player' | 'enemy') => {
+    setPendingClash(null)
+    setPhase(winner === 'player' ? 'player' : 'enemy')
+  }, [])
+
+  /** Called by TeamCollisionOverlay when all Now/Later choices are collected. */
+  const resolveTeamCollision = useCallback((choices: Map<string, 'now' | 'later'>) => {
+    setPendingTeamCollision(null)
+    choices.forEach((choice, unitId) => {
+      if (choice === 'later') {
+        const currentTick = registeredTicksRef.current.get(unitId) ?? 0
+        registerTick(unitId, currentTick + 1)
+      }
+    })
+    setPhase('player')
+  }, [registerTick])
 
   /** Animate a counter attempt and, on success, present a choice (player) or decide (enemy AI). */
   const scheduleCounterChain = useCallback((
@@ -673,7 +741,8 @@ export function BattleProvider({ children }: Props) {
       const currentSkills  = unitSkillsMapRef.current
       if (!currentPlayer || !isAlive(currentPlayer)) return
 
-      for (const enemy of activeEnemies) {
+      const sortedActiveEnemies = [...activeEnemies].sort((a, b) => b.stats.speed - a.stats.speed)
+      for (const enemy of sortedActiveEnemies) {
         const allEnemySkills    = currentSkills.get(enemy.id) ?? []
         const availableSkills   = allEnemySkills.filter((s) => !isOnCooldown(enemy, s))
         if (!availableSkills.length) {
@@ -754,8 +823,10 @@ export function BattleProvider({ children }: Props) {
       playerUnit, enemies, log, historyEntries,
       selectedSkill, gridCollapsed, isPaused, isLoading,
       diceResult, turnDisplay, pendingCounterDecision,
+      pendingClash, pendingTeamCollision,
       registeredTicks, scrollBounds,
       getUnitSkills, executeSkill, skipTurn, confirmCounter, skipCounter,
+      resolveClash, resolveTeamCollision,
       registerTick, unregisterTick, pushHistory,
       setPhase, appendLog, selectSkill, toggleGrid, setPaused,
     }}>
