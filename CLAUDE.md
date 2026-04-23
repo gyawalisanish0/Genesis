@@ -150,6 +150,7 @@ Genesis/
 │       │   │   ├── CounterResolver.ts    # findCounterSkill, canCounter, isSingleTarget
 │       │   │   ├── CooldownResolver.ts   # isOnCooldown, ticksRemaining, turnsRemaining, applyCooldown
 │       │   │   ├── TickDisplacer.ts      # rollD8Displacement, resolveTickDisplacement (tick occupancy cap)
+│       │   │   ├── ClashResolver.ts      # buildFactions, resolveClashOrder, resolveClashWinner (speed/dice)
 │       │   │   └── index.ts
 │       │   ├── effects/          # Effect engine — open hook system for skills/items/passives
 │       │   │   ├── types.ts      # 15 effect discriminated union, ValueExpr, WhenClause, EffectContext

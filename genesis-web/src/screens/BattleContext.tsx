@@ -8,8 +8,9 @@ import {
 } from 'react'
 import type { Unit, StatusEffect } from '../core/types'
 import type { SkillInstance, BattleState as EngineBattleState, EffectContext } from '../core/effects/types'
-import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, ENEMY_AI_DELAY_MS, COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE } from '../core/constants'
+import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, CLASH_ANNOUNCE_MS, ENEMY_AI_DELAY_MS, COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE } from '../core/constants'
 import { resolveTickDisplacement } from '../core/combat/TickDisplacer'
+import { resolveClashWinner, factionAvgSpeed } from '../core/combat/ClashResolver'
 import { createUnit, isAlive, setTickPosition, incrementActionCount } from '../core/unit'
 import { calculateStartingTick, advanceTick, calculateApGained } from '../core/combat/TickCalculator'
 import { calculateFinalChance, shiftProbabilities } from '../core/combat/HitChanceEvaluator'
@@ -226,6 +227,10 @@ export function BattleProvider({ children }: Props) {
   const [pendingCounterDecision, setPendingCounterDecision] = useState<CounterDecision | null>(null)
   const [pendingClash, setPendingClash]               = useState<ClashState | null>(null)
   const [pendingTeamCollision, setPendingTeamCollision] = useState<TeamCollisionState | null>(null)
+  // Set to the winner side while the clash-result log entry is briefly shown.
+  // Phase is advanced to the winner's side after CLASH_ANNOUNCE_MS.
+  const [pendingClashAnnounce, setPendingClashAnnounce] = useState<'player' | 'enemy' | null>(null)
+  const clashAnnounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Timeline tick registry — seeded from real unit positions after load.
   const [registeredTicks, setRegisteredTicks] = useState<Map<string, number>>(
@@ -346,7 +351,20 @@ export function BattleProvider({ children }: Props) {
   useEffect(() => () => {
     if (applyTimerRef.current) clearTimeout(applyTimerRef.current)
     if (playerApplyTimerRef.current) clearTimeout(playerApplyTimerRef.current)
+    if (clashAnnounceTimerRef.current) clearTimeout(clashAnnounceTimerRef.current)
   }, [])
+
+  // After clash winner is determined, advance to the winning phase.
+  useEffect(() => {
+    if (!pendingClashAnnounce) return
+    clashAnnounceTimerRef.current = setTimeout(() => {
+      setPhase(pendingClashAnnounce === 'player' ? 'player' : 'enemy')
+      setPendingClashAnnounce(null)
+    }, CLASH_ANNOUNCE_MS)
+    return () => {
+      if (clashAnnounceTimerRef.current) clearTimeout(clashAnnounceTimerRef.current)
+    }
+  }, [pendingClashAnnounce])
 
   // ── Timeline mechanics ─────────────────────────────────────────────────────
 
@@ -381,17 +399,49 @@ export function BattleProvider({ children }: Props) {
     return ids
   }, [registeredTicks, tickValue])
 
+  // ── Log + history helpers ──────────────────────────────────────────────────
+  // Declared here (before phase-derivation) so the phase effect can call appendLog.
+
+  const appendLog = useCallback((entry: Omit<LogEntry, 'id'>) => {
+    setLog((prev) => [...prev, { ...entry, id: String(Date.now() + Math.random()) }])
+  }, [])
+
+  const pushHistory = useCallback((entry: HistoryEntry) => {
+    setHistoryEntries((prev) => [...prev, entry])
+  }, [])
+
   // Derive phase from active unit ids — with collision detection.
   useEffect(() => {
     if (isLoading || activeUnitIds.size === 0) return
-    if (pendingClash || pendingTeamCollision) return  // already resolving a collision
+    // Don't re-trigger while another resolution is in progress.
+    if (pendingClash || pendingTeamCollision || pendingClashAnnounce) return
 
     const activePlayerUnits = playerUnit && activeUnitIds.has(playerUnit.id) ? [playerUnit] : []
     const activeEnemyUnits  = enemies.filter((e) => activeUnitIds.has(e.id))
     const hasClash          = activePlayerUnits.length > 0 && activeEnemyUnits.length > 0
 
     if (hasClash) {
-      setPendingClash({ playerUnits: activePlayerUnits, enemyUnits: activeEnemyUnits })
+      const allActive = [...activePlayerUnits, ...activeEnemyUnits]
+      const hasUniqueClash = allActive.some((u) => u.clashUniqueEnabled)
+
+      if (hasUniqueClash) {
+        // Unique clash mechanism defined in character data — activate QTE path.
+        setPendingClash({ playerUnits: activePlayerUnits, enemyUnits: activeEnemyUnits })
+        return
+      }
+
+      // Normal clash: resolve by average effective speed + weighted dice on tie.
+      const winner       = resolveClashWinner(activePlayerUnits, activeEnemyUnits)
+      const winnerUnits  = winner === 'player' ? activePlayerUnits : activeEnemyUnits
+      const loserUnits   = winner === 'player' ? activeEnemyUnits  : activePlayerUnits
+      const winnerAvg    = Math.round(factionAvgSpeed(winnerUnits))
+      const loserAvg     = Math.round(factionAvgSpeed(loserUnits))
+      const winnerLabel  = winnerUnits.map((u) => u.name).join(' & ')
+      appendLog({
+        text:   `CLASH — ${winnerLabel} acts first (avg. speed ${winnerAvg} vs ${loserAvg})`,
+        colour: winner === 'player' ? 'var(--accent-info)' : 'var(--accent-danger)',
+      })
+      setPendingClashAnnounce(winner)
       return
     }
 
@@ -415,7 +465,7 @@ export function BattleProvider({ children }: Props) {
 
     if (activePlayerUnits.length === 1) setPhase('player')
     else if (activeEnemyUnits.length === 1) setPhase('enemy')
-  }, [activeUnitIds, playerUnit, enemies, isLoading, pendingClash, pendingTeamCollision])
+  }, [activeUnitIds, playerUnit, enemies, isLoading, pendingClash, pendingTeamCollision, pendingClashAnnounce, appendLog])
 
   // Timeline scroll bounds.
   const scrollBounds = useMemo(() => {
@@ -427,16 +477,6 @@ export function BattleProvider({ children }: Props) {
       max: Math.max(Math.max(...ticks) + TIMELINE_BUFFER_TICKS, futureFloor),
     }
   }, [registeredTicks, tickValue])
-
-  // ── Log + history helpers ──────────────────────────────────────────────────
-
-  const appendLog = useCallback((entry: Omit<LogEntry, 'id'>) => {
-    setLog((prev) => [...prev, { ...entry, id: String(Date.now() + Math.random()) }])
-  }, [])
-
-  const pushHistory = useCallback((entry: HistoryEntry) => {
-    setHistoryEntries((prev) => [...prev, entry])
-  }, [])
 
   // ── Core skill execution ───────────────────────────────────────────────────
 

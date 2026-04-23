@@ -26,11 +26,13 @@ export function makeUnit(overrides: Partial<Unit> = {}): Unit {
     maxAp:        100,
     ap:           50,
     apRegenRate:  5,
-    tickPosition: 0,
-    actionCount:  0,
-    skills:       [],
-    statusSlots:  [],
-    isAlly:       true,
+    tickPosition:        0,
+    actionCount:         0,
+    clashSpeedModifier:  0,
+    clashUniqueEnabled:  false,
+    skills:              [],
+    statusSlots:         [],
+    isAlly:              true,
     ...overrides,
   }
 }
