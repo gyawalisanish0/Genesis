@@ -9,6 +9,11 @@ export interface StatBlockDef {
   precision:  number  // Hit chance multiplier
 }
 
+export interface CharacterClashDef {
+  speedModifier?: number   // added to this unit's effective speed for clash resolution
+  uniqueClash?:   boolean  // true → activates QTE path instead of speed/dice (unique abilities)
+}
+
 export interface CharacterDef {
   type:        'character'
   id:          string
@@ -21,6 +26,7 @@ export interface CharacterDef {
   apRegenRate: number
   passive:     string | null
   skillPath:   string
+  clash?:      CharacterClashDef
 }
 
 export interface LevelUpgrade {
@@ -89,11 +95,13 @@ export interface Unit {
   maxAp:        number
   ap:           number
   apRegenRate:  number
-  tickPosition: number
-  actionCount:  number   // runtime metric: how many actions this unit has taken
-  skills:       SkillInstance[]
-  statusSlots:  StatusEffect[]
-  isAlly:       boolean
+  tickPosition:        number
+  actionCount:         number   // runtime metric: how many actions this unit has taken
+  clashSpeedModifier:  number   // flat bonus to effective speed during clash resolution (from CharacterDef.clash)
+  clashUniqueEnabled:  boolean  // true → activates QTE path when this unit is in a clash
+  skills:              SkillInstance[]
+  statusSlots:         StatusEffect[]
+  isAlly:              boolean
 }
 
 // ── Battle result ──────────────────────────────────────────────────────────────

@@ -59,6 +59,7 @@ export const TIMELINE_NOW_FRACTION     = 0.75  // now-line sits at 75% from the 
 export const TIMELINE_RECENTER_DELAY_MS  = 1500 // ms of scroll-idle before auto-recenter fires
 export const TURN_DISPLAY_DISMISS_MS     = 2000 // ms after action resolves before turn panel auto-clears
 export const DICE_RESULT_DISMISS_MS      = 4000 // ms dice outcome burst is visible (matches 4s animation)
+export const CLASH_ANNOUNCE_MS           = 1500 // ms clash-winner log is shown before phase advances
 export const ENEMY_AI_DELAY_MS           = 2000 // ms between telegraph and enemy action firing
 export const BACK_DEBOUNCE_MS            = 300  // min ms between back-button presses in battle
 

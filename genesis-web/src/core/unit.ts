@@ -16,10 +16,12 @@ export function createUnit(def: CharacterDef, isAlly: boolean): Unit {
     maxAp:        def.maxAp,
     ap:           0,           // AP starts empty each battle
     apRegenRate:  def.apRegenRate,
-    tickPosition: 0,
-    actionCount:  0,
-    skills:       [],
-    statusSlots:  [],
+    tickPosition:       0,
+    actionCount:        0,
+    clashSpeedModifier: def.clash?.speedModifier ?? 0,
+    clashUniqueEnabled: def.clash?.uniqueClash   ?? false,
+    skills:             [],
+    statusSlots:        [],
     isAlly,
   }
 }
