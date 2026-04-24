@@ -1,0 +1,65 @@
+{
+  "type": "narrative",
+  "levelId": "story_001",
+  "entries": [
+    {
+      "narrativeId": "story_001_intro",
+      "trigger": { "event": "battle_start" },
+      "once": true,
+      "sequence": true,
+      "blocking": true,
+      "priority": 20,
+      "animations": [{ "type": "dialogue" }],
+      "lines": [
+        { "speakerId": "warrior_001", "text": "This outpost shouldn't be this quiet." },
+        { "speakerId": "hunter_001",  "text": "Something's coming. I can hear it." },
+        { "speakerId": "warrior_001", "text": "Then we meet it head on." }
+      ]
+    },
+    {
+      "narrativeId": "story_001_mid_warning",
+      "trigger": { "event": "unit_low_hp", "actorId": "warrior_001", "chance": 0.8 },
+      "once": true,
+      "priority": 5,
+      "animations": [
+        { "type": "screen_flash", "colour": "var(--accent-danger)", "duration": 500 },
+        { "type": "dialogue" }
+      ],
+      "lines": [
+        { "speakerId": "hunter_001",  "text": "Warden — you're taking too much damage!" },
+        { "speakerId": "warrior_001", "text": "I can hold. Keep pushing." }
+      ]
+    },
+    {
+      "narrativeId": "story_001_victory",
+      "trigger": { "event": "battle_victory" },
+      "once": true,
+      "sequence": true,
+      "blocking": true,
+      "priority": 20,
+      "animations": [
+        { "type": "screen_flash", "colour": "var(--accent-heal)", "duration": 600 },
+        { "type": "dialogue" }
+      ],
+      "lines": [
+        { "speakerId": "hunter_001",  "text": "That's the last of them." },
+        { "speakerId": "warrior_001", "text": "For now. Keep moving." }
+      ]
+    },
+    {
+      "narrativeId": "story_001_defeat",
+      "trigger": { "event": "battle_defeat" },
+      "once": true,
+      "sequence": true,
+      "blocking": true,
+      "priority": 20,
+      "animations": [
+        { "type": "screen_flash", "colour": "var(--accent-danger)", "duration": 1000 },
+        { "type": "dialogue" }
+      ],
+      "lines": [
+        { "speakerId": "hunter_001", "text": "Fall back! We're overwhelmed..." }
+      ]
+    }
+  ]
+}

@@ -70,6 +70,13 @@ export const SWIPE_MIN_DISTANCE_PX     = 50
 export const DOUBLE_TAP_WINDOW_MS      = 300
 export const SCROLL_DETECT_THRESHOLD_PX = 8  // if scrolled >8px, treat as scroll, not tap
 
+// Narrative layer — dialogue box + animation timings
+export const NARRATIVE_DISMISS_MS    = 3500  // ms before dialogue box auto-dismisses
+export const NARRATIVE_TYPEWRITER_MS = 30    // ms per character typewriter effect
+export const NARRATIVE_FLASH_MS      = 600   // screen-flash animation duration
+export const NARRATIVE_FLY_MS        = 350   // portrait fly-in animation duration
+export const NARRATIVE_FLOAT_MS      = 1200  // floating-text rise + fade duration
+
 // Default app settings
 export const DEFAULT_SETTINGS: AppSettings = {
   musicVolume:       0.75,

@@ -4,6 +4,7 @@ import { ScreenProvider }                                  from './navigation/Sc
 import { useViewportScale }                                from './utils/useViewportScale'
 import { initFullScreen }                                  from './services/DisplayService'
 
+import { NarrativeLayer }     from './components/NarrativeLayer'
 import { SplashScreen }       from './screens/SplashScreen'
 import { MainMenuScreen }     from './screens/MainMenuScreen'
 import { RosterScreen }       from './screens/RosterScreen'
@@ -37,6 +38,7 @@ export default function App() {
       >
         <HashRouter>
           <ScreenProvider>
+            <NarrativeLayer />
             <Routes>
               <Route path="/"              element={<Navigate to="/splash" replace />} />
               <Route path="/splash"        element={<SplashScreen />} />
