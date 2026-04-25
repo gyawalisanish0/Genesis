@@ -487,6 +487,12 @@ Full spec: `docs/mechanics/narrative.md`
   fire again in the same session.
 - **`sequence: true`** — all `lines` play in order, one tap (or `NARRATIVE_DISMISS_MS`)
   per line. Without it, one line is picked randomly.
+- **Dialogue freezes the battle** — any entry with `{ type: 'dialogue' }` in its
+  `animations` array silently halts enemy AI, player actions (`executeSkill`,
+  `skipTurn`), and phase derivation for its duration. Freeze is silent (no
+  visual indicator) and resumes instantly on dismiss. Non-dialogue animations
+  (`screen_flash`, `portrait_fly`, `floating_text`) do **not** freeze.
+  `BattleContext` exposes `narrativePaused: boolean` for any UI that needs it.
 
 ### Animation types (play simultaneously per entry)
 
