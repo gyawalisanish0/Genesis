@@ -9,6 +9,7 @@ import { useScreen } from '../navigation/useScreen'
 import { SCREEN_REGISTRY, SCREEN_IDS } from '../navigation/screenRegistry'
 import { useBackButton } from '../input/useBackButton'
 import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
+import { BattleArena } from '../components/BattleArena'
 import { BattleProvider, useBattleScreen } from './BattleContext'
 import { ClashQteOverlay } from './ClashQteOverlay'
 import { TeamCollisionOverlay } from './TeamCollisionOverlay'
@@ -297,26 +298,6 @@ function TurnDisplayPanel() {
   )
 }
 
-// ── Action log ──────────────────────────────────────────────────────────────
-function ActionLog() {
-  const { log } = useBattleScreen()
-  const bottomRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [log])
-
-  return (
-    <div className={styles.log}>
-      {log.map((entry) => (
-        <p key={entry.id} className={styles.logEntry} style={entry.colour ? { color: entry.colour } : undefined}>
-          {entry.text}
-        </p>
-      ))}
-      <div ref={bottomRef} />
-    </div>
-  )
-}
 
 // ── Status slots ────────────────────────────────────────────────────────────
 function StatusSlots() {
@@ -541,10 +522,18 @@ function DiceResultOverlay() {
 
 // ── Battle layout ───────────────────────────────────────────────────────────
 function BattleLayout() {
-  const { isPaused, setPaused, isLoading, playerUnit, turnDisplay, diceResult } = useBattleScreen()
-  const navigate = useNavigate()
-  const lastBackRef = useRef(0)
+  const { arenaRef, isPaused, setPaused, isLoading, playerUnit, turnDisplay, diceResult, log } = useBattleScreen()
+  const navigate      = useNavigate()
+  const lastBackRef   = useRef(0)
+  const prevLogLenRef = useRef(0)
   useScreen()
+
+  // Forward new log entries to the Phaser canvas as they arrive.
+  useEffect(() => {
+    const newEntries = log.slice(prevLogLenRef.current)
+    newEntries.forEach((e) => arenaRef.current?.addLog(e.text, e.colour ?? 'var(--text-primary)'))
+    prevLogLenRef.current = log.length
+  }, [log, arenaRef])
 
   // Redirect silently to pre-battle if no team was confirmed (direct URL access, etc.).
   useEffect(() => {
@@ -582,7 +571,7 @@ function BattleLayout() {
       <BattleTimeline />
       <div className={styles.main}>
         <TurnDisplayPanel key={turnDisplay?.animKey ?? 0} />
-        <ActionLog />
+        <BattleArena ref={arenaRef} />
         <StatusSlots />
         <div className={styles.bottom}>
           <div className={styles.portraitCol}>

@@ -1,0 +1,14 @@
+.arena {
+  flex: 1;
+  overflow: hidden;
+  background: var(--bg-deep);
+  min-height: 0;
+  /* Ensure Phaser canvas fills the container exactly */
+  position: relative;
+}
+
+.arena canvas {
+  display: block;
+  position: absolute;
+  inset: 0;
+}

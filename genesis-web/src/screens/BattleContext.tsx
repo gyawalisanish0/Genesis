@@ -8,7 +8,7 @@ import {
 } from 'react'
 import type { Unit, StatusEffect } from '../core/types'
 import type { SkillInstance, BattleState as EngineBattleState, EffectContext } from '../core/effects/types'
-import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, CLASH_ANNOUNCE_MS, ENEMY_AI_DELAY_MS, COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE } from '../core/constants'
+import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, CLASH_ANNOUNCE_MS, ENEMY_AI_DELAY_MS, COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE, BATTLE_FEEDBACK_HOLD_MS } from '../core/constants'
 import { resolveTickDisplacement } from '../core/combat/TickDisplacer'
 import { resolveClashWinner, factionAvgSpeed } from '../core/combat/ClashResolver'
 import { createUnit, isAlive, setTickPosition, incrementActionCount } from '../core/unit'
@@ -22,6 +22,7 @@ import { createSkillInstance, getCachedSkill } from '../core/engines/skill/Skill
 import { loadCharacterWithSkills } from '../services/DataService'
 import { NarrativeService } from '../services/NarrativeService'
 import { NarrativeUnits }   from '../components/NarrativeLayer'
+import type { BattleArenaHandle } from '../components/BattleArena'
 import { makeHistoryEntry } from '../core/battleHistory'
 import type { HistoryEntry } from '../core/battleHistory'
 import { useGameStore } from '../core/GameContext'
@@ -83,6 +84,8 @@ export interface TeamCollisionState {
 }
 
 interface BattleContextValue {
+  // Phaser arena handle — set by BattleLayout via <BattleArena ref={arenaRef} />
+  arenaRef: React.RefObject<BattleArenaHandle | null>
   // State
   phase:           TurnPhase
   narrativePaused: boolean  // true while a dialogue entry is showing — battle is frozen
@@ -189,6 +192,16 @@ function buildOutcomeMessage(
   }
 }
 
+// ── Arena feedback helpers ────────────────────────────────────────────────────
+
+function buildFeedbackText(outcome: DiceOutcome, damage: number): string {
+  if (outcome === 'Evasion') return 'EVADED!'
+  if (outcome === 'Fail')    return 'MISS!'
+  if (damage <= 0)           return outcome.toUpperCase()
+  const prefix = outcome === 'Boosted' ? '★ ' : ''
+  return `${prefix}−${damage} HP`
+}
+
 // ── Provider ──────────────────────────────────────────────────────────────────
 
 interface Props { children: ReactNode }
@@ -228,6 +241,7 @@ export function BattleProvider({ children }: Props) {
   const [gridCollapsed, setGridCollapsed]   = useState(false)
   const [isPaused, setPaused]               = useState(false)
   const [narrativePaused, setNarrativePaused] = useState(false)
+  const arenaRef = useRef<BattleArenaHandle>(null)
   const [pendingCounterDecision, setPendingCounterDecision] = useState<CounterDecision | null>(null)
   const [pendingClash, setPendingClash]               = useState<ClashState | null>(null)
   const [pendingTeamCollision, setPendingTeamCollision] = useState<TeamCollisionState | null>(null)
@@ -484,8 +498,14 @@ export function BattleProvider({ children }: Props) {
       return
     }
 
-    if (activePlayerUnits.length === 1) setPhase('player')
-    else if (activeEnemyUnits.length === 1) setPhase('enemy')
+    if (activePlayerUnits.length === 1) {
+      setPhase('player')
+      const firstEnemy = enemies.find(isAlive)
+      if (firstEnemy) arenaRef.current?.setTurnState(playerUnit!.defId, firstEnemy.defId)
+    } else if (activeEnemyUnits.length === 1) {
+      setPhase('enemy')
+      // setTurnState for enemy is called in the AI telegraph below, timed with the delay.
+    }
   }, [activeUnitIds, playerUnit, enemies, isLoading, narrativePaused, pendingClash, pendingTeamCollision, pendingClashAnnounce, appendLog])
 
   // Timeline scroll bounds.
@@ -513,7 +533,7 @@ export function BattleProvider({ children }: Props) {
   // Refs for mutual recursion between runAttack and scheduleCounterChain.
   // Both useCallbacks reference each other only through these refs so neither
   // has the other in its dependency array.
-  const runAttackRef            = useRef<((caster: Unit, target: Unit, skillInst: SkillInstance, snap: Map<string, Unit>, chainDepth?: number) => { tumbleDelay: number }) | null>(null)
+  const runAttackRef            = useRef<((caster: Unit, target: Unit, skillInst: SkillInstance, snap: Map<string, Unit>, chainDepth?: number) => { tumbleDelay: number; outcome: DiceOutcome; damage: number }) | null>(null)
   const scheduleCounterChainRef = useRef<((defender: Unit, originalCaster: Unit, counterSkill: SkillInstance, snap: Map<string, Unit>, depth: number) => void) | null>(null)
 
   /** Execute one attack: caster hits target using the given SkillInstance. */
@@ -523,7 +543,7 @@ export function BattleProvider({ children }: Props) {
     skillInst: SkillInstance,
     snap: Map<string, Unit>,
     chainDepth = 0,
-  ): { tumbleDelay: number } => {
+  ): { tumbleDelay: number; outcome: DiceOutcome; damage: number } => {
     const skill       = getCachedSkill(skillInst)
     const finalChance = calculateFinalChance(caster.stats.precision, skill.resolution?.baseChance ?? 1.0)
     const diceOutcome = roll(shiftProbabilities(finalChance))
@@ -531,6 +551,7 @@ export function BattleProvider({ children }: Props) {
     const noDamage    = diceOutcome === 'Evasion' || diceOutcome === 'Fail'
 
     showDiceResult(diceOutcome, buildOutcomeMessage(diceOutcome, caster.name, target.name, tumbleDelay))
+    const targetHpBefore = snap.get(target.id)?.hp ?? target.hp
 
     NarrativeService.emit({ type: 'skill_used', actorId: caster.defId, targetId: target.defId })
     if (diceOutcome === 'Boosted') {
@@ -578,7 +599,8 @@ export function BattleProvider({ children }: Props) {
       }
     }
 
-    return { tumbleDelay }
+    const damage = Math.max(0, targetHpBefore - (snap.get(target.id)?.hp ?? targetHpBefore))
+    return { tumbleDelay, outcome: diceOutcome, damage }
   }, [tickValue, appendLog, showDiceResult])
 
   // Keep both refs current so the mutual-recursion closures always see the
@@ -686,9 +708,9 @@ export function BattleProvider({ children }: Props) {
     const target = enemies.find(isAlive)
     if (!target) return
 
-    const skill    = getCachedSkill(skillInst)
-    const snap = makeSnapshot(playerUnit, enemies)
-    const { tumbleDelay } = runAttack(playerUnit, target, skillInst, snap)
+    const skill = getCachedSkill(skillInst)
+    const snap  = makeSnapshot(playerUnit, enemies)
+    const { tumbleDelay, outcome, damage } = runAttack(playerUnit, target, skillInst, snap)
 
     // Apply cooldown immediately at cast time so the badge updates right away.
     const withCooldown = applyCooldown(playerUnit, skillInst, skill)
@@ -702,10 +724,8 @@ export function BattleProvider({ children }: Props) {
     const fromTick = playerUnit.tickPosition
     const nextTick = advanceTick(fromTick, skill.tuCost + tumbleDelay)
 
-    // Ghost marker appears immediately at the old position.
     pushHistory(makeHistoryEntry(playerUnit.id, playerUnit.name, fromTick, playerUnit.isAlly))
 
-    // Confirmation panel shows immediately using snap values (HP reflects hit).
     const postTarget = snap.get(target.id) ?? target
     showTurnDisplay({
       actor:      null,
@@ -726,25 +746,48 @@ export function BattleProvider({ children }: Props) {
       isAlly: true,
     })
 
-    // Defer HP bars + timeline marker jump until dice animation ends.
-    // This creates a clean "dice resolves → world updates" sequence.
-    if (playerApplyTimerRef.current) clearTimeout(playerApplyTimerRef.current)
-    playerApplyTimerRef.current = setTimeout(() => {
+    // Apply state after animations complete: HP bars + timeline marker jump.
+    const applyState = () => {
       const updatedPlayer = incrementActionCount(snap.get(playerUnit.id) ?? playerUnit)
       setPlayerUnit(updatedPlayer)
       setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
       registerTick(playerUnit.id, nextTick)
 
       const snapEnemies = enemies.map((e) => snap.get(e.id) ?? e)
-      snapEnemies.filter((e) => !isAlive(e)).forEach((e) =>
+      const deadEnemies = snapEnemies.filter((e) => !isAlive(e))
+      deadEnemies.forEach((e) =>
         NarrativeService.emit({ type: 'unit_death', actorId: e.defId }),
       )
-      const allDead = snapEnemies.every((e) => !isAlive(e))
-      if (allDead) {
+      if (snapEnemies.every((e) => !isAlive(e))) {
         appendLog({ text: 'Victory! All enemies defeated.', colour: 'var(--accent-genesis)' })
         NarrativeService.emit({ type: 'battle_victory' })
       }
-    }, DICE_RESULT_DISMISS_MS)
+
+      // Stage 4: collapse the dead unit figure before sliding out survivors.
+      const arena     = arenaRef.current
+      const firstDead = deadEnemies[0]
+      if (firstDead && arena) {
+        arena.playDeath(firstDead.defId, () => arena.clearTurn())
+      } else {
+        arenaRef.current?.clearTurn()
+      }
+    }
+
+    // Phase-gated: dice animation → attack animation → feedback → apply state.
+    // Falls back to plain timer when the Phaser canvas is not mounted.
+    const arena = arenaRef.current
+    if (arena) {
+      arena.playDice(outcome, () => {
+        arena.playAttack(playerUnit.defId, target.defId, outcome, damage, () => {
+          arena.playFeedback(buildFeedbackText(outcome, damage), outcomeColour(outcome))
+          if (playerApplyTimerRef.current) clearTimeout(playerApplyTimerRef.current)
+          playerApplyTimerRef.current = setTimeout(applyState, BATTLE_FEEDBACK_HOLD_MS)
+        })
+      })
+    } else {
+      if (playerApplyTimerRef.current) clearTimeout(playerApplyTimerRef.current)
+      playerApplyTimerRef.current = setTimeout(applyState, DICE_RESULT_DISMISS_MS)
+    }
   }, [playerUnit, enemies, phase, narrativePaused, runAttack, pushHistory, registerTick, appendLog, showTurnDisplay, setUnitSkillsMap])
 
   // ── Enemy AI ───────────────────────────────────────────────────────────────
@@ -771,15 +814,19 @@ export function BattleProvider({ children }: Props) {
       ? Math.max(0, DICE_RESULT_DISMISS_MS - (Date.now() - diceShowTimeRef.current))
       : 0
 
-    // Step 1 + 2: after player dice clears, show telegraph.
+    // Step 1 + 2: after player dice clears, show telegraph + arena unit stage.
     const telegraphTimer = setTimeout(() => {
       const firstEnemy    = activeEnemies[0]
       const previewSkills = (unitSkillsMapRef.current.get(firstEnemy.id) ?? [])
         .filter((s) => !isOnCooldown(firstEnemy, s))
+      const previewTarget = playerUnitRef.current
+      // Show enemy (acting) on left, player (target) on right in the arena.
+      if (previewTarget) {
+        arenaRef.current?.setTurnState(firstEnemy.defId, previewTarget.defId)
+      }
       if (previewSkills.length > 0) {
         const previewSkillInst = previewSkills[0]
         const previewSkill     = getCachedSkill(previewSkillInst)
-        const previewTarget    = playerUnitRef.current
         showTurnDisplay(
           {
             actor: {
@@ -808,7 +855,6 @@ export function BattleProvider({ children }: Props) {
             } : { name: 'Player', className: '—', rarity: 1, hp: 0, maxHp: 1, ap: 0, maxAp: 1, statusSlots: [] },
             isAlly: false,
           },
-          // Stay visible through the full delay + dice animation window.
           ENEMY_AI_DELAY_MS + DICE_RESULT_DISMISS_MS,
         )
       }
@@ -823,24 +869,22 @@ export function BattleProvider({ children }: Props) {
 
       const sortedActiveEnemies = [...activeEnemies].sort((a, b) => b.stats.speed - a.stats.speed)
       for (const enemy of sortedActiveEnemies) {
-        const allEnemySkills    = currentSkills.get(enemy.id) ?? []
-        const availableSkills   = allEnemySkills.filter((s) => !isOnCooldown(enemy, s))
+        const allEnemySkills  = currentSkills.get(enemy.id) ?? []
+        const availableSkills = allEnemySkills.filter((s) => !isOnCooldown(enemy, s))
         if (!availableSkills.length) {
-          // No skill available (none present, or all on cooldown) — gather strength.
           const fromTick = enemy.tickPosition
           pushHistory(makeHistoryEntry(enemy.id, enemy.name, fromTick, enemy.isAlly))
           registerTick(enemy.id, advanceTick(fromTick, 10))
           appendLog({ text: `${enemy.name} is gathering strength…`, colour: 'var(--text-muted)' })
+          arenaRef.current?.clearTurn()
           continue
         }
 
         const skillInst = availableSkills[0]
         const skill     = getCachedSkill(skillInst)
         const snap      = makeSnapshot(currentPlayer, currentEnemies)
-        // runAttack fires showDiceResult internally — dice animation starts now.
-        const { tumbleDelay } = runAttack(enemy, currentPlayer, skillInst, snap)
+        const { tumbleDelay, outcome, damage } = runAttack(enemy, currentPlayer, skillInst, snap)
 
-        // Apply cooldown immediately at cast time.
         const withCooldown = applyCooldown(enemy, skillInst, skill)
         setUnitSkillsMap((prev) => {
           const next   = new Map(prev)
@@ -849,11 +893,10 @@ export function BattleProvider({ children }: Props) {
           return next
         })
 
-        // Step 4: defer HP/tick commits until the dice animation ends.
-        applyTimerRef.current = setTimeout(() => {
+        // Step 4: apply state after animations complete.
+        const applyEnemyState = () => {
           setPlayerUnit(snap.get(currentPlayer.id) ?? currentPlayer)
           setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
-
           const fromTick = enemy.tickPosition
           pushHistory(makeHistoryEntry(enemy.id, enemy.name, fromTick, enemy.isAlly))
           registerTick(enemy.id, advanceTick(fromTick, skill.tuCost + tumbleDelay))
@@ -864,7 +907,27 @@ export function BattleProvider({ children }: Props) {
             appendLog({ text: 'Defeat! You have been slain.', colour: 'var(--accent-danger)' })
             NarrativeService.emit({ type: 'battle_defeat' })
           }
-        }, DICE_RESULT_DISMISS_MS)
+
+          // Stage 4: collapse dead player figure before sliding out survivors.
+          const arena = arenaRef.current
+          if (!isAlive(updatedPlayer) && arena) {
+            arena.playDeath(updatedPlayer.defId, () => arena.clearTurn())
+          } else {
+            arenaRef.current?.clearTurn()
+          }
+        }
+
+        const arena = arenaRef.current
+        if (arena) {
+          arena.playDice(outcome, () => {
+            arena.playAttack(enemy.defId, currentPlayer.defId, outcome, damage, () => {
+              arena.playFeedback(buildFeedbackText(outcome, damage), outcomeColour(outcome))
+              applyTimerRef.current = setTimeout(applyEnemyState, BATTLE_FEEDBACK_HOLD_MS)
+            })
+          })
+        } else {
+          applyTimerRef.current = setTimeout(applyEnemyState, DICE_RESULT_DISMISS_MS)
+        }
       }
     }, remainingDice + ENEMY_AI_DELAY_MS)
 
@@ -887,6 +950,7 @@ export function BattleProvider({ children }: Props) {
     setPlayerUnit(incrementActionCount(playerUnit))
     registerTick(playerUnit.id, fromTick + 10)
     appendLog({ text: 'You skipped your turn.' })
+    arenaRef.current?.clearTurn()
   }, [playerUnit, phase, narrativePaused, pushHistory, registerTick, appendLog])
 
   const selectSkill = useCallback((skill: SkillInstance | null) => setSelectedSkill(skill), [])
@@ -900,6 +964,7 @@ export function BattleProvider({ children }: Props) {
 
   return (
     <BattleContext.Provider value={{
+      arenaRef,
       phase,
       narrativePaused,
       turnNumber: (playerUnit?.actionCount ?? 0) + 1,

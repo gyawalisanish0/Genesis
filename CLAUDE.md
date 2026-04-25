@@ -197,7 +197,7 @@ Genesis/
 │       │   ├── PreBattleStepTeam.tsx     # Step 1 — character roster pick (1–2 units)
 │       │   ├── PreBattleStepItems.tsx    # Step 2 — equipment slots (stub)
 │       │   ├── BattleScreen.tsx          # Battle layout: timeline strip, portrait col, action grid, overlays
-│       │   ├── BattleContext.tsx         # Screen-local context: phase, units, timeline, DiceResult+message, 6-outcome dice, sequential AI timing, deferred player state apply, skipTurn
+│       │   ├── BattleContext.tsx         # Screen-local context: arenaRef, phase, units, timeline, DiceResult+message, 6-outcome dice, phase-gated arena animations, sequential AI timing, skipTurn
 │       │   ├── TurnDisplayPanel.module.css
 │       │   ├── DiceResultOverlay.module.css
 │       │   ├── ClashQteOverlay.tsx       # Cross-team clash QTE: spinning knob + tug-of-war bar
@@ -207,11 +207,21 @@ Genesis/
 │       │   ├── BattleResultScreen.tsx    # Victory/defeat banner, rewards, unit results, battle stats
 │       │   ├── RosterScreen.tsx          # Character grid with class + rarity + name filters
 │       │   └── SettingsScreen.tsx        # Audio / display / notification / account settings
+│       ├── scenes/               # Phaser 3 scenes — no React imports
+│       │   ├── BattleScene.ts    # Stages 1–4 orchestrator: log, unit stage, dice/attack/feedback, particles/shake/death
+│       │   └── battle/           # BattleScene helper modules (one concern each)
+│       │       ├── UnitStage.ts      # Acting + target figure containers; slide, flash, dodge, collapse
+│       │       ├── DicePanel.ts      # Die face spin → outcome landing animation
+│       │       ├── AttackPanel.ts    # Shove tween, target flash, particle burst, camera shake
+│       │       ├── FeedbackPanel.ts  # Rising damage/outcome text tween
+│       │       └── ParticleEmitter.ts # One-shot burst effects per outcome; runtime-generated texture
 │       ├── components/           # Reusable React widgets
 │       │   ├── PrimaryButton.tsx         # Variants: primary / secondary / danger / ghost
 │       │   ├── ResourceBar.tsx           # Animated HP / AP / XP bar (400ms tween)
 │       │   ├── UnitPortrait.tsx          # Portrait circle: rarity-coloured border, 4 sizes, greyscale option
 │       │   ├── PagedGrid.tsx             # Generic paged grid: cols×rows, pointer swipe, arrows, dots, page counter
+│       │   ├── BattleArena.tsx           # Phaser wrapper; BattleArenaHandle ref (log, setTurnState, playDice, playAttack, playFeedback)
+│       │   ├── BattleArena.module.css    # flex: 1 container; canvas position: absolute inset: 0
 │       │   ├── NarrativeLayer.tsx        # Global narrative overlay (mounted in App.tsx); exports NarrativeUnits registry
 │       │   ├── NarrativeDialogueOverlay.tsx  # Dialogue box: portrait + nameplate + typewriter text
 │       │   ├── NarrativeScreenFlash.tsx  # Full-screen colour burst animation
@@ -224,8 +234,8 @@ Genesis/
 │       └── main.tsx              # Vite entry: registerBuiltins() → React root
 ```
 
-> **Planned / not yet created:** `scenes/` (Phaser 3 battle canvas).
-> Any code requiring this must add the directory and module — do not bypass the layer.
+> **`scenes/`** hosts Phaser 3 scenes. `BattleScene.ts` (Stage 1) is live — canvas mounts in `BattleArena.tsx` inside `BattleScreen`.
+> Art assets slot in at `public/images/characters/{defId}/idle.png` — zero architecture change required (see `docs/mechanics/phaser-arena.md`).
 
 ---
 
@@ -262,8 +272,11 @@ Each layer may only import from layers to its left.
 
 ### `scenes/`
 - Phaser 3 scenes only — no React imports
-- Receives data from React via a typed interface passed at scene start
-- Communicates results back to React via a callback or Zustand store write
+- Communicates back to React via `onDone` callbacks passed into `playDice` / `playAttack`
+- **`BattleScene`** is unit-agnostic — receives `actingDefId` / `targetDefId`, never assumes player/enemy roles
+- Helper modules live in `scenes/battle/` (one concern per file, all receive `scene: Phaser.Scene`)
+- React wrapper is `BattleArena.tsx`; `BattleContext` holds the `arenaRef` and calls handle methods directly
+- Full spec: `docs/mechanics/phaser-arena.md`
 
 ### `components/`
 - React + CSS Modules only — no Phaser
