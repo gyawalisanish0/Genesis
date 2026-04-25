@@ -5,14 +5,17 @@
 
 import type { CharacterDef, ModeDef } from '../core/types'
 import type { SkillDef } from '../core/effects/types'
+import type { CharacterDialogueDef, LevelNarrativeDef } from '../core/narrative'
 
 // ── In-memory cache ───────────────────────────────────────────────────────────
 
 const cache = {
-  characterIndex:  null as string[] | null,
-  characters:      new Map<string, CharacterDef>(),
-  characterSkills: new Map<string, SkillDef[]>(),  // keyed by characterId
-  modes:           new Map<string, ModeDef>(),
+  characterIndex:    null as string[] | null,
+  characters:        new Map<string, CharacterDef>(),
+  characterSkills:   new Map<string, SkillDef[]>(),  // keyed by characterId
+  modes:             new Map<string, ModeDef>(),
+  characterDialogue: new Map<string, CharacterDialogueDef>(),
+  levelNarrative:    new Map<string, LevelNarrativeDef>(),
 }
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
@@ -82,10 +85,46 @@ export async function loadCharacterWithSkills(id: string): Promise<{
   return { characterDef, skillDefs }
 }
 
+/**
+ * Load a character's universal dialogue definitions.
+ * Returns null silently when the file is absent — not every character has dialogue.
+ */
+export async function loadCharacterDialogue(id: string): Promise<CharacterDialogueDef | null> {
+  const cached = cache.characterDialogue.get(id)
+  if (cached) return cached
+  try {
+    const raw = await fetchJson(`data/characters/${id}/dialogue.json`)
+    const def = raw as CharacterDialogueDef
+    cache.characterDialogue.set(id, def)
+    return def
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Load level-specific narrative for a given level / mode id.
+ * Returns null silently when the file is absent.
+ */
+export async function loadLevelNarrative(levelId: string): Promise<LevelNarrativeDef | null> {
+  const cached = cache.levelNarrative.get(levelId)
+  if (cached) return cached
+  try {
+    const raw = await fetchJson(`data/levels/${levelId}/narrative.json`)
+    const def = raw as LevelNarrativeDef
+    cache.levelNarrative.set(levelId, def)
+    return def
+  } catch {
+    return null
+  }
+}
+
 /** Test utility — clears all cached data between test cases. */
 export function clearCache(): void {
   cache.characterIndex = null
   cache.characters.clear()
   cache.characterSkills.clear()
   cache.modes.clear()
+  cache.characterDialogue.clear()
+  cache.levelNarrative.clear()
 }

@@ -1,0 +1,14 @@
+.flash {
+  position: absolute;
+  inset: 0;
+  background: var(--flash-colour, var(--accent-info));
+  pointer-events: none;
+  z-index: 55;
+  animation: flash var(--flash-duration, 600ms) ease-out both;
+}
+
+@keyframes flash {
+  0%   { opacity: 0.6; }
+  30%  { opacity: 0.5; }
+  100% { opacity: 0;   }
+}

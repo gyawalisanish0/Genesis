@@ -20,6 +20,8 @@ import { isOnCooldown, applyCooldown } from '../core/combat/CooldownResolver'
 import { applyEffect } from '../core/effects/applyEffect'
 import { createSkillInstance, getCachedSkill } from '../core/engines/skill/SkillInstance'
 import { loadCharacterWithSkills } from '../services/DataService'
+import { NarrativeService } from '../services/NarrativeService'
+import { NarrativeUnits } from '../components/NarrativeLayer'
 import { makeHistoryEntry } from '../core/battleHistory'
 import type { HistoryEntry } from '../core/battleHistory'
 import { useGameStore } from '../core/GameContext'
@@ -287,6 +289,12 @@ export function BattleProvider({ children }: Props) {
           ]))
           setLog([{ id: '1', text: 'Battle started!', colour: 'var(--accent-genesis)' }])
           setIsLoading(false)
+          NarrativeUnits.register([player, enemy])
+          NarrativeService.emit({
+            type:     'battle_start',
+            actorId:  player.defId,
+            targetId: enemy.defId,
+          })
         }
       } catch (err) {
         console.error('BattleContext: failed to load battle data', err)
@@ -441,6 +449,9 @@ export function BattleProvider({ children }: Props) {
         text:   `CLASH — ${winnerLabel} acts first (avg. speed ${winnerAvg} vs ${loserAvg})`,
         colour: winner === 'player' ? 'var(--accent-info)' : 'var(--accent-danger)',
       })
+      winnerUnits.forEach((u) =>
+        NarrativeService.emit({ type: 'clash_resolved', actorId: u.defId }),
+      )
       setPendingClashAnnounce(winner)
       return
     }
@@ -510,6 +521,14 @@ export function BattleProvider({ children }: Props) {
     const noDamage    = diceOutcome === 'Evasion' || diceOutcome === 'Fail'
 
     showDiceResult(diceOutcome, buildOutcomeMessage(diceOutcome, caster.name, target.name, tumbleDelay))
+
+    NarrativeService.emit({ type: 'skill_used', actorId: caster.defId, targetId: target.defId })
+    if (diceOutcome === 'Boosted') {
+      NarrativeService.emit({ type: 'boosted_hit', actorId: caster.defId, targetId: target.defId })
+    }
+    if (diceOutcome === 'Evasion') {
+      NarrativeService.emit({ type: 'evaded', actorId: target.defId, targetId: caster.defId })
+    }
 
     const battle = snapshotToBattleState(snap)
     // AP regen for the caster based on ticks elapsed since last action.
@@ -619,6 +638,8 @@ export function BattleProvider({ children }: Props) {
 
       if (!succeeded) return
 
+      NarrativeService.emit({ type: 'counter', actorId: defender.defId, targetId: originalCaster.defId })
+
       if (defender.isAlly) {
         // Player counter — present choice prompt; AP deducted only on confirm.
         // Counter reactions bypass cooldown: no applyCooldown here or in confirmCounter.
@@ -703,8 +724,15 @@ export function BattleProvider({ children }: Props) {
       setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
       registerTick(playerUnit.id, nextTick)
 
-      const allDead = enemies.every((e) => !isAlive(snap.get(e.id) ?? e))
-      if (allDead) appendLog({ text: 'Victory! All enemies defeated.', colour: 'var(--accent-genesis)' })
+      const snapEnemies = enemies.map((e) => snap.get(e.id) ?? e)
+      snapEnemies.filter((e) => !isAlive(e)).forEach((e) =>
+        NarrativeService.emit({ type: 'unit_death', actorId: e.defId }),
+      )
+      const allDead = snapEnemies.every((e) => !isAlive(e))
+      if (allDead) {
+        appendLog({ text: 'Victory! All enemies defeated.', colour: 'var(--accent-genesis)' })
+        NarrativeService.emit({ type: 'battle_victory' })
+      }
     }, DICE_RESULT_DISMISS_MS)
   }, [playerUnit, enemies, phase, runAttack, pushHistory, registerTick, appendLog, showTurnDisplay, setUnitSkillsMap])
 
@@ -820,7 +848,9 @@ export function BattleProvider({ children }: Props) {
 
           const updatedPlayer = snap.get(currentPlayer.id) ?? currentPlayer
           if (!isAlive(updatedPlayer)) {
+            NarrativeService.emit({ type: 'unit_death', actorId: updatedPlayer.defId })
             appendLog({ text: 'Defeat! You have been slain.', colour: 'var(--accent-danger)' })
+            NarrativeService.emit({ type: 'battle_defeat' })
           }
         }, DICE_RESULT_DISMISS_MS)
       }

@@ -8,7 +8,11 @@ import { Capacitor } from '@capacitor/core'
 import { ScreenShell } from '../navigation/ScreenShell'
 import { useScreen } from '../navigation/useScreen'
 import { SCREEN_IDS } from '../navigation/screenRegistry'
-import { loadCharacterIndex, loadCharacter, loadMode } from '../services/DataService'
+import {
+  loadCharacterIndex, loadCharacter, loadMode,
+  loadCharacterDialogue, loadLevelNarrative,
+} from '../services/DataService'
+import { NarrativeService } from '../services/NarrativeService'
 import styles from './SplashScreen.module.css'
 
 const APP_VERSION = '0.1.0'
@@ -18,8 +22,19 @@ async function loadAllGameData(onProgress: (pct: number) => void): Promise<void>
   const ids = await loadCharacterIndex()
   onProgress(30)
   await Promise.all(ids.map(loadCharacter))
-  onProgress(70)
+  onProgress(60)
   await Promise.all([loadMode('story'), loadMode('ranked')])
+  onProgress(80)
+
+  // Load all character dialogue and known level narratives; register globally.
+  const [dialogueDefs, storyNarrative] = await Promise.all([
+    Promise.all(ids.map(loadCharacterDialogue)),
+    loadLevelNarrative('story_001'),
+  ])
+  const characterEntries = dialogueDefs.flatMap((d) => d?.entries ?? [])
+  NarrativeService.registerEntries('characters', characterEntries)
+  if (storyNarrative) NarrativeService.registerEntries('story_001', storyNarrative.entries)
+
   onProgress(100)
 }
 

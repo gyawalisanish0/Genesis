@@ -128,17 +128,22 @@ Genesis/
 │   │   │   ├── characters/       # index.json + one subfolder per character
 │   │   │   │   ├── index.json    # ["warrior_001", "hunter_001"]
 │   │   │   │   ├── warrior_001/  # Iron Warden (Warrior, Rarity 3)
-│   │   │   │   │   ├── main.json   # CharacterDef
-│   │   │   │   │   └── skills.json # SkillDef[] — Slash (physical, melee)
+│   │   │   │   │   ├── main.json     # CharacterDef
+│   │   │   │   │   ├── skills.json   # SkillDef[] — Slash (physical, melee)
+│   │   │   │   │   └── dialogue.json # CharacterDialogueDef — universal reactions
 │   │   │   │   └── hunter_001/   # Swift Veil (Hunter, Rarity 2)
 │   │   │   │       ├── main.json
-│   │   │   │       └── skills.json # Arcane Bolt (energy, ranged)
+│   │   │   │       ├── skills.json   # Arcane Bolt (energy, ranged)
+│   │   │   │       └── dialogue.json # CharacterDialogueDef — universal reactions
+│   │   │   ├── levels/           # Level-specific narrative (one subfolder per level)
+│   │   │   │   └── story_001/
+│   │   │   │       └── narrative.json # LevelNarrativeDef — story beats, cutscenes
 │   │   │   └── modes/            # story.json, ranked.json
 │   │   └── images/               # 3x PNG assets (primary density)
 │   └── src/
 │       ├── core/                 # Pure TS game logic — zero UI imports
 │       │   ├── types.ts          # StatBlockDef, CharacterDef, SkillDef, Unit, ModeDef, AppSettings, BattleResult
-│       │   ├── constants.ts      # All numeric constants: tick ranges, dice params, timing thresholds
+│       │   ├── constants.ts      # All numeric constants: tick ranges, dice params, timing thresholds, NARRATIVE_* timings
 │       │   ├── screen-types.ts   # ScreenId, ScreenConfig, SafeAreaMode, ScreenLifecycleHooks
 │       │   ├── unit.ts           # Immutable Unit factory + mutation helpers (createUnit, takeDamage, healUnit, incrementActionCount, …)
 │       │   ├── battleHistory.ts  # HistoryEntry type + makeHistoryEntry factory
@@ -160,6 +165,10 @@ Genesis/
 │       │   │   ├── patch.ts              # Named-key level-upgrade patching (dot-delimited paths)
 │       │   │   ├── targetSelector.ts     # Single/multi/filtered target resolution
 │       │   │   └── builtins/     # 6 registered handlers: damage, heal, gainAp, spendAp, tickShove, modifyStat
+│       │   ├── narrative/        # Pure narrative types + resolver — zero UI imports
+│       │   │   ├── types.ts      # NarrativeTrigger, NarrativeAnimation, NarrativeEntry, CharacterDialogueDef, LevelNarrativeDef, NarrativeEvent
+│       │   │   ├── NarrativeResolver.ts # resolveByEvent, resolveById, pickLine
+│       │   │   └── index.ts      # re-exports
 │       │   └── engines/skill/    # createSkillInstance, getCachedSkill, levelUpSkill, invalidateCache
 │       ├── navigation/           # Screen routing, safe-area, back-button
 │       │   ├── screenRegistry.ts # SCREEN_IDS constants + SCREEN_REGISTRY map (7 screens)
@@ -170,8 +179,9 @@ Genesis/
 │       │   ├── backButtonRegistry.ts  # Module-level singleton: register/unregister/invoke one handler at a time
 │       │   └── useBackButton.ts       # Hook: registers handler, pushes URL-sentinel for web popstate interception
 │       ├── services/             # Side-effectful singletons; Capacitor allowed
-│       │   ├── DataService.ts    # JSON loader: loadCharacter, loadCharacterSkillDefs, loadMode, loadCharacterWithSkills (cached)
+│       │   ├── DataService.ts    # JSON loader: loadCharacter, loadCharacterSkillDefs, loadMode, loadCharacterWithSkills, loadCharacterDialogue, loadLevelNarrative (all cached)
 │       │   ├── DisplayService.ts # Full-screen + StatusBar: Capacitor StatusBar.hide() on native; Fullscreen API on web
+│       │   ├── NarrativeService.ts # Global narrative bus: emit(), play(), subscribe(), subscribeDirect(), registerEntries(), unregisterEntries(), getAllEntries()
 │       │   └── __tests__/
 │       ├── utils/
 │       │   ├── useScrollAwarePointer.ts  # Tap / hold / scroll gesture discriminator (pointer-delta based)
@@ -201,7 +211,12 @@ Genesis/
 │       │   ├── PrimaryButton.tsx         # Variants: primary / secondary / danger / ghost
 │       │   ├── ResourceBar.tsx           # Animated HP / AP / XP bar (400ms tween)
 │       │   ├── UnitPortrait.tsx          # Portrait circle: rarity-coloured border, 4 sizes, greyscale option
-│       │   └── PagedGrid.tsx             # Generic paged grid: cols×rows, pointer swipe, arrows, dots, page counter
+│       │   ├── PagedGrid.tsx             # Generic paged grid: cols×rows, pointer swipe, arrows, dots, page counter
+│       │   ├── NarrativeLayer.tsx        # Global narrative overlay (mounted in App.tsx); exports NarrativeUnits registry
+│       │   ├── NarrativeDialogueOverlay.tsx  # Dialogue box: portrait + nameplate + typewriter text
+│       │   ├── NarrativeScreenFlash.tsx  # Full-screen colour burst animation
+│       │   ├── NarrativePortraitFlyIn.tsx # Character portrait slides in from left/right
+│       │   └── NarrativeFloatingText.tsx # Floating impact text (e.g. "CRITICAL!")
 │       ├── styles/
 │       │   └── tokens.css        # Full design-token set (colours, typography, spacing, radius, motion, safe-area, --app-scale)
 │       ├── App.tsx               # Transform-scale viewport + HashRouter + ScreenProvider + 7-route declaration
@@ -405,6 +420,8 @@ All game content is in `public/data/`. No content is hardcoded in TypeScript.
 public/data/characters/index.json              # character discovery list
 public/data/characters/{id}/main.json          # CharacterDef (stats, class, rarity…)
 public/data/characters/{id}/skills.json        # SkillDef[] for that character
+public/data/characters/{id}/dialogue.json      # CharacterDialogueDef — universal battle reactions (optional)
+public/data/levels/{levelId}/narrative.json    # LevelNarrativeDef — story beats + cutscenes (optional)
 public/data/modes/story.json
 ```
 
@@ -436,6 +453,56 @@ Skills may carry either or both optional cooldown fields:
 Both fields are absent by default (no cooldown). Both must clear before a
 skill with dual cooldowns is usable again. Values are patchable via
 `levelUpgrades`. See `docs/mechanics/cooldown.md` for the full spec.
+
+---
+
+## Narrative Layer
+
+The narrative layer drives immersive dialogue and visual reactions across all
+screens. It is globally active — any screen, context, or service can fire an
+event and the nearest `NarrativeLayer` component resolves and plays the match.
+
+Full spec: `docs/mechanics/narrative.md`
+
+### Key rules
+
+- **`NarrativeLayer` is mounted once in `App.tsx`** — inside the scale container,
+  as a sibling of `<Routes>`. Never mount it inside a screen component.
+- **`NarrativeService.emit(event)`** fires a narrative event from any layer
+  (`core/` excluded — pass `defId` not `unit.id` so triggers match JSON keys).
+- **`NarrativeService.play(narrativeId)`** triggers a specific entry directly
+  (cutscene transitions, boss taunts, scripted moments).
+- **`NarrativeService.registerEntries(namespace, entries)`** populates the entry
+  pool. Call at startup (`SplashScreen`) for persistent character/level data.
+- **`NarrativeUnits.register(units)`** — call after battle units load so portrait
+  fly-in animations can resolve speaker data. Clear on battle unmount.
+- **Character dialogue** lives in `characters/{id}/dialogue.json` — universal,
+  mode-independent reactions. Registered under namespace `'characters'`.
+- **Level narrative** lives in `levels/{levelId}/narrative.json` — story-specific
+  beats. Registered under namespace `'{levelId}'`.
+- **`blocking: true`** dims the screen and blocks input — use only for story
+  cutscenes, never for frequent reactive lines.
+- **`priority`** — higher interrupts lower. Default is `0`; story beats use `20`.
+- **`once: true`** — the entry is tracked in a session-scoped Set and will not
+  fire again in the same session.
+- **`sequence: true`** — all `lines` play in order, one tap (or `NARRATIVE_DISMISS_MS`)
+  per line. Without it, one line is picked randomly.
+
+### Animation types (play simultaneously per entry)
+
+| Type             | Visual effect |
+|---|---|
+| `dialogue`       | Slide-up box: portrait + nameplate + typewriter text |
+| `screen_flash`   | Full-screen colour burst; fades out |
+| `portrait_fly`   | Character portrait slides in from left or right edge |
+| `floating_text`  | Impact text rises from centre and fades |
+
+### Standard event strings
+
+`battle_start` · `battle_victory` · `battle_defeat` · `skill_used` ·
+`boosted_hit` · `evaded` · `unit_death` · `counter` · `clash_resolved`
+
+Any string is valid — add new events by adding JSON entries, no code change needed.
 
 ---
 

@@ -1,0 +1,13 @@
+.layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+}
+
+/* Blocking mode: dims the screen and captures pointer events to prevent
+   interaction with battle UI during story cutscenes. */
+.blocking {
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.45);
+}
