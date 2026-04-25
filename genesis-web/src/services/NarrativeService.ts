@@ -10,9 +10,12 @@ import type { NarrativeEvent, NarrativeEntry } from '../core/narrative'
 
 type EventListener = (event: NarrativeEvent) => void
 type PlayListener  = (narrativeId: string) => void
+type VoidListener  = () => void
 
 const eventListeners  = new Set<EventListener>()
 const playListeners   = new Set<PlayListener>()
+const pauseListeners  = new Set<VoidListener>()
+const resumeListeners = new Set<VoidListener>()
 const entryNamespaces = new Map<string, NarrativeEntry[]>()
 
 export const NarrativeService = {
@@ -36,6 +39,31 @@ export const NarrativeService = {
   subscribeDirect(listener: PlayListener): () => void {
     playListeners.add(listener)
     return () => playListeners.delete(listener)
+  },
+
+  // ── Battle freeze signals ─────────────────────────────────────────────────
+  // Called internally by NarrativeLayer; subscribed to by BattleContext.
+
+  /** Subscribe to receive a signal when a dialogue entry starts (battle should freeze). */
+  onNarrativePause(listener: VoidListener): () => void {
+    pauseListeners.add(listener)
+    return () => pauseListeners.delete(listener)
+  },
+
+  /** Subscribe to receive a signal when dialogue dismisses (battle should resume). */
+  onNarrativeResume(listener: VoidListener): () => void {
+    resumeListeners.add(listener)
+    return () => resumeListeners.delete(listener)
+  },
+
+  /** Internal — NarrativeLayer calls this when a dialogue animation becomes active. */
+  _signalPause(): void {
+    pauseListeners.forEach((l) => l())
+  },
+
+  /** Internal — NarrativeLayer calls this when the dialogue entry is dismissed. */
+  _signalResume(): void {
+    resumeListeners.forEach((l) => l())
   },
 
   // ── Entry registry ─────────────────────────────────────────────────────────

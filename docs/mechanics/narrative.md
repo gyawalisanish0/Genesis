@@ -101,6 +101,27 @@ is dismissed once every animation reports completion.
 
 ---
 
+## Battle Freeze
+
+Any entry whose `animations` array contains `{ type: 'dialogue' }` silently
+freezes the battle for the duration of the dialogue:
+
+| System | Behaviour while frozen |
+|---|---|
+| Enemy AI timers | Cancelled; restart fresh after dismiss |
+| Player `executeSkill` | Blocked — ROLL button does nothing |
+| Player `skipTurn` | Blocked |
+| Phase derivation | Deferred — no clash / QTE prompt fires mid-dialogue |
+
+- Freeze is **silent** — no badge, no overlay; the dialogue box is the only indicator
+- Resume is **instant** — the battle clock resumes the moment the box dismisses
+- `narrativePaused` in `BattleContext` is independent of `isPaused` (back-button pause menu); both can be true simultaneously
+
+Non-dialogue animations (`screen_flash`, `portrait_fly`, `floating_text`) do
+**not** freeze the battle — they play over live action.
+
+---
+
 ## NarrativeService API
 
 ```ts

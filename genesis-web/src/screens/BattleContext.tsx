@@ -21,7 +21,7 @@ import { applyEffect } from '../core/effects/applyEffect'
 import { createSkillInstance, getCachedSkill } from '../core/engines/skill/SkillInstance'
 import { loadCharacterWithSkills } from '../services/DataService'
 import { NarrativeService } from '../services/NarrativeService'
-import { NarrativeUnits } from '../components/NarrativeLayer'
+import { NarrativeUnits }   from '../components/NarrativeLayer'
 import { makeHistoryEntry } from '../core/battleHistory'
 import type { HistoryEntry } from '../core/battleHistory'
 import { useGameStore } from '../core/GameContext'
@@ -85,6 +85,7 @@ export interface TeamCollisionState {
 interface BattleContextValue {
   // State
   phase:           TurnPhase
+  narrativePaused: boolean  // true while a dialogue entry is showing — battle is frozen
   turnNumber:      number   // derived: playerUnit.actionCount + 1
   tickValue:       number
   activeUnitIds:   Set<string>
@@ -226,6 +227,7 @@ export function BattleProvider({ children }: Props) {
   const [selectedSkill, setSelectedSkill]   = useState<SkillInstance | null>(null)
   const [gridCollapsed, setGridCollapsed]   = useState(false)
   const [isPaused, setPaused]               = useState(false)
+  const [narrativePaused, setNarrativePaused] = useState(false)
   const [pendingCounterDecision, setPendingCounterDecision] = useState<CounterDecision | null>(null)
   const [pendingClash, setPendingClash]               = useState<ClashState | null>(null)
   const [pendingTeamCollision, setPendingTeamCollision] = useState<TeamCollisionState | null>(null)
@@ -332,6 +334,13 @@ export function BattleProvider({ children }: Props) {
     )
   }, [])
 
+  // Freeze battle while a narrative dialogue is showing.
+  useEffect(() => {
+    const unsubPause  = NarrativeService.onNarrativePause(()  => setNarrativePaused(true))
+    const unsubResume = NarrativeService.onNarrativeResume(() => setNarrativePaused(false))
+    return () => { unsubPause(); unsubResume() }
+  }, [])
+
   // Cleanup pending dismiss on unmount.
   useEffect(() => () => {
     if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current)
@@ -421,6 +430,7 @@ export function BattleProvider({ children }: Props) {
   // Derive phase from active unit ids — with collision detection.
   useEffect(() => {
     if (isLoading || activeUnitIds.size === 0) return
+    if (narrativePaused) return
     // Don't re-trigger while another resolution is in progress.
     if (pendingClash || pendingTeamCollision || pendingClashAnnounce) return
 
@@ -476,7 +486,7 @@ export function BattleProvider({ children }: Props) {
 
     if (activePlayerUnits.length === 1) setPhase('player')
     else if (activeEnemyUnits.length === 1) setPhase('enemy')
-  }, [activeUnitIds, playerUnit, enemies, isLoading, pendingClash, pendingTeamCollision, pendingClashAnnounce, appendLog])
+  }, [activeUnitIds, playerUnit, enemies, isLoading, narrativePaused, pendingClash, pendingTeamCollision, pendingClashAnnounce, appendLog])
 
   // Timeline scroll bounds.
   const scrollBounds = useMemo(() => {
@@ -671,6 +681,7 @@ export function BattleProvider({ children }: Props) {
   /** Player presses ROLL with a skill selected. */
   const executeSkill = useCallback((skillInst: SkillInstance) => {
     if (!playerUnit || phase !== 'player') return
+    if (narrativePaused) return
     if (isOnCooldown(playerUnit, skillInst)) return
     const target = enemies.find(isAlive)
     if (!target) return
@@ -734,7 +745,7 @@ export function BattleProvider({ children }: Props) {
         NarrativeService.emit({ type: 'battle_victory' })
       }
     }, DICE_RESULT_DISMISS_MS)
-  }, [playerUnit, enemies, phase, runAttack, pushHistory, registerTick, appendLog, showTurnDisplay, setUnitSkillsMap])
+  }, [playerUnit, enemies, phase, narrativePaused, runAttack, pushHistory, registerTick, appendLog, showTurnDisplay, setUnitSkillsMap])
 
   // ── Enemy AI ───────────────────────────────────────────────────────────────
   //
@@ -749,6 +760,7 @@ export function BattleProvider({ children }: Props) {
 
   useEffect(() => {
     if (phase !== 'enemy') return
+    if (narrativePaused) return
     const activeEnemies = enemiesRef.current.filter(
       (e) => activeUnitIds.has(e.id) && isAlive(e),
     )
@@ -861,20 +873,21 @@ export function BattleProvider({ children }: Props) {
       clearTimeout(actionTimer)
       if (applyTimerRef.current) clearTimeout(applyTimerRef.current)
     }
-  }, [phase, activeUnitIds, showTurnDisplay]) // refs keep callbacks current; diceResult intentionally excluded
+  }, [phase, activeUnitIds, narrativePaused, showTurnDisplay]) // refs keep callbacks current; diceResult intentionally excluded
 
   // ── Misc actions ───────────────────────────────────────────────────────────
 
   /** Player skips their turn — no dice, immediate timeline update. */
   const skipTurn = useCallback(() => {
     if (!playerUnit || phase !== 'player') return
+    if (narrativePaused) return
     setSelectedSkill(null)
     const fromTick = playerUnit.tickPosition
     pushHistory(makeHistoryEntry(playerUnit.id, playerUnit.name, fromTick, playerUnit.isAlly))
     setPlayerUnit(incrementActionCount(playerUnit))
     registerTick(playerUnit.id, fromTick + 10)
     appendLog({ text: 'You skipped your turn.' })
-  }, [playerUnit, phase, pushHistory, registerTick, appendLog])
+  }, [playerUnit, phase, narrativePaused, pushHistory, registerTick, appendLog])
 
   const selectSkill = useCallback((skill: SkillInstance | null) => setSelectedSkill(skill), [])
   const toggleGrid  = useCallback(() => setGridCollapsed((v) => !v), [])
@@ -888,6 +901,7 @@ export function BattleProvider({ children }: Props) {
   return (
     <BattleContext.Provider value={{
       phase,
+      narrativePaused,
       turnNumber: (playerUnit?.actionCount ?? 0) + 1,
       tickValue, activeUnitIds,
       playerUnit, enemies, log, historyEntries,

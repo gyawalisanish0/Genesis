@@ -88,6 +88,15 @@ export function NarrativeLayer() {
     pendingRef.current = currentEntry.animations.length || 1
   }, [currentEntry])
 
+  // Freeze the battle for the duration of any dialogue animation.
+  // Cleanup fires the instant currentEntry clears → instant resume.
+  const hasDialogue = currentEntry?.animations.some((a) => a.type === 'dialogue') ?? false
+  useEffect(() => {
+    if (!hasDialogue) return
+    NarrativeService._signalPause()
+    return () => { NarrativeService._signalResume() }
+  }, [hasDialogue])
+
   if (!currentEntry) return null
 
   const isBlocking = currentEntry.blocking === true
