@@ -1,16 +1,14 @@
 // BattleArena — React wrapper for the Phaser BattleScene.
 //
 // Mounts a Phaser Game instance into the container div.
-// Exposes an imperative handle so BattleScreen can forward log entries and
-// later (Stage 2+) trigger unit display and attack animations.
+// Exposes an imperative handle so BattleContext can forward log entries,
+// trigger unit display (Stage 2), and drive phase-gated animations (Stage 3+).
 //
-// React input handling is untouched — Phaser input is disabled entirely;
-// all battle interaction stays in the existing React skill grid and buttons.
+// React owns all battle interaction — Phaser input is disabled entirely.
 
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 import Phaser from 'phaser'
 import { BattleScene } from '../scenes/BattleScene'
-import type { BattleSceneCallbacks } from '../scenes/BattleScene'
 import styles from './BattleArena.module.css'
 
 // ── Public handle — all canvas commands go through this ───────────────────────
@@ -21,18 +19,14 @@ export interface BattleArenaHandle {
   // Stage 2
   setTurnState(actingDefId: string, targetDefId: string): void
   clearTurn(): void
-  // Stage 3
+  // Stage 3 — phase-gated: React awaits onDone before advancing
   playDice(outcome: string, onDone: () => void): void
   playAttack(casterId: string, targetId: string, outcome: string, damage: number, onDone: () => void): void
   playFeedback(text: string, colour: string): void
 }
 
-interface Props {
-  callbacks?: BattleSceneCallbacks
-}
-
-export const BattleArena = forwardRef<BattleArenaHandle, Props>(
-  function BattleArena({ callbacks: _callbacks = {} }, ref) {
+export const BattleArena = forwardRef<BattleArenaHandle>(
+  function BattleArena(_props, ref) {
     const containerRef = useRef<HTMLDivElement>(null)
     const gameRef      = useRef<Phaser.Game | null>(null)
     const sceneRef     = useRef<BattleScene | null>(null)
@@ -44,44 +38,34 @@ export const BattleArena = forwardRef<BattleArenaHandle, Props>(
       // Wait for the container to have real dimensions (flex layout may not
       // have settled on the first synchronous render).
       const ro = new ResizeObserver(() => {
-        if (gameRef.current) return  // already initialised
+        if (gameRef.current) return
         const w = container.clientWidth
         const h = container.clientHeight
         if (w === 0 || h === 0) return
 
-        const config: Phaser.Types.Core.GameConfig = {
+        const game = new Phaser.Game({
           type:   Phaser.AUTO,
           parent: container,
           scene:  BattleScene,
           scale: {
-            mode:          Phaser.Scale.RESIZE,
-            autoCenter:    Phaser.Scale.NO_CENTER,
+            mode:       Phaser.Scale.RESIZE,
+            autoCenter: Phaser.Scale.NO_CENTER,
           },
           backgroundColor: '#0a0a14',
-          banner:          false,
-          // Disable Phaser input — all interaction stays in React.
+          banner: false,
           input: {
             mouse:    { preventDefaultDown: false, preventDefaultUp: false, preventDefaultMove: false },
             touch:    { capture: false },
             keyboard: false,
             gamepad:  false,
           },
-          audio: { noAudio: true },
-          render: {
-            antialias:       true,
-            pixelArt:        false,
-            roundPixels:     false,
-            transparent:     false,
-          },
-        }
-
-        const game = new Phaser.Game(config)
+          audio:  { noAudio: true },
+          render: { antialias: true, pixelArt: false, roundPixels: false, transparent: false },
+        })
         gameRef.current = game
 
-        // Grab the scene reference once the game is ready.
         game.events.once('ready', () => {
-          const scene = game.scene.scenes[0] as BattleScene
-          sceneRef.current = scene
+          sceneRef.current = game.scene.scenes[0] as BattleScene
         })
       })
 
@@ -92,8 +76,6 @@ export const BattleArena = forwardRef<BattleArenaHandle, Props>(
         gameRef.current = null
         sceneRef.current = null
       }
-    // callbacks intentionally excluded — passed at scene init, not re-wired
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     useImperativeHandle(ref, () => ({
@@ -107,10 +89,18 @@ export const BattleArena = forwardRef<BattleArenaHandle, Props>(
         sceneRef.current?.clearTurn()
       },
       playDice(outcome, onDone) {
-        sceneRef.current?.playDice(outcome, onDone) ?? onDone()
+        if (sceneRef.current) {
+          sceneRef.current.playDice(outcome, onDone)
+        } else {
+          onDone()
+        }
       },
       playAttack(casterId, targetId, outcome, damage, onDone) {
-        sceneRef.current?.playAttack(casterId, targetId, outcome, damage, onDone) ?? onDone()
+        if (sceneRef.current) {
+          sceneRef.current.playAttack(casterId, targetId, outcome, damage, onDone)
+        } else {
+          onDone()
+        }
       },
       playFeedback(text, colour) {
         sceneRef.current?.playFeedback(text, colour)

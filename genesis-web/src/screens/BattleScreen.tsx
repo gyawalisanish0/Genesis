@@ -9,8 +9,7 @@ import { useScreen } from '../navigation/useScreen'
 import { SCREEN_REGISTRY, SCREEN_IDS } from '../navigation/screenRegistry'
 import { useBackButton } from '../input/useBackButton'
 import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
-import { BattleArena }           from '../components/BattleArena'
-import type { BattleArenaHandle } from '../components/BattleArena'
+import { BattleArena } from '../components/BattleArena'
 import { BattleProvider, useBattleScreen } from './BattleContext'
 import { ClashQteOverlay } from './ClashQteOverlay'
 import { TeamCollisionOverlay } from './TeamCollisionOverlay'
@@ -523,10 +522,9 @@ function DiceResultOverlay() {
 
 // ── Battle layout ───────────────────────────────────────────────────────────
 function BattleLayout() {
-  const { isPaused, setPaused, isLoading, playerUnit, turnDisplay, diceResult, log } = useBattleScreen()
-  const navigate   = useNavigate()
+  const { arenaRef, isPaused, setPaused, isLoading, playerUnit, turnDisplay, diceResult, log } = useBattleScreen()
+  const navigate      = useNavigate()
   const lastBackRef   = useRef(0)
-  const arenaRef      = useRef<BattleArenaHandle>(null)
   const prevLogLenRef = useRef(0)
   useScreen()
 
@@ -535,7 +533,7 @@ function BattleLayout() {
     const newEntries = log.slice(prevLogLenRef.current)
     newEntries.forEach((e) => arenaRef.current?.addLog(e.text, e.colour ?? 'var(--text-primary)'))
     prevLogLenRef.current = log.length
-  }, [log])
+  }, [log, arenaRef])
 
   // Redirect silently to pre-battle if no team was confirmed (direct URL access, etc.).
   useEffect(() => {

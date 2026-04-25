@@ -1,14 +1,18 @@
 // BattleScene — Phaser 3 scene that owns the cinematic battle canvas.
 //
-// Stage 1 (this file): scrolling battle log display.
-// Stage 2: acting unit + target appear as placeholder figures.
-// Stage 3: dice spin → attack animation → feedback numbers (phase-gated).
+// Stage 1: scrolling battle log.
+// Stage 2: acting unit + target placeholder figures (UnitStage).
+// Stage 3: dice spin → attack animation → feedback numbers (phase-gated via onDone callbacks).
 // Stage 4: particles, screen shake, evasion slide, death collapse.
 //
-// React communicates via the public command methods below.
-// Phaser communicates back to React via callbacks passed through SceneData.
+// React communicates via the public command methods; Phaser communicates back
+// to React via the onDone callbacks passed into playDice / playAttack.
 
 import Phaser from 'phaser'
+import { UnitStage }    from './battle/UnitStage'
+import { DicePanel }    from './battle/DicePanel'
+import { AttackPanel }  from './battle/AttackPanel'
+import { FeedbackPanel } from './battle/FeedbackPanel'
 
 // ── Design token colour map ───────────────────────────────────────────────────
 // Mirrors src/styles/tokens.css so Phaser objects match the React UI exactly.
@@ -30,13 +34,15 @@ export function tokenToHex(colour: string): string {
   return TOKEN[colour] ?? colour
 }
 
-// ── Constants ─────────────────────────────────────────────────────────────────
+// ── Log layout constants ──────────────────────────────────────────────────────
 
-const BG_COLOUR    = 0x0a0a14  // --bg-deep
-const LINE_H       = 17        // px per log line
-const LOG_PAD_X    = 10        // horizontal padding
-const LOG_PAD_Y    = 8         // vertical padding
-const MAX_ENTRIES  = 40        // entries kept in memory
+const BG_COLOUR   = 0x0a0a14
+const LINE_H      = 17
+const LOG_PAD_X   = 10
+const LOG_PAD_Y   = 8
+const MAX_ENTRIES = 40
+// When units are visible the log is compressed to the lower 42% of the canvas.
+const LOG_UNIT_SPLIT = 0.58
 
 const LOG_STYLE: Phaser.Types.GameObjects.Text.TextStyle = {
   fontFamily: '"system-ui", "-apple-system", "sans-serif"',
@@ -46,42 +52,44 @@ const LOG_STYLE: Phaser.Types.GameObjects.Text.TextStyle = {
   wordWrap:   { width: 0, useAdvancedWrap: true },
 }
 
-// ── Scene data passed from React ──────────────────────────────────────────────
-
-export interface BattleSceneCallbacks {
-  // Stage 3: called when dice animation finishes — React applies damage.
-  onDiceAnimationDone?: () => void
-  // Stage 3: called when attack animation finishes — React advances phase.
-  onAttackAnimationDone?: () => void
-}
-
 // ── BattleScene ───────────────────────────────────────────────────────────────
 
 export class BattleScene extends Phaser.Scene {
-  private bg!:          Phaser.GameObjects.Rectangle
-  private logGroup!:    Phaser.GameObjects.Group
-  private logEntries:   Array<{ text: string; colour: string }> = []
+  private bg!:         Phaser.GameObjects.Rectangle
+  private logGroup!:   Phaser.GameObjects.Group
+  private logEntries:  Array<{ text: string; colour: string }> = []
+
+  private unitStage!:    UnitStage
+  private dicePanel!:    DicePanel
+  private attackPanel!:  AttackPanel
+  private feedbackPanel!: FeedbackPanel
 
   constructor() {
     super({ key: 'BattleScene' })
   }
 
   preload(): void {
-    // Stage 2+: load character art here — public/images/characters/{defId}/idle.png
+    // Stage 2+: load character art → public/images/characters/{defId}/idle.png
+    // this.load.image(defId, `images/characters/${defId}/idle.png`)
   }
 
   create(): void {
     const { width, height } = this.scale
-
-    this.bg = this.add.rectangle(0, 0, width, height, BG_COLOUR).setOrigin(0, 0)
+    this.bg       = this.add.rectangle(0, 0, width, height, BG_COLOUR).setOrigin(0, 0)
     this.logGroup = this.add.group()
+
+    this.unitStage    = new UnitStage(this)
+    this.dicePanel    = new DicePanel(this)
+    this.attackPanel  = new AttackPanel(this, this.unitStage)
+    this.feedbackPanel = new FeedbackPanel(this)
 
     this.drawAccentLine(height)
 
-    // Re-render log and reposition elements when canvas is resized.
-    this.scale.on('resize', (_gs: Phaser.Structs.Size, _ds: Phaser.Structs.Size, _dw: number, _dh: number, newWidth: number, newHeight: number) => {
-      this.onResize(newWidth, newHeight)
-    })
+    this.scale.on('resize', (
+      _gs: Phaser.Structs.Size, _ds: Phaser.Structs.Size,
+      _dw: number, _dh: number,
+      newW: number, newH: number,
+    ) => this.onResize(newW, newH))
   }
 
   // ── Stage 1: battle log ───────────────────────────────────────────────────
@@ -92,57 +100,66 @@ export class BattleScene extends Phaser.Scene {
     this.renderLog()
   }
 
+  // ── Stage 2: unit figures ─────────────────────────────────────────────────
+
+  setTurnState(actingDefId: string, targetDefId: string): void {
+    this.unitStage.show(actingDefId, targetDefId)
+    this.renderLog()
+  }
+
+  clearTurn(): void {
+    this.unitStage.hide(() => this.renderLog())
+  }
+
+  // ── Stage 3: dice → attack → feedback (phase-gated via onDone) ───────────
+
+  playDice(outcome: string, onDone: () => void): void {
+    this.dicePanel.spin(outcome, onDone)
+  }
+
+  playAttack(
+    casterId: string,
+    targetId: string,
+    outcome:  string,
+    damage:   number,
+    onDone:   () => void,
+  ): void {
+    this.attackPanel.play(casterId, targetId, outcome, damage, onDone)
+  }
+
+  playFeedback(text: string, colour: string): void {
+    this.feedbackPanel.show(text, colour)
+  }
+
+  // ── Private helpers ───────────────────────────────────────────────────────
+
   private renderLog(): void {
     this.logGroup.clear(true, true)
-
     const { width, height } = this.scale
-    const maxVisible  = Math.floor((height - LOG_PAD_Y * 2) / LINE_H)
-    const visible     = this.logEntries.slice(-maxVisible)
-    const wrapWidth   = width - LOG_PAD_X * 2 - 6  // 6px for left accent line
+    // When units are visible, limit log to the lower portion of the canvas.
+    const logTop   = this.unitStage.isVisible ? Math.floor(height * LOG_UNIT_SPLIT) : 0
+    const availH   = height - logTop - LOG_PAD_Y * 2
+    const maxVis   = Math.max(1, Math.floor(availH / LINE_H))
+    const visible  = this.logEntries.slice(-maxVis)
+    const wrapW    = width - LOG_PAD_X * 2 - 6
 
     visible.forEach((entry, i) => {
       const y = height - LOG_PAD_Y - (visible.length - i) * LINE_H
+      if (y < logTop) return  // don't draw behind unit stage
       const t = this.add.text(LOG_PAD_X + 6, y, entry.text, {
         ...LOG_STYLE,
         color:    tokenToHex(entry.colour),
-        wordWrap: { width: wrapWidth, useAdvancedWrap: true },
+        wordWrap: { width: wrapW, useAdvancedWrap: true },
       })
       this.logGroup.add(t)
     })
   }
 
   private drawAccentLine(height: number): void {
-    const line = this.add.graphics()
-    line.fillStyle(0x8b5cf6, 0.25)  // --accent-genesis faint
-    line.fillRect(LOG_PAD_X, LOG_PAD_Y, 2, height - LOG_PAD_Y * 2)
+    const g = this.add.graphics()
+    g.fillStyle(0x8b5cf6, 0.25)
+    g.fillRect(LOG_PAD_X, LOG_PAD_Y, 2, height - LOG_PAD_Y * 2)
   }
-
-  // ── Stage 2 stubs — unit figures ──────────────────────────────────────────
-  // Replace stub bodies with real implementation in Stage 2.
-
-  setTurnState(_actingDefId: string, _targetDefId: string): void {}
-  clearTurn(): void {}
-
-  // ── Stage 3 stubs — dice + attack + feedback ──────────────────────────────
-  // Stubs immediately invoke callbacks so the battle flow is unaffected.
-
-  playDice(_outcome: string, onDone: () => void): void {
-    onDone()
-  }
-
-  playAttack(
-    _casterId: string,
-    _targetId: string,
-    _outcome:  string,
-    _damage:   number,
-    onDone:    () => void,
-  ): void {
-    onDone()
-  }
-
-  playFeedback(_text: string, _colour: string): void {}
-
-  // ── Internal ──────────────────────────────────────────────────────────────
 
   private onResize(newWidth: number, newHeight: number): void {
     this.bg.setSize(newWidth, newHeight)
