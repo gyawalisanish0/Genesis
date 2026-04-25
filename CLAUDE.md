@@ -207,11 +207,15 @@ Genesis/
 │       │   ├── BattleResultScreen.tsx    # Victory/defeat banner, rewards, unit results, battle stats
 │       │   ├── RosterScreen.tsx          # Character grid with class + rarity + name filters
 │       │   └── SettingsScreen.tsx        # Audio / display / notification / account settings
+│       ├── scenes/               # Phaser 3 scenes — no React imports
+│       │   └── BattleScene.ts    # Stage 1: scrolling battle log; Stage 2–4 stubs (unit figures, dice, attacks)
 │       ├── components/           # Reusable React widgets
 │       │   ├── PrimaryButton.tsx         # Variants: primary / secondary / danger / ghost
 │       │   ├── ResourceBar.tsx           # Animated HP / AP / XP bar (400ms tween)
 │       │   ├── UnitPortrait.tsx          # Portrait circle: rarity-coloured border, 4 sizes, greyscale option
 │       │   ├── PagedGrid.tsx             # Generic paged grid: cols×rows, pointer swipe, arrows, dots, page counter
+│       │   ├── BattleArena.tsx           # React wrapper for Phaser BattleScene; imperative BattleArenaHandle ref
+│       │   ├── BattleArena.module.css    # flex: 1 container; canvas position: absolute inset: 0
 │       │   ├── NarrativeLayer.tsx        # Global narrative overlay (mounted in App.tsx); exports NarrativeUnits registry
 │       │   ├── NarrativeDialogueOverlay.tsx  # Dialogue box: portrait + nameplate + typewriter text
 │       │   ├── NarrativeScreenFlash.tsx  # Full-screen colour burst animation
@@ -224,8 +228,8 @@ Genesis/
 │       └── main.tsx              # Vite entry: registerBuiltins() → React root
 ```
 
-> **Planned / not yet created:** `scenes/` (Phaser 3 battle canvas).
-> Any code requiring this must add the directory and module — do not bypass the layer.
+> **`scenes/`** hosts Phaser 3 scenes. `BattleScene.ts` (Stage 1) is live — canvas mounts in `BattleArena.tsx` inside `BattleScreen`.
+> Art assets slot in at `public/images/characters/{defId}/idle.png` — zero architecture change required (see `docs/mechanics/phaser-arena.md`).
 
 ---
 
@@ -264,6 +268,9 @@ Each layer may only import from layers to its left.
 - Phaser 3 scenes only — no React imports
 - Receives data from React via a typed interface passed at scene start
 - Communicates results back to React via a callback or Zustand store write
+- **`BattleScene`** is unit-agnostic — receives `actingDefId` / `targetDefId`, never assumes player/enemy roles
+- React wrapper is `BattleArena.tsx` (ResizeObserver initialises Phaser once container has real dimensions)
+- Full spec: `docs/mechanics/phaser-arena.md`
 
 ### `components/`
 - React + CSS Modules only — no Phaser
