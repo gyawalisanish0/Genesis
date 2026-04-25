@@ -139,10 +139,11 @@ inside `skipTurn`. Units slide out after HP bars update.
 
 | File | Responsibility |
 |---|---|
-| `UnitStage.ts` | Creates, slides, and destroys the two unit figure containers |
+| `UnitStage.ts` | Creates, slides, and destroys the two unit figure containers; drives evasion dodge and death collapse tweens |
 | `DicePanel.ts` | Renders the spinning die face; calls `onDone` after the hold |
-| `AttackPanel.ts` | Drives the shove tween and target flash via `UnitStage` |
+| `AttackPanel.ts` | Drives the shove tween, target flash, particle burst, and camera shake via `UnitStage` + `ParticleEmitter` |
 | `FeedbackPanel.ts` | Creates the rising damage/outcome text tween |
+| `ParticleEmitter.ts` | One-shot burst effects: colour and count vary per outcome; uses runtime-generated particle texture |
 
 Each helper receives `scene: Phaser.Scene` in its constructor and manages its
 own game objects. `BattleScene` orchestrates them with no cross-helper coupling.
@@ -165,6 +166,48 @@ own game objects. `BattleScene` orchestrates them with no cross-helper coupling.
 - **Acting unit**: purple (`--accent-genesis`) border, `▲ ACTING` label
 - **Target unit**: red (`--accent-danger`) border, `◎ TARGET` label
 - Slides in with `Back.easeOut` (300 ms); slides out with `Back.easeIn`
+
+---
+
+## Stage 4 effects
+
+### Particle bursts
+`ParticleEmitter.burst(x, y, outcome)` fires from the target's centre on any
+damaging outcome. Colour and count match the outcome:
+
+| Outcome | Colour | Count |
+|---|---|---|
+| `Boosted` | `--accent-gold` | 22 |
+| `Success` | `--accent-danger` | 12 |
+| `GuardUp` | `--accent-info` | 10 |
+| `Tumbling` | `--accent-warn` | 12 |
+
+Evasion and Fail produce no particles. Particle texture is a white circle
+generated at runtime in `BattleScene.create()` — no image file needed.
+
+### Camera shake
+Applied on hit via `this.cameras.main.shake(durationMs, intensity)`:
+
+| Outcome | Duration | Intensity |
+|---|---|---|
+| `Boosted` | 320 ms | 0.024 |
+| `Success` | 160 ms | 0.010 |
+| `GuardUp` | 120 ms | 0.007 |
+| `Tumbling` | 160 ms | 0.010 |
+
+### Evasion dodge
+When `outcome === 'Evasion'`: the attacker shoves (`shoveActing`) and the
+target slides away (`evasionDodge`) simultaneously. A two-counter `both()`
+callback fires `onDone` only after both tweens complete.
+
+### Death collapse (`playDeath`)
+`BattleScene.playDeath(defId, onDone)` delegates to
+`UnitStage.collapseByDefId(defId, onDone)`:
+- Finds the figure (acting or target) whose `defId` matches
+- Tweens `angle → 85°`, `alpha → 0`, `y + 44 px` over 580 ms
+- Destroys the container, then calls `onDone`
+- `BattleContext` passes `() => arena.clearTurn()` as `onDone`, so surviving
+  figures slide out only after the death animation completes
 
 ---
 
@@ -205,4 +248,4 @@ tokenToHex('var(--accent-gold)')    // → '#f59e0b'
 | 1 | Canvas mounts; scrolling battle log in Phaser | ✅ Done |
 | 2 | Acting unit + target placeholder figures; slide in/out per turn | ✅ Done |
 | 3 | Dice spin → attack animation → feedback numbers; phase-gated | ✅ Done |
-| 4 | Particles, screen shake, evasion slide, death collapse; real art | Pending |
+| 4 | Particles, screen shake, evasion slide, death collapse | ✅ Done |

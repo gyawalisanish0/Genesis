@@ -1,16 +1,17 @@
 // UnitStage — manages the two placeholder unit figures shown during a turn.
 // Acting unit slides in from the left, target from the right.
-// Art slots in by replacing the bg rectangle with a loaded image — no other change needed.
+// Stage 4: evasion dodge, death collapse. Art slots in by replacing
+// the bg rectangle with a loaded image — no other change needed.
 
 import Phaser from 'phaser'
 import { tokenToHex } from '../BattleScene'
 
-const UNIT_W         = 128
-const UNIT_H         = 92
-const SLIDE_MS       = 300
-const ACTING_STROKE  = 0x8b5cf6  // --accent-genesis
-const TARGET_STROKE  = 0xef4444  // --accent-danger
-const UNIT_BG        = 0x12121e
+const UNIT_W        = 128
+const UNIT_H        = 92
+const SLIDE_MS      = 300
+const ACTING_STROKE = 0x8b5cf6  // --accent-genesis
+const TARGET_STROKE = 0xef4444  // --accent-danger
+const UNIT_BG       = 0x12121e
 
 interface FigureRef {
   container: Phaser.GameObjects.Container
@@ -18,10 +19,12 @@ interface FigureRef {
 }
 
 export class UnitStage {
-  private scene:   Phaser.Scene
-  private acting:  FigureRef | null = null
-  private target:  FigureRef | null = null
-  private visible: boolean = false
+  private scene:        Phaser.Scene
+  private acting:       FigureRef | null = null
+  private target:       FigureRef | null = null
+  private actingDefId:  string = ''
+  private targetDefId:  string = ''
+  private visible:      boolean = false
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene
@@ -29,8 +32,14 @@ export class UnitStage {
 
   get isVisible(): boolean { return this.visible }
 
+  targetX(): number { return this.target?.container.x ?? 0 }
+  targetY(): number { return this.target?.container.y ?? 0 }
+
   show(actingDefId: string, targetDefId: string): void {
     this.destroyAll()
+    this.actingDefId = actingDefId
+    this.targetDefId = targetDefId
+
     const { width, height } = this.scene.scale
     const stageH = Math.floor(height * 0.55)
     const cy     = Math.floor(stageH * 0.48)
@@ -57,7 +66,7 @@ export class UnitStage {
 
     const each = () => { if (++done >= total) { this.destroyAll(); onDone?.() } }
     if (this.acting) {
-      this.scene.tweens.add({ targets: this.acting.container, x: -UNIT_W, duration: SLIDE_MS, ease: 'Back.easeIn', onComplete: each })
+      this.scene.tweens.add({ targets: this.acting.container, x: -UNIT_W,     duration: SLIDE_MS, ease: 'Back.easeIn', onComplete: each })
     }
     if (this.target) {
       this.scene.tweens.add({ targets: this.target.container, x: width + UNIT_W, duration: SLIDE_MS, ease: 'Back.easeIn', onComplete: each })
@@ -66,23 +75,58 @@ export class UnitStage {
 
   flashTarget(hitColour: number): void {
     if (!this.target) return
-    const bg = this.target.bg
+    const bg   = this.target.bg
     const orig = bg.fillColor
     bg.setFillStyle(hitColour)
     this.scene.tweens.add({
-      targets: bg, alpha: { from: 0.4, to: 1 }, duration: 110, yoyo: true,
+      targets: bg, alpha: { from: 0.3, to: 1 }, duration: 110, yoyo: true,
       onComplete: () => bg.setFillStyle(orig),
     })
   }
 
   shoveActing(dx: number, onDone: () => void): void {
     if (!this.acting) { onDone(); return }
-    const c   = this.acting.container
-    const src = c.x
+    const c = this.acting.container
     this.scene.tweens.add({
-      targets: c, x: { from: src, to: src + dx },
+      targets: c, x: { from: c.x, to: c.x + dx },
       duration: 190, ease: 'Sine.easeIn', yoyo: true, hold: 50,
       onComplete: () => onDone(),
+    })
+  }
+
+  // Stage 4 — target slides away from the attack then returns.
+  evasionDodge(onDone: () => void): void {
+    if (!this.target) { onDone(); return }
+    const c      = this.target.container
+    const dodgeDx = Math.floor(this.scene.scale.width * 0.09)
+    this.scene.tweens.add({
+      targets: c, x: { from: c.x, to: c.x + dodgeDx },
+      duration: 170, ease: 'Sine.easeOut', yoyo: true, hold: 40,
+      onComplete: () => onDone(),
+    })
+  }
+
+  // Stage 4 — matching unit figure tilts and falls, then calls onDone.
+  collapseByDefId(defId: string, onDone: () => void): void {
+    const fig = defId === this.actingDefId ? this.acting
+              : defId === this.targetDefId ? this.target
+              : null
+    if (!fig) { onDone(); return }
+
+    const c = fig.container
+    this.scene.tweens.add({
+      targets:  c,
+      angle:    85,
+      alpha:    0,
+      y:        c.y + 44,
+      duration: 580,
+      ease:     'Sine.easeIn',
+      onComplete: () => {
+        c.destroy()
+        if (fig === this.acting) this.acting = null
+        else                      this.target = null
+        onDone()
+      },
     })
   }
 
@@ -103,7 +147,7 @@ export class UnitStage {
     const line2    = parts.length > 1 ? parts[parts.length - 1] : ''
 
     const container = this.scene.add.container(0, cy)
-    const bg = this.scene.add.rectangle(0, 0, UNIT_W, UNIT_H, UNIT_BG).setStrokeStyle(2, stroke)
+    const bg        = this.scene.add.rectangle(0, 0, UNIT_W, UNIT_H, UNIT_BG).setStrokeStyle(2, stroke)
     container.add(bg)
 
     container.add(this.scene.add.text(0, -UNIT_H / 2 + 8, roleText, {

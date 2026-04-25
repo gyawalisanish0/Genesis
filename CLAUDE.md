@@ -208,12 +208,13 @@ Genesis/
 │       │   ├── RosterScreen.tsx          # Character grid with class + rarity + name filters
 │       │   └── SettingsScreen.tsx        # Audio / display / notification / account settings
 │       ├── scenes/               # Phaser 3 scenes — no React imports
-│       │   ├── BattleScene.ts    # Stage 1–3 orchestrator: log, unit stage, dice/attack/feedback
+│       │   ├── BattleScene.ts    # Stages 1–4 orchestrator: log, unit stage, dice/attack/feedback, particles/shake/death
 │       │   └── battle/           # BattleScene helper modules (one concern each)
-│       │       ├── UnitStage.ts      # Acting + target figure containers; slide in/out
+│       │       ├── UnitStage.ts      # Acting + target figure containers; slide, flash, dodge, collapse
 │       │       ├── DicePanel.ts      # Die face spin → outcome landing animation
-│       │       ├── AttackPanel.ts    # Shove tween + target flash via UnitStage
-│       │       └── FeedbackPanel.ts  # Rising damage/outcome text tween
+│       │       ├── AttackPanel.ts    # Shove tween, target flash, particle burst, camera shake
+│       │       ├── FeedbackPanel.ts  # Rising damage/outcome text tween
+│       │       └── ParticleEmitter.ts # One-shot burst effects per outcome; runtime-generated texture
 │       ├── components/           # Reusable React widgets
 │       │   ├── PrimaryButton.tsx         # Variants: primary / secondary / danger / ghost
 │       │   ├── ResourceBar.tsx           # Animated HP / AP / XP bar (400ms tween)

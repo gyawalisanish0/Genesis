@@ -752,15 +752,24 @@ export function BattleProvider({ children }: Props) {
       setPlayerUnit(updatedPlayer)
       setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
       registerTick(playerUnit.id, nextTick)
-      arenaRef.current?.clearTurn()
 
       const snapEnemies = enemies.map((e) => snap.get(e.id) ?? e)
-      snapEnemies.filter((e) => !isAlive(e)).forEach((e) =>
+      const deadEnemies = snapEnemies.filter((e) => !isAlive(e))
+      deadEnemies.forEach((e) =>
         NarrativeService.emit({ type: 'unit_death', actorId: e.defId }),
       )
       if (snapEnemies.every((e) => !isAlive(e))) {
         appendLog({ text: 'Victory! All enemies defeated.', colour: 'var(--accent-genesis)' })
         NarrativeService.emit({ type: 'battle_victory' })
+      }
+
+      // Stage 4: collapse the dead unit figure before sliding out survivors.
+      const arena     = arenaRef.current
+      const firstDead = deadEnemies[0]
+      if (firstDead && arena) {
+        arena.playDeath(firstDead.defId, () => arena.clearTurn())
+      } else {
+        arenaRef.current?.clearTurn()
       }
     }
 
@@ -891,12 +900,20 @@ export function BattleProvider({ children }: Props) {
           const fromTick = enemy.tickPosition
           pushHistory(makeHistoryEntry(enemy.id, enemy.name, fromTick, enemy.isAlly))
           registerTick(enemy.id, advanceTick(fromTick, skill.tuCost + tumbleDelay))
-          arenaRef.current?.clearTurn()
+
           const updatedPlayer = snap.get(currentPlayer.id) ?? currentPlayer
           if (!isAlive(updatedPlayer)) {
             NarrativeService.emit({ type: 'unit_death', actorId: updatedPlayer.defId })
             appendLog({ text: 'Defeat! You have been slain.', colour: 'var(--accent-danger)' })
             NarrativeService.emit({ type: 'battle_defeat' })
+          }
+
+          // Stage 4: collapse dead player figure before sliding out survivors.
+          const arena = arenaRef.current
+          if (!isAlive(updatedPlayer) && arena) {
+            arena.playDeath(updatedPlayer.defId, () => arena.clearTurn())
+          } else {
+            arenaRef.current?.clearTurn()
           }
         }
 

@@ -23,6 +23,8 @@ export interface BattleArenaHandle {
   playDice(outcome: string, onDone: () => void): void
   playAttack(casterId: string, targetId: string, outcome: string, damage: number, onDone: () => void): void
   playFeedback(text: string, colour: string): void
+  // Stage 4 — death collapse (phase-gated: clearTurn should be called inside onDone)
+  playDeath(defId: string, onDone: () => void): void
 }
 
 export const BattleArena = forwardRef<BattleArenaHandle>(
@@ -104,6 +106,13 @@ export const BattleArena = forwardRef<BattleArenaHandle>(
       },
       playFeedback(text, colour) {
         sceneRef.current?.playFeedback(text, colour)
+      },
+      playDeath(defId, onDone) {
+        if (sceneRef.current) {
+          sceneRef.current.playDeath(defId, onDone)
+        } else {
+          onDone()
+        }
       },
     }))
 
