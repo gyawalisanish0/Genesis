@@ -11,6 +11,7 @@ import { useBackButton } from '../input/useBackButton'
 import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import { BattleArena } from '../components/BattleArena'
 import { BattleProvider, useBattleScreen } from './BattleContext'
+import { BattleLogOverlay } from './BattleLogOverlay'
 import { ClashQteOverlay } from './ClashQteOverlay'
 import { TeamCollisionOverlay } from './TeamCollisionOverlay'
 import type { DiceOutcome } from '../core/combat/DiceResolver'
@@ -429,18 +430,12 @@ function DiceResultOverlay() {
 
 // ── Battle layout ───────────────────────────────────────────────────────────
 function BattleLayout() {
-  const { arenaRef, isPaused, setPaused, isLoading, playerUnit, diceResult, log } = useBattleScreen()
-  const navigate      = useNavigate()
-  const lastBackRef   = useRef(0)
-  const prevLogLenRef = useRef(0)
+  const { arenaRef, isPaused, setPaused, isLoading, playerUnit, diceResult } = useBattleScreen()
+  const navigate    = useNavigate()
+  const lastBackRef = useRef(0)
+  const createHandler = useScrollAwarePointer()
+  const [logOpen, setLogOpen] = useState(false)
   useScreen()
-
-  // Forward new log entries to the Phaser canvas as they arrive.
-  useEffect(() => {
-    const newEntries = log.slice(prevLogLenRef.current)
-    newEntries.forEach((e) => arenaRef.current?.addLog(e.text, e.colour ?? 'var(--text-primary)'))
-    prevLogLenRef.current = log.length
-  }, [log, arenaRef])
 
   // Redirect silently to pre-battle if no team was confirmed (direct URL access, etc.).
   useEffect(() => {
@@ -448,13 +443,16 @@ function BattleLayout() {
       navigate(SCREEN_REGISTRY[SCREEN_IDS.PRE_BATTLE].path, { replace: true })
     }
   }, [isLoading, playerUnit, navigate])
+
   // Bounded pause loop: back → pause, back → resume. Never navigates away.
+  // Log overlay intercepts back before the pause handler so it closes first.
   // Guards: (1) no-op during load, (2) 300ms debounce, (3) functional update avoids stale closure.
   useBackButton(() => {
     if (isLoading) return
     const now = Date.now()
     if (now - lastBackRef.current < BACK_DEBOUNCE_MS) return
     lastBackRef.current = now
+    if (logOpen) { setLogOpen(false); return }
     setPaused((prev) => !prev)
   })
 
@@ -471,6 +469,7 @@ function BattleLayout() {
   return (
     <div className={styles.root}>
       {isPaused && <PauseOverlay />}
+      {logOpen && <BattleLogOverlay onClose={() => setLogOpen(false)} />}
       <CounterPromptOverlay />
       <ClashQteOverlay />
       <TeamCollisionOverlay />
@@ -478,6 +477,14 @@ function BattleLayout() {
       <BattleTimeline />
       <div className={styles.main}>
         <BattleArena ref={arenaRef} />
+        <div className={styles.logButtonRow}>
+          <button
+            className={styles.logButton}
+            onPointerDown={createHandler({ onTap: () => setLogOpen(true) })}
+          >
+            BATTLE LOG
+          </button>
+        </div>
         <StatusSlots />
         <div className={styles.bottom}>
           <div className={styles.portraitCol}>

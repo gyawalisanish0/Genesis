@@ -1,10 +1,11 @@
 // BattleArena — React wrapper for the Phaser BattleScene.
 //
 // Mounts a Phaser Game instance into the container div.
-// Exposes an imperative handle so BattleContext can forward log entries,
-// trigger unit display (Stage 2), and drive phase-gated animations (Stage 3+).
+// Exposes an imperative handle so BattleContext can trigger unit display (Stage 2)
+// and drive phase-gated animations (Stage 3+).
 //
 // React owns all battle interaction — Phaser input is disabled entirely.
+// The battle log lives in BattleLogOverlay (React), not in the canvas.
 
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 import Phaser from 'phaser'
@@ -37,8 +38,6 @@ export interface TurnDisplayData {
 // ── Public handle — all canvas commands go through this ───────────────────────
 
 export interface BattleArenaHandle {
-  // Stage 1
-  addLog(text: string, colour: string): void
   // Stage 2
   setTurnState(actingDefId: string, targetDefId: string): void
   clearTurn(): void
@@ -121,9 +120,6 @@ export const BattleArena = forwardRef<BattleArenaHandle>(
     }, [])
 
     useImperativeHandle(ref, () => ({
-      addLog(text, colour) {
-        sceneRef.current?.addLogEntry(text, colour)
-      },
       setTurnState(actingDefId, targetDefId) {
         if (sceneRef.current) {
           sceneRef.current.setTurnState(actingDefId, targetDefId)

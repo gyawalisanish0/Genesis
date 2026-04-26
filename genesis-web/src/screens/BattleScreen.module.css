@@ -118,14 +118,25 @@
   overflow: hidden;
 }
 
-/* ── Action log ─────────────────────────────────────────────────────── */
-.log {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--s-sm);
-  background: var(--bg-deep);
-  scrollbar-width: thin;
-  scrollbar-color: var(--bg-elevated) transparent;
+/* ── Battle log button row ──────────────────────────────────────────── */
+.logButtonRow {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.125rem 0.5rem;
+  flex-shrink: 0;
+}
+
+.logButton {
+  min-height: var(--touch-min);
+  padding: 0 0.75rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--bg-panel);
+  border-radius: 0.25rem;
+  color: var(--text-secondary);
+  font-size: 0.625rem;
+  letter-spacing: 0.07em;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .logEntry {

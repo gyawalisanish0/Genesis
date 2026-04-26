@@ -2,8 +2,8 @@
 
 The battle arena is a Phaser 3 canvas that fills a fixed region of `BattleScreen`.
 It is the **cinematic stage** — it owns the visual storytelling of each turn. React
-owns all interaction (skill grid, roll button, overlays, HUD). The canvas never
-resizes in response to React UI panels appearing or disappearing; those panels
+owns all interaction (skill grid, roll button, overlays, HUD, battle log). The canvas
+never resizes in response to React UI panels appearing or disappearing; those panels
 overlay the canvas instead.
 
 ---
@@ -12,6 +12,7 @@ overlay the canvas instead.
 
 ```
 React (BattleScreen)
+  ├── BattleLogOverlay  (React overlay — full log history, opened by BATTLE LOG button)
   └── BattleArena (React wrapper)
         └── Phaser.Game
               └── BattleScene (orchestrator)
@@ -67,23 +68,26 @@ arguments which carry stale `previousWidth`/`previousHeight` values.
 
 ## Canvas Layout
 
+The top 160 px are permanently reserved for the TurnDisplayPanel (`TURN_PANEL_RESERVE`).
+All other canvas content (unit figures, dice, feedback text) is positioned below this
+boundary. The battle log is no longer in the canvas — it lives in `BattleLogOverlay`
+(a React slide-up panel opened by the **BATTLE LOG** button below the arena).
+
 ```
 ┌─────────────────────────────────┐
 │ ┌─────────────────────────────┐ │  ← TurnDisplayPanel (Stage 5)
 │ │  ⚔ Slash  ·  TU 20 · AP 10 │ │    slides in from top of canvas;
 │ │  Target: Iron Warden  ██░░  │ │    overlays canvas without resizing it
-│ └─────────────────────────────┘ │
-│  [ACTING]          [TARGET]     │  ← Unit Stage (top 58%)
-│   ▲ ACTING          ◎ TARGET    │    slides in from both sides on turn start
-│                                 │
+│ └─────────────────────────────┘ │  ← 160 px TURN_PANEL_RESERVE boundary
+│  [ACTING]          [TARGET]     │  ← Unit Stage (below TOP_INSET, ~55% of content zone)
+│   ▲ ACTING          ◎ TARGET    │    slides in from both sides on turn start;
+│                                 │    hide → 150 ms pause → show between turns
 │         ┌──────────┐            │
-│         │ ★ BOOSTED│            │  ← Dice Panel (centre overlay, Stage 3)
+│         │ ★ BOOSTED│            │  ← Dice Panel (centre of content zone, Stage 3)
 │         └──────────┘            │
 │                                 │
 │         −25 HP (rising text)    │  ← Feedback Panel (Stage 3)
-├─────────────────────────────────┤
-│ ▏ Battle log text here...       │  ← Log (lower 42% when units active,
-│ ▏ More log text...              │        full height in idle)
+│                                 │
 └─────────────────────────────────┘
 ```
 
@@ -92,31 +96,33 @@ arguments which carry stale `previousWidth`/`previousHeight` values.
 ## Canvas State Machine
 
 ```
-IDLE ──(turn starts)──▶ UNIT_ENTER ──(ROLL / AI acts)──▶ DICE
-                                                            │
-                         IDLE ◀──(clearTurn)── FEEDBACK ◀── ATTACK
+IDLE ──(turn starts)──▶ UNIT_EXIT ──(150 ms pause)──▶ UNIT_ENTER ──(ROLL / AI acts)──▶ DICE
+                                                                                           │
+                              IDLE ◀──(clearTurn)────────────── FEEDBACK ◀── ATTACK ◀─────┘
 ```
 
 | State | Canvas shows |
 |---|---|
-| `idle` | Scrollable battle log (full height) |
-| `unit_enter` | Acting unit + target slide in; log compresses to lower 42% |
+| `idle` | Clean canvas (log is in React overlay, not canvas) |
+| `unit_exit` | Previous units slide off screen (300 ms `Back.easeIn`) |
+| `unit_enter` | Incoming units slide in from both sides (300 ms `Back.easeOut`) after 150 ms gap |
 | `turn_display` | TurnDisplayPanel slides in from top of canvas (overlaid, not resizing canvas) |
-| `dice` | `DicePanel` appears between units: face spins → lands on outcome |
+| `dice` | `DicePanel` appears in content zone: face spins → lands on outcome |
 | `attack` | Acting unit shoves toward target; target flashes on hit |
-| `feedback` | Damage/outcome text rises and fades from centre |
+| `feedback` | Damage/outcome text rises and fades from centre of content zone |
 
 ---
 
 ## React → Phaser Commands (`BattleArenaHandle`)
 
-```ts
-// Stage 1 — log
-arenaRef.current.addLog(text, colour)
+The battle log is **not** in this interface — it lives in `BattleLogOverlay` (React).
 
+```ts
 // Stage 2 — unit display
-arenaRef.current.setTurnState(actingDefId, targetDefId)  // slides units in
-arenaRef.current.clearTurn()                              // slides units out
+arenaRef.current.setTurnState(actingDefId, targetDefId)
+// If units are currently on screen: triggers hide → 150 ms pause → show for incoming pair.
+// If canvas is idle: units slide in immediately.
+arenaRef.current.clearTurn()                              // slides current units out
 
 // Stage 3 — animations (phase-gated: React awaits onDone before advancing)
 arenaRef.current.playDice(outcome, onDone)
@@ -265,7 +271,8 @@ own game objects. `BattleScene` orchestrates them with no cross-helper coupling.
 
 - **Acting unit**: purple (`--accent-genesis`) border, `▲ ACTING` label
 - **Target unit**: red (`--accent-danger`) border, `◎ TARGET` label
-- Slides in with `Back.easeOut` (300 ms); slides out with `Back.easeIn`
+- Slides in with `Back.easeOut` (300 ms); slides out with `Back.easeIn` (300 ms)
+- Between turns: exit tween completes → 150 ms pause (`BETWEEN_TURN_PAUSE_MS`) → enter tween starts
 
 ---
 
@@ -345,8 +352,9 @@ tokenToHex('var(--accent-gold)')    // → '#f59e0b'
 
 | Stage | Branch deliverable | Status |
 |---|---|---|
-| 1 | Canvas mounts; scrolling battle log in Phaser | ✅ Done |
+| 1 | Canvas mounts; scrolling battle log in Phaser | ✅ Superseded — log moved to React overlay |
 | 2 | Acting unit + target placeholder figures; slide in/out per turn | ✅ Done |
 | 3 | Dice spin → attack animation → feedback numbers; phase-gated | ✅ Done |
 | 4 | Particles, screen shake, evasion slide, death collapse | ✅ Done |
-| 5 | TurnDisplayPanel migrated into Phaser canvas (no canvas resize on panel show/hide) | ✅ Done |
+| 5 | TurnDisplayPanel overlaid at top of canvas; 160 px reserved zone; between-turn pause | ✅ Done |
+| 6 | Battle log moved to React BattleLogOverlay; BATTLE LOG button below canvas | ✅ Done |
