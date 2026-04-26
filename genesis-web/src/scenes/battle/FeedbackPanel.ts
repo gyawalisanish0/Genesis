@@ -7,16 +7,18 @@ const RISE_PX  = 48
 const FLOAT_MS = 1100
 
 export class FeedbackPanel {
-  private scene: Phaser.Scene
+  private scene:    Phaser.Scene
+  private topInset: number
 
-  constructor(scene: Phaser.Scene) {
-    this.scene = scene
+  constructor(scene: Phaser.Scene, topInset = 0) {
+    this.scene    = scene
+    this.topInset = topInset
   }
 
   show(text: string, colour: string): void {
     const { width, height } = this.scene.scale
     const cx = Math.floor(width / 2)
-    const cy = Math.floor(height * 0.43)
+    const cy = Math.floor(this.topInset + (height - this.topInset) * 0.43)
 
     const t = this.scene.add.text(cx, cy, text, {
       fontFamily:      'system-ui,sans-serif',

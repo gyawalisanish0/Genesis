@@ -20,14 +20,16 @@ interface FigureRef {
 
 export class UnitStage {
   private scene:        Phaser.Scene
+  private topInset:     number
   private acting:       FigureRef | null = null
   private target:       FigureRef | null = null
   private actingDefId:  string = ''
   private targetDefId:  string = ''
   private visible:      boolean = false
 
-  constructor(scene: Phaser.Scene) {
-    this.scene = scene
+  constructor(scene: Phaser.Scene, topInset = 0) {
+    this.scene    = scene
+    this.topInset = topInset
   }
 
   get isVisible(): boolean { return this.visible }
@@ -41,8 +43,9 @@ export class UnitStage {
     this.targetDefId = targetDefId
 
     const { width, height } = this.scene.scale
-    const stageH = Math.floor(height * 0.55)
-    const cy     = Math.floor(stageH * 0.48)
+    const contentH = height - this.topInset
+    const stageH   = Math.floor(contentH * 0.55)
+    const cy       = this.topInset + Math.floor(stageH * 0.48)
 
     const ax = Math.floor(width * 0.22)
     this.acting = this.buildFigure(actingDefId, cy, 'acting')
@@ -60,16 +63,34 @@ export class UnitStage {
   hide(onDone?: () => void): void {
     if (!this.visible) { onDone?.(); return }
     const { width } = this.scene.scale
-    let done = 0
-    const total = (this.acting ? 1 : 0) + (this.target ? 1 : 0)
-    if (!total) { this.destroyAll(); onDone?.(); return }
 
-    const each = () => { if (++done >= total) { this.destroyAll(); onDone?.() } }
-    if (this.acting) {
-      this.scene.tweens.add({ targets: this.acting.container, x: -UNIT_W,     duration: SLIDE_MS, ease: 'Back.easeIn', onComplete: each })
+    // Capture old refs and clear immediately so any concurrent show() call
+    // creates new containers without being clobbered by a deferred callback.
+    const oldActing = this.acting
+    const oldTarget = this.target
+    this.acting = null
+    this.target = null
+    this.visible = false
+
+    const total = (oldActing ? 1 : 0) + (oldTarget ? 1 : 0)
+    if (!total) { onDone?.(); return }
+
+    let done = 0
+    const each = () => { if (++done >= total) onDone?.() }
+
+    if (oldActing) {
+      this.scene.tweens.add({
+        targets: oldActing.container, x: -UNIT_W,
+        duration: SLIDE_MS, ease: 'Back.easeIn',
+        onComplete: () => { oldActing.container.destroy(); each() },
+      })
     }
-    if (this.target) {
-      this.scene.tweens.add({ targets: this.target.container, x: width + UNIT_W, duration: SLIDE_MS, ease: 'Back.easeIn', onComplete: each })
+    if (oldTarget) {
+      this.scene.tweens.add({
+        targets: oldTarget.container, x: width + UNIT_W,
+        duration: SLIDE_MS, ease: 'Back.easeIn',
+        onComplete: () => { oldTarget.container.destroy(); each() },
+      })
     }
   }
 

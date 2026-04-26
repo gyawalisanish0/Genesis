@@ -55,9 +55,11 @@ export interface BattleArenaHandle {
 
 export const BattleArena = forwardRef<BattleArenaHandle>(
   function BattleArena(_props, ref) {
-    const containerRef = useRef<HTMLDivElement>(null)
-    const gameRef      = useRef<Phaser.Game | null>(null)
-    const sceneRef     = useRef<BattleScene | null>(null)
+    const containerRef      = useRef<HTMLDivElement>(null)
+    const gameRef           = useRef<Phaser.Game | null>(null)
+    const sceneRef          = useRef<BattleScene | null>(null)
+    // Buffers a setTurnState call that arrived before Phaser was ready.
+    const pendingTurnState  = useRef<[string, string] | null>(null)
 
     useEffect(() => {
       const container = containerRef.current
@@ -102,6 +104,10 @@ export const BattleArena = forwardRef<BattleArenaHandle>(
 
         game.events.once('ready', () => {
           sceneRef.current = game.scene.scenes[0] as BattleScene
+          if (pendingTurnState.current) {
+            sceneRef.current.setTurnState(...pendingTurnState.current)
+            pendingTurnState.current = null
+          }
         })
       })
 
@@ -119,7 +125,11 @@ export const BattleArena = forwardRef<BattleArenaHandle>(
         sceneRef.current?.addLogEntry(text, colour)
       },
       setTurnState(actingDefId, targetDefId) {
-        sceneRef.current?.setTurnState(actingDefId, targetDefId)
+        if (sceneRef.current) {
+          sceneRef.current.setTurnState(actingDefId, targetDefId)
+        } else {
+          pendingTurnState.current = [actingDefId, targetDefId]
+        }
       },
       clearTurn() {
         sceneRef.current?.clearTurn()

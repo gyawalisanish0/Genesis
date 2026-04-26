@@ -14,6 +14,11 @@ const CHIP_H  = 13
 const LABEL_W = 56   // pixels reserved for "HP NNN/NNN" value text
 const SLIDE   = 250
 
+// Pixels permanently reserved at the top of the canvas for this panel.
+// Equals the maximum realistic panel height (actor + skill + target with
+// one status-chip row each, rounded up to a clean multiple).
+export const TURN_PANEL_RESERVE = 160
+
 // ── Colour palette ────────────────────────────────────────────────────────────
 const BG_COL       = 0x0d0d1a
 const DIVIDER_COL  = 0x2a2440
