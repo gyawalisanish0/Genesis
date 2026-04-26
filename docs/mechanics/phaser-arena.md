@@ -349,4 +349,4 @@ tokenToHex('var(--accent-gold)')    // → '#f59e0b'
 | 2 | Acting unit + target placeholder figures; slide in/out per turn | ✅ Done |
 | 3 | Dice spin → attack animation → feedback numbers; phase-gated | ✅ Done |
 | 4 | Particles, screen shake, evasion slide, death collapse | ✅ Done |
-| 5 | TurnDisplayPanel migrated into Phaser canvas (no canvas resize on panel show/hide) | Pending |
+| 5 | TurnDisplayPanel migrated into Phaser canvas (no canvas resize on panel show/hide) | ✅ Done |

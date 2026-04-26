@@ -21,7 +21,6 @@ import {
   TIMELINE_RECENTER_DELAY_MS, BACK_DEBOUNCE_MS,
 } from '../core/constants'
 import styles from './BattleScreen.module.css'
-import turnStyles from './TurnDisplayPanel.module.css'
 import diceStyles from './DiceResultOverlay.module.css'
 
 // ── Dice outcome colour map (existing design tokens — no new tokens) ─────────
@@ -206,98 +205,6 @@ function BattleTimeline() {
     </div>
   )
 }
-
-// ── Turn display panel ──────────────────────────────────────────────────────
-// Shows the active unit, their skill, and target in sequence.
-// Enemy turn: animates in BEFORE the action fires (telegraph during AI delay).
-// Player turn: animates in AFTER the action resolves (confirmation summary).
-// Auto-dismisses 2s after the action completes. Actor row hidden for player.
-function TurnDisplayPanel() {
-  const { turnDisplay } = useBattleScreen()
-  if (!turnDisplay) return null
-
-  const { actor, skillName, tuCost, apCost, skillLevel, target, isAlly } = turnDisplay
-  const actorAccent  = isAlly ? 'var(--accent-info)' : 'var(--accent-danger)'
-  const targetAccent = isAlly ? 'var(--accent-danger)' : 'var(--accent-info)'
-  // Stagger: actor 0ms → skill 250ms → target 500ms (proportional to 750ms anim).
-  // When no actor row (player action), shift everything 250ms earlier.
-  const skillDelay  = actor ? '250ms' : '0ms'
-  const targetDelay = actor ? '500ms' : '250ms'
-
-  return (
-    <div className={turnStyles.turnDisplay}>
-      {actor && (
-        <div className={turnStyles.actorRow}
-             style={{ borderLeftColor: actorAccent, animationDelay: '0ms' }}>
-          <div className={turnStyles.actorPortrait} style={{ borderColor: actorAccent }}>
-            {actor.name.charAt(0).toUpperCase()}
-          </div>
-          <div className={turnStyles.actorInfo}>
-            <div className={turnStyles.actorHeader}>
-              <span className={turnStyles.actorName}>{actor.name}</span>
-              <span className={turnStyles.actorMeta}>
-                {actor.className} · {'★'.repeat(actor.rarity)}
-              </span>
-            </div>
-            <div className={turnStyles.actorBarRow}>
-              <span className={turnStyles.actorBarLabel}>HP</span>
-              <ResourceBar variant="hp" value={actor.hp} max={actor.maxHp} />
-              <span className={turnStyles.actorBarValue}>{actor.hp}/{actor.maxHp}</span>
-            </div>
-            <div className={turnStyles.actorBarRow}>
-              <span className={turnStyles.actorBarLabel}>AP</span>
-              <ResourceBar variant="ap" value={actor.ap} max={actor.maxAp} />
-              <span className={turnStyles.actorBarValue}>{actor.ap}/{actor.maxAp}</span>
-            </div>
-            {actor.statusSlots.length > 0 && (
-              <div className={turnStyles.actorStatusRow}>
-                {actor.statusSlots.map((s) => (
-                  <span key={s.id} className={turnStyles.statusChip}>{s.name}</span>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-      <div className={turnStyles.turnRow} style={{ animationDelay: skillDelay }}>
-        <span className={turnStyles.skillName}>{skillName}</span>
-        <span className={turnStyles.skillTu}>TU {tuCost} · AP {apCost} · Lv {skillLevel}</span>
-      </div>
-      <div className={turnStyles.actorRow}
-           style={{ borderLeftColor: targetAccent, animationDelay: targetDelay }}>
-        <div className={turnStyles.actorPortrait} style={{ borderColor: targetAccent }}>
-          {target.name.charAt(0).toUpperCase()}
-        </div>
-        <div className={turnStyles.actorInfo}>
-          <div className={turnStyles.actorHeader}>
-            <span className={turnStyles.actorName}>{target.name}</span>
-            <span className={turnStyles.actorMeta}>
-              {target.className} · {'★'.repeat(target.rarity)}
-            </span>
-          </div>
-          <div className={turnStyles.actorBarRow}>
-            <span className={turnStyles.actorBarLabel}>HP</span>
-            <ResourceBar variant="hp" value={target.hp} max={target.maxHp} />
-            <span className={turnStyles.actorBarValue}>{target.hp}/{target.maxHp}</span>
-          </div>
-          <div className={turnStyles.actorBarRow}>
-            <span className={turnStyles.actorBarLabel}>AP</span>
-            <ResourceBar variant="ap" value={target.ap} max={target.maxAp} />
-            <span className={turnStyles.actorBarValue}>{target.ap}/{target.maxAp}</span>
-          </div>
-          {target.statusSlots.length > 0 && (
-            <div className={turnStyles.actorStatusRow}>
-              {target.statusSlots.map((s) => (
-                <span key={s.id} className={turnStyles.statusChip}>{s.name}</span>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
 
 // ── Status slots ────────────────────────────────────────────────────────────
 function StatusSlots() {
@@ -522,7 +429,7 @@ function DiceResultOverlay() {
 
 // ── Battle layout ───────────────────────────────────────────────────────────
 function BattleLayout() {
-  const { arenaRef, isPaused, setPaused, isLoading, playerUnit, turnDisplay, diceResult, log } = useBattleScreen()
+  const { arenaRef, isPaused, setPaused, isLoading, playerUnit, diceResult, log } = useBattleScreen()
   const navigate      = useNavigate()
   const lastBackRef   = useRef(0)
   const prevLogLenRef = useRef(0)
@@ -570,7 +477,6 @@ function BattleLayout() {
       <DiceResultOverlay key={diceResult?.animKey ?? 0} />
       <BattleTimeline />
       <div className={styles.main}>
-        <TurnDisplayPanel key={turnDisplay?.animKey ?? 0} />
         <BattleArena ref={arenaRef} />
         <StatusSlots />
         <div className={styles.bottom}>
