@@ -39,18 +39,26 @@ export const BattleArena = forwardRef<BattleArenaHandle>(
 
       // Wait for the container to have real dimensions (flex layout may not
       // have settled on the first synchronous render).
+      // Scale.NONE: we own all resize calls — no CSS/Phaser inline-style conflict.
       const ro = new ResizeObserver(() => {
-        if (gameRef.current) return
         const w = container.clientWidth
         const h = container.clientHeight
         if (w === 0 || h === 0) return
 
+        if (gameRef.current) {
+          // Forward subsequent container resizes into Phaser manually.
+          gameRef.current.scale.resize(w, h)
+          return
+        }
+
         const game = new Phaser.Game({
           type:   Phaser.AUTO,
           parent: container,
+          width:  w,
+          height: h,
           scene:  BattleScene,
           scale: {
-            mode:       Phaser.Scale.RESIZE,
+            mode:       Phaser.Scale.NONE,
             autoCenter: Phaser.Scale.NO_CENTER,
           },
           backgroundColor: '#0a0a14',

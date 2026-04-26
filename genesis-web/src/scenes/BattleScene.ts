@@ -94,11 +94,10 @@ export class BattleScene extends Phaser.Scene {
 
     this.drawAccentLine(height)
 
-    this.scale.on('resize', (
-      _gs: Phaser.Structs.Size, _ds: Phaser.Structs.Size,
-      _dw: number, _dh: number,
-      newW: number, newH: number,
-    ) => this.onResize(newW, newH))
+    // gameSize carries the new canvas dimensions; subsequent params are stale values.
+    this.scale.on('resize', (gameSize: Phaser.Structs.Size) => {
+      this.onResize(gameSize.width, gameSize.height)
+    })
   }
 
   // ── Stage 1: battle log ───────────────────────────────────────────────────
