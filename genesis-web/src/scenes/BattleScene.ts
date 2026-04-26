@@ -15,8 +15,12 @@ import { DicePanel }        from './battle/DicePanel'
 import { AttackPanel }      from './battle/AttackPanel'
 import { FeedbackPanel }    from './battle/FeedbackPanel'
 import { ParticleEmitter, PARTICLE_KEY } from './battle/ParticleEmitter'
-import { TurnDisplayPanel } from './battle/TurnDisplayPanel'
+import { TurnDisplayPanel, TURN_PANEL_RESERVE } from './battle/TurnDisplayPanel'
 import type { TurnPanelData } from './battle/TurnDisplayPanel'
+
+// Pixels at the top of the canvas permanently reserved for the TurnDisplayPanel.
+// All other scene content (units, log, dice, feedback) is positioned below this.
+const TOP_INSET = TURN_PANEL_RESERVE
 
 // ── Design token colour map ───────────────────────────────────────────────────
 // Mirrors src/styles/tokens.css so Phaser objects match the React UI exactly.
@@ -91,10 +95,10 @@ export class BattleScene extends Phaser.Scene {
     gfx.destroy()
 
     const particles      = new ParticleEmitter(this)
-    this.unitStage       = new UnitStage(this)
-    this.dicePanel       = new DicePanel(this)
-    this.attackPanel     = new AttackPanel(this, this.unitStage, particles)
-    this.feedbackPanel   = new FeedbackPanel(this)
+    this.unitStage        = new UnitStage(this, TOP_INSET)
+    this.dicePanel        = new DicePanel(this, TOP_INSET)
+    this.attackPanel      = new AttackPanel(this, this.unitStage, particles)
+    this.feedbackPanel    = new FeedbackPanel(this, TOP_INSET)
     this.turnDisplayPanel = new TurnDisplayPanel(this)
 
     this.drawAccentLine(height)
@@ -165,7 +169,10 @@ export class BattleScene extends Phaser.Scene {
   private renderLog(): void {
     this.logGroup.clear(true, true)
     const { width, height } = this.scale
-    const logTop  = this.unitStage.isVisible ? Math.floor(height * LOG_UNIT_SPLIT) : 0
+    // logTop is never above TOP_INSET — the panel zone is always reserved.
+    const logTop  = this.unitStage.isVisible
+      ? Math.max(TOP_INSET, Math.floor(height * LOG_UNIT_SPLIT))
+      : TOP_INSET
     const availH  = height - logTop - LOG_PAD_Y * 2
     const maxVis  = Math.max(1, Math.floor(availH / LINE_H))
     const visible = this.logEntries.slice(-maxVis)
@@ -186,7 +193,7 @@ export class BattleScene extends Phaser.Scene {
   private drawAccentLine(height: number): void {
     const g = this.add.graphics()
     g.fillStyle(0x8b5cf6, 0.25)
-    g.fillRect(LOG_PAD_X, LOG_PAD_Y, 2, height - LOG_PAD_Y * 2)
+    g.fillRect(LOG_PAD_X, TOP_INSET + LOG_PAD_Y, 2, height - TOP_INSET - LOG_PAD_Y * 2)
   }
 
   private onResize(newWidth: number, newHeight: number): void {

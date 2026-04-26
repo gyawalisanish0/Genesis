@@ -29,18 +29,20 @@ const COLOUR: Record<string, string> = {
 const OUTCOMES = Object.keys(FACE)
 
 export class DicePanel {
-  private scene: Phaser.Scene
-  private panel: Phaser.GameObjects.Container | null = null
+  private scene:    Phaser.Scene
+  private topInset: number
+  private panel:    Phaser.GameObjects.Container | null = null
 
-  constructor(scene: Phaser.Scene) {
-    this.scene = scene
+  constructor(scene: Phaser.Scene, topInset = 0) {
+    this.scene    = scene
+    this.topInset = topInset
   }
 
   spin(outcome: string, onDone: () => void): void {
     this.destroy()
     const { width, height } = this.scene.scale
     const cx = Math.floor(width / 2)
-    const cy = Math.floor(height * 0.27)
+    const cy = Math.floor(this.topInset + (height - this.topInset) * 0.27)
 
     this.panel = this.scene.add.container(cx, cy)
 
