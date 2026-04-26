@@ -63,6 +63,7 @@ export const CLASH_ANNOUNCE_MS           = 1500 // ms clash-winner log is shown 
 export const ENEMY_AI_DELAY_MS           = 2000 // ms between telegraph and enemy action firing
 export const BACK_DEBOUNCE_MS            = 300  // min ms between back-button presses in battle
 export const BATTLE_FEEDBACK_HOLD_MS     = 500  // ms to hold after attack animation before applying state
+export const BETWEEN_TURN_PAUSE_MS       = 150  // pause between unit exit and next unit entrance
 
 // Input timing thresholds (milliseconds / px)
 export const HOVER_THROTTLE_MS         = 100

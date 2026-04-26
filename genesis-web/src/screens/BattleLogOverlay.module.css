@@ -1,0 +1,72 @@
+/* Semi-transparent backdrop — tap outside the panel to close. */
+.backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: flex-end;
+}
+
+/* Slide-up panel — anchored to the bottom edge, max 60% of screen height. */
+.panel {
+  width: 100%;
+  max-height: 60%;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--bg-elevated);
+  border-radius: 0.75rem 0.75rem 0 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slideUp var(--motion-modal) ease-out both;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--bg-elevated);
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.06em;
+}
+
+.closeBtn {
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* Scrollable entry list — occupies all remaining panel height. */
+.list {
+  overflow-y: auto;
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg-elevated) transparent;
+}
+
+.entry {
+  font-size: 0.6875rem;
+  line-height: 1.55;
+  padding: 0.1rem 0;
+}

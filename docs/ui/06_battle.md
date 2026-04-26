@@ -3,11 +3,12 @@
 ## Purpose
 
 The core gameplay screen. Displays the vertical tick timeline on the left edge,
-a turn display panel at top-right (telegraphs incoming enemy actions and confirms
-player actions), a scrollable action log in the centre, the player's status
-effects, a portrait panel, and a collapsible action grid. A full-screen dice
-result overlay bursts on every skill resolution. Every interaction the player
-takes during a battle flows through this screen.
+a turn display panel at top of the arena canvas (telegraphs incoming enemy actions
+and confirms player actions), a **BATTLE LOG** button below the arena that opens a
+slide-up overlay with the full combat history, the player's status effects, a
+portrait panel, and a collapsible action grid. A full-screen dice result overlay
+bursts on every skill resolution. Every interaction the player takes during a
+battle flows through this screen.
 
 ---
 
@@ -45,13 +46,13 @@ Main area : 332 dp wide (x=28 to x=360)
 
 ```
 ┌──┬─────────────────────────────────────────┐  y=0
-│TL│  Turn Display Panel  (0–3 animated rows │  ~22dp/row; absent when idle
-│TL│  actor · skill name · target)           │
-│TL├─────────────────────────────────────────┤  y=0–66
-│TL│                                         │
-│TL│  Action Log Box  (scrollable)           │  fills remaining space
-│TL│                                         │
-│TL├─────────────────────────────────────────┤  y=var
+│TL│  ╔═════════════════════════════════════╗ │  ← Phaser canvas (BattleArena)
+│TL│  ║  TurnDisplayPanel (top of canvas)  ║ │    fills this entire region
+│TL│  ║  Unit figures · Dice · Feedback    ║ │
+│TL│  ╚═════════════════════════════════════╝ │
+│TL├─────────────────────────────────────────┤
+│TL│  [               BATTLE LOG        ▲ ] │  32dp  log button row (right-aligned)
+│TL├─────────────────────────────────────────┤
 │TL│  ╭──[■]──[■]──[■]──╮  Status Slots     │  44dp
 │TL├─────────────────────────────────────────┤
 │  │ [ROLL (if skill)]   │      End/Skip     │  48dp  action row 1  ← ROLL btn visible when skill selected
@@ -67,6 +68,13 @@ Main area : 332 dp wide (x=28 to x=360)
 ║            BOOSTED  (text burst)             ║    position:absolute, centred
 ║           ─────────────────────             ║    z-index 40; pointer-events:none
 ╚══════════════════════════════════════════════╝    visible ~2s per action
+
+╔══════════════════════════════════════════════╗  ← BattleLogOverlay (when open)
+║  BATTLE LOG                            [✕]  ║    position:absolute, bottom-anchored
+║ ─────────────────────────────────────────── ║    max-height 60%; z-index 30
+║  Iron Warden → Slash on Swift Veil          ║    slide-up animation
+║  Swift Veil evaded                          ║    auto-scroll to latest entry
+╚══════════════════════════════════════════════╝    backdrop tap or ✕ to close
 ```
 
 Left TL strip: 28 dp wide · full height · vertical tick axis, ally/enemy markers  
@@ -80,11 +88,12 @@ Skill columns: (332 − 8) / 2 = 162 dp each, 8 dp gap between columns
 | Zone | Height | Visibility |
 |---|---|---|
 | Timeline strip | full height 640 dp | Always visible — 28 dp left column |
-| Turn display panel | 22 dp × row count (1–3 rows) | Visible while an action is in progress; unmounts when idle |
-| Action log | fills remainder | Grows when turn panel is absent |
+| Phaser arena canvas | flex:1 (fills remaining above HUD) | Always visible; TurnDisplayPanel + unit figures inside |
+| BATTLE LOG button row | 32 dp | Always visible; right-aligned below canvas |
 | Status slots pill | 44 dp | Always visible |
 | Bottom area | 246 dp | Portrait + stats always; action grid collapsible |
 | Dice result overlay | full area (position:absolute) | ~2 s per action; pointer-events:none |
+| Battle log overlay | position:absolute, max 60% height, bottom-anchored | When BATTLE LOG button tapped |
 
 ---
 
@@ -247,16 +256,38 @@ the CSS animation even when the outcome is unchanged.
 
 ---
 
-### Action Log (332 × variable dp)
+### BATTLE LOG Button (332 × 32 dp row)
 
-Scrollable list of combat events. Oldest at top, newest at bottom. Auto-scrolls
-to bottom on each new entry.
+A small pill button pinned to the right side of the row directly below the arena
+canvas. Tapping it opens the Battle Log overlay. Always visible during battle.
 
 | Component | Properties |
 |---|---|
-| Log bg | `$bg-deep` |
-| Log entry | `$t-micro` `$text-muted`; 24 dp height per line; left-padded 8 dp |
-| Outcome line | Coloured by outcome type; `$t-label` weight |
+| Row bg | `$bg-deep` |
+| Button | `$bg-elevated` fill; 1 dp `$bg-panel` border; `$r-sm`; `$text-secondary`; 0.625 rem / 600 weight; `var(--touch-min)` min height |
+| Label | `BATTLE LOG` — all caps, tracked |
+
+---
+
+### Battle Log Overlay (position:absolute, max 60% height)
+
+Slide-up panel showing the full battle log history. Opens from the BATTLE LOG
+button; closed by tapping ✕, tapping the semi-transparent backdrop, or pressing
+the back button (the back press is consumed — it does not trigger the pause loop).
+
+Auto-scrolls to the latest entry each time it opens or a new entry arrives while
+the overlay is visible.
+
+| Component | Properties |
+|---|---|
+| Backdrop | `rgba(0,0,0,0.55)`; `z-index: 30`; tap to close |
+| Panel | `$bg-panel`; top corners `0.75rem` radius; slides up via `slideUp` animation (`--motion-modal`) |
+| Header | `BATTLE LOG` label left · ✕ button right; 1 dp `$bg-elevated` border-bottom |
+| Entry list | `overflow-y: auto`; `flex:1`; each entry coloured by outcome token |
+| Entry | `0.6875rem` font-size; colour from `entry.colour ?? --text-muted` |
+
+**Implementation files:** `BattleLogOverlay.tsx` · `BattleLogOverlay.module.css` ·
+`BattleScreen.tsx` (`logOpen` state, `BATTLE LOG` button, back-button intercept)
 
 ---
 

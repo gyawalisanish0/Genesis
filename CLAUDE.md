@@ -143,7 +143,7 @@ Genesis/
 │   └── src/
 │       ├── core/                 # Pure TS game logic — zero UI imports
 │       │   ├── types.ts          # StatBlockDef, CharacterDef, SkillDef, Unit, ModeDef, AppSettings, BattleResult
-│       │   ├── constants.ts      # All numeric constants: tick ranges, dice params, timing thresholds, NARRATIVE_* timings
+│       │   ├── constants.ts      # All numeric constants: tick ranges, dice params, timing thresholds, BETWEEN_TURN_PAUSE_MS, NARRATIVE_* timings
 │       │   ├── screen-types.ts   # ScreenId, ScreenConfig, SafeAreaMode, ScreenLifecycleHooks
 │       │   ├── unit.ts           # Immutable Unit factory + mutation helpers (createUnit, takeDamage, healUnit, incrementActionCount, …)
 │       │   ├── battleHistory.ts  # HistoryEntry type + makeHistoryEntry factory
@@ -196,8 +196,10 @@ Genesis/
 │       │   ├── PreBattleStepMode.tsx     # Step 0 — mode selection (story / ranked / draft)
 │       │   ├── PreBattleStepTeam.tsx     # Step 1 — character roster pick (1–2 units)
 │       │   ├── PreBattleStepItems.tsx    # Step 2 — equipment slots (stub)
-│       │   ├── BattleScreen.tsx          # Battle layout: timeline strip, portrait col, action grid, overlays
-│       │   ├── BattleContext.tsx         # Screen-local context: arenaRef, phase, units, timeline, DiceResult+message, 6-outcome dice, phase-gated arena animations, sequential AI timing, skipTurn; calls showTurnDisplay/hideTurnDisplay on arenaRef (no React TurnDisplay state)
+│       │   ├── BattleScreen.tsx          # Battle layout: timeline strip, arena, BATTLE LOG button, portrait col, action grid, overlays
+│       │   ├── BattleContext.tsx         # Screen-local context: arenaRef, phase, units, log, timeline, DiceResult+message, 6-outcome dice, phase-gated arena animations, sequential AI timing, skipTurn; calls showTurnDisplay/hideTurnDisplay on arenaRef (no React TurnDisplay state)
+│       │   ├── BattleLogOverlay.tsx      # Slide-up battle log history panel; opened by BATTLE LOG button; closed by ✕, backdrop tap, or back button; auto-scrolls to latest entry
+│       │   ├── BattleLogOverlay.module.css
 │       │   ├── DiceResultOverlay.module.css
 │       │   ├── ClashQteOverlay.tsx       # Cross-team clash QTE: spinning knob + tug-of-war bar
 │       │   ├── ClashQteOverlay.module.css
@@ -207,20 +209,20 @@ Genesis/
 │       │   ├── RosterScreen.tsx          # Character grid with class + rarity + name filters
 │       │   └── SettingsScreen.tsx        # Audio / display / notification / account settings
 │       ├── scenes/               # Phaser 3 scenes — no React imports
-│       │   ├── BattleScene.ts    # Stages 1–5 orchestrator: log, unit stage, dice/attack/feedback, particles/shake/death, turn display
+│       │   ├── BattleScene.ts    # Stages 2–5 orchestrator: unit stage, dice/attack/feedback, particles/shake/death, turn display; between-turn pause (BETWEEN_TURN_PAUSE_MS)
 │       │   └── battle/           # BattleScene helper modules (one concern each)
-│       │       ├── TurnDisplayPanel.ts # Turn info overlay: actor (enemy-only), skill, target with HP/AP bars; slides in from top of canvas
-│       │       ├── UnitStage.ts      # Acting + target figure containers; slide, flash, dodge, collapse
-│       │       ├── DicePanel.ts      # Die face spin → outcome landing animation
+│       │       ├── TurnDisplayPanel.ts # Turn info overlay: actor (enemy-only), skill, target with HP/AP bars; slides in from top of canvas; exports TURN_PANEL_RESERVE = 160
+│       │       ├── UnitStage.ts      # Acting + target figure containers; slide, flash, dodge, collapse; topInset keeps content below TurnDisplayPanel zone
+│       │       ├── DicePanel.ts      # Die face spin → outcome landing animation; topInset keeps dice in content zone
 │       │       ├── AttackPanel.ts    # Shove tween, target flash, particle burst, camera shake
-│       │       ├── FeedbackPanel.ts  # Rising damage/outcome text tween
+│       │       ├── FeedbackPanel.ts  # Rising damage/outcome text tween; topInset keeps text in content zone
 │       │       └── ParticleEmitter.ts # One-shot burst effects per outcome; runtime-generated texture
 │       ├── components/           # Reusable React widgets
 │       │   ├── PrimaryButton.tsx         # Variants: primary / secondary / danger / ghost
 │       │   ├── ResourceBar.tsx           # Animated HP / AP / XP bar (400ms tween)
 │       │   ├── UnitPortrait.tsx          # Portrait circle: rarity-coloured border, 4 sizes, greyscale option
 │       │   ├── PagedGrid.tsx             # Generic paged grid: cols×rows, pointer swipe, arrows, dots, page counter
-│       │   ├── BattleArena.tsx           # Phaser wrapper; BattleArenaHandle ref (log, setTurnState, playDice, playAttack, playFeedback, playDeath, showTurnDisplay, hideTurnDisplay); exports TurnDisplayData type
+│       │   ├── BattleArena.tsx           # Phaser wrapper; BattleArenaHandle ref (setTurnState, playDice, playAttack, playFeedback, playDeath, showTurnDisplay, hideTurnDisplay); exports TurnDisplayData type; no addLog — log is in BattleLogOverlay
 │       │   ├── BattleArena.module.css    # flex: 1 container; canvas position: absolute inset: 0; Scale.NONE — no inline style conflict
 │       │   ├── NarrativeLayer.tsx        # Global narrative overlay (mounted in App.tsx); exports NarrativeUnits registry
 │       │   ├── NarrativeDialogueOverlay.tsx  # Dialogue box: portrait + nameplate + typewriter text
