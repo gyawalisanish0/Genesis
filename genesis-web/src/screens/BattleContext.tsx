@@ -6,7 +6,7 @@ import {
   createContext, useContext, useState, useCallback,
   useMemo, useEffect, useRef, type ReactNode,
 } from 'react'
-import type { Unit, StatusEffect } from '../core/types'
+import type { Unit } from '../core/types'
 import type { SkillInstance, BattleState as EngineBattleState, EffectContext } from '../core/effects/types'
 import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, CLASH_ANNOUNCE_MS, ENEMY_AI_DELAY_MS, COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE, BATTLE_FEEDBACK_HOLD_MS } from '../core/constants'
 import { resolveTickDisplacement } from '../core/combat/TickDisplacer'
@@ -22,7 +22,7 @@ import { createSkillInstance, getCachedSkill } from '../core/engines/skill/Skill
 import { loadCharacterWithSkills } from '../services/DataService'
 import { NarrativeService } from '../services/NarrativeService'
 import { NarrativeUnits }   from '../components/NarrativeLayer'
-import type { BattleArenaHandle } from '../components/BattleArena'
+import type { BattleArenaHandle, TurnDisplayData } from '../components/BattleArena'
 import { makeHistoryEntry } from '../core/battleHistory'
 import type { HistoryEntry } from '../core/battleHistory'
 import { useGameStore } from '../core/GameContext'
@@ -35,28 +35,6 @@ export interface DiceResult {
   outcome: DiceOutcome  // 'Boosted' | 'Success' | 'Tumbling' | 'GuardUp' | 'Evasion' | 'Fail'
   message: string       // short flavour description shown below the outcome name
   animKey: number       // incremented on each show; React key for animation retrigger
-}
-
-export interface TurnDisplayUnit {
-  name:        string
-  className:   string
-  rarity:      number
-  hp:          number
-  maxHp:       number
-  ap:          number
-  maxAp:       number
-  statusSlots: StatusEffect[]
-}
-
-export interface TurnDisplay {
-  actor:      TurnDisplayUnit | null  // null = player-controlled; actor row omitted
-  skillName:  string
-  tuCost:     number
-  apCost:     number
-  skillLevel: number
-  target:     TurnDisplayUnit
-  isAlly:     boolean  // drives accent colour: true = blue, false = red
-  animKey:    number   // incremented each show; used as React key to retrigger animation
 }
 
 export interface LogEntry {
@@ -102,8 +80,6 @@ interface BattleContextValue {
   isLoading:       boolean
   // Dice result overlay
   diceResult:      DiceResult | null
-  // Turn display panel
-  turnDisplay:     TurnDisplay | null
   // Counter choice prompt — set when player's counter roll succeeds
   pendingCounterDecision: CounterDecision | null
   // Collision overlays
@@ -217,10 +193,8 @@ export function BattleProvider({ children }: Props) {
     () => new Map(),
   )
 
-  // Turn display panel — ephemeral, set immediately before/after each action
-  const [turnDisplay, setTurnDisplay]   = useState<TurnDisplay | null>(null)
+  // Turn display dismiss timer — controls showTurnDisplay auto-hide timing
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const animKeyRef      = useRef(0)
 
   // Dice result overlay — shown simultaneously with action resolution
   const [diceResult, setDiceResult]     = useState<DiceResult | null>(null)
@@ -330,20 +304,19 @@ export function BattleProvider({ children }: Props) {
 
   // ── Turn display helpers ───────────────────────────────────────────────────
 
-  // Shows the action panel and schedules its auto-dismiss.
+  // Shows the Phaser TurnDisplayPanel and schedules its auto-dismiss.
   // Clears any pending dismiss so a new action replaces the previous display.
   // dismissAfter defaults to TURN_DISPLAY_DISMISS_MS; enemy telegraph passes a
   // longer value (ENEMY_AI_DELAY_MS + DICE_RESULT_DISMISS_MS) to keep the panel
   // visible through the full AI delay + dice animation sequence.
   const showTurnDisplay = useCallback((
-    d: Omit<TurnDisplay, 'animKey'>,
+    d: TurnDisplayData,
     dismissAfter = TURN_DISPLAY_DISMISS_MS,
   ) => {
     if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current)
-    animKeyRef.current += 1
-    setTurnDisplay({ ...d, animKey: animKeyRef.current })
+    arenaRef.current?.showTurnDisplay(d)
     dismissTimerRef.current = setTimeout(
-      () => setTurnDisplay(null),
+      () => arenaRef.current?.hideTurnDisplay(),
       dismissAfter,
     )
   }, [])
@@ -765,11 +738,12 @@ export function BattleProvider({ children }: Props) {
 
       // Stage 4: collapse the dead unit figure before sliding out survivors.
       const arena     = arenaRef.current
+      arena?.hideTurnDisplay()
       const firstDead = deadEnemies[0]
       if (firstDead && arena) {
         arena.playDeath(firstDead.defId, () => arena.clearTurn())
       } else {
-        arenaRef.current?.clearTurn()
+        arena?.clearTurn()
       }
     }
 
@@ -910,10 +884,11 @@ export function BattleProvider({ children }: Props) {
 
           // Stage 4: collapse dead player figure before sliding out survivors.
           const arena = arenaRef.current
+          arena?.hideTurnDisplay()
           if (!isAlive(updatedPlayer) && arena) {
             arena.playDeath(updatedPlayer.defId, () => arena.clearTurn())
           } else {
-            arenaRef.current?.clearTurn()
+            arena?.clearTurn()
           }
         }
 
@@ -971,7 +946,7 @@ export function BattleProvider({ children }: Props) {
       tickValue, activeUnitIds,
       playerUnit, enemies, log, historyEntries,
       selectedSkill, gridCollapsed, isPaused, isLoading,
-      diceResult, turnDisplay, pendingCounterDecision,
+      diceResult, pendingCounterDecision,
       pendingClash, pendingTeamCollision,
       registeredTicks, scrollBounds,
       getUnitSkills, executeSkill, skipTurn, confirmCounter, skipCounter,

@@ -1,9 +1,10 @@
 # Phaser Battle Arena
 
-The battle arena is a Phaser 3 canvas mounted inside `BattleScreen`, sitting
-between the `TurnDisplayPanel` and the action grid. It is the **cinematic
-stage** — it owns the visual storytelling of each turn. React owns all
-interaction (skill grid, roll button, overlays, HUD).
+The battle arena is a Phaser 3 canvas that fills a fixed region of `BattleScreen`.
+It is the **cinematic stage** — it owns the visual storytelling of each turn. React
+owns all interaction (skill grid, roll button, overlays, HUD). The canvas never
+resizes in response to React UI panels appearing or disappearing; those panels
+overlay the canvas instead.
 
 ---
 
@@ -14,10 +15,12 @@ React (BattleScreen)
   └── BattleArena (React wrapper)
         └── Phaser.Game
               └── BattleScene (orchestrator)
-                    ├── UnitStage     (Stage 2 — unit figures)
-                    ├── DicePanel     (Stage 3 — dice spin)
-                    ├── AttackPanel   (Stage 3 — attack animation)
-                    └── FeedbackPanel (Stage 3 — damage numbers)
+                    ├── TurnDisplayPanel  (Stage 5 — turn info overlay inside canvas)
+                    ├── UnitStage         (Stage 2 — unit figures)
+                    ├── DicePanel         (Stage 3 — dice spin)
+                    ├── AttackPanel       (Stage 3 — attack animation)
+                    ├── FeedbackPanel     (Stage 3 — damage numbers)
+                    └── ParticleEmitter   (Stage 4 — hit burst effects)
 ```
 
 `BattleContext` holds `arenaRef` (`RefObject<BattleArenaHandle | null>`) and
@@ -43,10 +46,33 @@ player's unit. The canvas shows whoever is *currently acting*.
 
 ---
 
+## Canvas sizing — `Phaser.Scale.NONE` + manual resize
+
+The Phaser game uses `Scale.NONE` (no auto-resize). The `ResizeObserver` in
+`BattleArena.tsx` is the sole source of truth for canvas dimensions:
+
+- **On first non-zero size**: creates the game with `width: w, height: h`
+- **On every subsequent callback**: calls `game.scale.resize(w, h)`
+
+This eliminates the conflict between CSS `inset: 0` (which sets positional
+offsets on the canvas) and `Scale.RESIZE` (which wrote inline `style.width` /
+`style.height`, causing the CSS `bottom`/`right` constraints to be silently
+ignored and the canvas to overflow its container).
+
+The `BattleScene` `resize` event subscriber reads the new dimensions from
+`gameSize.width` / `gameSize.height` (first argument), not from the 5th/6th
+arguments which carry stale `previousWidth`/`previousHeight` values.
+
+---
+
 ## Canvas Layout
 
 ```
 ┌─────────────────────────────────┐
+│ ┌─────────────────────────────┐ │  ← TurnDisplayPanel (Stage 5)
+│ │  ⚔ Slash  ·  TU 20 · AP 10 │ │    slides in from top of canvas;
+│ │  Target: Iron Warden  ██░░  │ │    overlays canvas without resizing it
+│ └─────────────────────────────┘ │
 │  [ACTING]          [TARGET]     │  ← Unit Stage (top 58%)
 │   ▲ ACTING          ◎ TARGET    │    slides in from both sides on turn start
 │                                 │
@@ -75,6 +101,7 @@ IDLE ──(turn starts)──▶ UNIT_ENTER ──(ROLL / AI acts)──▶ DIC
 |---|---|
 | `idle` | Scrollable battle log (full height) |
 | `unit_enter` | Acting unit + target slide in; log compresses to lower 42% |
+| `turn_display` | TurnDisplayPanel slides in from top of canvas (overlaid, not resizing canvas) |
 | `dice` | `DicePanel` appears between units: face spins → lands on outcome |
 | `attack` | Acting unit shoves toward target; target flashes on hit |
 | `feedback` | Damage/outcome text rises and fades from centre |
@@ -95,12 +122,84 @@ arenaRef.current.clearTurn()                              // slides units out
 arenaRef.current.playDice(outcome, onDone)
 arenaRef.current.playAttack(casterId, targetId, outcome, damage, onDone)
 arenaRef.current.playFeedback(text, colour)              // fire-and-forget
+
+// Stage 4 — death collapse (phase-gated)
+arenaRef.current.playDeath(defId, onDone)
+
+// Stage 5 — turn display (overlaid inside canvas, no resize)
+arenaRef.current.showTurnDisplay(data: TurnDisplayData)  // slides in from top
+arenaRef.current.hideTurnDisplay()                        // slides out
 ```
 
-`playDice` and `playAttack` are **phase-gated**: BattleContext does not apply
-HP changes or advance the timeline until `onDone` fires. If the Phaser canvas
-is not mounted the handle calls `onDone` immediately so battle logic is never
-blocked.
+`playDice`, `playAttack`, and `playDeath` are **phase-gated**: BattleContext
+does not apply HP changes or advance the timeline until `onDone` fires. If the
+Phaser canvas is not mounted the handle calls `onDone` immediately so battle
+logic is never blocked.
+
+`showTurnDisplay` and `hideTurnDisplay` are fire-and-forget. BattleContext
+drives timing via its existing dismiss timer (`dismissTimerRef`), which calls
+`hideTurnDisplay()` instead of clearing a React state variable.
+
+---
+
+## `TurnDisplayData` type (exported from `BattleArena.tsx`)
+
+```ts
+export interface TurnDisplayUnitData {
+  name:        string
+  className:   string
+  rarity:      number
+  hp:          number
+  maxHp:       number
+  ap:          number
+  maxAp:       number
+  statusSlots: Array<{ id: string; name: string }>
+}
+
+export interface TurnDisplayData {
+  actor:      TurnDisplayUnitData | null  // null = player turn (actor row hidden)
+  skillName:  string
+  tuCost:     number
+  apCost:     number
+  skillLevel: number
+  target:     TurnDisplayUnitData
+  isAlly:     boolean  // true = player attacking; drives accent colour (blue/red)
+}
+```
+
+Defined in `BattleArena.tsx` (components layer) and imported by
+`BattleContext.tsx` (screens layer) so the data type flows in the correct
+layer direction without a circular dependency.
+
+---
+
+## TurnDisplayPanel visual (Stage 5)
+
+```
+┌─────────────────────────────────────┐
+│ Hunter 001          ◎ TARGET        │  ← actor row (enemy turns only)
+│ ████████░░  HP 82/100               │    HP bar (Phaser Graphics rect)
+│ ████░░░░░░  AP 40/100               │    AP bar
+│ [Poison] [Bleed]                    │    status chips (text objects)
+├─────────────────────────────────────┤
+│  ⚔ Arcane Bolt  ·  TU 18  ·  AP 10 │  ← skill row (always shown)
+│  Lv 2                               │
+├─────────────────────────────────────┤
+│ Iron Warden         ◎ TARGET        │  ← target row (always shown)
+│ ████████████  HP 120/120            │
+│ ████████░░░░  AP 60/100             │
+└─────────────────────────────────────┘
+```
+
+- Slides in from top of canvas with `Back.easeOut` (250 ms)
+- Canvas animations (dice spin, attack) continue live behind the panel
+- No dim layer — canvas stays fully visible
+- HP/AP bars rendered as Phaser `Graphics` `fillRect` calls using `tokenToHex`
+  colour values (same approach as unit figures)
+- Rarity accent: actor/target name colour matches `--rarity-N` via `RARITY_HEX`
+  map in `TurnDisplayPanel.ts`
+- Status chips: small `Text` objects with a rounded `Graphics` background,
+  laid out left-to-right with wrapping
 
 ---
 
@@ -123,15 +222,15 @@ Without arena: `setTimeout(applyState, DICE_RESULT_DISMISS_MS)` as before.
 
 ---
 
-## `setTurnState` call points
+## `setTurnState` + `showTurnDisplay` call points
 
-| Moment | Call |
+| Moment | Calls |
 |---|---|
 | Phase derivation → player turn | `setTurnState(player.defId, firstEnemy.defId)` |
-| Enemy AI telegraph fires | `setTurnState(enemy.defId, player.defId)` |
-
-`clearTurn` is called inside `applyState` (after state is committed) and
-inside `skipTurn`. Units slide out after HP bars update.
+| Player executes skill | `showTurnDisplay({ actor: null, … })` + dismiss timer |
+| Enemy AI telegraph fires | `setTurnState(enemy.defId, player.defId)` + `showTurnDisplay({ actor: enemy, … })` |
+| `applyState` / `applyEnemyState` | `hideTurnDisplay()` + `clearTurn()` (or `playDeath → clearTurn`) |
+| `skipTurn` | `clearTurn()` (no turn display for skips) |
 
 ---
 
@@ -139,6 +238,7 @@ inside `skipTurn`. Units slide out after HP bars update.
 
 | File | Responsibility |
 |---|---|
+| `TurnDisplayPanel.ts` | Skill name + TU/AP cost + actor (enemy-only) + target rows with HP/AP bars; slides in/out from top of canvas |
 | `UnitStage.ts` | Creates, slides, and destroys the two unit figure containers; drives evasion dodge and death collapse tweens |
 | `DicePanel.ts` | Renders the spinning die face; calls `onDone` after the hold |
 | `AttackPanel.ts` | Drives the shove tween, target flash, particle burst, and camera shake via `UnitStage` + `ParticleEmitter` |
@@ -249,3 +349,4 @@ tokenToHex('var(--accent-gold)')    // → '#f59e0b'
 | 2 | Acting unit + target placeholder figures; slide in/out per turn | ✅ Done |
 | 3 | Dice spin → attack animation → feedback numbers; phase-gated | ✅ Done |
 | 4 | Particles, screen shake, evasion slide, death collapse | ✅ Done |
+| 5 | TurnDisplayPanel migrated into Phaser canvas (no canvas resize on panel show/hide) | ✅ Done |

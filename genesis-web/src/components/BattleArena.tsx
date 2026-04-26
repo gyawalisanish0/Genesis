@@ -11,6 +11,29 @@ import Phaser from 'phaser'
 import { BattleScene } from '../scenes/BattleScene'
 import styles from './BattleArena.module.css'
 
+// ── Exported data types for Stage 5 (TurnDisplayPanel) ───────────────────────
+
+export interface TurnDisplayUnitData {
+  name:        string
+  className:   string
+  rarity:      number
+  hp:          number
+  maxHp:       number
+  ap:          number
+  maxAp:       number
+  statusSlots: Array<{ id: string; name: string }>
+}
+
+export interface TurnDisplayData {
+  actor:      TurnDisplayUnitData | null  // null = player turn (actor row hidden)
+  skillName:  string
+  tuCost:     number
+  apCost:     number
+  skillLevel: number
+  target:     TurnDisplayUnitData
+  isAlly:     boolean  // true = player attacking; drives accent colour
+}
+
 // ── Public handle — all canvas commands go through this ───────────────────────
 
 export interface BattleArenaHandle {
@@ -25,6 +48,9 @@ export interface BattleArenaHandle {
   playFeedback(text: string, colour: string): void
   // Stage 4 — death collapse (phase-gated: clearTurn should be called inside onDone)
   playDeath(defId: string, onDone: () => void): void
+  // Stage 5 — turn display overlay (fire-and-forget; BattleContext drives timing)
+  showTurnDisplay(data: TurnDisplayData): void
+  hideTurnDisplay(): void
 }
 
 export const BattleArena = forwardRef<BattleArenaHandle>(
@@ -121,6 +147,12 @@ export const BattleArena = forwardRef<BattleArenaHandle>(
         } else {
           onDone()
         }
+      },
+      showTurnDisplay(data) {
+        sceneRef.current?.showTurnDisplay(data)
+      },
+      hideTurnDisplay() {
+        sceneRef.current?.hideTurnDisplay()
       },
     }))
 

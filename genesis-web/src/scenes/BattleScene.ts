@@ -4,6 +4,7 @@
 // Stage 2: acting unit + target placeholder figures (UnitStage).
 // Stage 3: dice spin → attack animation → feedback numbers (phase-gated via onDone).
 // Stage 4: screen shake, particle bursts, evasion dodge, death collapse.
+// Stage 5: TurnDisplayPanel overlaid at top of canvas (no canvas resize).
 //
 // React communicates via the public command methods; Phaser communicates back
 // to React via the onDone callbacks passed into playDice / playAttack / playDeath.
@@ -14,6 +15,8 @@ import { DicePanel }        from './battle/DicePanel'
 import { AttackPanel }      from './battle/AttackPanel'
 import { FeedbackPanel }    from './battle/FeedbackPanel'
 import { ParticleEmitter, PARTICLE_KEY } from './battle/ParticleEmitter'
+import { TurnDisplayPanel } from './battle/TurnDisplayPanel'
+import type { TurnPanelData } from './battle/TurnDisplayPanel'
 
 // ── Design token colour map ───────────────────────────────────────────────────
 // Mirrors src/styles/tokens.css so Phaser objects match the React UI exactly.
@@ -59,10 +62,11 @@ export class BattleScene extends Phaser.Scene {
   private logGroup!:     Phaser.GameObjects.Group
   private logEntries:    Array<{ text: string; colour: string }> = []
 
-  private unitStage!:     UnitStage
-  private dicePanel!:     DicePanel
-  private attackPanel!:   AttackPanel
-  private feedbackPanel!: FeedbackPanel
+  private unitStage!:        UnitStage
+  private dicePanel!:        DicePanel
+  private attackPanel!:      AttackPanel
+  private feedbackPanel!:    FeedbackPanel
+  private turnDisplayPanel!: TurnDisplayPanel
 
   constructor() {
     super({ key: 'BattleScene' })
@@ -86,11 +90,12 @@ export class BattleScene extends Phaser.Scene {
     gfx.generateTexture(PARTICLE_KEY, 8, 8)
     gfx.destroy()
 
-    const particles   = new ParticleEmitter(this)
-    this.unitStage    = new UnitStage(this)
-    this.dicePanel    = new DicePanel(this)
-    this.attackPanel  = new AttackPanel(this, this.unitStage, particles)
-    this.feedbackPanel = new FeedbackPanel(this)
+    const particles      = new ParticleEmitter(this)
+    this.unitStage       = new UnitStage(this)
+    this.dicePanel       = new DicePanel(this)
+    this.attackPanel     = new AttackPanel(this, this.unitStage, particles)
+    this.feedbackPanel   = new FeedbackPanel(this)
+    this.turnDisplayPanel = new TurnDisplayPanel(this)
 
     this.drawAccentLine(height)
 
@@ -143,6 +148,16 @@ export class BattleScene extends Phaser.Scene {
 
   playDeath(defId: string, onDone: () => void): void {
     this.unitStage.collapseByDefId(defId, onDone)
+  }
+
+  // ── Stage 5: turn display overlay ────────────────────────────────────────
+
+  showTurnDisplay(data: TurnPanelData): void {
+    this.turnDisplayPanel.show(data)
+  }
+
+  hideTurnDisplay(): void {
+    this.turnDisplayPanel.hide()
   }
 
   // ── Private helpers ───────────────────────────────────────────────────────
