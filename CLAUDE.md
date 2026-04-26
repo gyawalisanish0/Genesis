@@ -197,8 +197,7 @@ Genesis/
 │       │   ├── PreBattleStepTeam.tsx     # Step 1 — character roster pick (1–2 units)
 │       │   ├── PreBattleStepItems.tsx    # Step 2 — equipment slots (stub)
 │       │   ├── BattleScreen.tsx          # Battle layout: timeline strip, portrait col, action grid, overlays
-│       │   ├── BattleContext.tsx         # Screen-local context: arenaRef, phase, units, timeline, DiceResult+message, 6-outcome dice, phase-gated arena animations, sequential AI timing, skipTurn
-│       │   ├── TurnDisplayPanel.module.css
+│       │   ├── BattleContext.tsx         # Screen-local context: arenaRef, phase, units, timeline, DiceResult+message, 6-outcome dice, phase-gated arena animations, sequential AI timing, skipTurn; calls showTurnDisplay/hideTurnDisplay on arenaRef (no React TurnDisplay state)
 │       │   ├── DiceResultOverlay.module.css
 │       │   ├── ClashQteOverlay.tsx       # Cross-team clash QTE: spinning knob + tug-of-war bar
 │       │   ├── ClashQteOverlay.module.css
@@ -208,8 +207,9 @@ Genesis/
 │       │   ├── RosterScreen.tsx          # Character grid with class + rarity + name filters
 │       │   └── SettingsScreen.tsx        # Audio / display / notification / account settings
 │       ├── scenes/               # Phaser 3 scenes — no React imports
-│       │   ├── BattleScene.ts    # Stages 1–4 orchestrator: log, unit stage, dice/attack/feedback, particles/shake/death
+│       │   ├── BattleScene.ts    # Stages 1–5 orchestrator: log, unit stage, dice/attack/feedback, particles/shake/death, turn display
 │       │   └── battle/           # BattleScene helper modules (one concern each)
+│       │       ├── TurnDisplayPanel.ts # Turn info overlay: actor (enemy-only), skill, target with HP/AP bars; slides in from top of canvas
 │       │       ├── UnitStage.ts      # Acting + target figure containers; slide, flash, dodge, collapse
 │       │       ├── DicePanel.ts      # Die face spin → outcome landing animation
 │       │       ├── AttackPanel.ts    # Shove tween, target flash, particle burst, camera shake
@@ -220,8 +220,8 @@ Genesis/
 │       │   ├── ResourceBar.tsx           # Animated HP / AP / XP bar (400ms tween)
 │       │   ├── UnitPortrait.tsx          # Portrait circle: rarity-coloured border, 4 sizes, greyscale option
 │       │   ├── PagedGrid.tsx             # Generic paged grid: cols×rows, pointer swipe, arrows, dots, page counter
-│       │   ├── BattleArena.tsx           # Phaser wrapper; BattleArenaHandle ref (log, setTurnState, playDice, playAttack, playFeedback)
-│       │   ├── BattleArena.module.css    # flex: 1 container; canvas position: absolute inset: 0
+│       │   ├── BattleArena.tsx           # Phaser wrapper; BattleArenaHandle ref (log, setTurnState, playDice, playAttack, playFeedback, playDeath, showTurnDisplay, hideTurnDisplay); exports TurnDisplayData type
+│       │   ├── BattleArena.module.css    # flex: 1 container; canvas position: absolute inset: 0; Scale.NONE — no inline style conflict
 │       │   ├── NarrativeLayer.tsx        # Global narrative overlay (mounted in App.tsx); exports NarrativeUnits registry
 │       │   ├── NarrativeDialogueOverlay.tsx  # Dialogue box: portrait + nameplate + typewriter text
 │       │   ├── NarrativeScreenFlash.tsx  # Full-screen colour burst animation
@@ -272,10 +272,12 @@ Each layer may only import from layers to its left.
 
 ### `scenes/`
 - Phaser 3 scenes only — no React imports
-- Communicates back to React via `onDone` callbacks passed into `playDice` / `playAttack`
+- Communicates back to React via `onDone` callbacks passed into `playDice` / `playAttack` / `playDeath`
 - **`BattleScene`** is unit-agnostic — receives `actingDefId` / `targetDefId`, never assumes player/enemy roles
 - Helper modules live in `scenes/battle/` (one concern per file, all receive `scene: Phaser.Scene`)
 - React wrapper is `BattleArena.tsx`; `BattleContext` holds the `arenaRef` and calls handle methods directly
+- **Canvas never resizes in response to React UI panels** — `Phaser.Scale.NONE` is used; the `ResizeObserver` in `BattleArena.tsx` calls `game.scale.resize(w, h)` for genuine container size changes only
+- **TurnDisplayPanel lives inside the canvas** (Stage 5) — overlaid at the top via `showTurnDisplay` / `hideTurnDisplay` handle methods; the canvas area is a fixed-size container and React panels do not push it
 - Full spec: `docs/mechanics/phaser-arena.md`
 
 ### `components/`
