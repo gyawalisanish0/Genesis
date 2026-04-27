@@ -224,6 +224,14 @@ export function BattleProvider({ children }: Props) {
   const [pendingClashAnnounce, setPendingClashAnnounce] = useState<'player' | 'enemy' | null>(null)
   const clashAnnounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // Ref mirrors for the three clash guard values.
+  // The phase derivation effect reads these instead of the state values so that
+  // clearing any of them (setState → null) does NOT re-trigger the effect and
+  // re-detect a clash that was already resolved at the same tick.
+  const pendingClashRef         = useRef<ClashState | null>(null)
+  const pendingTeamCollisionRef = useRef<TeamCollisionState | null>(null)
+  const pendingClashAnnounceRef = useRef<'player' | 'enemy' | null>(null)
+
   // Timeline tick registry — seeded from real unit positions after load.
   const [registeredTicks, setRegisteredTicks] = useState<Map<string, number>>(
     () => new Map(),
@@ -363,6 +371,7 @@ export function BattleProvider({ children }: Props) {
     if (!pendingClashAnnounce) return
     clashAnnounceTimerRef.current = setTimeout(() => {
       setPhase(pendingClashAnnounce === 'player' ? 'player' : 'enemy')
+      pendingClashAnnounceRef.current = null
       setPendingClashAnnounce(null)
     }, CLASH_ANNOUNCE_MS)
     return () => {
@@ -415,11 +424,13 @@ export function BattleProvider({ children }: Props) {
   }, [])
 
   // Derive phase from active unit ids — with collision detection.
+  // Guard values are read from refs (not state) so that clearing any of them
+  // does not re-trigger this effect and re-detect an already-resolved clash
+  // while activeUnitIds still has both units at the same tick.
   useEffect(() => {
     if (isLoading || activeUnitIds.size === 0) return
     if (narrativePaused) return
-    // Don't re-trigger while another resolution is in progress.
-    if (pendingClash || pendingTeamCollision || pendingClashAnnounce) return
+    if (pendingClashRef.current || pendingTeamCollisionRef.current || pendingClashAnnounceRef.current) return
 
     const activePlayerUnits = playerUnit && activeUnitIds.has(playerUnit.id) ? [playerUnit] : []
     const activeEnemyUnits  = enemies.filter((e) => activeUnitIds.has(e.id))
@@ -431,7 +442,8 @@ export function BattleProvider({ children }: Props) {
 
       if (hasUniqueClash) {
         // Unique clash mechanism defined in character data — activate QTE path.
-        setPendingClash({ playerUnits: activePlayerUnits, enemyUnits: activeEnemyUnits })
+        pendingClashRef.current = { playerUnits: activePlayerUnits, enemyUnits: activeEnemyUnits }
+        setPendingClash(pendingClashRef.current)
         return
       }
 
@@ -449,6 +461,7 @@ export function BattleProvider({ children }: Props) {
       winnerUnits.forEach((u) =>
         NarrativeService.emit({ type: 'clash_resolved', actorId: u.defId }),
       )
+      pendingClashAnnounceRef.current = winner
       setPendingClashAnnounce(winner)
       return
     }
@@ -460,7 +473,8 @@ export function BattleProvider({ children }: Props) {
         setPhase('player')  // fastest acts first, no prompt needed
       } else {
         const choices = new Map(activePlayerUnits.map((u) => [u.id, null as 'now' | 'later' | null]))
-        setPendingTeamCollision({ units: activePlayerUnits, choices })
+        pendingTeamCollisionRef.current = { units: activePlayerUnits, choices }
+        setPendingTeamCollision(pendingTeamCollisionRef.current)
       }
       return
     }
@@ -479,7 +493,7 @@ export function BattleProvider({ children }: Props) {
       setPhase('enemy')
       // setTurnState for enemy is called in the AI telegraph below, timed with the delay.
     }
-  }, [activeUnitIds, playerUnit, enemies, isLoading, narrativePaused, pendingClash, pendingTeamCollision, pendingClashAnnounce, appendLog])
+  }, [activeUnitIds, playerUnit, enemies, isLoading, narrativePaused, appendLog])
 
   // Timeline scroll bounds.
   const scrollBounds = useMemo(() => {
@@ -607,12 +621,14 @@ export function BattleProvider({ children }: Props) {
 
   /** Called by ClashQteOverlay when bar settles — 'player' = player side wins. */
   const resolveClash = useCallback((winner: 'player' | 'enemy') => {
+    pendingClashRef.current = null
     setPendingClash(null)
     setPhase(winner === 'player' ? 'player' : 'enemy')
   }, [])
 
   /** Called by TeamCollisionOverlay when all Now/Later choices are collected. */
   const resolveTeamCollision = useCallback((choices: Map<string, 'now' | 'later'>) => {
+    pendingTeamCollisionRef.current = null
     setPendingTeamCollision(null)
     choices.forEach((choice, unitId) => {
       if (choice === 'later') {
