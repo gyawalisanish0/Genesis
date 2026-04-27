@@ -142,8 +142,8 @@ Genesis/
 │   │   └── images/               # 3x PNG assets (primary density)
 │   └── src/
 │       ├── core/                 # Pure TS game logic — zero UI imports
-│       │   ├── types.ts          # StatBlockDef, CharacterDef, SkillDef, Unit, ModeDef, AppSettings, BattleResult
-│       │   ├── constants.ts      # All numeric constants: tick ranges, dice params, timing thresholds, BETWEEN_TURN_PAUSE_MS, NARRATIVE_* timings
+│       │   ├── types.ts          # StatBlockDef, CharacterDef, SkillDef, Unit, ModeDef, AppSettings, BattleResult, QualityTier
+│       │   ├── constants.ts      # All numeric constants: tick ranges, dice params, timing thresholds, BETWEEN_TURN_PAUSE_MS, NARRATIVE_* timings, QUALITY_* thresholds
 │       │   ├── screen-types.ts   # ScreenId, ScreenConfig, SafeAreaMode, ScreenLifecycleHooks
 │       │   ├── unit.ts           # Immutable Unit factory + mutation helpers (createUnit, takeDamage, healUnit, incrementActionCount, …)
 │       │   ├── battleHistory.ts  # HistoryEntry type + makeHistoryEntry factory
@@ -182,6 +182,7 @@ Genesis/
 │       │   ├── DataService.ts    # JSON loader: loadCharacter, loadCharacterSkillDefs, loadMode, loadCharacterWithSkills, loadCharacterDialogue, loadLevelNarrative (all cached)
 │       │   ├── DisplayService.ts # Full-screen + StatusBar: Capacitor StatusBar.hide() on native; Fullscreen API on web
 │       │   ├── NarrativeService.ts # Global narrative bus: emit(), play(), subscribe(), subscribeDirect(), registerEntries(), unregisterEntries(), getAllEntries()
+│       │   ├── ResolutionService.ts # Quality tier: rAF benchmark → High/Medium/Low; localStorage persistence; stepUp(); subscribe()
 │       │   └── __tests__/
 │       ├── utils/
 │       │   ├── useScrollAwarePointer.ts  # Tap / hold / scroll gesture discriminator (pointer-delta based)
@@ -216,7 +217,8 @@ Genesis/
 │       │       ├── DicePanel.ts      # Die face spin → outcome landing animation; topInset keeps dice in content zone
 │       │       ├── AttackPanel.ts    # Shove tween, target flash, particle burst, camera shake
 │       │       ├── FeedbackPanel.ts  # Rising damage/outcome text tween; topInset keeps text in content zone
-│       │       └── ParticleEmitter.ts # One-shot burst effects per outcome; runtime-generated texture
+│       │       ├── ParticleEmitter.ts # One-shot burst effects per outcome; runtime-generated texture
+│       │       └── ResolutionAdaptor.ts # FPS monitor: 1-s interval; promotes quality tier after QUALITY_STEP_UP_CHECKS consecutive ≥58fps checks
 │       ├── components/           # Reusable React widgets
 │       │   ├── PrimaryButton.tsx         # Variants: primary / secondary / danger / ghost
 │       │   ├── ResourceBar.tsx           # Animated HP / AP / XP bar (400ms tween)

@@ -115,6 +115,10 @@ export interface BattleResult {
   xpGained:  number
 }
 
+// ── Resolution quality ─────────────────────────────────────────────────────────
+
+export type QualityTier = 'High' | 'Medium' | 'Low'
+
 // ── App settings ───────────────────────────────────────────────────────────────
 
 export interface AppSettings {

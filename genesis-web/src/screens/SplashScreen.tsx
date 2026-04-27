@@ -12,7 +12,8 @@ import {
   loadCharacterIndex, loadCharacter, loadMode,
   loadCharacterDialogue, loadLevelNarrative,
 } from '../services/DataService'
-import { NarrativeService } from '../services/NarrativeService'
+import { NarrativeService }  from '../services/NarrativeService'
+import { ResolutionService } from '../services/ResolutionService'
 import styles from './SplashScreen.module.css'
 
 const APP_VERSION = '0.1.0'
@@ -55,7 +56,10 @@ export function SplashScreen() {
   const [readyToEnter, setReadyToEnter] = useState(false)
 
   useEffect(() => {
-    loadAllGameData(setProgress)
+    Promise.all([
+      loadAllGameData(setProgress),
+      ResolutionService.detectTier(),
+    ])
       .then(() => {
         setDone(true)
         if (isBrowserTab()) {
@@ -68,6 +72,7 @@ export function SplashScreen() {
       })
       .catch((err: unknown) => {
         setError(err instanceof Error ? err.message : 'Load failed')
+        // Still apply a tier in case the benchmark completed before the data error.
       })
   }, [navigateTo])
 
