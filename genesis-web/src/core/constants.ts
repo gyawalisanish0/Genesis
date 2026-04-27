@@ -72,6 +72,13 @@ export const SWIPE_MIN_DISTANCE_PX     = 50
 export const DOUBLE_TAP_WINDOW_MS      = 300
 export const SCROLL_DETECT_THRESHOLD_PX = 8  // if scrolled >8px, treat as scroll, not tap
 
+// Resolution quality adapter
+export const QUALITY_BENCHMARK_FRAMES    = 120    // frames sampled during startup FPS benchmark
+export const QUALITY_HIGH_FPS_THRESHOLD  = 55     // ≥55 fps → High tier
+export const QUALITY_MED_FPS_THRESHOLD   = 40     // ≥40 fps → Medium tier (else Low)
+export const QUALITY_STEP_UP_FPS         = 58     // sustained fps required for live step-up
+export const QUALITY_STEP_UP_CHECKS      = 10     // consecutive 1-s checks at ≥STEP_UP_FPS to trigger step-up
+
 // Narrative layer — dialogue box + animation timings
 export const NARRATIVE_DISMISS_MS    = 3500  // ms before dialogue box auto-dismisses
 export const NARRATIVE_TYPEWRITER_MS = 30    // ms per character typewriter effect

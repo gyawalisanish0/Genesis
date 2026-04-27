@@ -18,6 +18,7 @@ import { ParticleEmitter, PARTICLE_KEY } from './battle/ParticleEmitter'
 import { TurnDisplayPanel, TURN_PANEL_RESERVE } from './battle/TurnDisplayPanel'
 import type { TurnPanelData } from './battle/TurnDisplayPanel'
 import { BETWEEN_TURN_PAUSE_MS } from '../core/constants'
+import { ResolutionAdaptor }    from './battle/ResolutionAdaptor'
 
 // Pixels at the top of the canvas permanently reserved for the TurnDisplayPanel.
 // All other scene content (units, dice, feedback) is positioned below this.
@@ -83,6 +84,9 @@ export class BattleScene extends Phaser.Scene {
     this.attackPanel      = new AttackPanel(this, this.unitStage, particles)
     this.feedbackPanel    = new FeedbackPanel(this, TOP_INSET)
     this.turnDisplayPanel = new TurnDisplayPanel(this)
+    // ResolutionAdaptor monitors FPS and promotes quality tier if sustained ≥58fps.
+    // Stored as a local (not field) since it self-manages via scene time events.
+    void new ResolutionAdaptor(this)
 
     // gameSize carries the new canvas dimensions; subsequent params are stale values.
     this.scale.on('resize', (gameSize: Phaser.Structs.Size) => {
