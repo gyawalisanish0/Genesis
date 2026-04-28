@@ -1010,25 +1010,27 @@ export function BattleProvider({ children }: Props) {
       return
     }
     const def      = getCachedSkill(skill)
-    const selector = def.targeting.selector
-    if (selector === 'enemy') {
-      // Single-target: open picker overlay; canvas stays blank until player confirms.
+    const selector     = def.targeting.selector
+    const currentEnemies = enemiesRef.current
+    const currentPlayer  = playerUnitRef.current
+    const aliveEnemies   = currentEnemies.filter(isAlive)
+
+    if (selector === 'enemy' && aliveEnemies.length > 1) {
+      // 2+ enemies alive — open picker so the player chooses.
       setSelectedTarget(null)
       setShowTargetPicker(true)
     } else {
-      // Auto-targeting selectors: resolve immediately and show canvas preview.
+      // 0 or 1 enemy alive (or auto-targeting selector) — resolve immediately.
       setShowTargetPicker(false)
-      const currentEnemies = enemiesRef.current
-      const currentPlayer  = playerUnitRef.current
       let autoTarget: Unit | null = null
-      if (selector === 'lowest-hp-enemy') {
-        const alive = currentEnemies.filter(isAlive)
-        autoTarget = alive.reduce<Unit | null>((a, b) => !a || b.hp < a.hp ? b : a, null)
+      if (selector === 'enemy') {
+        autoTarget = aliveEnemies[0] ?? null
+      } else if (selector === 'lowest-hp-enemy') {
+        autoTarget = aliveEnemies.reduce<Unit | null>((a, b) => !a || b.hp < a.hp ? b : a, null)
       } else if (selector === 'random-enemy') {
-        const alive = currentEnemies.filter(isAlive)
-        autoTarget = alive[Math.floor(Math.random() * alive.length)] ?? null
+        autoTarget = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)] ?? null
       } else {
-        autoTarget = currentEnemies.find(isAlive) ?? null
+        autoTarget = aliveEnemies[0] ?? null
       }
       setSelectedTarget(autoTarget)
       if (autoTarget && currentPlayer) {
