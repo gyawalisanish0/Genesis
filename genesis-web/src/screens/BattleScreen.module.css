@@ -94,8 +94,14 @@
   transition: top 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.markerActive {
-  animation: markerPulse 1.5s ease-in-out infinite;
+/* Active ally — blue pulse matching the HP arc ring colour */
+.markerActiveAlly {
+  animation: markerPulseAlly 1.5s ease-in-out infinite;
+}
+
+/* Active enemy — red pulse matching the HP arc ring colour */
+.markerActiveEnemy {
+  animation: markerPulseEnemy 1.5s ease-in-out infinite;
 }
 
 /* History ghost — grayscale + dimmed; no interaction */
@@ -105,9 +111,14 @@
   pointer-events: none;
 }
 
-@keyframes markerPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4); }
-  50%       { box-shadow: 0 0 0 0.375rem rgba(139, 92, 246, 0); }
+@keyframes markerPulseAlly {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5); }
+  50%       { box-shadow: 0 0 0 0.375rem rgba(59, 130, 246, 0); }
+}
+
+@keyframes markerPulseEnemy {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+  50%       { box-shadow: 0 0 0 0.375rem rgba(239, 68, 68, 0); }
 }
 
 /* ── Main content area (332dp right column) ────────────────────────── */
