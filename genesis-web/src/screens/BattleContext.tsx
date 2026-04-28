@@ -7,7 +7,7 @@ import {
   useMemo, useEffect, useRef, type ReactNode,
 } from 'react'
 import type { Unit } from '../core/types'
-import type { SkillInstance, BattleState as EngineBattleState, EffectContext } from '../core/effects/types'
+import type { SkillInstance, BattleState as EngineBattleState, EffectContext, TargetSelector } from '../core/effects/types'
 import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, CLASH_ANNOUNCE_MS, ENEMY_AI_DELAY_MS, COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE, BATTLE_FEEDBACK_HOLD_MS } from '../core/constants'
 import { resolveTickDisplacement } from '../core/combat/TickDisplacer'
 import { resolveClashWinner, factionAvgSpeed } from '../core/combat/ClashResolver'
@@ -134,6 +134,56 @@ function snapshotToBattleState(snap: Map<string, Unit>): EngineBattleState {
     setUnit:     (unit) => snap.set(unit.id, unit),
     getAllUnits: () => [...snap.values()],
   }
+}
+
+// ── Caster-relative target resolution ────────────────────────────────────────
+
+/**
+ * Resolves the full list of targets for a skill cast.
+ * Selector semantics are caster-relative: 'enemy' = opposite faction of caster,
+ * 'ally' = same faction. Works identically for player and AI casters.
+ *
+ * @param preferred  Pre-selected target (used only for the 'enemy' single selector).
+ */
+function resolveSkillTargets(
+  caster:    Unit,
+  selector:  TargetSelector,
+  snap:      Map<string, Unit>,
+  preferred: Unit | null = null,
+): Unit[] {
+  if (typeof selector === 'object') return []   // tag selectors unsupported in v0.1
+  const alive   = [...snap.values()].filter(u => u.hp > 0)
+  const foes    = alive.filter(u => u.isAlly !== caster.isAlly)
+  const friends = alive.filter(u => u.isAlly === caster.isAlly && u.id !== caster.id)
+  switch (selector) {
+    case 'enemy': {
+      const pref = preferred && foes.find(u => u.id === preferred.id)
+      return pref ? [pref] : foes.slice(0, 1)
+    }
+    case 'all-enemies':    return foes
+    case 'lowest-hp-enemy': return foes.length ? [[...foes].sort((a, b) => a.hp - b.hp)[0]] : []
+    case 'random-enemy':   return foes.length ? [foes[Math.floor(Math.random() * foes.length)]] : []
+    case 'self':           return [snap.get(caster.id) ?? caster]
+    case 'ally':           return friends.slice(0, 1)
+    case 'all-allies':     return friends
+    case 'lowest-hp-ally': return friends.length ? [[...friends].sort((a, b) => a.hp - b.hp)[0]] : []
+    case 'random-ally':    return friends.length ? [friends[Math.floor(Math.random() * friends.length)]] : []
+    case 'caster-and-target': return [caster, ...foes.slice(0, 1)]
+    default:               return foes.slice(0, 1)
+  }
+}
+
+/** Selector-aware skill picker for AI: prefer AoE when 2+ foes, single-target otherwise. */
+function pickAiSkill(
+  availableSkills: SkillInstance[],
+  foeCount:        number,
+): SkillInstance {
+  const preferAoe   = foeCount > 1
+  const preferred   = availableSkills.find(s => {
+    const sel = getCachedSkill(s).targeting.selector
+    return preferAoe ? sel === 'all-enemies' : sel === 'enemy'
+  })
+  return preferred ?? availableSkills[0]
 }
 
 // ── Outcome helpers ───────────────────────────────────────────────────────────
@@ -707,25 +757,12 @@ export function BattleProvider({ children }: Props) {
     if (narrativePaused) return
     if (isOnCooldown(playerUnit, skillInst)) return
 
-    const skill     = getCachedSkill(skillInst)
-    const selector  = skill.targeting.selector
-
-    // Resolve target list based on skill's targeting selector.
-    let allTargets: Unit[]
-    if (selector === 'all-enemies') {
-      allTargets = enemies.filter(isAlive)
-    } else {
-      // Single-target: prefer the player-selected target, fall back to first alive.
-      const t = selectedTarget && isAlive(selectedTarget)
-        ? (enemies.find(e => e.id === selectedTarget.id) ?? enemies.find(isAlive))
-        : enemies.find(isAlive)
-      if (!t || !isAlive(t)) return
-      allTargets = [t]
-    }
+    const skill      = getCachedSkill(skillInst)
+    const snap       = makeSnapshot(playerUnit, enemies)
+    const allTargets = resolveSkillTargets(playerUnit, skill.targeting.selector, snap, selectedTarget)
     if (!allTargets.length) return
 
     const primaryTarget = allTargets[0]
-    const snap = makeSnapshot(playerUnit, enemies)
 
     // Primary target: full dice roll + narrative + effects.
     const { tumbleDelay, outcome, damage: primaryDamage } = runAttack(playerUnit, primaryTarget, skillInst, snap)
@@ -862,48 +899,59 @@ export function BattleProvider({ children }: Props) {
 
     // Step 1 + 2: after player dice clears, show telegraph + arena unit stage.
     const telegraphTimer = setTimeout(() => {
-      const firstEnemy    = activeEnemies[0]
-      const previewSkills = (unitSkillsMapRef.current.get(firstEnemy.id) ?? [])
+      const firstEnemy      = activeEnemies[0]
+      const previewSkills   = (unitSkillsMapRef.current.get(firstEnemy.id) ?? [])
         .filter((s) => !isOnCooldown(firstEnemy, s))
-      const previewTarget = playerUnitRef.current
-      // Show enemy (acting) on left, player (target) on right in the arena.
+      const currentPlayer   = playerUnitRef.current
+      const currentEnemies  = enemiesRef.current
+      if (!previewSkills.length) return
+
+      // Selector-aware: pick preview skill the same way the action timer will.
+      const aliveAllies   = [currentPlayer, ...currentEnemies.filter(e => e.isAlly)].filter(
+        (u): u is Unit => !!u && isAlive(u),
+      )
+      const previewSkillInst = pickAiSkill(previewSkills, aliveAllies.length)
+      const previewSkill     = getCachedSkill(previewSkillInst)
+
+      // Resolve primary target for the telegraph preview.
+      const telegraphSnap    = makeSnapshot(currentPlayer, currentEnemies)
+      const previewTargets   = resolveSkillTargets(firstEnemy, previewSkill.targeting.selector, telegraphSnap)
+      const previewTarget    = previewTargets[0] ?? null
+
       if (previewTarget) {
         arenaRef.current?.setTurnState(firstEnemy.defId, previewTarget.defId)
       }
-      if (previewSkills.length > 0) {
-        const previewSkillInst = previewSkills[0]
-        const previewSkill     = getCachedSkill(previewSkillInst)
-        showTurnDisplay(
-          {
-            actor: {
-              name:        firstEnemy.name,
-              className:   firstEnemy.className,
-              rarity:      firstEnemy.rarity,
-              hp:          firstEnemy.hp,
-              maxHp:       firstEnemy.maxHp,
-              ap:          firstEnemy.ap,
-              maxAp:       firstEnemy.maxAp,
-              statusSlots: firstEnemy.statusSlots,
-            },
-            skillName:  previewSkill.name,
-            tuCost:     previewSkill.tuCost,
-            apCost:     previewSkill.apCost,
-            skillLevel: previewSkillInst.currentLevel,
-            target: previewTarget ? {
-              name:        previewTarget.name,
-              className:   previewTarget.className,
-              rarity:      previewTarget.rarity,
-              hp:          previewTarget.hp,
-              maxHp:       previewTarget.maxHp,
-              ap:          previewTarget.ap,
-              maxAp:       previewTarget.maxAp,
-              statusSlots: previewTarget.statusSlots,
-            } : { name: 'Player', className: '—', rarity: 1, hp: 0, maxHp: 1, ap: 0, maxAp: 1, statusSlots: [] },
-            isAlly: false,
+
+      showTurnDisplay(
+        {
+          actor: {
+            name:        firstEnemy.name,
+            className:   firstEnemy.className,
+            rarity:      firstEnemy.rarity,
+            hp:          firstEnemy.hp,
+            maxHp:       firstEnemy.maxHp,
+            ap:          firstEnemy.ap,
+            maxAp:       firstEnemy.maxAp,
+            statusSlots: firstEnemy.statusSlots,
           },
-          ENEMY_AI_DELAY_MS + DICE_RESULT_DISMISS_MS,
-        )
-      }
+          skillName:  previewSkill.name,
+          tuCost:     previewSkill.tuCost,
+          apCost:     previewSkill.apCost,
+          skillLevel: previewSkillInst.currentLevel,
+          target: previewTarget ? {
+            name:        previewTarget.name,
+            className:   previewTarget.className,
+            rarity:      previewTarget.rarity,
+            hp:          previewTarget.hp,
+            maxHp:       previewTarget.maxHp,
+            ap:          previewTarget.ap,
+            maxAp:       previewTarget.maxAp,
+            statusSlots: previewTarget.statusSlots,
+          } : { name: '—', className: '—', rarity: 1, hp: 0, maxHp: 1, ap: 0, maxAp: 1, statusSlots: [] },
+          isAlly: false,
+        },
+        ENEMY_AI_DELAY_MS + DICE_RESULT_DISMISS_MS,
+      )
     }, remainingDice)
 
     // Step 3: after telegraph delay, fire the attack (dice starts here).
@@ -912,6 +960,9 @@ export function BattleProvider({ children }: Props) {
       const currentEnemies = enemiesRef.current
       const currentSkills  = unitSkillsMapRef.current
       if (!currentPlayer || !isAlive(currentPlayer)) return
+
+      // Faction-mates alive (current player allies = just playerUnit for now).
+      const alivePlayerAllies = [currentPlayer].filter(isAlive)
 
       const sortedActiveEnemies = [...activeEnemies].sort((a, b) => b.stats.speed - a.stats.speed)
       for (const enemy of sortedActiveEnemies) {
@@ -926,10 +977,45 @@ export function BattleProvider({ children }: Props) {
           continue
         }
 
-        const skillInst = availableSkills[0]
-        const skill     = getCachedSkill(skillInst)
-        const snap      = makeSnapshot(currentPlayer, currentEnemies)
-        const { tumbleDelay, outcome, damage } = runAttack(enemy, currentPlayer, skillInst, snap)
+        // Selector-aware skill choice: prefer AoE when multiple player allies present.
+        const skillInst  = pickAiSkill(availableSkills, alivePlayerAllies.length)
+        const skill      = getCachedSkill(skillInst)
+        const snap       = makeSnapshot(currentPlayer, currentEnemies)
+        const allTargets = resolveSkillTargets(enemy, skill.targeting.selector, snap)
+        if (!allTargets.length) {
+          arenaRef.current?.clearTurn()
+          continue
+        }
+
+        const primaryTarget = allTargets[0]
+
+        // Primary target: full dice roll + narrative + effects.
+        const { tumbleDelay, outcome, damage: primaryDamage } = runAttack(enemy, primaryTarget, skillInst, snap)
+
+        // Additional targets for multi-target skills.
+        let extraDamage = 0
+        if (allTargets.length > 1) {
+          const noDamage = outcome === 'Evasion' || outcome === 'Fail'
+          for (const extra of allTargets.slice(1)) {
+            const extraSnap = snap.get(extra.id) ?? extra
+            if (!isAlive(extraSnap)) continue
+            const hpBefore = extraSnap.hp
+            const ctx: EffectContext = {
+              caster: enemy,
+              target: noDamage ? undefined : extra,
+              battle: snapshotToBattleState(snap),
+              source: 'skill',
+              event:  { event: 'onCast' },
+              dice:   outcome,
+            }
+            for (const effect of skillInst.cachedEffects) {
+              if (effect.when.event === 'onCast') applyEffect(effect, ctx)
+            }
+            extraDamage += Math.max(0, hpBefore - (snap.get(extra.id) ?? extra).hp)
+            appendLog({ text: `${enemy.name} → ${skill.name} on ${extra.name} [${outcome}]`, colour: outcomeColour(outcome) })
+          }
+        }
+        const totalDamage = primaryDamage + extraDamage
 
         const withCooldown = applyCooldown(enemy, skillInst, skill)
         setUnitSkillsMap((prev) => {
@@ -954,7 +1040,6 @@ export function BattleProvider({ children }: Props) {
             NarrativeService.emit({ type: 'battle_defeat' })
           }
 
-          // Stage 4: collapse dead player figure before sliding out survivors.
           const arena = arenaRef.current
           arena?.hideTurnDisplay()
           if (!isAlive(updatedPlayer) && arena) {
@@ -964,11 +1049,12 @@ export function BattleProvider({ children }: Props) {
           }
         }
 
+        const feedbackText = buildFeedbackText(outcome, allTargets.length > 1 ? totalDamage : primaryDamage)
         const arena = arenaRef.current
         if (arena) {
           arena.playDice(outcome, () => {
-            arena.playAttack(enemy.defId, currentPlayer.defId, outcome, damage, () => {
-              arena.playFeedback(buildFeedbackText(outcome, damage), outcomeColour(outcome))
+            arena.playAttack(enemy.defId, primaryTarget.defId, outcome, primaryDamage, () => {
+              arena.playFeedback(feedbackText, outcomeColour(outcome))
               applyTimerRef.current = setTimeout(applyEnemyState, BATTLE_FEEDBACK_HOLD_MS)
             })
           })
