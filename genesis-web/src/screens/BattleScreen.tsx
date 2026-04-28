@@ -14,28 +14,15 @@ import { BattleProvider, useBattleScreen } from './BattleContext'
 import { BattleLogOverlay } from './BattleLogOverlay'
 import { ClashQteOverlay } from './ClashQteOverlay'
 import { TeamCollisionOverlay } from './TeamCollisionOverlay'
-import type { DiceOutcome } from '../core/combat/DiceResolver'
 import { isOnCooldown, ticksRemaining, turnsRemaining } from '../core/combat/CooldownResolver'
-import { getCachedSkill } from '../core/engines/skill/SkillInstance'
-import { isAlive } from '../core/unit'
-import { ResourceBar } from '../components/ResourceBar'
 import {
   TIMELINE_PX_PER_TICK, TIMELINE_OVERLAY_PX,
   TIMELINE_RECENTER_DELAY_MS, BACK_DEBOUNCE_MS,
 } from '../core/constants'
+import { getCachedSkill } from '../core/engines/skill/SkillInstance'
+import { isAlive } from '../core/unit'
+import { ResourceBar } from '../components/ResourceBar'
 import styles from './BattleScreen.module.css'
-import diceStyles from './DiceResultOverlay.module.css'
-
-// ── Dice outcome colour map (existing design tokens — no new tokens) ─────────
-
-const OUTCOME_COLORS: Record<DiceOutcome, string> = {
-  Boosted:  'var(--accent-gold)',
-  Success:  'var(--accent-heal)',
-  Tumbling: 'var(--accent-danger)',
-  GuardUp:  'var(--accent-info)',
-  Evasion:  'var(--accent-evasion)',
-  Fail:     'var(--text-muted)',
-}
 
 // ── Timeline helpers ─────────────────────────────────────────────────────────
 
@@ -486,33 +473,9 @@ function TargetSelectOverlay() {
   )
 }
 
-// ── Dice result overlay ─────────────────────────────────────────────────────
-// Full-area centred burst that slams in, holds, and fades over 2s.
-// Mounted with key={animKey} so each new roll triggers a fresh CSS animation.
-function DiceResultOverlay() {
-  const { diceResult } = useBattleScreen()
-  if (!diceResult) return null
-
-  const color = OUTCOME_COLORS[diceResult.outcome]
-
-  return (
-    <div className={diceStyles.overlay}>
-      <div className={diceStyles.burst} style={{ color }}>
-        <span className={diceStyles.outcomeName}>
-          {diceResult.outcome.toUpperCase()}
-        </span>
-        <div className={diceStyles.accentLine} />
-        {diceResult.message && (
-          <span className={diceStyles.outcomeMsg}>{diceResult.message}</span>
-        )}
-      </div>
-    </div>
-  )
-}
-
 // ── Battle layout ───────────────────────────────────────────────────────────
 function BattleLayout() {
-  const { arenaRef, isPaused, setPaused, isLoading, playerUnit, diceResult } = useBattleScreen()
+  const { arenaRef, isPaused, setPaused, isLoading, playerUnit } = useBattleScreen()
   const navigate    = useNavigate()
   const lastBackRef = useRef(0)
   const createHandler = useScrollAwarePointer()
@@ -556,7 +519,6 @@ function BattleLayout() {
       <TargetSelectOverlay />
       <ClashQteOverlay />
       <TeamCollisionOverlay />
-      <DiceResultOverlay key={diceResult?.animKey ?? 0} />
       <BattleTimeline />
       <div className={styles.main}>
         <BattleArena ref={arenaRef} />
