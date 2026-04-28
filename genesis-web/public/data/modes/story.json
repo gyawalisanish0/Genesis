@@ -6,6 +6,8 @@
   "settings": {
     "enemyAi": "story",
     "respawn": false,
-    "timeLimitTicks": null
+    "timeLimitTicks": null,
+    "playerControl": "single",
+    "enemies": ["hunter_001"]
   }
 }
