@@ -74,10 +74,12 @@ interface BattleContextValue {
   enemies:         Unit[]
   log:             LogEntry[]
   historyEntries:  HistoryEntry[]
-  selectedSkill:   SkillInstance | null
-  gridCollapsed:   boolean
-  isPaused:        boolean
-  isLoading:       boolean
+  selectedSkill:    SkillInstance | null
+  selectedTarget:   Unit | null
+  showTargetPicker: boolean
+  gridCollapsed:    boolean
+  isPaused:         boolean
+  isLoading:        boolean
   // Dice result overlay
   diceResult:      DiceResult | null
   // Counter choice prompt — set when player's counter roll succeeds
@@ -103,6 +105,7 @@ interface BattleContextValue {
   setPhase:        (p: TurnPhase) => void
   appendLog:       (entry: Omit<LogEntry, 'id'>) => void
   selectSkill:     (skill: SkillInstance | null) => void
+  selectTarget:    (unit: Unit) => void
   toggleGrid:      () => void
   setPaused:       (v: boolean | ((prev: boolean) => boolean)) => void
 }
@@ -212,6 +215,8 @@ export function BattleProvider({ children }: Props) {
   ])
   const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>([])
   const [selectedSkill, setSelectedSkill]   = useState<SkillInstance | null>(null)
+  const [selectedTarget, setSelectedTarget] = useState<Unit | null>(null)
+  const [showTargetPicker, setShowTargetPicker] = useState(false)
   const [gridCollapsed, setGridCollapsed]   = useState(false)
   const [isPaused, setPaused]               = useState(false)
   const [narrativePaused, setNarrativePaused] = useState(false)
@@ -487,13 +492,20 @@ export function BattleProvider({ children }: Props) {
 
     if (activePlayerUnits.length === 1) {
       setPhase('player')
-      const firstEnemy = enemies.find(isAlive)
-      if (firstEnemy) arenaRef.current?.setTurnState(playerUnit!.defId, firstEnemy.defId)
+      // Canvas stays blank until player selects a target — setTurnState is called in selectTarget/selectSkill.
     } else if (activeEnemyUnits.length === 1) {
       setPhase('enemy')
       // setTurnState for enemy is called in the AI telegraph below, timed with the delay.
     }
   }, [activeUnitIds, playerUnit, enemies, isLoading, narrativePaused, appendLog])
+
+  // Clear pending target selection whenever it is no longer the player's turn.
+  useEffect(() => {
+    if (phase !== 'player') {
+      setSelectedTarget(null)
+      setShowTargetPicker(false)
+    }
+  }, [phase])
 
   // Timeline scroll bounds.
   const scrollBounds = useMemo(() => {
@@ -694,12 +706,55 @@ export function BattleProvider({ children }: Props) {
     if (!playerUnit || phase !== 'player') return
     if (narrativePaused) return
     if (isOnCooldown(playerUnit, skillInst)) return
-    const target = enemies.find(isAlive)
-    if (!target) return
 
-    const skill = getCachedSkill(skillInst)
-    const snap  = makeSnapshot(playerUnit, enemies)
-    const { tumbleDelay, outcome, damage } = runAttack(playerUnit, target, skillInst, snap)
+    const skill     = getCachedSkill(skillInst)
+    const selector  = skill.targeting.selector
+
+    // Resolve target list based on skill's targeting selector.
+    let allTargets: Unit[]
+    if (selector === 'all-enemies') {
+      allTargets = enemies.filter(isAlive)
+    } else {
+      // Single-target: prefer the player-selected target, fall back to first alive.
+      const t = selectedTarget && isAlive(selectedTarget)
+        ? (enemies.find(e => e.id === selectedTarget.id) ?? enemies.find(isAlive))
+        : enemies.find(isAlive)
+      if (!t || !isAlive(t)) return
+      allTargets = [t]
+    }
+    if (!allTargets.length) return
+
+    const primaryTarget = allTargets[0]
+    const snap = makeSnapshot(playerUnit, enemies)
+
+    // Primary target: full dice roll + narrative + effects.
+    const { tumbleDelay, outcome, damage: primaryDamage } = runAttack(playerUnit, primaryTarget, skillInst, snap)
+
+    // Additional targets (multi-target skills): same outcome, effects re-applied without re-rolling.
+    let extraDamage = 0
+    if (allTargets.length > 1) {
+      const noDamage = outcome === 'Evasion' || outcome === 'Fail'
+      for (const extra of allTargets.slice(1)) {
+        const extraSnap = snap.get(extra.id) ?? extra
+        if (!isAlive(extraSnap)) continue
+        const hpBefore = extraSnap.hp
+        const ctx: EffectContext = {
+          caster: playerUnit,
+          target: noDamage ? undefined : extra,
+          battle: snapshotToBattleState(snap),
+          source: 'skill',
+          event:  { event: 'onCast' },
+          dice:   outcome,
+        }
+        for (const effect of skillInst.cachedEffects) {
+          if (effect.when.event === 'onCast') applyEffect(effect, ctx)
+        }
+        const hpAfter = (snap.get(extra.id) ?? extra).hp
+        extraDamage += Math.max(0, hpBefore - hpAfter)
+        appendLog({ text: `${playerUnit.name} → ${skill.name} on ${extra.name} [${outcome}]`, colour: outcomeColour(outcome) })
+      }
+    }
+    const totalDamage = primaryDamage + extraDamage
 
     // Apply cooldown immediately at cast time so the badge updates right away.
     const withCooldown = applyCooldown(playerUnit, skillInst, skill)
@@ -715,7 +770,7 @@ export function BattleProvider({ children }: Props) {
 
     pushHistory(makeHistoryEntry(playerUnit.id, playerUnit.name, fromTick, playerUnit.isAlly))
 
-    const postTarget = snap.get(target.id) ?? target
+    const postTarget = snap.get(primaryTarget.id) ?? primaryTarget
     showTurnDisplay({
       actor:      null,
       skillName:  skill.name,
@@ -765,11 +820,12 @@ export function BattleProvider({ children }: Props) {
 
     // Phase-gated: dice animation → attack animation → feedback → apply state.
     // Falls back to plain timer when the Phaser canvas is not mounted.
+    const feedbackText = buildFeedbackText(outcome, allTargets.length > 1 ? totalDamage : primaryDamage)
     const arena = arenaRef.current
     if (arena) {
       arena.playDice(outcome, () => {
-        arena.playAttack(playerUnit.defId, target.defId, outcome, damage, () => {
-          arena.playFeedback(buildFeedbackText(outcome, damage), outcomeColour(outcome))
+        arena.playAttack(playerUnit.defId, primaryTarget.defId, outcome, primaryDamage, () => {
+          arena.playFeedback(feedbackText, outcomeColour(outcome))
           if (playerApplyTimerRef.current) clearTimeout(playerApplyTimerRef.current)
           playerApplyTimerRef.current = setTimeout(applyState, BATTLE_FEEDBACK_HOLD_MS)
         })
@@ -778,7 +834,7 @@ export function BattleProvider({ children }: Props) {
       if (playerApplyTimerRef.current) clearTimeout(playerApplyTimerRef.current)
       playerApplyTimerRef.current = setTimeout(applyState, DICE_RESULT_DISMISS_MS)
     }
-  }, [playerUnit, enemies, phase, narrativePaused, runAttack, pushHistory, registerTick, appendLog, showTurnDisplay, setUnitSkillsMap])
+  }, [playerUnit, enemies, phase, narrativePaused, selectedTarget, runAttack, pushHistory, registerTick, appendLog, showTurnDisplay, setUnitSkillsMap])
 
   // ── Enemy AI ───────────────────────────────────────────────────────────────
   //
@@ -936,6 +992,8 @@ export function BattleProvider({ children }: Props) {
     if (!playerUnit || phase !== 'player') return
     if (narrativePaused) return
     setSelectedSkill(null)
+    setSelectedTarget(null)
+    setShowTargetPicker(false)
     const fromTick = playerUnit.tickPosition
     pushHistory(makeHistoryEntry(playerUnit.id, playerUnit.name, fromTick, playerUnit.isAlly))
     setPlayerUnit(incrementActionCount(playerUnit))
@@ -944,7 +1002,51 @@ export function BattleProvider({ children }: Props) {
     arenaRef.current?.clearTurn()
   }, [playerUnit, phase, narrativePaused, pushHistory, registerTick, appendLog])
 
-  const selectSkill = useCallback((skill: SkillInstance | null) => setSelectedSkill(skill), [])
+  const selectSkill = useCallback((skill: SkillInstance | null) => {
+    setSelectedSkill(skill)
+    if (!skill) {
+      setSelectedTarget(null)
+      setShowTargetPicker(false)
+      return
+    }
+    const def      = getCachedSkill(skill)
+    const selector = def.targeting.selector
+    if (selector === 'enemy') {
+      // Single-target: open picker overlay; canvas stays blank until player confirms.
+      setSelectedTarget(null)
+      setShowTargetPicker(true)
+    } else {
+      // Auto-targeting selectors: resolve immediately and show canvas preview.
+      setShowTargetPicker(false)
+      const currentEnemies = enemiesRef.current
+      const currentPlayer  = playerUnitRef.current
+      let autoTarget: Unit | null = null
+      if (selector === 'lowest-hp-enemy') {
+        const alive = currentEnemies.filter(isAlive)
+        autoTarget = alive.reduce<Unit | null>((a, b) => !a || b.hp < a.hp ? b : a, null)
+      } else if (selector === 'random-enemy') {
+        const alive = currentEnemies.filter(isAlive)
+        autoTarget = alive[Math.floor(Math.random() * alive.length)] ?? null
+      } else {
+        autoTarget = currentEnemies.find(isAlive) ?? null
+      }
+      setSelectedTarget(autoTarget)
+      if (autoTarget && currentPlayer) {
+        arenaRef.current?.setTurnState(currentPlayer.defId, autoTarget.defId)
+      }
+    }
+  }, [])
+
+  /** Player confirms a target from the target picker overlay. */
+  const selectTarget = useCallback((unit: Unit) => {
+    setSelectedTarget(unit)
+    setShowTargetPicker(false)
+    const currentPlayer = playerUnitRef.current
+    if (currentPlayer) {
+      arenaRef.current?.setTurnState(currentPlayer.defId, unit.defId)
+    }
+  }, [])
+
   const toggleGrid  = useCallback(() => setGridCollapsed((v) => !v), [])
 
   const getUnitSkills = useCallback((unitId: string): SkillInstance[] => {
@@ -961,14 +1063,15 @@ export function BattleProvider({ children }: Props) {
       turnNumber: (playerUnit?.actionCount ?? 0) + 1,
       tickValue, activeUnitIds,
       playerUnit, enemies, log, historyEntries,
-      selectedSkill, gridCollapsed, isPaused, isLoading,
+      selectedSkill, selectedTarget, showTargetPicker,
+      gridCollapsed, isPaused, isLoading,
       diceResult, pendingCounterDecision,
       pendingClash, pendingTeamCollision,
       registeredTicks, scrollBounds,
       getUnitSkills, executeSkill, skipTurn, confirmCounter, skipCounter,
       resolveClash, resolveTeamCollision,
       registerTick, unregisterTick, pushHistory,
-      setPhase, appendLog, selectSkill, toggleGrid, setPaused,
+      setPhase, appendLog, selectSkill, selectTarget, toggleGrid, setPaused,
     }}>
       {children}
     </BattleContext.Provider>

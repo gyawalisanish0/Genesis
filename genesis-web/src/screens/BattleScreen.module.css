@@ -523,3 +523,100 @@
 
 .pauseBtn:active { transform: scale(0.97); }
 
+/* ── Target picker overlay ──────────────────────────────────────────── */
+.targetPickerOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: var(--bg-overlay);
+  z-index: 35;
+  animation: slideUpIn var(--motion-modal) ease-out both;
+}
+
+@keyframes slideUpIn {
+  from { opacity: 0; transform: translateY(0.75rem); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.targetPickerCard {
+  width: 100%;
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--bg-panel);
+  border-radius: var(--r-md) var(--r-md) 0 0;
+  padding: var(--s-sm) 0 var(--s-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-xs);
+}
+
+.targetPickerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--s-md);
+}
+
+.targetPickerTitle {
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+}
+
+.targetPickerCancel {
+  width: var(--touch-min);
+  height: var(--touch-min);
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.targetPickerList {
+  display: flex;
+  flex-direction: column;
+}
+
+.targetPickerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--touch-min);
+  padding: 0 var(--s-md);
+  background: transparent;
+  border: none;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  border-top: 1px solid var(--bg-panel);
+  transition: background var(--motion-button);
+}
+
+.targetPickerRow:active { background: var(--bg-card); }
+
+.targetPickerName {
+  font-size: var(--t-body-size);
+  color: var(--text-primary);
+}
+
+.targetPickerHp {
+  font-size: var(--t-micro-size);
+  color: var(--accent-danger);
+}
+
+/* ── Skill target badge (shows confirmed target on active skill button) ─ */
+.skillTargetBadge {
+  grid-column: 1 / -1;
+  font-size: var(--t-micro-size);
+  color: var(--accent-info);
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
