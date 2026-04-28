@@ -81,9 +81,13 @@ function TimelineMarker({ name, isAlly, hpFraction }: TimelineMarkerProps) {
   )
 }
 
+// Vertical gap between markers that share the same tick position.
+// Centered on the tick line so the group's midpoint stays at the actual tick.
+const STACK_OFFSET_PX = 8
+
 // ── Timeline strip ──────────────────────────────────────────────────────────
 function BattleTimeline() {
-  const { tickValue, playerUnit, enemies, scrollBounds, historyEntries } = useBattleScreen()
+  const { tickValue, playerUnit, enemies, activeUnitIds, scrollBounds, historyEntries } = useBattleScreen()
   const containerRef = useRef<HTMLDivElement>(null)
 
   const trackHeight = (scrollBounds.max - scrollBounds.min) * TIMELINE_PX_PER_TICK
@@ -159,6 +163,22 @@ function BattleTimeline() {
 
   const allUnits = playerUnit ? [playerUnit, ...enemies] : enemies
 
+  // Group live units by tick so we can fan same-tick markers vertically.
+  const tickGroups = new Map<number, string[]>()
+  for (const unit of allUnits) {
+    const ids = tickGroups.get(unit.tickPosition) ?? []
+    ids.push(unit.id)
+    tickGroups.set(unit.tickPosition, ids)
+  }
+
+  // Top value for a unit, offset within its tick group (centered on the tick line).
+  function stackedTop(unitId: string, tick: number): number {
+    const ids = tickGroups.get(tick) ?? []
+    const n   = ids.length
+    const i   = ids.indexOf(unitId)
+    return tickToTop(tick, scrollBounds.max) + (i - (n - 1) / 2) * STACK_OFFSET_PX
+  }
+
   return (
     <div className={styles.timelineWrap} ref={containerRef}>
       <div
@@ -192,8 +212,13 @@ function BattleTimeline() {
         {allUnits.map((unit) => (
           <div
             key={unit.id}
-            className={`${styles.marker} ${unit === playerUnit ? styles.markerActive : ''}`}
-            style={{ top: tickToTop(unit.tickPosition, scrollBounds.max) }}
+            className={[
+              styles.marker,
+              activeUnitIds.has(unit.id)
+                ? (unit.isAlly ? styles.markerActiveAlly : styles.markerActiveEnemy)
+                : '',
+            ].join(' ')}
+            style={{ top: stackedTop(unit.id, unit.tickPosition) }}
           >
             <TimelineMarker
               name={unit.name}
