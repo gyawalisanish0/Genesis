@@ -5,19 +5,17 @@
 import Phaser from 'phaser'
 
 // ── Layout constants ──────────────────────────────────────────────────────────
-const PAD_X   = 10
-const PAD_Y   = 6
-const LINE_H  = 14
-const BAR_H   = 5
-const BAR_GAP = 3
-const CHIP_H  = 13
-const LABEL_W = 56   // pixels reserved for "HP NNN/NNN" value text
-const SLIDE   = 250
+const PAD_X        = 10
+const PAD_Y        = 4
+const LINE_H       = 14
+const STAT_LABEL_H = 11   // height of "HP  82/100" header row above each bar
+const BAR_H        = 5
+const CHIP_H       = 13
+const SLIDE        = 250
 
 // Pixels permanently reserved at the top of the canvas for this panel.
-// Equals the maximum realistic panel height (actor + skill + target with
-// one status-chip row each, rounded up to a clean multiple).
-export const TURN_PANEL_RESERVE = 160
+// Sized for actor + skill + target with one status-chip row each.
+export const TURN_PANEL_RESERVE = 200
 
 // ── Colour palette ────────────────────────────────────────────────────────────
 const BG_COL       = 0x0d0d1a
@@ -43,6 +41,9 @@ const BOLD_STYLE: Phaser.Types.GameObjects.Text.TextStyle = {
 }
 const SMALL_STYLE: Phaser.Types.GameObjects.Text.TextStyle = {
   fontFamily: 'system-ui,sans-serif', fontSize: '10px', color: TEXT_MUT,
+}
+const VALUE_STYLE: Phaser.Types.GameObjects.Text.TextStyle = {
+  fontFamily: 'system-ui,sans-serif', fontSize: '10px', color: TEXT_PRI,
 }
 const CHIP_STYLE: Phaser.Types.GameObjects.Text.TextStyle = {
   fontFamily: 'system-ui,sans-serif', fontSize: '9px', color: TEXT_PRI,
@@ -119,13 +120,14 @@ export class TurnDisplayPanel {
     return h
   }
 
+  // unitH: name row + (HP label + HP bar) + (AP label + AP bar) + optional status row.
   private unitH(statusCount: number): number {
-    const base = PAD_Y + LINE_H + BAR_GAP + BAR_H + BAR_GAP + BAR_H + PAD_Y
-    return base + (statusCount > 0 ? BAR_GAP + CHIP_H : 0)
+    const base = PAD_Y + LINE_H + STAT_LABEL_H + BAR_H + 2 + STAT_LABEL_H + BAR_H + PAD_Y
+    return base + (statusCount > 0 ? 3 + CHIP_H : 0)
   }
 
   private skillH(): number {
-    return PAD_Y + LINE_H + 4 + LINE_H + PAD_Y
+    return PAD_Y + LINE_H + 3 + LINE_H + PAD_Y
   }
 
   private drawUnitRow(
@@ -134,9 +136,12 @@ export class TurnDisplayPanel {
   ): number {
     gfx.fillStyle(accent, 0.7).fillRect(0, startY, 3, this.unitH(unit.statusSlots.length))
 
-    const cx = PAD_X + 4
+    const cx   = PAD_X + 4
+    const barX = cx
+    const barW = width - cx - PAD_X   // full available width; no space reserved beside bars
     let y = startY + PAD_Y
 
+    // Name + class/rarity row
     const rarityCol = RARITY_COL[unit.rarity] ?? TEXT_PRI
     this.panel!.add(this.scene.add.text(cx, y, unit.name, { ...BOLD_STYLE, color: rarityCol }))
     this.panel!.add(
@@ -145,25 +150,36 @@ export class TurnDisplayPanel {
     )
     y += LINE_H
 
-    const barX = cx
-    const barW  = width - cx - LABEL_W - PAD_X
+    // HP header: "HP" left · "82/100" right
+    this.panel!.add(this.scene.add.text(barX, y, 'HP', SMALL_STYLE))
+    this.panel!.add(
+      this.scene.add.text(barX + barW, y, `${unit.hp}/${unit.maxHp}`, VALUE_STYLE)
+        .setOrigin(1, 0),
+    )
+    y += STAT_LABEL_H
 
-    y += BAR_GAP
+    // HP bar — full width
     const hpFrac = Math.min(1, unit.hp / Math.max(1, unit.maxHp))
     gfx.fillStyle(TRACK_COL).fillRect(barX, y, barW, BAR_H)
        .fillStyle(HP_COL).fillRect(barX, y, Math.round(barW * hpFrac), BAR_H)
-    this.panel!.add(this.scene.add.text(barX + barW + 4, y - 1, `HP ${unit.hp}/${unit.maxHp}`, SMALL_STYLE))
-    y += BAR_H
+    y += BAR_H + 2
 
-    y += BAR_GAP
+    // AP header: "AP" left · "40/100" right
+    this.panel!.add(this.scene.add.text(barX, y, 'AP', SMALL_STYLE))
+    this.panel!.add(
+      this.scene.add.text(barX + barW, y, `${unit.ap}/${unit.maxAp}`, VALUE_STYLE)
+        .setOrigin(1, 0),
+    )
+    y += STAT_LABEL_H
+
+    // AP bar — full width
     const apFrac = Math.min(1, unit.ap / Math.max(1, unit.maxAp))
     gfx.fillStyle(TRACK_COL).fillRect(barX, y, barW, BAR_H)
        .fillStyle(AP_COL).fillRect(barX, y, Math.round(barW * apFrac), BAR_H)
-    this.panel!.add(this.scene.add.text(barX + barW + 4, y - 1, `AP ${unit.ap}/${unit.maxAp}`, SMALL_STYLE))
     y += BAR_H
 
     if (unit.statusSlots.length > 0) {
-      y += BAR_GAP
+      y += 3
       let chipX = cx
       for (const slot of unit.statusSlots) {
         const chipTxt = this.scene.add.text(chipX + 3, y + 2, slot.name, CHIP_STYLE)
@@ -185,7 +201,7 @@ export class TurnDisplayPanel {
         `⚔ ${data.skillName}  ·  TU ${data.tuCost}  ·  AP ${data.apCost}`,
         { ...BOLD_STYLE, color: TEXT_PRI }),
     )
-    this.panel!.add(this.scene.add.text(cx, y + LINE_H + 4, `Lv ${data.skillLevel}`, SMALL_STYLE))
+    this.panel!.add(this.scene.add.text(cx, y + LINE_H + 3, `Lv ${data.skillLevel}`, SMALL_STYLE))
     return startY + this.skillH()
   }
 }
