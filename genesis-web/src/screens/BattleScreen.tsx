@@ -434,15 +434,22 @@ function CounterPromptOverlay() {
 }
 
 // ── Target select overlay ────────────────────────────────────────────────────
-// Slides up from bottom after the player picks a single-target skill.
-// Dismissed by selecting a target or tapping ✕ (deselects skill).
+// Centered modal — only shown when 2+ enemies are alive for a single-target skill.
+// Auto-confirms if enemies die while the picker is open and only 1 remains.
 function TargetSelectOverlay() {
   const { showTargetPicker, enemies, selectedSkill, selectTarget, selectSkill } = useBattleScreen()
   const createHandler = useScrollAwarePointer()
 
-  if (!showTargetPicker || !selectedSkill) return null
-
   const aliveEnemies = enemies.filter(isAlive)
+
+  // Auto-confirm the last surviving enemy while picker is open.
+  useEffect(() => {
+    if (showTargetPicker && aliveEnemies.length === 1) {
+      selectTarget(aliveEnemies[0])
+    }
+  }, [showTargetPicker, aliveEnemies.length]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!showTargetPicker || !selectedSkill) return null
 
   return (
     <div className={styles.targetPickerOverlay}>
