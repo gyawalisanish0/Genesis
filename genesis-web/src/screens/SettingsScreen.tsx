@@ -1,6 +1,7 @@
-// Settings screen — audio, display, notifications, account.
-// Reads and writes AppSettings from the Zustand store.
+// Settings screen — tabbed layout: Sound · Display · Account.
+// Notifications folds into Display to keep each tab's content within viewport height.
 
+import { useState } from 'react'
 import { ScreenShell } from '../navigation/ScreenShell'
 import { useScreen } from '../navigation/useScreen'
 import { SCREEN_IDS } from '../navigation/screenRegistry'
@@ -12,6 +13,14 @@ import styles from './SettingsScreen.module.css'
 
 const APP_VERSION = '0.1.0'
 
+type SettingsTab = 'sound' | 'display' | 'account'
+
+const TABS: { id: SettingsTab; label: string }[] = [
+  { id: 'sound',   label: 'SOUND'   },
+  { id: 'display', label: 'DISPLAY' },
+  { id: 'account', label: 'ACCOUNT' },
+]
+
 // ── Reusable row components ────────────────────────────────────────────────
 
 function SectionHeader({ label }: { label: string }) {
@@ -19,10 +28,10 @@ function SectionHeader({ label }: { label: string }) {
 }
 
 interface SliderRowProps {
-  label: string
-  value: number
+  label:     string
+  value:     number
   disabled?: boolean
-  onChange: (v: number) => void
+  onChange:  (v: number) => void
 }
 
 function SliderRow({ label, value, disabled = false, onChange }: SliderRowProps) {
@@ -44,15 +53,14 @@ function SliderRow({ label, value, disabled = false, onChange }: SliderRowProps)
 }
 
 interface ToggleRowProps {
-  label: string
-  value: boolean
-  onToggle: () => void
-  onPointerDown?: React.PointerEventHandler<HTMLDivElement>
+  label:         string
+  value:         boolean
+  onPointerDown: React.PointerEventHandler<HTMLDivElement>
 }
 
-function ToggleRow({ label, value, onToggle, onPointerDown }: ToggleRowProps) {
+function ToggleRow({ label, value, onPointerDown }: ToggleRowProps) {
   return (
-    <div className={styles.row} onPointerDown={onPointerDown ?? onToggle}>
+    <div className={styles.row} onPointerDown={onPointerDown}>
       <span className={styles.rowLabel}>{label}</span>
       <div className={`${styles.toggleTrack} ${value ? styles.toggleTrackOn : ''}`}>
         <div className={`${styles.toggleThumb} ${value ? styles.toggleThumbOn : ''}`} />
@@ -62,14 +70,13 @@ function ToggleRow({ label, value, onToggle, onPointerDown }: ToggleRowProps) {
 }
 
 interface NavRowProps {
-  label: string
-  onPress?: () => void
-  onPointerDown?: React.PointerEventHandler<HTMLDivElement>
+  label:         string
+  onPointerDown: React.PointerEventHandler<HTMLDivElement>
 }
 
-function NavRow({ label, onPress, onPointerDown }: NavRowProps) {
+function NavRow({ label, onPointerDown }: NavRowProps) {
   return (
-    <div className={styles.row} onPointerDown={onPointerDown ?? onPress}>
+    <div className={styles.row} onPointerDown={onPointerDown}>
       <span className={styles.rowLabel}>{label}</span>
       <span className={styles.chevron}>›</span>
     </div>
@@ -83,11 +90,12 @@ function SectionGroup({ children }: { children: React.ReactNode }) {
 // ── Screen ─────────────────────────────────────────────────────────────────
 
 export function SettingsScreen() {
-  const { navigateTo } = useScreen()
-  const handleBack = useBackButton(() => navigateTo(SCREEN_IDS.MAIN_MENU))
-  const settings          = useGameStore((s) => s.settings)
-  const updateSetting     = useGameStore((s) => s.updateSetting)
-  const createScrollAwareHandler = useScrollAwarePointer()
+  const { navigateTo }            = useScreen()
+  const handleBack                = useBackButton(() => navigateTo(SCREEN_IDS.MAIN_MENU))
+  const settings                  = useGameStore((s) => s.settings)
+  const updateSetting             = useGameStore((s) => s.updateSetting)
+  const createHandler             = useScrollAwarePointer()
+  const [activeTab, setActiveTab] = useState<SettingsTab>('sound')
 
   function set<K extends keyof AppSettings>(key: K, value: AppSettings[K]) {
     updateSetting(key, value)
@@ -99,87 +107,120 @@ export function SettingsScreen() {
 
         {/* Sticky header */}
         <header className={styles.header}>
-          <button className={styles.backBtn} onPointerDown={createScrollAwareHandler({ onTap: handleBack })} aria-label="Back">←</button>
+          <button
+            className={styles.backBtn}
+            onPointerDown={createHandler({ onTap: handleBack })}
+            aria-label="Back"
+          >
+            ←
+          </button>
           <span className={styles.headerTitle}>SETTINGS</span>
         </header>
 
-        {/* Scrollable content */}
+        {/* Tab bar */}
+        <div className={styles.tabBar}>
+          {TABS.map(({ id, label }) => (
+            <button
+              key={id}
+              className={`${styles.tabBtn} ${activeTab === id ? styles.tabBtnActive : ''}`}
+              onPointerDown={createHandler({ onTap: () => setActiveTab(id) })}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab content */}
         <div className={styles.scroll}>
 
-          <SectionHeader label="AUDIO" />
-          <SectionGroup>
-            <SliderRow label="Music Volume" value={settings.musicVolume} disabled={settings.muteAll} onChange={(v) => set('musicVolume', v)} />
-            <div className={styles.divider} />
-            <SliderRow label="SFX Volume"   value={settings.sfxVolume}   disabled={settings.muteAll} onChange={(v) => set('sfxVolume', v)} />
-            <div className={styles.divider} />
-            <ToggleRow
-              label="Mute All"
-              value={settings.muteAll}
-              onToggle={() => set('muteAll', !settings.muteAll)}
-              onPointerDown={createScrollAwareHandler({ onTap: () => set('muteAll', !settings.muteAll) })}
-            />
-          </SectionGroup>
+          {activeTab === 'sound' && (
+            <SectionGroup>
+              <SliderRow
+                label="Music Volume"
+                value={settings.musicVolume}
+                disabled={settings.muteAll}
+                onChange={(v) => set('musicVolume', v)}
+              />
+              <div className={styles.divider} />
+              <SliderRow
+                label="SFX Volume"
+                value={settings.sfxVolume}
+                disabled={settings.muteAll}
+                onChange={(v) => set('sfxVolume', v)}
+              />
+              <div className={styles.divider} />
+              <ToggleRow
+                label="Mute All"
+                value={settings.muteAll}
+                onPointerDown={createHandler({ onTap: () => set('muteAll', !settings.muteAll) })}
+              />
+            </SectionGroup>
+          )}
 
-          <SectionHeader label="DISPLAY" />
-          <SectionGroup>
-            <ToggleRow
-              label="Reduce Animations"
-              value={settings.reduceAnimations}
-              onToggle={() => set('reduceAnimations',  !settings.reduceAnimations)}
-              onPointerDown={createScrollAwareHandler({ onTap: () => set('reduceAnimations',  !settings.reduceAnimations) })}
-            />
-            <div className={styles.divider} />
-            <ToggleRow
-              label="Show Damage Numbers"
-              value={settings.showDamageNumbers}
-              onToggle={() => set('showDamageNumbers', !settings.showDamageNumbers)}
-              onPointerDown={createScrollAwareHandler({ onTap: () => set('showDamageNumbers', !settings.showDamageNumbers) })}
-            />
-            <div className={styles.divider} />
-            <SliderRow label="Timeline Zoom" value={settings.timelineZoom} onChange={(v) => set('timelineZoom', v)} />
-          </SectionGroup>
+          {activeTab === 'display' && (
+            <>
+              <SectionGroup>
+                <ToggleRow
+                  label="Reduce Animations"
+                  value={settings.reduceAnimations}
+                  onPointerDown={createHandler({ onTap: () => set('reduceAnimations', !settings.reduceAnimations) })}
+                />
+                <div className={styles.divider} />
+                <ToggleRow
+                  label="Show Damage Numbers"
+                  value={settings.showDamageNumbers}
+                  onPointerDown={createHandler({ onTap: () => set('showDamageNumbers', !settings.showDamageNumbers) })}
+                />
+                <div className={styles.divider} />
+                <SliderRow
+                  label="Timeline Zoom"
+                  value={settings.timelineZoom}
+                  onChange={(v) => set('timelineZoom', v)}
+                />
+              </SectionGroup>
+              <SectionHeader label="NOTIFICATIONS" />
+              <SectionGroup>
+                <ToggleRow
+                  label="Battle Reminders"
+                  value={settings.battleReminders}
+                  onPointerDown={createHandler({ onTap: () => set('battleReminders', !settings.battleReminders) })}
+                />
+                <div className={styles.divider} />
+                <ToggleRow
+                  label="New Content Alerts"
+                  value={settings.newContentAlerts}
+                  onPointerDown={createHandler({ onTap: () => set('newContentAlerts', !settings.newContentAlerts) })}
+                />
+              </SectionGroup>
+            </>
+          )}
 
-          <SectionHeader label="NOTIFICATIONS" />
-          <SectionGroup>
-            <ToggleRow
-              label="Battle Reminders"
-              value={settings.battleReminders}
-              onToggle={() => set('battleReminders',   !settings.battleReminders)}
-              onPointerDown={createScrollAwareHandler({ onTap: () => set('battleReminders',   !settings.battleReminders) })}
-            />
-            <div className={styles.divider} />
-            <ToggleRow
-              label="New Content Alerts"
-              value={settings.newContentAlerts}
-              onToggle={() => set('newContentAlerts',  !settings.newContentAlerts)}
-              onPointerDown={createScrollAwareHandler({ onTap: () => set('newContentAlerts',  !settings.newContentAlerts) })}
-            />
-          </SectionGroup>
-
-          <SectionHeader label="ACCOUNT" />
-          <SectionGroup>
-            <NavRow
-              label="Sync / Cloud Save"
-              onPointerDown={createScrollAwareHandler({ onTap: () => { /* TODO: sync handler */ } })}
-            />
-            <div className={styles.divider} />
-            <NavRow
-              label="Restore Purchases"
-              onPointerDown={createScrollAwareHandler({ onTap: () => { /* TODO: restore handler */ } })}
-            />
-            <div className={styles.divider} />
-            <NavRow
-              label="Privacy Policy"
-              onPointerDown={createScrollAwareHandler({ onTap: () => { /* TODO: open privacy policy */ } })}
-            />
-            <div className={styles.divider} />
-            <NavRow
-              label="Terms of Service"
-              onPointerDown={createScrollAwareHandler({ onTap: () => { /* TODO: open ToS */ } })}
-            />
-          </SectionGroup>
-
-          <p className={styles.versionFooter}>Genesis v{APP_VERSION} · Build 001</p>
+          {activeTab === 'account' && (
+            <>
+              <SectionGroup>
+                <NavRow
+                  label="Sync / Cloud Save"
+                  onPointerDown={createHandler({ onTap: () => { /* TODO: sync */ } })}
+                />
+                <div className={styles.divider} />
+                <NavRow
+                  label="Restore Purchases"
+                  onPointerDown={createHandler({ onTap: () => { /* TODO: restore */ } })}
+                />
+                <div className={styles.divider} />
+                <NavRow
+                  label="Privacy Policy"
+                  onPointerDown={createHandler({ onTap: () => { /* TODO: privacy */ } })}
+                />
+                <div className={styles.divider} />
+                <NavRow
+                  label="Terms of Service"
+                  onPointerDown={createHandler({ onTap: () => { /* TODO: ToS */ } })}
+                />
+              </SectionGroup>
+              <p className={styles.versionFooter}>Genesis v{APP_VERSION} · Build 001</p>
+            </>
+          )}
 
         </div>
       </div>

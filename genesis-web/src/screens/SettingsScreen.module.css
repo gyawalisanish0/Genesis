@@ -15,9 +15,6 @@
   background: var(--bg-panel);
   border-bottom: 1px solid var(--bg-elevated);
   flex-shrink: 0;
-  position: sticky;
-  top: 0;
-  z-index: 1;
 }
 
 .backBtn {
@@ -44,17 +41,44 @@
   margin-right: var(--touch-min); /* balance back button */
 }
 
+/* ── Tab bar ────────────────────────────────────────────────────────── */
+.tabBar {
+  display: flex;
+  flex-shrink: 0;
+  background: var(--bg-panel);
+}
+
+.tabBtn {
+  flex: 1;
+  min-height: var(--touch-min);
+  border: none;
+  border-bottom: 2px solid var(--bg-elevated);
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: color var(--motion-button), border-color var(--motion-button);
+}
+
+.tabBtnActive {
+  color: var(--accent-genesis);
+  border-bottom-color: var(--accent-genesis);
+}
+
 /* ── Scrollable body ────────────────────────────────────────────────── */
 .scroll {
   flex: 1;
   overflow-y: auto;
-  padding: var(--s-sm) var(--s-md) var(--s-2xl);
+  padding: var(--s-sm) var(--s-md) var(--s-md);
   display: flex;
   flex-direction: column;
   gap: var(--s-xs);
 }
 
-/* ── Section header ─────────────────────────────────────────────────── */
+/* ── Section header (sub-label within a tab) ────────────────────────── */
 .sectionHeader {
   font-size: var(--t-label-size);
   font-weight: var(--t-label-weight);
