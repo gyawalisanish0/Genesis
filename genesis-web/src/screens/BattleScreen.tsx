@@ -16,6 +16,8 @@ import { ClashQteOverlay } from './ClashQteOverlay'
 import { TeamCollisionOverlay } from './TeamCollisionOverlay'
 import type { DiceOutcome } from '../core/combat/DiceResolver'
 import { isOnCooldown, ticksRemaining, turnsRemaining } from '../core/combat/CooldownResolver'
+import { getCachedSkill } from '../core/engines/skill/SkillInstance'
+import { isAlive } from '../core/unit'
 import { ResourceBar } from '../components/ResourceBar'
 import {
   TIMELINE_PX_PER_TICK, TIMELINE_OVERLAY_PX,
@@ -277,7 +279,7 @@ function PortraitPanel() {
 function ActionGrid() {
   const {
     phase, gridCollapsed, toggleGrid,
-    playerUnit, getUnitSkills, selectedSkill, selectSkill, skipTurn,
+    playerUnit, getUnitSkills, selectedSkill, selectedTarget, selectSkill, skipTurn,
   } = useBattleScreen()
   const createHandler = useScrollAwarePointer()
   const disabled = phase !== 'player'
@@ -306,6 +308,8 @@ function ActionGrid() {
               const tickCD     = onCooldown && playerUnit ? ticksRemaining(playerUnit, skillInst) : 0
               const turnCD     = onCooldown && playerUnit ? turnsRemaining(playerUnit, skillInst) : 0
               const isDisabled = !hasSkill || disabled || onCooldown
+              // Show selected target name on the active skill button.
+              const targetLabel = isSelected && selectedTarget ? selectedTarget.name : null
               return (
                 <button
                   key={i}
@@ -331,6 +335,9 @@ function ActionGrid() {
                       {turnCD > 0 ? `⏳${turnCD}` : ''}
                     </span>
                   )}
+                  {targetLabel && (
+                    <span className={styles.skillTargetBadge}>→ {targetLabel}</span>
+                  )}
                 </button>
               )
             })}
@@ -345,10 +352,11 @@ function ActionGrid() {
 }
 
 // ── Roll button ─────────────────────────────────────────────────────────────
-// Appears above the portrait when a skill is selected.
-// Triggers a 500ms "Rolling…" pulse before the dice fires, then clears the selection.
+// Appears above the portrait when a skill is selected AND a target is ready.
+// Single-target skills require the player to confirm a target first.
+// Auto-targeting skills (all-enemies, etc.) show ROLL immediately on skill select.
 function RollButton() {
-  const { selectedSkill, phase, executeSkill, selectSkill } = useBattleScreen()
+  const { selectedSkill, selectedTarget, showTargetPicker, phase, executeSkill, selectSkill } = useBattleScreen()
   const createHandler = useScrollAwarePointer()
   const [isRolling, setIsRolling] = useState(false)
   const rollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -358,6 +366,11 @@ function RollButton() {
   }, [])
 
   if (!selectedSkill || phase !== 'player') return null
+  // Single-target: hide ROLL while the picker is open or no target is chosen yet.
+  const skillDef      = getCachedSkill(selectedSkill)
+  const needsTarget   = skillDef.targeting.selector === 'enemy'
+  const targetReady   = !needsTarget || (selectedTarget !== null && !showTargetPicker)
+  if (!targetReady) return null
 
   const handleRoll = () => {
     if (isRolling) return
@@ -433,6 +446,46 @@ function CounterPromptOverlay() {
   )
 }
 
+// ── Target select overlay ────────────────────────────────────────────────────
+// Slides up from bottom after the player picks a single-target skill.
+// Dismissed by selecting a target or tapping ✕ (deselects skill).
+function TargetSelectOverlay() {
+  const { showTargetPicker, enemies, selectedSkill, selectTarget, selectSkill } = useBattleScreen()
+  const createHandler = useScrollAwarePointer()
+
+  if (!showTargetPicker || !selectedSkill) return null
+
+  const aliveEnemies = enemies.filter(isAlive)
+
+  return (
+    <div className={styles.targetPickerOverlay}>
+      <div className={styles.targetPickerCard}>
+        <div className={styles.targetPickerHeader}>
+          <span className={styles.targetPickerTitle}>SELECT TARGET</span>
+          <button
+            className={styles.targetPickerCancel}
+            onPointerDown={createHandler({ onTap: () => selectSkill(null) })}
+          >
+            ✕
+          </button>
+        </div>
+        <div className={styles.targetPickerList}>
+          {aliveEnemies.map((enemy) => (
+            <button
+              key={enemy.id}
+              className={styles.targetPickerRow}
+              onPointerDown={createHandler({ onTap: () => selectTarget(enemy) })}
+            >
+              <span className={styles.targetPickerName}>{enemy.name}</span>
+              <span className={styles.targetPickerHp}>{enemy.hp}/{enemy.maxHp} HP</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Dice result overlay ─────────────────────────────────────────────────────
 // Full-area centred burst that slams in, holds, and fades over 2s.
 // Mounted with key={animKey} so each new roll triggers a fresh CSS animation.
@@ -500,6 +553,7 @@ function BattleLayout() {
       {isPaused && <PauseOverlay />}
       {logOpen && <BattleLogOverlay onClose={() => setLogOpen(false)} />}
       <CounterPromptOverlay />
+      <TargetSelectOverlay />
       <ClashQteOverlay />
       <TeamCollisionOverlay />
       <DiceResultOverlay key={diceResult?.animKey ?? 0} />
