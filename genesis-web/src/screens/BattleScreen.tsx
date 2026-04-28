@@ -256,14 +256,18 @@ function PortraitPanel() {
       <div className={styles.portraitCircle}>{playerUnit?.name.charAt(0) ?? 'P'}</div>
       <span className={styles.lvlBadge}>{playerUnit ? `${playerUnit.className} ★${playerUnit.rarity}` : 'LVL 1'}</span>
       <div className={styles.barRow}>
-        <span className={styles.barLabel}>HP</span>
+        <div className={styles.barHeader}>
+          <span className={styles.barLabel}>HP</span>
+          <span className={styles.barValue}>{hp}/{maxHp}</span>
+        </div>
         <ResourceBar variant="hp" value={hp} max={maxHp} />
-        <span className={styles.barValue}>{hp}/{maxHp}</span>
       </div>
       <div className={styles.barRow}>
-        <span className={styles.barLabel}>AP</span>
+        <div className={styles.barHeader}>
+          <span className={styles.barLabel}>AP</span>
+          <span className={styles.barValue}>{ap}/{maxAp}</span>
+        </div>
         <ResourceBar variant="ap" value={ap} max={maxAp} />
-        <span className={styles.barValue}>{ap}/{maxAp}</span>
       </div>
     </div>
   )

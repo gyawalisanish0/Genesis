@@ -212,7 +212,7 @@ Genesis/
 │       ├── scenes/               # Phaser 3 scenes — no React imports
 │       │   ├── BattleScene.ts    # Stages 2–5 orchestrator: unit stage, dice/attack/feedback, particles/shake/death, turn display; between-turn pause (BETWEEN_TURN_PAUSE_MS)
 │       │   └── battle/           # BattleScene helper modules (one concern each)
-│       │       ├── TurnDisplayPanel.ts # Turn info overlay: actor (enemy-only), skill, target with HP/AP bars; slides in from top of canvas; exports TURN_PANEL_RESERVE = 160
+│       │       ├── TurnDisplayPanel.ts # Turn info overlay: actor (enemy-only), skill, target with HP/AP bars; slides in from top of canvas; exports TURN_PANEL_RESERVE = 200
 │       │       ├── UnitStage.ts      # Acting + target figure containers; slide, flash, dodge, collapse; topInset keeps content below TurnDisplayPanel zone
 │       │       ├── DicePanel.ts      # Die face spin → outcome landing animation; topInset keeps dice in content zone
 │       │       ├── AttackPanel.ts    # Shove tween, target flash, particle burst, camera shake

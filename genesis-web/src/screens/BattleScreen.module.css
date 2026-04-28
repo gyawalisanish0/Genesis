@@ -264,24 +264,26 @@
 .barRow {
   width: 100%;
   display: flex;
-  align-items: center;
-  gap: var(--s-xs);
+  flex-direction: column;
+  gap: 0.125rem;  /* 2px between label/value header and the bar */
+}
+
+/* Label + value on one line, bar on the line below */
+.barHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
 }
 
 .barLabel {
   font-size: var(--t-micro-size);
   color: var(--text-muted);
-  width: 1rem;
-  flex-shrink: 0;
 }
 
 .barValue {
-  font-size: var(--t-micro-size);
-  color: var(--text-muted);
-  white-space: nowrap;
-  flex-shrink: 0;
-  min-width: 2.5rem;
-  text-align: right;
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  color: var(--text-secondary);
 }
 
 /* ── Action grid ────────────────────────────────────────────────────── */
