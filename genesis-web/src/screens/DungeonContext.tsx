@@ -109,14 +109,30 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
       // Load player units for NarrativeUnits registry
       await registerPlayerUnits(stage)
 
-      // Fire intro after arena is ready
-      setTimeout(() => {
-        NarrativeService.play('stage_001_intro')
+      // Wait for arena ref to attach + Phaser scene ready, then init + play intro
+      waitForArenaReady(() => {
         initArena(map, positions, start)
-      }, 500)
+        NarrativeService.play('stage_001_intro')
+      })
     }
 
     setPhase('exploring')
+  }
+
+  function waitForArenaReady(cb: () => void): void {
+    const start = Date.now()
+    const tick = () => {
+      // arenaRef.current is set when DungeonArena mounts (almost instantly).
+      // The internal sceneRef is set after Phaser's 'ready' event — we can't
+      // observe it from here, so poll a short interval.
+      if (arenaRef.current) {
+        // Give Phaser a moment to finish 'ready' event after mount
+        if (Date.now() - start > 300) { cb(); return }
+      }
+      if (Date.now() - start > 5000) { cb(); return }  // safety bail
+      setTimeout(tick, 50)
+    }
+    tick()
   }
 
   function restoreState(
@@ -179,20 +195,20 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
     const map = mapDefRef.current
     if (!map) return
 
-    const cur  = partyRef.current
-    const nx   = cur.x + dx
-    const ny   = cur.y + dy
-
-    // Check passable and no blocking entity
-    if (!arenaRef.current?.setTapCallback) return
     const arena = arenaRef.current
+    if (!arena) return
 
-    // Use tilemap passability via scene (we check via arena absence — scene exposes isPassable via a side-channel)
-    // For now check map tiles directly
+    const cur = partyRef.current
+    const nx  = cur.x + dx
+    const ny  = cur.y + dy
+
     if (!isTilePassable(map, nx, ny)) return
     if (hasBlockingEntity(nx, ny)) return
 
     moveQueueRef.current = true
+    // Watchdog: force-release the queue if no chain completes within 3 seconds.
+    const watchdog = setTimeout(() => { moveQueueRef.current = false }, 3000)
+
     const next = { x: nx, y: ny }
     partyRef.current = next
     setPartyTile(next)
@@ -202,6 +218,7 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
       updateEntityVisibility(nx, ny)
       checkTriggers(nx, ny)
       advanceEnemyPatrols(() => {
+        clearTimeout(watchdog)
         moveQueueRef.current = false
         checkWavePhase()
       })
