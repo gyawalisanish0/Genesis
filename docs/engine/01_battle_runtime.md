@@ -40,6 +40,34 @@ Each character is built into a runtime `Unit` via `createUnit()`, and its
 starting tick position is assigned by `calculateStartingTick(stats.speed, className)`.
 Skills are wrapped into `SkillInstance` objects via `createSkillInstance(skillDef)`.
 
+### Tick displacement on initialization
+
+**Critical to prevent AI loop freeze**: After building all player and enemy units,
+a tick displacement pass runs before the battle state is registered with the context.
+
+```ts
+// Build ticks map: { unitId: tick, ... }
+const ticks = new Map<string, number>()
+for (const unit of allUnits) {
+  ticks.set(unit.id, unit.tickPosition)
+}
+
+// Apply resolveTickDisplacement to each unit
+for (const unit of allUnits) {
+  const adjusted = resolveTickDisplacement(unit.tickPosition, ticks, unit.id)
+  unit = setTickPosition(unit, adjusted)  // immutable update
+  ticks.set(unit.id, adjusted)
+}
+```
+
+This ensures **no two units share a starting tick position**. Without this, a
+collision causes the enemy AI loop to call `arena.playDice()` multiple times
+synchronously. `DicePanel.spin()` calls `this.destroy()` on the first call,
+wiping animation callbacks for subsequent units, leaving them in an incomplete
+state and re-triggering the loop infinitely.
+
+See `src/core/combat/TickDisplacer.ts` for the displacement algorithm.
+
 `isLoading` is `true` during this async phase. The UI renders a loading message
 and does not render the timeline or action grid.
 
@@ -345,6 +373,70 @@ const isActive = activeUnitIds.has(unit.id)
 
 At any given `tickValue`, zero or more units may be active simultaneously
 (if multiple units share the same starting tick position).
+
+---
+
+## Battle end conditions and navigation
+
+### Victory and defeat detection
+
+After every state update (enemy action completes, player unit dies, enemy dies),
+`BattleContext` checks for a terminal condition:
+
+```ts
+// Victory: all enemies defeated
+if (enemies.every(e => e.hp <= 0)) {
+  endBattle('victory')
+}
+
+// Defeat: player unit defeated
+if (playerUnit && playerUnit.hp <= 0) {
+  endBattle('defeat')
+}
+```
+
+### `endBattle(outcome: 'victory' | 'defeat')`
+
+Called when battle reaches a terminal condition. Prevents double-fire (multi-kill
+scenarios) via `battleEndedRef` guard. Flow:
+
+```ts
+1. Guard: if (battleEndedRef.current) return; battleEndedRef.current = true
+2. Calculate result:
+   - turns = sum of all player unit actionCount values
+   - xpGained = (outcome === 'victory') ? 100 * enemyCount : 0
+3. Emit narrative event: NarrativeService.emit({ type: 'battle_victory' or 'battle_defeat' })
+4. Commit to store: useGameStore.getState().setBattleResult({ outcome, turns, xpGained })
+5. Schedule navigation (2.5s delay): navigate to BATTLE_RESULT screen
+```
+
+The 2.5s delay allows narrative animations and defeat log entries to display
+before the result screen transitions in.
+
+### Campaign integration
+
+When battle is launched from **campaign mode**, the global Zustand store carries
+two additional fields:
+
+| Field | Set by | Used for |
+|---|---|---|
+| `returnScreen` | DungeonContext before launching battle | Post-battle navigation destination after victory |
+| `currentEncounterEnemies` | DungeonContext before launching battle | Enemy `defId` list for current encounter |
+
+After victory, `BattleResultScreen` checks `returnScreen`:
+
+```ts
+if (returnScreen) {
+  // Campaign mode: return to dungeon exploration
+  navigateTo(returnScreen)
+} else {
+  // Story/ranked mode: return to pre-battle or main menu
+  if (victory) navigateTo(MAIN_MENU)
+  else navigateTo(PRE_BATTLE)
+}
+```
+
+See `docs/mechanics/campaign.md` for full campaign flow.
 
 ---
 
