@@ -65,7 +65,39 @@ in count. The combat framework treats units as an open collection.
   etc.) is a runtime metric, not a round system. The rule is about
   initiative truth, not vocabulary
 
-### 4. Reactive mechanics use hooks, not hardcoded branches
+### 4. One controlled unit, party members fight as AI allies
+
+The player **controls exactly one unit per battle** — the **party leader**. Other
+party members appear in the battle as **AI-controlled allies** and the dungeon
+overworld shows a **single party token** even when multiple units are present.
+
+- **HUD shows ONE controlled unit** — the action grid, ROLL button, and skill
+  panel are bound to the leader only; ally units are visible on the timeline
+  and arena but not in the player's action HUD
+- **AI allies act on their own ticks** — driven by the same enemy-AI sequencing
+  pipeline (`telegraphTimer → actionTimer → applyTimer`) but tagged
+  `team: 'ally'` so they target enemies, not the player
+- **Leader selection is mode/stage-dependent**:
+  - **Story / Ranked**: player chooses the leader at pre-battle (first slot of
+    `selectedTeamIds` is the leader by default; user can reorder)
+  - **Campaign**: `stage.json` may set `leader: 'warrior_001'` to force a specific
+    leader (e.g. story missions where Iron Warden is the protagonist); falls back
+    to first `selectedTeamIds` if absent
+- **Dungeon = single party token** — only the leader's portrait and position render
+  on the dungeon grid; the rest of the party is implicit (alive but not visualized
+  outside battle)
+- **`Unit.team`** field — `'player' | 'ally' | 'enemy'` — drives both targeting
+  rules in the combat engine and which units the player can issue commands to
+- **`Unit.isControlled`** field — `true` for the leader, `false` for AI allies
+  and enemies; the action grid filters on this flag
+
+This rule supersedes the broader "no hardcoded team-size cap" principle only at
+the **HUD layer** — `core/` still treats the unit roster as an open collection;
+the cap is purely a UX decision applied in `BattleScreen` and `DungeonScreen`.
+
+See `docs/mechanics/party-leader.md` for the full spec.
+
+### 5. Reactive mechanics use hooks, not hardcoded branches
 
 The counter mechanic is the canonical example: the framework detects Evasion
 and checks for a `counter`/`uniqueCounter`-tagged skill — it does **not**

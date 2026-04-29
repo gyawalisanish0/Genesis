@@ -49,7 +49,8 @@ Describes one stage's battle properties, player team, and initial setup.
   "description": "A ruined outpost at the edge of the frontier.",
   "playerUnits": {
     "mode": "fixed",
-    "units": ["warrior_001", "hunter_001"]
+    "units": ["warrior_001", "hunter_001"],
+    "leader": "warrior_001"
   },
   "moveRange": 1,
   "settings": {
@@ -64,9 +65,14 @@ Describes one stage's battle properties, player team, and initial setup.
 **Fields**:
 - `playerUnits.mode`: `"fixed"` (team set by stage) or `"player"` (player selects)
 - `playerUnits.units`: Array of character `defId` values
+- `playerUnits.leader` (optional): `defId` of the controlled party leader.
+  When absent, the leader defaults to the **first entry** of `units`. The leader
+  is the only unit the player can issue commands to; the rest fight as **AI
+  allies** alongside the leader. See `docs/mechanics/party-leader.md`.
 - `moveRange`: Grid squares per turn (typically 1 for single-hex movement)
 - `settings.enemyAi`: `"patrol"` (fixed routes) or future `"hunt"` (pursue player)
-- `settings.playerControl`: `"single"` (control one character) or future `"squad"` (multi-unit)
+- `settings.playerControl`: `"single"` (one controlled unit + AI allies — the
+  default and currently the only supported mode) or future `"squad"`
 
 ### Map definition — `public/data/campaign/{stageId}/map.json`
 
@@ -138,27 +144,34 @@ proceeds to Dungeon Screen.
 
 ### 2. Dungeon Screen (Exploration)
 
+The dungeon is a **single-token overworld**. Even when the party contains
+multiple units, only one token — the **party leader** — is rendered on the
+grid. AI allies are implicit (alive in the roster, but not visible on the
+map) and only materialize when battle is engaged.
+
 #### State shape
 
 ```ts
 interface DungeonState {
   stageId: string
+  leaderId: string                // defId of the controlled leader; drives the token
   mapState: {
-    playerPos: { x: number; y: number }
-    waves: WaveState[]        // current positions of enemy patrols
-    defeated: Set<string>     // defeated wave IDs
+    partyPos: { x: number; y: number }   // single token position
+    waves: WaveState[]                   // current positions of enemy patrols
+    defeated: Set<string>                // defeated wave IDs
   }
   units: {
-    player: Unit[]            // active team (from pre-battle or stage)
-    encounters: Map<string, Unit[]>  // pre-loaded enemy units per wave
+    party: Unit[]                              // full team — leader + AI allies
+    encounters: Map<string, Unit[]>            // pre-loaded enemy units per wave
   }
 }
 ```
 
 #### Player movement
 
-- Player occupies one grid cell
-- Each turn, player can move up to `stage.moveRange` cells (Manhattan distance)
+- The party occupies **one grid cell** (single-token model)
+- Each turn, the leader moves up to `stage.moveRange` cells (Manhattan distance)
+- AI allies always travel with the leader — no separate movement for them
 - Movement cost: 1 action point per cell (simplified for Phase 1)
 - No blocking by terrain (simplified; water/walls handled in Phase 2)
 - Out-of-bounds movement is rejected
@@ -172,14 +185,20 @@ Wave position updates every 3 turns (configurable `patrolTurnInterval`).
 
 #### Engagement trigger
 
-When player and enemy wave occupy adjacent cells (or same cell in Phase 1),
-**combat is initiated**:
+When the party token and an enemy wave occupy adjacent cells (or same cell in
+Phase 1), **combat is initiated**:
 
 1. DungeonContext calls `launchBattle()`
 2. Creates a temporary `ModeDef` from stage settings
 3. Sets `currentEncounterEnemies` to enemy `defId` list from wave
-4. Sets `returnScreen` to `SCREEN_IDS.DUNGEON`
-5. Navigates to `BATTLE` screen
+4. Sets `currentLeaderId` to the dungeon's `leaderId` (so BattleContext knows
+   which unit gets the player HUD)
+5. Sets `returnScreen` to `SCREEN_IDS.DUNGEON`
+6. Navigates to `BATTLE` screen
+
+Inside battle, the **leader** receives the action grid HUD; all other party
+members enter as `team: 'ally'` AI units that target enemies on their own
+ticks. See `docs/mechanics/party-leader.md`.
 
 #### During battle
 
