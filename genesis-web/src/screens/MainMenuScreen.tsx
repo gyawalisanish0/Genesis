@@ -46,7 +46,7 @@ export function MainMenuScreen() {
         <nav className={styles.nav}>
           <button
             className={`${styles.navBtn} ${styles.navBtnPlay}`}
-            onPointerDown={createHandler({ onTap: () => navigateTo(SCREEN_IDS.PRE_BATTLE) })}
+            onPointerDown={createHandler({ onTap: () => navigateTo(SCREEN_IDS.CAMPAIGN) })}
           >
             ▶  PLAY
           </button>

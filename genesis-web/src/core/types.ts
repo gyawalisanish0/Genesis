@@ -14,19 +14,25 @@ export interface CharacterClashDef {
   uniqueClash?:   boolean  // true → activates QTE path instead of speed/dice (unique abilities)
 }
 
+export interface DungeonGimmick {
+  type:      'extendedMove'
+  moveRange: number
+}
+
 export interface CharacterDef {
-  type:        'character'
-  id:          string
-  name:        string
-  className:   string
-  rarity:      number
-  stats:       StatBlockDef
-  maxHp:       number
-  maxAp:       number
-  apRegenRate: number
-  passive:     string | null
-  skillPath:   string
-  clash?:      CharacterClashDef
+  type:          'character'
+  id:            string
+  name:          string
+  className:     string
+  rarity:        number
+  stats:         StatBlockDef
+  maxHp:         number
+  maxAp:         number
+  apRegenRate:   number
+  passive:       string | null
+  skillPath:     string
+  clash?:        CharacterClashDef
+  dungeonGimmick?: DungeonGimmick
 }
 
 export interface LevelUpgrade {
@@ -123,6 +129,107 @@ export interface BattleResult {
 // ── Resolution quality ─────────────────────────────────────────────────────────
 
 export type QualityTier = 'High' | 'Medium' | 'Low'
+
+// ── Campaign / dungeon definitions ─────────────────────────────────────────────
+
+export interface TileTypeDef {
+  passable: boolean
+  id:       string
+}
+
+export interface WavePhaseConfig {
+  mode: 'player-select' | 'sequential' | 'simultaneous'
+  order?: string[]  // entityIds for sequential mode
+}
+
+// Entity discriminated union — all map entities share x/y and narrativeId
+interface EntityBase {
+  entityId:    string
+  x:           number
+  y:           number
+  narrativeId?: string
+}
+
+export interface EnemyEntityDef extends EntityBase {
+  type:        'enemy'
+  defId:       string
+  patrol:      { x: number; y: number }[]
+  visualRange?: number
+}
+
+export interface NpcEntityDef extends EntityBase {
+  type:           'npc'
+  defId:          string
+  destination?:   { x: number; y: number } | null
+  visualRange?:   number
+  blocksMovement?: boolean
+}
+
+export interface InteractableEntityDef extends EntityBase {
+  type:     'interactable'
+  subtype?: string   // 'chest' | 'switch' | etc.
+}
+
+export interface ExitEntityDef extends EntityBase {
+  type:     'exit'
+  leadsTo?: string   // stageId of next stage
+}
+
+export interface TriggerEntityDef extends EntityBase {
+  type: 'trigger'
+  once?: boolean
+}
+
+export type EntityDef =
+  | EnemyEntityDef
+  | NpcEntityDef
+  | InteractableEntityDef
+  | ExitEntityDef
+  | TriggerEntityDef
+
+export interface MapDef {
+  type:         'map'
+  stageId:      string
+  grid:         { cols: number; rows: number }
+  tileSize:     number
+  tiles:        number[][]
+  tileTypes:    Record<string, TileTypeDef>
+  playerStart:  { x: number; y: number }
+  fogOfWar:     boolean
+  revealRadius: number
+  entities:     EntityDef[]
+  wavePhase:    WavePhaseConfig
+}
+
+export interface PlayerUnitsDef {
+  mode:  'fixed' | 'selectable'
+  units: string[]   // CharacterDef.id[]
+}
+
+export interface StageDef {
+  type:        'stage'
+  id:          string
+  name:        string
+  description: string
+  playerUnits: PlayerUnitsDef
+  moveRange:   number
+  settings: {
+    enemyAi:        string
+    respawn:        boolean
+    timeLimitTicks: number | null
+    playerControl?: 'single' | 'all'
+  }
+}
+
+// Runtime dungeon state — persisted in GameContext across dungeon↔battle navigation
+export interface DungeonState {
+  stageId:           string
+  partyTile:         { x: number; y: number }
+  entityPositions:   Record<string, { x: number; y: number }>
+  defeatedEntityIds: string[]
+  revealedTiles:     string[]          // "x,y" encoded keys
+  lastSeenPositions: Record<string, { x: number; y: number }>
+}
 
 // ── App settings ───────────────────────────────────────────────────────────────
 

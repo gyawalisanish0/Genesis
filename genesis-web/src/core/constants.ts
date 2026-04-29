@@ -79,6 +79,14 @@ export const QUALITY_MED_FPS_THRESHOLD   = 40     // ≥40 fps → Medium tier (
 export const QUALITY_STEP_UP_FPS         = 58     // sustained fps required for live step-up
 export const QUALITY_STEP_UP_CHECKS      = 10     // consecutive 1-s checks at ≥STEP_UP_FPS to trigger step-up
 
+// Dungeon exploration
+export const DUNGEON_DEFAULT_MOVE_RANGE    = 1    // tiles the party can move per turn
+export const DUNGEON_DEFAULT_VISUAL_RANGE  = 1    // Chebyshev detection radius for entities
+export const DUNGEON_REVEAL_RADIUS         = 2    // fog-of-war reveal radius around party
+export const DUNGEON_MOVE_ANIM_MS          = 180  // ms per tile movement tween
+export const DUNGEON_PATROL_ANIM_MS        = 200  // ms per tile for enemy patrol step
+export const DUNGEON_WAVE_VIGNETTE_OPACITY = 0.65 // overlay opacity during wave phase
+
 // Narrative layer — dialogue box + animation timings
 export const NARRATIVE_DISMISS_MS    = 3500  // ms before dialogue box auto-dismisses
 export const NARRATIVE_TYPEWRITER_MS = 30    // ms per character typewriter effect

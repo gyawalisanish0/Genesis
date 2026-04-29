@@ -9,8 +9,9 @@ import { ScreenShell } from '../navigation/ScreenShell'
 import { useScreen } from '../navigation/useScreen'
 import { SCREEN_IDS } from '../navigation/screenRegistry'
 import {
-  loadCharacterIndex, loadCharacter, loadMode,
-  loadCharacterDialogue, loadLevelNarrative,
+  loadCharacterIndex, loadCharacter,
+  loadCharacterDialogue, loadCampaignIndex, loadStageDef,
+  loadLevelNarrative,
 } from '../services/DataService'
 import { NarrativeService }  from '../services/NarrativeService'
 import { ResolutionService } from '../services/ResolutionService'
@@ -23,18 +24,21 @@ async function loadAllGameData(onProgress: (pct: number) => void): Promise<void>
   const ids = await loadCharacterIndex()
   onProgress(30)
   await Promise.all(ids.map(loadCharacter))
-  onProgress(60)
-  await Promise.all([loadMode('story'), loadMode('ranked')])
-  onProgress(80)
+  onProgress(50)
 
-  // Load all character dialogue and known level narratives; register globally.
-  const [dialogueDefs, storyNarrative] = await Promise.all([
-    Promise.all(ids.map(loadCharacterDialogue)),
-    loadLevelNarrative('story_001'),
-  ])
+  // Load campaign index + stage defs
+  const stageIds = await loadCampaignIndex().catch(() => [] as string[])
+  await Promise.all(stageIds.map(loadStageDef))
+  onProgress(70)
+
+  // Load character dialogue; register globally
+  const dialogueDefs = await Promise.all(ids.map(loadCharacterDialogue))
   const characterEntries = dialogueDefs.flatMap((d) => d?.entries ?? [])
   NarrativeService.registerEntries('characters', characterEntries)
-  if (storyNarrative) NarrativeService.registerEntries('story_001', storyNarrative.entries)
+  onProgress(90)
+
+  // Pre-load campaign stage_001 narrative (registered fresh when dungeon loads)
+  await loadLevelNarrative('stage_001').catch(() => null)
 
   onProgress(100)
 }

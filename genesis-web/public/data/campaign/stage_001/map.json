@@ -1,0 +1,91 @@
+{
+  "type": "map",
+  "stageId": "stage_001",
+  "grid": { "cols": 8, "rows": 8 },
+  "tileSize": 48,
+  "tiles": [
+    [1, 1, 1, 0, 1, 1, 1, 0],
+    [1, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 1, 0, 1, 0, 0, 1],
+    [0, 0, 1, 0, 1, 0, 1, 1],
+    [0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 1, 0, 1, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1]
+  ],
+  "tileTypes": {
+    "0": { "passable": true,  "id": "floor" },
+    "1": { "passable": false, "id": "wall"  }
+  },
+  "playerStart": { "x": 1, "y": 6 },
+  "fogOfWar": true,
+  "revealRadius": 2,
+  "entities": [
+    {
+      "entityId": "patrol_guard_a",
+      "type": "enemy",
+      "defId": "hunter_001",
+      "x": 3, "y": 3,
+      "patrol": [
+        { "x": 3, "y": 3 },
+        { "x": 5, "y": 3 },
+        { "x": 5, "y": 4 },
+        { "x": 3, "y": 4 }
+      ],
+      "visualRange": 1,
+      "narrativeId": "stage_001_guard_spotted"
+    },
+    {
+      "entityId": "patrol_guard_b",
+      "type": "enemy",
+      "defId": "hunter_001",
+      "x": 1, "y": 3,
+      "patrol": [
+        { "x": 1, "y": 3 },
+        { "x": 1, "y": 4 },
+        { "x": 1, "y": 5 }
+      ],
+      "visualRange": 1,
+      "narrativeId": "stage_001_guard_spotted"
+    },
+    {
+      "entityId": "npc_elder",
+      "type": "npc",
+      "defId": "npc_elder_001",
+      "x": 5, "y": 1,
+      "destination": null,
+      "visualRange": 1,
+      "blocksMovement": true,
+      "narrativeId": "stage_001_elder_greeting"
+    },
+    {
+      "entityId": "chest_a",
+      "type": "interactable",
+      "subtype": "chest",
+      "x": 3, "y": 0,
+      "narrativeId": "stage_001_first_chest"
+    },
+    {
+      "entityId": "exit_a",
+      "type": "exit",
+      "x": 7, "y": 0,
+      "leadsTo": "stage_002",
+      "narrativeId": "stage_001_exit_reached"
+    },
+    {
+      "entityId": "tut_move",
+      "type": "trigger",
+      "x": 2, "y": 6,
+      "once": true,
+      "narrativeId": "stage_001_tutorial_move"
+    },
+    {
+      "entityId": "tut_combat",
+      "type": "trigger",
+      "x": 3, "y": 5,
+      "once": true,
+      "narrativeId": "stage_001_tutorial_combat"
+    }
+  ],
+  "wavePhase": { "mode": "player-select" }
+}

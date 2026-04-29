@@ -329,10 +329,12 @@ export function BattleProvider({ children }: Props) {
     let cancelled = false
     async function load() {
       try {
-        const { selectedMode: storeMode } = useGameStore.getState()
-        const enemyIds = storeMode?.settings.enemies?.length
-          ? storeMode.settings.enemies
-          : ['hunter_001']
+        const { selectedMode: storeMode, currentEncounterEnemies } = useGameStore.getState()
+        const enemyIds = currentEncounterEnemies.length
+          ? currentEncounterEnemies
+          : storeMode?.settings.enemies?.length
+            ? storeMode.settings.enemies
+            : ['hunter_001']
 
         const [playerDataArr, enemyDataArr] = await Promise.all([
           Promise.all(selectedTeamIds.map((id) => loadCharacterWithSkills(id))),

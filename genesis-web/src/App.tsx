@@ -12,6 +12,8 @@ import { PreBattleScreen }    from './screens/PreBattleScreen'
 import { BattleScreen }       from './screens/BattleScreen'
 import { BattleResultScreen } from './screens/BattleResultScreen'
 import { SettingsScreen }     from './screens/SettingsScreen'
+import { CampaignScreen }     from './screens/CampaignScreen'
+import { DungeonScreen }      from './screens/DungeonScreen'
 import styles from './App.module.css'
 
 export default function App() {
@@ -48,6 +50,8 @@ export default function App() {
               <Route path="/battle"        element={<BattleScreen />} />
               <Route path="/battle-result" element={<BattleResultScreen />} />
               <Route path="/settings"      element={<SettingsScreen />} />
+              <Route path="/campaign"      element={<CampaignScreen />} />
+              <Route path="/dungeon"       element={<DungeonScreen />} />
               <Route path="*"              element={<Navigate to="/splash" replace />} />
             </Routes>
           </ScreenProvider>
