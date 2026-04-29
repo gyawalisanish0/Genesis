@@ -6,7 +6,6 @@
       "narrativeId": "stage_001_intro",
       "once": true,
       "sequence": true,
-      "blocking": true,
       "priority": 20,
       "animations": [{ "type": "dialogue" }],
       "lines": [
@@ -47,7 +46,6 @@
       "narrativeId": "stage_001_elder_greeting",
       "once": true,
       "sequence": true,
-      "blocking": true,
       "priority": 10,
       "animations": [{ "type": "dialogue" }],
       "lines": [
@@ -67,7 +65,6 @@
       "narrativeId": "stage_001_exit_reached",
       "once": true,
       "sequence": true,
-      "blocking": true,
       "priority": 20,
       "animations": [{ "type": "dialogue" }],
       "lines": [

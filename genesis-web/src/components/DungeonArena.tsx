@@ -61,11 +61,14 @@ export const DungeonArena = forwardRef<DungeonArenaHandle>(function DungeonArena
   useImperativeHandle(ref, () => ({
     loadMap: (mapDef) => sceneRef.current?.loadMap(mapDef),
     setPartyTile: (tx, ty, animated, onDone) => {
-      sceneRef.current?.setPartyTile(tx, ty, animated, onDone)
-      if (!sceneRef.current) onDone?.()
+      if (sceneRef.current) sceneRef.current.setPartyTile(tx, ty, animated, onDone)
+      else onDone?.()
     },
     revealTiles:       (cx, cy, r)           => sceneRef.current?.revealTiles(cx, cy, r),
-    setEntityPosition: (id, tx, ty, a, done) => sceneRef.current?.setEntityPosition(id, tx, ty, a, done),
+    setEntityPosition: (id, tx, ty, a, done) => {
+      if (sceneRef.current) sceneRef.current.setEntityPosition(id, tx, ty, a, done)
+      else done?.()
+    },
     setEntityVisible:  (id, v)               => sceneRef.current?.setEntityVisible(id, v),
     setEntityGreyscale:(id, g)               => sceneRef.current?.setEntityGreyscale(id, g),
     removeEntity:      (id)                  => sceneRef.current?.removeEntity(id),
