@@ -76,7 +76,7 @@ const STACK_OFFSET_PX = 8
 
 // ── Timeline strip ──────────────────────────────────────────────────────────
 function BattleTimeline() {
-  const { tickValue, playerUnit, enemies, activeUnitIds, scrollBounds, historyEntries } = useBattleScreen()
+  const { tickValue, playerUnits, enemies, activeUnitIds, scrollBounds, historyEntries } = useBattleScreen()
   const containerRef = useRef<HTMLDivElement>(null)
 
   const trackHeight = (scrollBounds.max - scrollBounds.min) * TIMELINE_PX_PER_TICK
@@ -150,7 +150,7 @@ function BattleTimeline() {
     }, TIMELINE_RECENTER_DELAY_MS)
   }
 
-  const allUnits = playerUnit ? [playerUnit, ...enemies] : enemies
+  const allUnits = [...playerUnits, ...enemies]
 
   // Group live units by tick so we can fan same-tick markers vertically.
   const tickGroups = new Map<number, string[]>()
@@ -233,31 +233,34 @@ function StatusSlots() {
 
 // ── Player portrait panel ───────────────────────────────────────────────────
 function PortraitPanel() {
-  const { turnNumber, tickValue, playerUnit } = useBattleScreen()
-  const hp    = playerUnit?.hp    ?? 0
-  const maxHp = playerUnit?.maxHp ?? 1
-  const ap    = playerUnit?.ap    ?? 0
-  const maxAp = playerUnit?.maxAp ?? 1
+  const { turnNumber, tickValue, playerUnits, activePlayerUnit } = useBattleScreen()
+  const isMulti = playerUnits.length > 1
   return (
     <div className={styles.portrait}>
       <span className={styles.turnLabel}>Turn {turnNumber}</span>
       <span className={styles.tickLabel}>Tick: {tickValue}</span>
-      <div className={styles.portraitCircle}>{playerUnit?.name.charAt(0) ?? 'P'}</div>
-      <span className={styles.lvlBadge}>{playerUnit ? `${playerUnit.className} ★${playerUnit.rarity}` : 'LVL 1'}</span>
-      <div className={styles.barRow}>
-        <div className={styles.barHeader}>
-          <span className={styles.barLabel}>HP</span>
-          <span className={styles.barValue}>{hp}/{maxHp}</span>
+      {playerUnits.map((unit) => (
+        <div key={unit.id} className={`${styles.unitEntry} ${activePlayerUnit?.id === unit.id ? styles.unitEntryActive : ''}`}>
+          <div className={isMulti ? styles.portraitCircleSmall : styles.portraitCircle}>
+            {unit.name.charAt(0)}
+          </div>
+          <span className={styles.lvlBadge}>{unit.className} ★{unit.rarity}</span>
+          <div className={styles.barRow}>
+            <div className={styles.barHeader}>
+              <span className={styles.barLabel}>HP</span>
+              <span className={styles.barValue}>{unit.hp}/{unit.maxHp}</span>
+            </div>
+            <ResourceBar variant="hp" value={unit.hp} max={unit.maxHp} />
+          </div>
+          <div className={styles.barRow}>
+            <div className={styles.barHeader}>
+              <span className={styles.barLabel}>AP</span>
+              <span className={styles.barValue}>{unit.ap}/{unit.maxAp}</span>
+            </div>
+            <ResourceBar variant="ap" value={unit.ap} max={unit.maxAp} />
+          </div>
         </div>
-        <ResourceBar variant="hp" value={hp} max={maxHp} />
-      </div>
-      <div className={styles.barRow}>
-        <div className={styles.barHeader}>
-          <span className={styles.barLabel}>AP</span>
-          <span className={styles.barValue}>{ap}/{maxAp}</span>
-        </div>
-        <ResourceBar variant="ap" value={ap} max={maxAp} />
-      </div>
+      ))}
     </div>
   )
 }
@@ -266,12 +269,12 @@ function PortraitPanel() {
 function ActionGrid() {
   const {
     phase, gridCollapsed, toggleGrid,
-    playerUnit, getUnitSkills, selectedSkill, selectedTarget, selectSkill, skipTurn,
+    activePlayerUnit, getUnitSkills, selectedSkill, selectedTarget, selectSkill, skipTurn,
   } = useBattleScreen()
   const createHandler = useScrollAwarePointer()
   const disabled = phase !== 'player'
 
-  const playerSkills = playerUnit ? getUnitSkills(playerUnit.id) : []
+  const playerSkills = activePlayerUnit ? getUnitSkills(activePlayerUnit.id) : []
 
   // Pad skill list to always show 4 slots.
   const slots = Array.from({ length: 4 }, (_, i) => playerSkills[i] ?? null)
@@ -291,9 +294,9 @@ function ActionGrid() {
               const isSelected = hasSkill && selectedSkill?.defId === skillInst.defId
               const tuCost     = hasSkill ? skillInst.cachedCosts.tuCost : null
               const name       = hasSkill ? skillInst.baseDef.name : '—'
-              const onCooldown = hasSkill && !!playerUnit && isOnCooldown(playerUnit, skillInst)
-              const tickCD     = onCooldown && playerUnit ? ticksRemaining(playerUnit, skillInst) : 0
-              const turnCD     = onCooldown && playerUnit ? turnsRemaining(playerUnit, skillInst) : 0
+              const onCooldown = hasSkill && !!activePlayerUnit && isOnCooldown(activePlayerUnit, skillInst)
+              const tickCD     = onCooldown && activePlayerUnit ? ticksRemaining(activePlayerUnit, skillInst) : 0
+              const turnCD     = onCooldown && activePlayerUnit ? turnsRemaining(activePlayerUnit, skillInst) : 0
               const isDisabled = !hasSkill || disabled || onCooldown
               // Show selected target name on the active skill button.
               const targetLabel = isSelected && selectedTarget ? selectedTarget.name : null
@@ -482,7 +485,7 @@ function TargetSelectOverlay() {
 
 // ── Battle layout ───────────────────────────────────────────────────────────
 function BattleLayout() {
-  const { arenaRef, isPaused, setPaused, isLoading, playerUnit } = useBattleScreen()
+  const { arenaRef, isPaused, setPaused, isLoading, playerUnits } = useBattleScreen()
   const navigate    = useNavigate()
   const lastBackRef = useRef(0)
   const createHandler = useScrollAwarePointer()
@@ -491,10 +494,10 @@ function BattleLayout() {
 
   // Redirect silently to pre-battle if no team was confirmed (direct URL access, etc.).
   useEffect(() => {
-    if (!isLoading && !playerUnit) {
+    if (!isLoading && playerUnits.length === 0) {
       navigate(SCREEN_REGISTRY[SCREEN_IDS.PRE_BATTLE].path, { replace: true })
     }
-  }, [isLoading, playerUnit, navigate])
+  }, [isLoading, playerUnits, navigate])
 
   // Bounded pause loop: back → pause, back → resume. Never navigates away.
   // Log overlay intercepts back before the pause handler so it closes first.

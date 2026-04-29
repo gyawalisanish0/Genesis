@@ -6,6 +6,8 @@
   "settings": {
     "enemyAi": "pvp",
     "respawn": false,
-    "timeLimitTicks": 500
+    "timeLimitTicks": 500,
+    "playerControl": "single",
+    "enemies": ["hunter_001"]
   }
 }

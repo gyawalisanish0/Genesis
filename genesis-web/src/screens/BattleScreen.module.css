@@ -286,6 +286,44 @@
   color: var(--text-secondary);
 }
 
+/* ── Multi-unit portrait entries ────────────────────────────────────── */
+/* Each player unit gets a .unitEntry wrapper inside .portrait.
+ * With a single unit the wrapper is invisible (no border, no gap).
+ * With 2+ units a top border separates entries. */
+.unitEntry {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.unitEntry + .unitEntry {
+  border-top: 1px solid var(--bg-elevated);
+  padding-top: 0.25rem;
+}
+
+/* Gold ring on portrait circle when it's this unit's turn */
+.unitEntryActive .portraitCircle,
+.unitEntryActive .portraitCircleSmall {
+  border-color: var(--accent-gold);
+}
+
+/* Compact portrait circle for 2+ unit layout */
+.portraitCircleSmall {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  border: 2px solid var(--accent-genesis);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  color: var(--text-muted);
+  align-self: center;
+}
+
 /* ── Action grid ────────────────────────────────────────────────────── */
 .actionGrid {
   flex: 1;

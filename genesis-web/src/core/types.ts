@@ -58,6 +58,11 @@ export interface ModeDef {
     enemyAi:        string
     respawn:        boolean
     timeLimitTicks: number | null
+    // 'single' (default): only the first team unit is player-controlled; rest are AI allies.
+    // 'all': every team unit is player-controlled, acting sequentially on their own ticks.
+    playerControl?: 'single' | 'all'
+    // IDs of characters to spawn as the opposing team. Falls back to ['hunter_001'] when absent.
+    enemies?: string[]
   }
 }
 
