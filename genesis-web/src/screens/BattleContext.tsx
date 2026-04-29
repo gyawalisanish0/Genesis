@@ -6,6 +6,7 @@ import {
   createContext, useContext, useState, useCallback,
   useMemo, useEffect, useRef, type ReactNode,
 } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { Unit } from '../core/types'
 import type { SkillInstance, BattleState as EngineBattleState, EffectContext, TargetSelector } from '../core/effects/types'
 import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, CLASH_ANNOUNCE_MS, ENEMY_AI_DELAY_MS, COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE, BATTLE_FEEDBACK_HOLD_MS } from '../core/constants'
@@ -26,6 +27,7 @@ import type { BattleArenaHandle, TurnDisplayData } from '../components/BattleAre
 import { makeHistoryEntry } from '../core/battleHistory'
 import type { HistoryEntry } from '../core/battleHistory'
 import { useGameStore } from '../core/GameContext'
+import { SCREEN_REGISTRY, SCREEN_IDS } from '../navigation/screenRegistry'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -238,6 +240,10 @@ interface Props { children: ReactNode }
 
 export function BattleProvider({ children }: Props) {
   const selectedMode = useGameStore((s) => s.selectedMode)
+  const navigate     = useNavigate()
+
+  // Guard: fires only once per battle — prevents double-navigation on multi-kill.
+  const battleEndedRef = useRef(false)
 
   // ── Core unit state ────────────────────────────────────────────────────────
   const [isLoading, setIsLoading]     = useState(true)
@@ -354,26 +360,42 @@ export function BattleProvider({ children }: Props) {
           ),
         )
 
-        const skillsMap = new Map<string, SkillInstance[]>()
-        playerDataArr.forEach((d, i) => skillsMap.set(loadedPlayers[i].id, d.skillDefs.map(createSkillInstance)))
-        enemyDataArr.forEach((d, i)  => skillsMap.set(loadedEnemies[i].id, d.skillDefs.map(createSkillInstance)))
-
+        // Displace any coincident starting ticks so no two units share the same
+        // tick at battle open — prevents the AI from processing multiple units in
+        // one playDice call which would destroy the first unit's callback.
         const ticks = new Map<string, number>()
-        loadedPlayers.forEach((u) => ticks.set(u.id, u.tickPosition))
-        loadedEnemies.forEach((u) => ticks.set(u.id, u.tickPosition))
+        const allLoaded = [...loadedPlayers, ...loadedEnemies]
+        for (const u of allLoaded) {
+          const finalTick = resolveTickDisplacement(u.tickPosition, ticks, u.id)
+          ticks.set(u.id, finalTick)
+        }
+        // Sync displaced ticks back into unit objects so registeredTicks and
+        // unit.tickPosition stay consistent.
+        const displacedPlayers = loadedPlayers.map((u) => {
+          const t = ticks.get(u.id)
+          return t !== undefined && t !== u.tickPosition ? setTickPosition(u, t) : u
+        })
+        const displacedEnemies = loadedEnemies.map((u) => {
+          const t = ticks.get(u.id)
+          return t !== undefined && t !== u.tickPosition ? setTickPosition(u, t) : u
+        })
+
+        const skillsMap = new Map<string, SkillInstance[]>()
+        playerDataArr.forEach((d, i) => skillsMap.set(displacedPlayers[i].id, d.skillDefs.map(createSkillInstance)))
+        enemyDataArr.forEach((d, i)  => skillsMap.set(displacedEnemies[i].id, d.skillDefs.map(createSkillInstance)))
 
         if (!cancelled) {
-          setPlayerUnits(loadedPlayers)
-          setEnemies(loadedEnemies)
+          setPlayerUnits(displacedPlayers)
+          setEnemies(displacedEnemies)
           setUnitSkillsMap(skillsMap)
           setRegisteredTicks(ticks)
           setLog([{ id: '1', text: 'Battle started!', colour: 'var(--accent-genesis)' }])
           setIsLoading(false)
-          NarrativeUnits.register([...loadedPlayers, ...loadedEnemies])
+          NarrativeUnits.register([...displacedPlayers, ...displacedEnemies])
           NarrativeService.emit({
             type:     'battle_start',
-            actorId:  loadedPlayers[0]?.defId,
-            targetId: loadedEnemies[0]?.defId,
+            actorId:  displacedPlayers[0]?.defId,
+            targetId: displacedEnemies[0]?.defId,
           })
         }
       } catch (err) {
@@ -611,6 +633,20 @@ export function BattleProvider({ children }: Props) {
   useEffect(() => { enemiesRef.current = enemies },           [enemies])
   useEffect(() => { unitSkillsMapRef.current = unitSkillsMap }, [unitSkillsMap])
   useEffect(() => { diceResultRef.current = diceResult },    [diceResult])
+
+  // End-of-battle: commit result to the store and navigate to the result screen.
+  // Guarded by battleEndedRef so only the first call fires (multi-kill safety).
+  const endBattle = useCallback((outcome: 'victory' | 'defeat') => {
+    if (battleEndedRef.current) return
+    battleEndedRef.current = true
+    const turns    = playerUnitsRef.current.reduce((sum, u) => sum + u.actionCount, 0)
+    const xpGained = outcome === 'victory' ? 100 * enemiesRef.current.length : 0
+    useGameStore.getState().setBattleResult({ outcome, turns, xpGained })
+    setTimeout(() => navigate(SCREEN_REGISTRY[SCREEN_IDS.BATTLE_RESULT].path), 2500)
+  }, [navigate])
+
+  const endBattleRef = useRef(endBattle)
+  useEffect(() => { endBattleRef.current = endBattle }, [endBattle])
 
   // Refs for mutual recursion between runAttack and scheduleCounterChain.
   // Both useCallbacks reference each other only through these refs so neither
@@ -875,6 +911,7 @@ export function BattleProvider({ children }: Props) {
       if (snapEnemies.every((e) => !isAlive(e))) {
         appendLog({ text: 'Victory! All enemies defeated.', colour: 'var(--accent-genesis)' })
         NarrativeService.emit({ type: 'battle_victory' })
+        endBattleRef.current('victory')
       }
 
       const arena     = arenaRef.current
@@ -1071,6 +1108,7 @@ export function BattleProvider({ children }: Props) {
             if (updatedPlayers.every((u) => !isAlive(u))) {
               appendLog({ text: 'Defeat! All allies have been slain.', colour: 'var(--accent-danger)' })
               NarrativeService.emit({ type: 'battle_defeat' })
+              endBattleRef.current('defeat')
             }
             const firstDeadPlayer = deadPlayers[0]
             if (firstDeadPlayer && arena) {
@@ -1085,6 +1123,7 @@ export function BattleProvider({ children }: Props) {
             if (updatedEnemies.every((e) => !isAlive(e))) {
               appendLog({ text: 'Victory! All enemies defeated.', colour: 'var(--accent-genesis)' })
               NarrativeService.emit({ type: 'battle_victory' })
+              endBattleRef.current('victory')
             }
             const firstDeadEnemy = deadEnemies[0]
             if (firstDeadEnemy && arena) {
