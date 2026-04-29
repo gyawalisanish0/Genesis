@@ -171,7 +171,7 @@ Genesis/
 │       │   │   └── index.ts      # re-exports
 │       │   └── engines/skill/    # createSkillInstance, getCachedSkill, levelUpSkill, invalidateCache
 │       ├── navigation/           # Screen routing, safe-area, back-button
-│       │   ├── screenRegistry.ts # SCREEN_IDS constants + SCREEN_REGISTRY map (7 screens)
+│       │   ├── screenRegistry.ts # SCREEN_IDS constants + SCREEN_REGISTRY map (9 screens: splash, main-menu, campaign, dungeon, pre-battle, battle, battle-result, roster, settings)
 │       │   ├── ScreenContext.tsx  # ScreenProvider: pathname→config, safe-area env() read, Capacitor + popstate back-button
 │       │   ├── ScreenShell.tsx   # Safe-area padding wrapper (full / top-only / none)
 │       │   └── useScreen.ts      # Hook: { screen, safeInsets, navigateTo }; registers onEnter/onLeave hooks
@@ -190,15 +190,18 @@ Genesis/
 │       ├── hooks/                # Shared React hooks (data fetching, UI state)
 │       │   └── useRosterData.ts          # Loads character index + all CharacterDef via DataService (cached)
 │       ├── screens/              # React screen components (one .tsx + one .module.css each)
-│       │   ├── SplashScreen.tsx          # Real DataService preload (characters + modes) → auto-navigate to main menu
+│       │   ├── SplashScreen.tsx          # Real DataService preload (characters + campaign + narrative) → auto-navigate to main menu
 │       │   ├── MainMenuScreen.tsx        # PLAY / ROSTER / SETTINGS nav; quit confirm on back
-│       │   ├── PreBattleScreen.tsx       # 3-step wizard shell + back button
+│       │   ├── CampaignScreen.tsx        # Stage select + unlocking; primary game flow for public demo
+│       │   ├── DungeonScreen.tsx         # Turn-based dungeon exploration; party movement, enemy patrol, fog of war, wave phase
+│       │   ├── DungeonContext.tsx        # Turn loop: moveParty → advancePatrols → checkWavePhase → launchBattle → return
+│       │   ├── PreBattleScreen.tsx       # 3-step wizard (backup flow; not used in campaign mode)
 │       │   ├── PreBattleContext.tsx      # Wizard state: step, selectedModeId, selectedTeam, canContinue
 │       │   ├── PreBattleStepMode.tsx     # Step 0 — mode selection (story / ranked / draft)
 │       │   ├── PreBattleStepTeam.tsx     # Step 1 — character roster pick (1–2 units)
 │       │   ├── PreBattleStepItems.tsx    # Step 2 — equipment slots (stub)
 │       │   ├── BattleScreen.tsx          # Battle layout: timeline strip, arena, BATTLE LOG button, portrait col, action grid, overlays
-│       │   ├── BattleContext.tsx         # Screen-local context: arenaRef, phase, units, log, timeline, DiceResult+message, 6-outcome dice, phase-gated arena animations, sequential AI timing, skipTurn; calls showTurnDisplay/hideTurnDisplay on arenaRef (no React TurnDisplay state)
+│       │   ├── BattleContext.tsx         # Screen-local context: arenaRef, phase, units, log, timeline, DiceResult, endBattle navigation, tick displacement at start, phase-gated arena animations, sequential AI timing
 │       │   ├── BattleLogOverlay.tsx      # Slide-up battle log history panel; opened by BATTLE LOG button; closed by ✕, backdrop tap, or back button; auto-scrolls to latest entry
 │       │   ├── BattleLogOverlay.module.css
 │       │   ├── DiceResultOverlay.module.css
@@ -440,7 +443,10 @@ public/data/characters/index.json              # character discovery list
 public/data/characters/{id}/main.json          # CharacterDef (stats, class, rarity…)
 public/data/characters/{id}/skills.json        # SkillDef[] for that character
 public/data/characters/{id}/dialogue.json      # CharacterDialogueDef — universal battle reactions (optional)
-public/data/levels/{levelId}/narrative.json    # LevelNarrativeDef — story beats + cutscenes (optional)
+public/data/campaign/index.json                # stage discovery list ["stage_001", ...]
+public/data/campaign/{stageId}/stage.json      # StageDef (playerUnits, moveRange, enemyAi, playerControl)
+public/data/campaign/{stageId}/map.json        # MapDef (tilemap, entities, entities, wavePhase, fogOfWar)
+public/data/campaign/{stageId}/narrative.json  # LevelNarrativeDef — dungeon-specific story beats + cutscenes
 public/data/modes/story.json
 ```
 
