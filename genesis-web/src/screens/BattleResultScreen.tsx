@@ -31,19 +31,28 @@ const BATTLE_STATS = [
 export function BattleResultScreen() {
   const { navigateTo } = useScreen()
   const storedResult = useGameStore((s) => s.battleResult)
+  const returnScreen = useGameStore((s) => s.returnScreen)
   const resetBattle  = useGameStore((s) => s.resetBattle)
+  const setReturnScreen = useGameStore((s) => s.setReturnScreen)
 
   const result   = storedResult ?? MOCK_RESULT
   const victory  = result.outcome === 'victory'
   const createScrollAwareHandler = useScrollAwarePointer()
 
   const handlePrimary = () => {
-    resetBattle()
-    if (victory) navigateTo(SCREEN_IDS.MAIN_MENU)
-    else navigateTo(SCREEN_IDS.PRE_BATTLE)
+    if (returnScreen) {
+      const dest = returnScreen
+      setReturnScreen(null)
+      navigateTo(dest)
+    } else {
+      resetBattle()
+      if (victory) navigateTo(SCREEN_IDS.MAIN_MENU)
+      else navigateTo(SCREEN_IDS.PRE_BATTLE)
+    }
   }
 
   const handleMainMenu = () => {
+    setReturnScreen(null)
     resetBattle()
     navigateTo(SCREEN_IDS.MAIN_MENU)
   }
@@ -113,7 +122,9 @@ export function BattleResultScreen() {
               className={`${styles.primaryBtn} ${!victory ? styles.primaryBtnRetry : ''}`}
               onPointerDown={createScrollAwareHandler({ onTap: handlePrimary })}
             >
-              {victory ? 'CONTINUE →' : '↺ RETRY'}
+              {victory
+                ? (returnScreen ? 'RETURN TO DUNGEON →' : 'CONTINUE →')
+                : '↺ RETRY'}
             </button>
             <button className={styles.ghostBtn} onPointerDown={createScrollAwareHandler({ onTap: handleMainMenu })}>
               MAIN MENU

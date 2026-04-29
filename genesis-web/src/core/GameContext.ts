@@ -2,7 +2,8 @@
 // Import `useGameStore` anywhere in the React tree; no provider needed.
 
 import { create } from 'zustand'
-import type { Unit, ModeDef, BattleResult, AppSettings } from './types'
+import type { Unit, ModeDef, BattleResult, AppSettings, DungeonState } from './types'
+import type { ScreenId } from './screen-types'
 import { DEFAULT_SETTINGS } from './constants'
 
 interface GameStore {
@@ -15,6 +16,11 @@ interface GameStore {
   // Post-battle
   battleResult:  BattleResult | null
 
+  // Campaign / dungeon
+  dungeonState:             DungeonState | null
+  currentEncounterEnemies:  string[]    // defIds set by DungeonContext before navigating to battle
+  returnScreen:             ScreenId | null  // screen to return to after BattleResultScreen
+
   // Persisted preferences
   settings: AppSettings
 
@@ -24,23 +30,33 @@ interface GameStore {
   setSelectedTeamIds(ids: string[]): void
   setEnemies(enemies: Unit[]): void
   setBattleResult(result: BattleResult): void
+  setDungeonState(state: DungeonState | null): void
+  setCurrentEncounterEnemies(ids: string[]): void
+  setReturnScreen(screen: ScreenId | null): void
   updateSetting<K extends keyof AppSettings>(key: K, value: AppSettings[K]): void
   resetBattle(): void
 }
 
 export const useGameStore = create<GameStore>((set) => ({
-  selectedMode:    null,
-  selectedTeam:    [],
-  selectedTeamIds: [],
-  enemies:         [],
-  battleResult:    null,
-  settings:        { ...DEFAULT_SETTINGS },
+  selectedMode:             null,
+  selectedTeam:             [],
+  selectedTeamIds:          [],
+  enemies:                  [],
+  battleResult:             null,
+  dungeonState:             null,
+  currentEncounterEnemies:  [],
+  returnScreen:             null,
+  settings:                 { ...DEFAULT_SETTINGS },
 
   setSelectedMode:    (mode)    => set({ selectedMode: mode }),
   setSelectedTeam:    (team)    => set({ selectedTeam: team }),
   setSelectedTeamIds: (ids)     => set({ selectedTeamIds: ids }),
   setEnemies:         (enemies) => set({ enemies }),
   setBattleResult:    (result)  => set({ battleResult: result }),
+
+  setDungeonState:            (state)  => set({ dungeonState: state }),
+  setCurrentEncounterEnemies: (ids)    => set({ currentEncounterEnemies: ids }),
+  setReturnScreen:            (screen) => set({ returnScreen: screen }),
 
   updateSetting: (key, value) =>
     set((s) => ({ settings: { ...s.settings, [key]: value } })),

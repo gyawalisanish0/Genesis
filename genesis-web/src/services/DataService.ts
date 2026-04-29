@@ -3,7 +3,7 @@
 // Layer rules: no React imports; Capacitor platform check guards native paths.
 // All callers receive typed data; Zod validation is deferred to Wave C.
 
-import type { CharacterDef, ModeDef } from '../core/types'
+import type { CharacterDef, ModeDef, StageDef, MapDef } from '../core/types'
 import type { SkillDef } from '../core/effects/types'
 import type { CharacterDialogueDef, LevelNarrativeDef } from '../core/narrative'
 
@@ -11,11 +11,14 @@ import type { CharacterDialogueDef, LevelNarrativeDef } from '../core/narrative'
 
 const cache = {
   characterIndex:    null as string[] | null,
+  campaignIndex:     null as string[] | null,
   characters:        new Map<string, CharacterDef>(),
   characterSkills:   new Map<string, SkillDef[]>(),  // keyed by characterId
   modes:             new Map<string, ModeDef>(),
   characterDialogue: new Map<string, CharacterDialogueDef>(),
   levelNarrative:    new Map<string, LevelNarrativeDef>(),
+  stages:            new Map<string, StageDef>(),
+  maps:              new Map<string, MapDef>(),
 }
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
@@ -119,12 +122,51 @@ export async function loadLevelNarrative(levelId: string): Promise<LevelNarrativ
   }
 }
 
+/** Returns the list of available campaign stage IDs. */
+export async function loadCampaignIndex(): Promise<string[]> {
+  if (cache.campaignIndex) return cache.campaignIndex
+  const raw = await fetchJson('data/campaign/index.json')
+  cache.campaignIndex = raw as string[]
+  return cache.campaignIndex
+}
+
+/** Load stage definition. Returns null silently when absent. */
+export async function loadStageDef(stageId: string): Promise<StageDef | null> {
+  const cached = cache.stages.get(stageId)
+  if (cached) return cached
+  try {
+    const raw = await fetchJson(`data/campaign/${stageId}/stage.json`)
+    const def = raw as StageDef
+    cache.stages.set(stageId, def)
+    return def
+  } catch {
+    return null
+  }
+}
+
+/** Load dungeon map definition. Returns null silently when absent. */
+export async function loadMapDef(stageId: string): Promise<MapDef | null> {
+  const cached = cache.maps.get(stageId)
+  if (cached) return cached
+  try {
+    const raw = await fetchJson(`data/campaign/${stageId}/map.json`)
+    const def = raw as MapDef
+    cache.maps.set(stageId, def)
+    return def
+  } catch {
+    return null
+  }
+}
+
 /** Test utility — clears all cached data between test cases. */
 export function clearCache(): void {
   cache.characterIndex = null
+  cache.campaignIndex  = null
   cache.characters.clear()
   cache.characterSkills.clear()
   cache.modes.clear()
   cache.characterDialogue.clear()
   cache.levelNarrative.clear()
+  cache.stages.clear()
+  cache.maps.clear()
 }

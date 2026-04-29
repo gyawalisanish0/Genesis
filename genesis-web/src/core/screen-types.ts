@@ -9,6 +9,8 @@ export type ScreenId =
   | 'battle-result'
   | 'roster'
   | 'settings'
+  | 'campaign'
+  | 'dungeon'
 
 // Controls which device-edge insets get applied as padding.
 // 'full'     — all 4 sides: menus, roster, settings
