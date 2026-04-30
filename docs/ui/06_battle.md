@@ -20,8 +20,16 @@ battle flows through this screen.
 | **Exit to** | Battle Result (win/loss) · Main Menu (forfeit via pause menu) |
 
 **Battle entry guard:** if `BattleScreen` mounts with no team selected
-(`playerUnit === null` after loading), it silently redirects to Pre-Battle.
+(`playerUnits.length === 0` after loading), it silently redirects to Pre-Battle.
 This guards against direct URL access.
+
+**Single controlled unit rule (default):** the portrait HUD shows **only the
+party leader** — the first entry of `selectedTeamIds`. The action grid binds to
+`activePlayerUnit` (the leader by default). Other party members appear in the
+arena and timeline but never appear in the portrait panel and do not receive
+player input; they fight as **AI allies** on their own ticks. Modes can opt-in
+to multi-unit control via `playerControl: 'all'`. See
+`docs/mechanics/party-leader.md`.
 
 **Back button (in-battle strict pause loop):**
 - First back press → pause overlay appears (`isPaused = true`)
@@ -330,16 +338,21 @@ Tapping ROLL triggers a 250 ms pulse, then fires `executeSkill(selectedSkill)` a
 
 | Component | Size (dp) | Properties |
 |---|---|---|
-| Turn counter | auto × 20 | "Turn N" `$t-micro` `$text-secondary`; N = `playerUnit.actionCount + 1`; updates after dice ends |
+| Turn counter | auto × 20 | "Turn N" `$t-micro` `$text-secondary`; N = `leader.actionCount + 1`; updates after dice ends |
 | Tick value | auto × 20 | "Tick: N" `$t-micro` `$text-muted` |
 | Portrait circle | 100 × 100 | `$accent-genesis` ring 3 dp; placeholder image |
 | Class/rarity badge | auto × 16 | `ClassName ★N` `$t-micro` `$accent-gold` |
 | HP row | full width | Label "HP" + `ResourceBar hp` + `"N/MAX"` value `$t-micro` `$text-muted` |
 | AP row | full width | Label "AP" + `ResourceBar ap` + `"N/MAX"` value `$t-micro` `$text-muted` |
 
-HP/AP numerals and the turn counter all update simultaneously when `playerUnit` state
+HP/AP numerals and the turn counter all update simultaneously when `leader` state
 commits after the dice animation (via `playerApplyTimerRef`). On End/Skip they update
 immediately since there is no dice animation.
+
+**Ally visibility**: AI allies do **not** appear in the portrait panel. They
+remain visible on the timeline strip (left edge) and as figures inside the
+Phaser arena, where their HP and tick position can still be observed. The
+portrait panel is reserved exclusively for the leader.
 
 ---
 

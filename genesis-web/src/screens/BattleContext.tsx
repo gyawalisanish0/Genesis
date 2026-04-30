@@ -73,6 +73,7 @@ interface BattleContextValue {
   tickValue:        number
   activeUnitIds:    Set<string>
   playerUnits:      Unit[]    // all player-side units (controlled + AI allies)
+  leader:           Unit | null  // the controlled leader (always present once loaded); HUD binds here
   activePlayerUnit: Unit | null  // player-controlled unit currently acting; null during enemy phase
   enemies:          Unit[]
   log:             LogEntry[]
@@ -360,14 +361,20 @@ export function BattleProvider({ children }: Props) {
           ),
         )
 
-        // Displace any coincident starting ticks so no two units share the same
-        // tick at battle open — prevents the AI from processing multiple units in
-        // one playDice call which would destroy the first unit's callback.
+        // Force every unit onto a unique starting tick. The general
+        // resolveTickDisplacement only displaces when TICK_MAX_OCCUPANCY (4) is
+        // reached, but the synchronous AI for-loop calls arena.playDice once per
+        // active unit — a second call destroys the first call's onDone chain,
+        // which freezes the battle. Strict uniqueness at battle open prevents
+        // any starting collision regardless of party size.
         const ticks = new Map<string, number>()
+        const used  = new Set<number>()
         const allLoaded = [...loadedPlayers, ...loadedEnemies]
         for (const u of allLoaded) {
-          const finalTick = resolveTickDisplacement(u.tickPosition, ticks, u.id)
-          ticks.set(u.id, finalTick)
+          let tick = u.tickPosition
+          while (used.has(tick)) tick += 1
+          ticks.set(u.id, tick)
+          used.add(tick)
         }
         // Sync displaced ticks back into unit objects so registeredTicks and
         // unit.tickPosition stay consistent.
@@ -525,6 +532,13 @@ export function BattleProvider({ children }: Props) {
 
   const activePlayerUnitRef = useRef<Unit | null>(null)
   useEffect(() => { activePlayerUnitRef.current = activePlayerUnit }, [activePlayerUnit])
+
+  // The leader unit — always derived from controlledIds. With the default
+  // 'single' control mode, controlledIds has one entry: playerUnits[0].
+  // With 'all' mode, the first controlled unit is treated as the HUD anchor.
+  const leader = useMemo<Unit | null>(() => {
+    return playerUnits.find((u) => controlledIds.has(u.id)) ?? null
+  }, [playerUnits, controlledIds])
 
   // ── Log + history helpers ──────────────────────────────────────────────────
   // Declared here (before phase-derivation) so the phase effect can call appendLog.
@@ -1232,9 +1246,9 @@ export function BattleProvider({ children }: Props) {
       arenaRef,
       phase,
       narrativePaused,
-      turnNumber: (playerUnits[0]?.actionCount ?? 0) + 1,
+      turnNumber: (leader?.actionCount ?? 0) + 1,
       tickValue, activeUnitIds,
-      playerUnits, activePlayerUnit, enemies, log, historyEntries,
+      playerUnits, leader, activePlayerUnit, enemies, log, historyEntries,
       selectedSkill, selectedTarget, showTargetPicker,
       gridCollapsed, isPaused, isLoading,
       diceResult, pendingCounterDecision,

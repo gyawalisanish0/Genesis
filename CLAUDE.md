@@ -65,7 +65,40 @@ in count. The combat framework treats units as an open collection.
   etc.) is a runtime metric, not a round system. The rule is about
   initiative truth, not vocabulary
 
-### 4. Reactive mechanics use hooks, not hardcoded branches
+### 4. Single controlled unit by default, mode-dependent control
+
+The default is **one controlled unit per battle** — the **party leader**. Other
+party members fight as **AI-controlled allies**, sharing the same `isAlly: true`
+faction tag as the leader. Modes may override this via
+`ModeDef.settings.playerControl`.
+
+- **HUD shows ONE controlled unit** — `PortraitPanel` binds to the `leader`
+  alone; `ActionGrid` binds to `activePlayerUnit` (also the leader by default).
+  Ally units appear on the timeline and arena but never in the player HUD.
+- **AI allies use the same AI pipeline** as enemies — `telegraphTimer →
+  actionTimer → applyTimer` — and target enemies via the caster-relative
+  selector logic in `resolveSkillTargets` (`'enemy'` selector resolves to the
+  opposite faction of the caster).
+- **Leader = first slot** — `playerUnits[0]` is the leader by default. Campaigns
+  control leader identity by ordering `stage.playerUnits.units`; pre-battle
+  reorders are exposed in the wizard for non-campaign modes.
+- **`controlledIds`** is derived in `BattleContext`:
+  - `playerControl: 'single'` (default; absent value) → `{ playerUnits[0].id }`
+  - `playerControl: 'all'` → every player unit ID; each takes its own player turn
+- **Dungeon = single party token** — only the leader's portrait and position
+  render on the dungeon grid; the rest of the party is implicit (alive but not
+  visualized outside battle).
+- **No new `Unit.team` / `Unit.isControlled` fields** — `Unit.isAlly` (boolean)
+  is the only faction tag; control is a screen-layer concern derived from
+  `selectedMode`. `core/` stays free of UI assumptions.
+
+This rule supersedes the broader "no hardcoded team-size cap" principle only at
+the **HUD layer** — `core/` still treats the unit roster as an open collection;
+the cap is purely a UX decision applied in `BattleScreen` and `DungeonScreen`.
+
+See `docs/mechanics/party-leader.md` for the full spec.
+
+### 5. Reactive mechanics use hooks, not hardcoded branches
 
 The counter mechanic is the canonical example: the framework detects Evasion
 and checks for a `counter`/`uniqueCounter`-tagged skill — it does **not**
