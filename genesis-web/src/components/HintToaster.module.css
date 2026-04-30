@@ -1,0 +1,47 @@
+/* HintToaster — small dismissible chip at the top or bottom of the screen.
+ * Pointer-events enabled so a tap dismisses; otherwise non-blocking. */
+
+.toaster {
+  position: absolute;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--accent-genesis);
+  border-radius: 1.25rem;
+  padding: 0.5rem 0.875rem;
+  max-width: calc(100% - 2rem);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  z-index: 70;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+.toasterTop {
+  top: calc(var(--safe-top) + 4.25rem);
+  transform: translateX(-50%);
+  animation: hintDropIn 280ms cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+.toasterBottom {
+  bottom: calc(var(--safe-bottom) + 4.5rem);
+  transform: translateX(-50%);
+  animation: hintRiseIn 280ms cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+.bulb { font-size: 0.95rem; line-height: 1; }
+.message { line-height: 1.3; }
+
+@keyframes hintDropIn {
+  from { opacity: 0; transform: translate(-50%, -0.5rem); }
+  to   { opacity: 1; transform: translate(-50%, 0);       }
+}
+
+@keyframes hintRiseIn {
+  from { opacity: 0; transform: translate(-50%, 0.5rem); }
+  to   { opacity: 1; transform: translate(-50%, 0);      }
+}

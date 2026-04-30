@@ -112,6 +112,14 @@ interface BattleContextValue {
   selectTarget:    (unit: Unit) => void
   toggleGrid:      () => void
   setPaused:       (v: boolean | ((prev: boolean) => boolean)) => void
+  // Skip active dice animation early (tap-to-skip UX). Cancels Phaser timers
+  // and fires onDone immediately so the attack flow advances without waiting.
+  skipDice:        () => void
+  // Skill info inspector — long-press a skill to open a centered modal with
+  // full description / costs / effects. Setting this also silently freezes the
+  // battle (same gate as narrativePaused) so the player can read at leisure.
+  inspectingSkill:    SkillInstance | null
+  setInspectingSkill: (skill: SkillInstance | null) => void
 }
 
 const BattleContext = createContext<BattleContextValue | null>(null)
@@ -294,6 +302,7 @@ export function BattleProvider({ children }: Props) {
   const [gridCollapsed, setGridCollapsed]   = useState(false)
   const [isPaused, setPaused]               = useState(false)
   const [narrativePaused, setNarrativePaused] = useState(false)
+  const [inspectingSkill, setInspectingSkill] = useState<SkillInstance | null>(null)
   const arenaRef = useRef<BattleArenaHandle>(null)
   const [pendingCounterDecision, setPendingCounterDecision] = useState<CounterDecision | null>(null)
   const [pendingClash, setPendingClash]               = useState<ClashState | null>(null)
@@ -470,6 +479,19 @@ export function BattleProvider({ children }: Props) {
     if (diceTimerRef.current) clearTimeout(diceTimerRef.current)
   }, [])
 
+  // Tap-to-skip dice: cancels the Phaser dice spin animation (firing its
+  // onDone immediately so the attack flow advances) AND clears the React-side
+  // dice-result auto-dismiss so subsequent enemy AI timing computes 0 remaining.
+  const skipDice = useCallback(() => {
+    if (!diceResultRef.current) return
+    if (diceTimerRef.current) {
+      clearTimeout(diceTimerRef.current)
+      diceTimerRef.current = null
+    }
+    setDiceResult(null)
+    arenaRef.current?.skipActiveDice()
+  }, [])
+
   // Cleanup deferred state-apply timers on unmount.
   useEffect(() => () => {
     if (applyTimerRef.current) clearTimeout(applyTimerRef.current)
@@ -557,7 +579,7 @@ export function BattleProvider({ children }: Props) {
   // while activeUnitIds still has both units at the same tick.
   useEffect(() => {
     if (isLoading || activeUnitIds.size === 0) return
-    if (narrativePaused) return
+    if (narrativePaused || inspectingSkill) return
     if (pendingClashRef.current || pendingTeamCollisionRef.current || pendingClashAnnounceRef.current) return
 
     // Player-controlled units active at this tick vs all AI units (enemies + non-controlled allies).
@@ -616,7 +638,7 @@ export function BattleProvider({ children }: Props) {
       setPhase('player')
       // Canvas stays blank until player selects a target — setTurnState is called in selectTarget/selectSkill.
     }
-  }, [activeUnitIds, playerUnits, enemies, controlledIds, isLoading, narrativePaused, appendLog])
+  }, [activeUnitIds, playerUnits, enemies, controlledIds, isLoading, narrativePaused, inspectingSkill, appendLog])
 
   // Clear pending target selection whenever it is no longer the player's turn.
   useEffect(() => {
@@ -837,7 +859,7 @@ export function BattleProvider({ children }: Props) {
   const executeSkill = useCallback((skillInst: SkillInstance) => {
     const actor = activePlayerUnitRef.current
     if (!actor || phase !== 'player') return
-    if (narrativePaused) return
+    if (narrativePaused || inspectingSkill) return
     if (isOnCooldown(actor, skillInst)) return
 
     const skill      = getCachedSkill(skillInst)
@@ -954,7 +976,7 @@ export function BattleProvider({ children }: Props) {
       if (playerApplyTimerRef.current) clearTimeout(playerApplyTimerRef.current)
       playerApplyTimerRef.current = setTimeout(applyState, DICE_RESULT_DISMISS_MS)
     }
-  }, [phase, narrativePaused, selectedTarget, runAttack, pushHistory, registerTick, appendLog, showTurnDisplay, setUnitSkillsMap])
+  }, [phase, narrativePaused, inspectingSkill, selectedTarget, runAttack, pushHistory, registerTick, appendLog, showTurnDisplay, setUnitSkillsMap])
 
   // ── Enemy AI ───────────────────────────────────────────────────────────────
   //
@@ -969,7 +991,7 @@ export function BattleProvider({ children }: Props) {
 
   useEffect(() => {
     if (phase !== 'enemy') return
-    if (narrativePaused) return
+    if (narrativePaused || inspectingSkill) return
 
     // AI handles: active non-controlled player allies + active enemies (sorted fastest-first).
     const controlled       = controlledIdsRef.current
@@ -1168,7 +1190,7 @@ export function BattleProvider({ children }: Props) {
       clearTimeout(actionTimer)
       if (applyTimerRef.current) clearTimeout(applyTimerRef.current)
     }
-  }, [phase, activeUnitIds, narrativePaused, showTurnDisplay]) // refs keep callbacks current; diceResult intentionally excluded
+  }, [phase, activeUnitIds, narrativePaused, inspectingSkill, showTurnDisplay]) // refs keep callbacks current; diceResult intentionally excluded
 
   // ── Misc actions ───────────────────────────────────────────────────────────
 
@@ -1176,7 +1198,7 @@ export function BattleProvider({ children }: Props) {
   const skipTurn = useCallback(() => {
     const actor = activePlayerUnitRef.current
     if (!actor || phase !== 'player') return
-    if (narrativePaused) return
+    if (narrativePaused || inspectingSkill) return
     setSelectedSkill(null)
     setSelectedTarget(null)
     setShowTargetPicker(false)
@@ -1186,7 +1208,7 @@ export function BattleProvider({ children }: Props) {
     registerTick(actor.id, fromTick + 10)
     appendLog({ text: 'You skipped your turn.' })
     arenaRef.current?.clearTurn()
-  }, [phase, narrativePaused, pushHistory, registerTick, appendLog])
+  }, [phase, narrativePaused, inspectingSkill, pushHistory, registerTick, appendLog])
 
   const selectSkill = useCallback((skill: SkillInstance | null) => {
     setSelectedSkill(skill)
@@ -1258,6 +1280,8 @@ export function BattleProvider({ children }: Props) {
       resolveClash, resolveTeamCollision,
       registerTick, unregisterTick, pushHistory,
       setPhase, appendLog, selectSkill, selectTarget, toggleGrid, setPaused,
+      skipDice,
+      inspectingSkill, setInspectingSkill,
     }}>
       {children}
     </BattleContext.Provider>

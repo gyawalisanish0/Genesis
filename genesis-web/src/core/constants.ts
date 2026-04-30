@@ -86,6 +86,11 @@ export const DUNGEON_REVEAL_RADIUS         = 2    // fog-of-war reveal radius ar
 export const DUNGEON_MOVE_ANIM_MS          = 180  // ms per tile movement tween
 export const DUNGEON_PATROL_ANIM_MS        = 200  // ms per tile for enemy patrol step
 export const DUNGEON_WAVE_VIGNETTE_OPACITY = 0.65 // overlay opacity during wave phase
+export const DUNGEON_ENCOUNTER_BANNER_MS   = 1200 // ms encounter telegraph banner is held before navigating to battle
+
+// First-time hint toaster
+export const HINT_TOASTER_DURATION_MS = 5000  // ms the hint stays visible before auto-dismiss
+export const HINT_STORAGE_PREFIX      = 'genesis-hint-'
 
 // Narrative layer — dialogue box + animation timings
 export const NARRATIVE_DISMISS_MS    = 3500  // ms before dialogue box auto-dismisses
