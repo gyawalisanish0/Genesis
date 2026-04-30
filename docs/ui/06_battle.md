@@ -20,14 +20,16 @@ battle flows through this screen.
 | **Exit to** | Battle Result (win/loss) · Main Menu (forfeit via pause menu) |
 
 **Battle entry guard:** if `BattleScreen` mounts with no team selected
-(`leader === null` after loading), it silently redirects to Pre-Battle.
+(`playerUnits.length === 0` after loading), it silently redirects to Pre-Battle.
 This guards against direct URL access.
 
-**Single controlled unit rule:** the action grid HUD (ROLL button, skill panel,
-End/Skip button, portrait panel HP/AP bars) is bound to **exactly one unit**
-— the **party leader**. Other party members appear in the arena and timeline
-but never receive player input; they fight as **AI allies** that target enemies
-on their own ticks. See `docs/mechanics/party-leader.md`.
+**Single controlled unit rule (default):** the portrait HUD shows **only the
+party leader** — the first entry of `selectedTeamIds`. The action grid binds to
+`activePlayerUnit` (the leader by default). Other party members appear in the
+arena and timeline but never appear in the portrait panel and do not receive
+player input; they fight as **AI allies** on their own ticks. Modes can opt-in
+to multi-unit control via `playerControl: 'all'`. See
+`docs/mechanics/party-leader.md`.
 
 **Back button (in-battle strict pause loop):**
 - First back press → pause overlay appears (`isPaused = true`)
@@ -347,10 +349,10 @@ HP/AP numerals and the turn counter all update simultaneously when `leader` stat
 commits after the dice animation (via `playerApplyTimerRef`). On End/Skip they update
 immediately since there is no dice animation.
 
-**Ally portraits**: when the party has more than one unit, AI allies render as
-**smaller secondary portrait pills** stacked above the leader's main portrait
-(48 dp diameter, HP-only mini-bar, no AP gauge — the player cannot spend ally
-AP). Allies remain non-interactive: tapping their portraits does nothing.
+**Ally visibility**: AI allies do **not** appear in the portrait panel. They
+remain visible on the timeline strip (left edge) and as figures inside the
+Phaser arena, where their HP and tick position can still be observed. The
+portrait panel is reserved exclusively for the leader.
 
 ---
 

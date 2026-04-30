@@ -49,8 +49,7 @@ Describes one stage's battle properties, player team, and initial setup.
   "description": "A ruined outpost at the edge of the frontier.",
   "playerUnits": {
     "mode": "fixed",
-    "units": ["warrior_001", "hunter_001"],
-    "leader": "warrior_001"
+    "units": ["warrior_001", "hunter_001"]
   },
   "moveRange": 1,
   "settings": {
@@ -64,15 +63,14 @@ Describes one stage's battle properties, player team, and initial setup.
 
 **Fields**:
 - `playerUnits.mode`: `"fixed"` (team set by stage) or `"player"` (player selects)
-- `playerUnits.units`: Array of character `defId` values
-- `playerUnits.leader` (optional): `defId` of the controlled party leader.
-  When absent, the leader defaults to the **first entry** of `units`. The leader
-  is the only unit the player can issue commands to; the rest fight as **AI
-  allies** alongside the leader. See `docs/mechanics/party-leader.md`.
+- `playerUnits.units`: Array of character `defId` values. **The first entry is
+  the leader** — the only unit the player can issue commands to when
+  `playerControl: 'single'`. The rest fight as AI allies. See
+  `docs/mechanics/party-leader.md`.
 - `moveRange`: Grid squares per turn (typically 1 for single-hex movement)
 - `settings.enemyAi`: `"patrol"` (fixed routes) or future `"hunt"` (pursue player)
-- `settings.playerControl`: `"single"` (one controlled unit + AI allies — the
-  default and currently the only supported mode) or future `"squad"`
+- `settings.playerControl`: `"single"` (default — one HUD slot, the rest are AI
+  allies) or `"all"` (every party unit takes its own player-driven turn)
 
 ### Map definition — `public/data/campaign/{stageId}/map.json`
 
@@ -189,16 +187,16 @@ When the party token and an enemy wave occupy adjacent cells (or same cell in
 Phase 1), **combat is initiated**:
 
 1. DungeonContext calls `launchBattle()`
-2. Creates a temporary `ModeDef` from stage settings
-3. Sets `currentEncounterEnemies` to enemy `defId` list from wave
-4. Sets `currentLeaderId` to the dungeon's `leaderId` (so BattleContext knows
-   which unit gets the player HUD)
+2. Builds a `ModeDef` from `stage.settings` (carrying `playerControl`)
+3. Calls `setSelectedMode(modeDef)` and `setSelectedTeamIds(stage.playerUnits.units)`
+   — the **first entry** of `units` becomes the leader inside BattleContext
+4. Sets `currentEncounterEnemies` to the enemy `defId` list from the wave
 5. Sets `returnScreen` to `SCREEN_IDS.DUNGEON`
 6. Navigates to `BATTLE` screen
 
-Inside battle, the **leader** receives the action grid HUD; all other party
-members enter as `team: 'ally'` AI units that target enemies on their own
-ticks. See `docs/mechanics/party-leader.md`.
+Inside battle, the **leader** receives the portrait HUD. With the default
+`playerControl: 'single'`, all other party members enter as AI allies that
+target enemies on their own ticks. See `docs/mechanics/party-leader.md`.
 
 #### During battle
 

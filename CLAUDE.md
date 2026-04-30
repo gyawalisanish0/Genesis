@@ -65,31 +65,32 @@ in count. The combat framework treats units as an open collection.
   etc.) is a runtime metric, not a round system. The rule is about
   initiative truth, not vocabulary
 
-### 4. One controlled unit, party members fight as AI allies
+### 4. Single controlled unit by default, mode-dependent control
 
-The player **controls exactly one unit per battle** — the **party leader**. Other
-party members appear in the battle as **AI-controlled allies** and the dungeon
-overworld shows a **single party token** even when multiple units are present.
+The default is **one controlled unit per battle** — the **party leader**. Other
+party members fight as **AI-controlled allies**, sharing the same `isAlly: true`
+faction tag as the leader. Modes may override this via
+`ModeDef.settings.playerControl`.
 
-- **HUD shows ONE controlled unit** — the action grid, ROLL button, and skill
-  panel are bound to the leader only; ally units are visible on the timeline
-  and arena but not in the player's action HUD
-- **AI allies act on their own ticks** — driven by the same enemy-AI sequencing
-  pipeline (`telegraphTimer → actionTimer → applyTimer`) but tagged
-  `team: 'ally'` so they target enemies, not the player
-- **Leader selection is mode/stage-dependent**:
-  - **Story / Ranked**: player chooses the leader at pre-battle (first slot of
-    `selectedTeamIds` is the leader by default; user can reorder)
-  - **Campaign**: `stage.json` may set `leader: 'warrior_001'` to force a specific
-    leader (e.g. story missions where Iron Warden is the protagonist); falls back
-    to first `selectedTeamIds` if absent
-- **Dungeon = single party token** — only the leader's portrait and position render
-  on the dungeon grid; the rest of the party is implicit (alive but not visualized
-  outside battle)
-- **`Unit.team`** field — `'player' | 'ally' | 'enemy'` — drives both targeting
-  rules in the combat engine and which units the player can issue commands to
-- **`Unit.isControlled`** field — `true` for the leader, `false` for AI allies
-  and enemies; the action grid filters on this flag
+- **HUD shows ONE controlled unit** — `PortraitPanel` binds to the `leader`
+  alone; `ActionGrid` binds to `activePlayerUnit` (also the leader by default).
+  Ally units appear on the timeline and arena but never in the player HUD.
+- **AI allies use the same AI pipeline** as enemies — `telegraphTimer →
+  actionTimer → applyTimer` — and target enemies via the caster-relative
+  selector logic in `resolveSkillTargets` (`'enemy'` selector resolves to the
+  opposite faction of the caster).
+- **Leader = first slot** — `playerUnits[0]` is the leader by default. Campaigns
+  control leader identity by ordering `stage.playerUnits.units`; pre-battle
+  reorders are exposed in the wizard for non-campaign modes.
+- **`controlledIds`** is derived in `BattleContext`:
+  - `playerControl: 'single'` (default; absent value) → `{ playerUnits[0].id }`
+  - `playerControl: 'all'` → every player unit ID; each takes its own player turn
+- **Dungeon = single party token** — only the leader's portrait and position
+  render on the dungeon grid; the rest of the party is implicit (alive but not
+  visualized outside battle).
+- **No new `Unit.team` / `Unit.isControlled` fields** — `Unit.isAlly` (boolean)
+  is the only faction tag; control is a screen-layer concern derived from
+  `selectedMode`. `core/` stays free of UI assumptions.
 
 This rule supersedes the broader "no hardcoded team-size cap" principle only at
 the **HUD layer** — `core/` still treats the unit roster as an open collection;

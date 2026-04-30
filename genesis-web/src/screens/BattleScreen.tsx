@@ -232,35 +232,37 @@ function StatusSlots() {
 }
 
 // ── Player portrait panel ───────────────────────────────────────────────────
+// HUD binds to a single controlled unit — the leader. AI allies fight alongside
+// but never appear in the action HUD. Mode-dependent control: the default is
+// 'single' (one HUD slot); a future 'all' mode could swap which leader is shown
+// per active tick, but only ever one slot is rendered here.
 function PortraitPanel() {
-  const { turnNumber, tickValue, playerUnits, activePlayerUnit } = useBattleScreen()
-  const isMulti = playerUnits.length > 1
+  const { turnNumber, tickValue, leader } = useBattleScreen()
+  if (!leader) return null
   return (
     <div className={styles.portrait}>
       <span className={styles.turnLabel}>Turn {turnNumber}</span>
       <span className={styles.tickLabel}>Tick: {tickValue}</span>
-      {playerUnits.map((unit) => (
-        <div key={unit.id} className={`${styles.unitEntry} ${activePlayerUnit?.id === unit.id ? styles.unitEntryActive : ''}`}>
-          <div className={isMulti ? styles.portraitCircleSmall : styles.portraitCircle}>
-            {unit.name.charAt(0)}
-          </div>
-          <span className={styles.lvlBadge}>{unit.className} ★{unit.rarity}</span>
-          <div className={styles.barRow}>
-            <div className={styles.barHeader}>
-              <span className={styles.barLabel}>HP</span>
-              <span className={styles.barValue}>{unit.hp}/{unit.maxHp}</span>
-            </div>
-            <ResourceBar variant="hp" value={unit.hp} max={unit.maxHp} />
-          </div>
-          <div className={styles.barRow}>
-            <div className={styles.barHeader}>
-              <span className={styles.barLabel}>AP</span>
-              <span className={styles.barValue}>{unit.ap}/{unit.maxAp}</span>
-            </div>
-            <ResourceBar variant="ap" value={unit.ap} max={unit.maxAp} />
-          </div>
+      <div className={`${styles.unitEntry} ${styles.unitEntryActive}`}>
+        <div className={styles.portraitCircle}>
+          {leader.name.charAt(0)}
         </div>
-      ))}
+        <span className={styles.lvlBadge}>{leader.className} ★{leader.rarity}</span>
+        <div className={styles.barRow}>
+          <div className={styles.barHeader}>
+            <span className={styles.barLabel}>HP</span>
+            <span className={styles.barValue}>{leader.hp}/{leader.maxHp}</span>
+          </div>
+          <ResourceBar variant="hp" value={leader.hp} max={leader.maxHp} />
+        </div>
+        <div className={styles.barRow}>
+          <div className={styles.barHeader}>
+            <span className={styles.barLabel}>AP</span>
+            <span className={styles.barValue}>{leader.ap}/{leader.maxAp}</span>
+          </div>
+          <ResourceBar variant="ap" value={leader.ap} max={leader.maxAp} />
+        </div>
+      </div>
     </div>
   )
 }

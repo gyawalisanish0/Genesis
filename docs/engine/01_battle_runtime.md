@@ -35,22 +35,14 @@ const enemyData = await Promise.all(enemyDefIds.map(loadCharacterWithSkills))
 
 ### Party leader vs AI allies
 
-The first slot of `selectedTeamIds` is the **leader** by default. Campaign mode
-overrides this via `currentLeaderId` (set from `stage.json` `playerUnits.leader`).
-Each party unit is tagged with a `team` and `isControlled` flag:
+The **first slot** of `selectedTeamIds` is the leader. Campaign mode controls
+which unit is first by ordering `stage.playerUnits.units` accordingly. The
+default control mode is `'single'`: only the leader is in `controlledIds` and
+only the leader receives the action grid HUD. The rest are **AI allies** that
+fight alongside but never accept player input. Modes can opt-in to multi-unit
+control via `settings.playerControl: 'all'`.
 
-```ts
-const leaderId = currentLeaderId ?? selectedTeamIds[0]
-
-const partyUnits = partyData.map(p => createUnit({
-  ...p,
-  team:         p.defId === leaderId ? 'player' : 'ally',
-  isControlled: p.defId === leaderId,
-}))
-```
-
-The **leader** receives the action grid HUD; the rest are **AI allies** that
-fight alongside but never accept player input. See `docs/mechanics/party-leader.md`.
+See `docs/mechanics/party-leader.md` for the full leader/ally model.
 
 `loadCharacterWithSkills(id)` fires two parallel requests per character:
 
@@ -66,33 +58,38 @@ Each character is built into a runtime `Unit` via `createUnit()`, and its
 starting tick position is assigned by `calculateStartingTick(stats.speed, className)`.
 Skills are wrapped into `SkillInstance` objects via `createSkillInstance(skillDef)`.
 
-### Tick displacement on initialization
+### Strict unique starting ticks
 
 **Critical to prevent AI loop freeze**: After building all player and enemy units,
-a tick displacement pass runs before the battle state is registered with the context.
+a strict-uniqueness pass assigns every unit its own tick position. The general
+`resolveTickDisplacement` only displaces when `TICK_MAX_OCCUPANCY` (currently 4)
+is reached — fine mid-battle for clash mechanics, but at battle start a 2- or
+3-unit collision must be eliminated outright:
 
 ```ts
-// Build ticks map: { unitId: tick, ... }
 const ticks = new Map<string, number>()
-for (const unit of allUnits) {
-  ticks.set(unit.id, unit.tickPosition)
-}
-
-// Apply resolveTickDisplacement to each unit
-for (const unit of allUnits) {
-  const adjusted = resolveTickDisplacement(unit.tickPosition, ticks, unit.id)
-  unit = setTickPosition(unit, adjusted)  // immutable update
-  ticks.set(unit.id, adjusted)
+const used  = new Set<number>()
+for (const u of [...loadedPlayers, ...loadedEnemies]) {
+  let tick = u.tickPosition
+  while (used.has(tick)) tick += 1   // bump until vacant
+  ticks.set(u.id, tick)
+  used.add(tick)
 }
 ```
 
-This ensures **no two units share a starting tick position**. Without this, a
-collision causes the enemy AI loop to call `arena.playDice()` multiple times
-synchronously. `DicePanel.spin()` calls `this.destroy()` on the first call,
-wiping animation callbacks for subsequent units, leaving them in an incomplete
-state and re-triggering the loop infinitely.
+Without strict uniqueness at battle open, the synchronous AI for-loop calls
+`arena.playDice()` once per active AI unit on the same tick. The second call's
+`DicePanel.spin()` calls `this.destroy()` on the panel — wiping the **first**
+unit's `onDone` callback chain. The first unit's `applyAIState` never fires;
+its tick never advances; the AI loop re-triggers on the next render and the
+battle freezes.
 
-See `src/core/combat/TickDisplacer.ts` for the displacement algorithm.
+Mid-battle, `resolveTickDisplacement` (called via `registerTick`) keeps the
+existing TICK_MAX_OCCUPANCY=4 threshold so clash mechanics still trigger when
+a player and enemy land on the same tick. The strict-uniqueness rule applies
+**only** to the initial seed.
+
+See `src/core/combat/TickDisplacer.ts` for mid-battle displacement.
 
 `isLoading` is `true` during this async phase. The UI renders a loading message
 and does not render the timeline or action grid.
@@ -112,14 +109,36 @@ and does not render the timeline or action grid.
 
 | Field | Type | Description |
 |---|---|---|
-| `partyUnits` | `Unit[]` | All player-side units (leader + AI allies); empty while loading |
-| `leader` | `Unit \| null` | Derived: `partyUnits.find(u => u.isControlled)` — the unit bound to the player HUD |
+| `playerUnits` | `Unit[]` | All player-side units (leader + AI allies); empty while loading |
+| `leader` | `Unit \| null` | Derived: `playerUnits.find(u => controlledIds.has(u.id))` — the unit bound to the portrait HUD |
+| `activePlayerUnit` | `Unit \| null` | Whichever controlled unit is currently at the now-line during the `'player'` phase; `null` outside that phase |
 | `enemies` | `Unit[]` | All enemy units in the battle |
 | `isLoading` | `boolean` | `true` while `DataService` is fetching; `false` once the battle is ready |
 
-The HUD action grid, ROLL button, and skill panel bind to `leader` only. Allies
-appear on the timeline and arena but never receive player input. See
+The HUD `PortraitPanel` binds to `leader` only. The `ActionGrid` (skill buttons,
+ROLL, End/Skip) binds to `activePlayerUnit`. With the default `'single'` mode
+they are the same unit. With `playerControl: 'all'`, `activePlayerUnit` rotates
+through controlled units while the portrait stays anchored on `leader`. See
 `docs/mechanics/party-leader.md` for the full leader/ally model.
+
+### Control mode (`controlledIds`)
+
+`controlledIds: Set<string>` is derived from the active mode:
+
+```ts
+const controlledIds = useMemo(() => {
+  if (selectedMode?.settings.playerControl === 'all') {
+    return new Set(playerUnits.map((u) => u.id))
+  }
+  const primaryId = playerUnits[0]?.id   // leader = first slot
+  return primaryId ? new Set([primaryId]) : new Set<string>()
+}, [selectedMode, playerUnits])
+```
+
+| Mode setting | `controlledIds` | Effect |
+|---|---|---|
+| `playerControl: 'single'` (or absent) | `{ playerUnits[0].id }` | Only the leader takes player turns; the rest fight as AI allies |
+| `playerControl: 'all'` | All player IDs | Every player unit takes its own player-driven turn when active on the tick stream |
 
 `Unit.actionCount` (declared in `core/types.ts`) tracks how many actions each unit has taken during the session. It is incremented by `incrementActionCount()` (`core/unit.ts`) inside the deferred apply for rolls and immediately inside `skipTurn()`. Enemy action counts are incremented in `applyTimerRef` after their dice animations. The field is intentionally on `Unit` rather than stored separately so any future system (XP scaling, passive triggers, telemetry) can read it without additional context lookups.
 
@@ -461,13 +480,17 @@ before the result screen transitions in.
 ### Campaign integration
 
 When battle is launched from **campaign mode**, the global Zustand store carries
-three additional fields:
+two additional fields. The leader is implied by the order of `selectedTeamIds`
+(its first entry), which `DungeonContext` sets directly from
+`stage.playerUnits.units`:
 
 | Field | Set by | Used for |
 |---|---|---|
 | `returnScreen` | DungeonContext before launching battle | Post-battle navigation destination after victory |
 | `currentEncounterEnemies` | DungeonContext before launching battle | Enemy `defId` list for current encounter |
-| `currentLeaderId` | DungeonContext (from `dungeonState.leaderId` / `stage.json`) | `defId` of the controlled party leader for this battle |
+
+`selectedMode` is set to a stage-derived `ModeDef` carrying
+`settings.playerControl`, which BattleContext consults to derive `controlledIds`.
 
 After victory, `BattleResultScreen` checks `returnScreen`:
 

@@ -22,105 +22,112 @@ token. This document specifies the leader system end-to-end.
 
 ## Unit roles
 
-```ts
-type UnitTeam = 'player' | 'ally' | 'enemy'
+The implementation keeps `Unit.isAlly` (boolean: friendly or hostile) as the
+faction tag and derives **controlled-vs-AI** at the screen layer, not on `Unit`.
+This avoids per-unit mutation when the control mode changes and keeps `core/`
+free of UI concerns.
 
+```ts
+// On Unit (core/types.ts) — unchanged from before:
 interface Unit {
-  // existing fields …
-  team:         UnitTeam   // 'player' = leader; 'ally' = AI ally; 'enemy' = hostile
-  isControlled: boolean    // true ONLY for the leader
-  isAlly?:      boolean    // legacy field retained for history rendering
+  // …
+  isAlly: boolean   // true = player-side (leader OR AI ally); false = enemy
 }
 ```
 
-| `team`     | `isControlled` | HUD | Targeted by enemies | Targets enemies |
-|---|---|---|---|---|
-| `player`   | `true`         | Yes — action grid bound here | Yes | Yes |
-| `ally`     | `false`        | No — appears on timeline + arena only | Yes | Yes |
-| `enemy`    | `false`        | No | No | Yes (vs `player`/`ally`) |
+```ts
+// In BattleContext (screens/BattleContext.tsx):
+const controlledIds = useMemo<Set<string>>(() => {
+  if (selectedMode?.settings.playerControl === 'all') {
+    return new Set(playerUnits.map((u) => u.id))   // every party unit is controlled
+  }
+  const primaryId = playerUnits[0]?.id
+  return primaryId ? new Set([primaryId]) : new Set<string>()
+}, [selectedMode, playerUnits])
 
-The combat engine treats `player` and `ally` units as the same faction for
-targeting and victory checks (battle ends when **all** non-enemy units die,
+const leader = playerUnits.find((u) => controlledIds.has(u.id)) ?? null
+```
+
+| Unit | `isAlly` | In `controlledIds`? | HUD | Targeted by enemies | Targets enemies |
+|---|---|---|---|---|---|
+| Leader     | `true`  | yes  | Yes — action grid bound here | Yes | Yes |
+| AI ally    | `true`  | no   | No — appears on timeline + arena only | Yes | Yes |
+| Enemy      | `false` | no   | No | No | Yes (vs ally side) |
+
+The combat engine treats all `isAlly === true` units as the same faction for
+targeting and victory checks (battle ends when **all** ally-side units die,
 or all enemies die).
 
 ---
 
-## Leader selection
+## Leader selection — driven by `ModeDef.settings.playerControl`
 
-Leader selection depends on the **mode** and **stage**:
+Leader selection is **mode-dependent**. The `playerControl` field on a mode
+definition decides whether the player controls one unit or all of them:
 
-### Pre-Battle modes (Story / Ranked / Draft)
+| `playerControl` | Behaviour |
+|---|---|
+| `'single'` (default; absent value) | Only `playerUnits[0]` is controlled — that unit is the leader. Everyone else fights as AI. |
+| `'all'` | Every party unit is controlled — each takes its own player-driven turn when active on the tick stream. The HUD still anchors on the first unit but the action grid binds to whichever controlled unit is currently active. |
+
+`controlledIds` is the source of truth: a `Set<string>` of unit IDs the player
+can issue commands to. It is recomputed whenever `selectedMode` or `playerUnits`
+change.
+
+### Story / Ranked (Pre-Battle wizard)
 
 The user picks the team in `PreBattleStepTeam`. The **first slot** of
-`selectedTeamIds` is treated as the leader by default. The user can reorder the
-team to promote a different unit. No JSON override applies.
+`selectedTeamIds` becomes the leader by default. Modes can declare
+`playerControl: 'all'` to let the player drive every unit individually
+(currently no story mode opts in — single is the default).
 
-```
-selectedTeamIds: ['hunter_001', 'warrior_001']
-                    ↑ leader
-```
+### Campaign (stage-driven)
 
-### Campaign mode (stage-driven)
-
-`stage.json` may declare `playerUnits.leader`:
+`stage.json` carries the same `settings.playerControl` field:
 
 ```json
 {
-  "playerUnits": {
-    "mode":   "fixed",
-    "units":  ["warrior_001", "hunter_001"],
-    "leader": "warrior_001"
+  "playerUnits": { "mode": "fixed", "units": ["warrior_001", "hunter_001"] },
+  "settings": {
+    "enemyAi":       "patrol",
+    "playerControl": "single"
   }
 }
 ```
 
-| Stage field present? | Leader source |
-|---|---|
-| `playerUnits.leader` set | That `defId` is the leader (story-driven; e.g. Iron Warden is the protagonist of stage_001) |
-| `playerUnits.leader` absent | First entry of `playerUnits.units` is the leader |
-| `playerUnits.mode === "player"` (rare in campaign) | Falls back to the user's pre-battle reorder rule |
+`DungeonContext.launchBattle()` builds a `ModeDef` from `stage.settings` and
+calls `setSelectedMode(modeDef)` + `setSelectedTeamIds(stage.playerUnits.units)`.
+BattleContext reads `selectedMode.settings.playerControl` to derive
+`controlledIds`. The first entry of `selectedTeamIds` is the leader.
 
-A stage-defined leader **must** appear in `playerUnits.units`. If the leader
-`defId` is not in the unit list, `DataService` throws a validation error during
-load.
+For story-critical missions where the protagonist must be a specific character,
+order `units` so the protagonist comes first:
 
-### Dungeon → Battle handoff
-
-`DungeonContext.launchBattle()` reads `dungeonState.leaderId` and writes it to
-the global Zustand store as `currentLeaderId`. `BattleContext` reads this on
-mount when constructing the party:
-
-```ts
-const leaderId = useGameStore.getState().currentLeaderId
-                 ?? selectedTeamIds[0]    // fallback for non-campaign modes
-
-const party = await Promise.all(selectedTeamIds.map(loadCharacterWithSkills))
-const partyUnits = party.map(p => createUnit({
-  ...p,
-  team:         p.defId === leaderId ? 'player' : 'ally',
-  isControlled: p.defId === leaderId,
-}))
+```json
+"units": ["warrior_001", "hunter_001"]   // Iron Warden leads
 ```
 
 ---
 
 ## HUD binding
 
-`BattleScreen` filters its action HUD bindings by `isControlled`:
+`BattleScreen.PortraitPanel` reads the `leader` field from `BattleContext` and
+renders **a single entry** — the leader's portrait, HP bar, AP bar, and class
+badge. AI allies are not displayed in the portrait panel.
 
 | HUD element | Bound to |
 |---|---|
-| `UnitPortrait` (centre, large) | The leader |
-| `ActionGrid` (skill buttons) | Leader's skills via `getUnitSkills(leader.id)` |
-| `ROLL` button | Leader only |
-| `END/SKIP` button | Leader only |
-| `ResourceBar` (HP/AP) — main panel | Leader |
-| Timeline strip | All units (`player`, `ally`, `enemy`) — full roster visible |
+| `PortraitPanel` (portrait + HP/AP) | `leader` only |
+| `ActionGrid` (skill buttons) | `activePlayerUnit`'s skills (which is always the leader unless `playerControl: 'all'`) |
+| `ROLL` button | `activePlayerUnit` (leader by default) |
+| `END/SKIP` button | `activePlayerUnit` (leader by default) |
+| Turn counter ("Turn N") | `leader.actionCount + 1` |
+| Timeline strip | All units (leader, allies, enemies) — full roster visible |
 | Arena (Phaser canvas) | All units rendered as figures — leader does not visually dominate |
 
-Allies appear as smaller portraits **above** or **beside** the leader's main
-portrait (TBD layout; see `docs/ui/06_battle.md`). They show HP bars but no AP
-gauges, since the player cannot spend their AP.
+Allies' health and AP can still be inspected on the timeline (and inside the
+Phaser arena via their figures), but the player cannot directly issue commands
+to them — they auto-fight via the AI loop.
 
 ---
 
