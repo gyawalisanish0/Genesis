@@ -120,6 +120,10 @@ export class BattleScene extends Phaser.Scene {
     this.dicePanel.spin(outcome, onDone)
   }
 
+  skipActiveDice(): void {
+    this.dicePanel.skip()
+  }
+
   playAttack(
     casterId: string,
     targetId: string,

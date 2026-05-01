@@ -35,7 +35,37 @@
   color: var(--text-primary);
   letter-spacing: 0.05em;
   text-transform: uppercase;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+
+/* Objective pill — defeated/total enemies. Always visible while in dungeon
+ * so the player can gauge progress at a glance. */
+.objectivePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.6rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--accent-danger);
+  border-radius: 0.875rem;
+  color: var(--accent-danger);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+  transition: border-color 200ms ease-out, color 200ms ease-out;
+}
+
+.objectivePillDone {
+  border-color: var(--accent-heal);
+  color: var(--accent-heal);
+}
+
+.objectiveIcon { font-size: 0.85rem; line-height: 1; }
+.objectiveCount { font-weight: 700; }
 
 /* D-pad */
 .dpad {
@@ -130,6 +160,115 @@
 .waveBtn:active {
   background: var(--accent-danger);
   color: var(--text-on-accent);
+}
+
+/* Persistent party HP pill — leader's HP visible at all times so the player
+ * always knows their fragility. Shifts to red below 30% HP. */
+.hpPill {
+  position: absolute;
+  top: calc(var(--safe-top) + 3.25rem);  /* below the dungeon header */
+  left: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.6rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--bg-elevated);
+  border-radius: 0.875rem;
+  z-index: 18;
+  pointer-events: none;
+  animation: hpPillFadeIn 240ms ease-out both;
+}
+
+.hpPillLow {
+  border-color: var(--accent-danger);
+  animation: hpPillFadeIn 240ms ease-out both, hpPillLowPulse 1.4s ease-in-out infinite;
+}
+
+.hpName {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.hpBarTrack {
+  width: 4rem;
+  height: 0.4rem;
+  background: var(--bg-deep);
+  border-radius: 0.2rem;
+  overflow: hidden;
+}
+
+.hpBarFill {
+  height: 100%;
+  background: var(--accent-danger);
+  transition: width var(--motion-bar);
+}
+
+.hpValue {
+  font-size: 0.65rem;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes hpPillFadeIn {
+  from { opacity: 0; transform: translateX(-0.5rem); }
+  to   { opacity: 1; transform: translateX(0);       }
+}
+
+@keyframes hpPillLowPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.0); }
+  50%      { box-shadow: 0 0 0 0.25rem rgba(239, 68, 68, 0.25); }
+}
+
+/* Encounter telegraph banner — sliding overlay shown after a wave is selected
+ * but before navigating to the BATTLE screen. Tells the player who they're
+ * about to fight. */
+.encounterBanner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background: rgba(0, 0, 0, 0.78);
+  z-index: 60;
+  pointer-events: none;
+  animation: encounterFadeIn 220ms ease-out both;
+}
+
+.encounterTitle {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: 0.25em;
+  color: var(--accent-danger);
+  text-shadow: 0 0 12px rgba(239, 68, 68, 0.55);
+  animation: encounterTitleIn 360ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.encounterEnemy {
+  font-size: 0.9rem;
+  letter-spacing: 0.18em;
+  color: var(--text-primary);
+  animation: encounterEnemyIn 480ms ease-out 120ms both;
+}
+
+@keyframes encounterFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes encounterTitleIn {
+  from { opacity: 0; transform: translateY(0.5rem) scale(0.85); letter-spacing: 0.5em; }
+  to   { opacity: 1; transform: translateY(0)      scale(1);    letter-spacing: 0.25em; }
+}
+
+@keyframes encounterEnemyIn {
+  from { opacity: 0; transform: translateY(0.5rem); }
+  to   { opacity: 1; transform: translateY(0);      }
 }
 
 /* Loading */

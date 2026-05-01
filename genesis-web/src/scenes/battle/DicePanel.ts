@@ -32,6 +32,10 @@ export class DicePanel {
   private scene:    Phaser.Scene
   private topInset: number
   private panel:    Phaser.GameObjects.Container | null = null
+  private spinEvent:   Phaser.Time.TimerEvent | null = null
+  private landTimer:   Phaser.Time.TimerEvent | null = null
+  private holdTimer:   Phaser.Time.TimerEvent | null = null
+  private pendingDone: (() => void) | null = null
 
   constructor(scene: Phaser.Scene, topInset = 0) {
     this.scene    = scene
@@ -40,6 +44,7 @@ export class DicePanel {
 
   spin(outcome: string, onDone: () => void): void {
     this.destroy()
+    this.pendingDone = onDone
     const { width, height } = this.scene.scale
     const cx = Math.floor(width / 2)
     const cy = Math.floor(this.topInset + (height - this.topInset) * 0.27)
@@ -60,7 +65,7 @@ export class DicePanel {
     this.panel.add(face)
 
     // Spin: cycle through random faces
-    const spinEvent = this.scene.time.addEvent({
+    this.spinEvent = this.scene.time.addEvent({
       delay: TICK_MS,
       repeat: Math.floor(SPIN_MS / TICK_MS) - 1,
       callback: () => {
@@ -70,8 +75,9 @@ export class DicePanel {
     })
 
     // Land on actual outcome
-    this.scene.time.delayedCall(SPIN_MS, () => {
-      spinEvent.destroy()
+    this.landTimer = this.scene.time.delayedCall(SPIN_MS, () => {
+      this.spinEvent?.destroy()
+      this.spinEvent = null
       label.setText('OUTCOME')
       face.setText(FACE[outcome] ?? outcome.toUpperCase())
         .setColor(tokenToHex(COLOUR[outcome] ?? 'var(--text-primary)'))
@@ -83,14 +89,33 @@ export class DicePanel {
         ease: 'Back.easeOut',
       })
       // Hold then signal done
-      this.scene.time.delayedCall(HOLD_MS, () => {
-        this.destroy()
-        onDone()
+      this.holdTimer = this.scene.time.delayedCall(HOLD_MS, () => {
+        this.fire()
       })
     })
   }
 
+  // Skip the animation: cancel timers, fire onDone immediately.
+  // Safe to call when no animation is active — it's a no-op.
+  skip(): void {
+    if (!this.pendingDone) return
+    this.fire()
+  }
+
+  private fire(): void {
+    const cb = this.pendingDone
+    this.pendingDone = null
+    this.destroy()
+    cb?.()
+  }
+
   destroy(): void {
+    this.spinEvent?.destroy()
+    this.spinEvent = null
+    this.landTimer?.destroy()
+    this.landTimer = null
+    this.holdTimer?.destroy()
+    this.holdTimer = null
     this.panel?.destroy()
     this.panel = null
   }

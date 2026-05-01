@@ -10,10 +10,12 @@ import { SCREEN_REGISTRY, SCREEN_IDS } from '../navigation/screenRegistry'
 import { useBackButton } from '../input/useBackButton'
 import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import { BattleArena } from '../components/BattleArena'
+import { HintToaster } from '../components/HintToaster'
 import { BattleProvider, useBattleScreen } from './BattleContext'
 import { BattleLogOverlay } from './BattleLogOverlay'
 import { ClashQteOverlay } from './ClashQteOverlay'
 import { TeamCollisionOverlay } from './TeamCollisionOverlay'
+import { SkillInfoOverlay } from './SkillInfoOverlay'
 import { isOnCooldown, ticksRemaining, turnsRemaining } from '../core/combat/CooldownResolver'
 import {
   TIMELINE_PX_PER_TICK, TIMELINE_OVERLAY_PX,
@@ -272,6 +274,7 @@ function ActionGrid() {
   const {
     phase, gridCollapsed, toggleGrid,
     activePlayerUnit, getUnitSkills, selectedSkill, selectedTarget, selectSkill, skipTurn,
+    setInspectingSkill,
   } = useBattleScreen()
   const createHandler = useScrollAwarePointer()
   const disabled = phase !== 'player'
@@ -282,7 +285,7 @@ function ActionGrid() {
   const slots = Array.from({ length: 4 }, (_, i) => playerSkills[i] ?? null)
 
   return (
-    <div className={styles.actionGrid}>
+    <div className={[styles.actionGrid, phase === 'player' ? styles.actionGridActive : ''].join(' ')}>
       {!gridCollapsed && (
         <>
           <div className={styles.actionRow}>
@@ -302,6 +305,12 @@ function ActionGrid() {
               const isDisabled = !hasSkill || disabled || onCooldown
               // Show selected target name on the active skill button.
               const targetLabel = isSelected && selectedTarget ? selectedTarget.name : null
+              const tapHandler = (hasSkill && !disabled && !onCooldown)
+                ? () => selectSkill(isSelected ? null : skillInst)
+                : undefined
+              const holdHandler = hasSkill
+                ? () => setInspectingSkill(skillInst)
+                : undefined
               return (
                 <button
                   key={i}
@@ -311,20 +320,27 @@ function ActionGrid() {
                     onCooldown              ? styles.skillBtnCooldown  : '',
                     isSelected              ? styles.skillBtnSelected  : '',
                   ].join(' ')}
-                  disabled={isDisabled}
-                  onPointerDown={hasSkill && !onCooldown ? createHandler({ onTap: () => {
-                    selectSkill(isSelected ? null : skillInst)
-                  }}) : undefined}
+                  // Note: no `disabled` attribute — long-press for skill info must
+                  // work even on cooldown / off-turn. Tap is gated inside tapHandler.
+                  aria-disabled={isDisabled}
+                  onPointerDown={hasSkill ? createHandler({ onTap: tapHandler, onHold: holdHandler }) : undefined}
                 >
                   <span className={styles.skillName}>{name}</span>
                   <span className={styles.skillLvl}>Lv {skillInst?.currentLevel ?? '—'}</span>
                   <span className={styles.skillTu}>{tuCost !== null ? `TU: ${tuCost}` : 'TU: —'}</span>
                   <span className={styles.skillChrg}>{hasSkill ? `Lv${skillInst.baseDef.maxLevel}` : '×—'}</span>
                   {onCooldown && (
-                    <span className={styles.skillCdBadge}>
-                      {tickCD > 0 ? `⏳${tickCD}t` : ''}
-                      {tickCD > 0 && turnCD > 0 ? ' ' : ''}
-                      {turnCD > 0 ? `⏳${turnCD}` : ''}
+                    <span className={styles.skillCdBadgeRow}>
+                      {tickCD > 0 && (
+                        <span className={`${styles.skillCdChip} ${styles.skillCdChipTick}`}>
+                          ⏳ {tickCD}t
+                        </span>
+                      )}
+                      {turnCD > 0 && (
+                        <span className={`${styles.skillCdChip} ${styles.skillCdChipTurn}`}>
+                          ↻ {turnCD}
+                        </span>
+                      )}
                     </span>
                   )}
                   {targetLabel && (
@@ -487,7 +503,7 @@ function TargetSelectOverlay() {
 
 // ── Battle layout ───────────────────────────────────────────────────────────
 function BattleLayout() {
-  const { arenaRef, isPaused, setPaused, isLoading, playerUnits } = useBattleScreen()
+  const { arenaRef, isPaused, setPaused, isLoading, playerUnits, diceResult, skipDice, inspectingSkill, setInspectingSkill } = useBattleScreen()
   const navigate    = useNavigate()
   const lastBackRef = useRef(0)
   const createHandler = useScrollAwarePointer()
@@ -509,6 +525,7 @@ function BattleLayout() {
     const now = Date.now()
     if (now - lastBackRef.current < BACK_DEBOUNCE_MS) return
     lastBackRef.current = now
+    if (inspectingSkill) { setInspectingSkill(null); return }
     if (logOpen) { setLogOpen(false); return }
     setPaused((prev) => !prev)
   })
@@ -527,13 +544,30 @@ function BattleLayout() {
     <div className={styles.root}>
       {isPaused && <PauseOverlay />}
       {logOpen && <BattleLogOverlay onClose={() => setLogOpen(false)} />}
+      {inspectingSkill && <SkillInfoOverlay skill={inspectingSkill} onClose={() => setInspectingSkill(null)} />}
       <CounterPromptOverlay />
       <TargetSelectOverlay />
       <ClashQteOverlay />
       <TeamCollisionOverlay />
+      <HintToaster id="battle-skill"  message="Tap a skill, then ROLL to attack." />
+      <HintToaster id="battle-inspect" message="Long-press any skill to see its full details." position="bottom" />
+      {diceResult && (
+        <HintToaster id="battle-skip-dice" message="Tap the canvas to skip the dice animation." position="bottom" />
+      )}
       <BattleTimeline />
       <div className={styles.main}>
-        <BattleArena ref={arenaRef} />
+        <div className={styles.arenaWrap}>
+          <BattleArena ref={arenaRef} />
+          {diceResult && (
+            <button
+              className={styles.diceSkipHotzone}
+              onPointerDown={createHandler({ onTap: skipDice })}
+              aria-label="Skip dice animation"
+            >
+              <span className={styles.diceSkipHint}>TAP TO SKIP</span>
+            </button>
+          )}
+        </div>
         <div className={styles.logButtonRow}>
           <button
             className={styles.logButton}

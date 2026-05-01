@@ -43,6 +43,7 @@ export interface BattleArenaHandle {
   clearTurn(): void
   // Stage 3 — phase-gated: React awaits onDone before advancing
   playDice(outcome: string, onDone: () => void): void
+  skipActiveDice(): void
   playAttack(casterId: string, targetId: string, outcome: string, damage: number, onDone: () => void): void
   playFeedback(text: string, colour: string): void
   // Stage 4 — death collapse (phase-gated: clearTurn should be called inside onDone)
@@ -136,6 +137,9 @@ export const BattleArena = forwardRef<BattleArenaHandle>(
         } else {
           onDone()
         }
+      },
+      skipActiveDice() {
+        sceneRef.current?.skipActiveDice()
       },
       playAttack(casterId, targetId, outcome, damage, onDone) {
         if (sceneRef.current) {

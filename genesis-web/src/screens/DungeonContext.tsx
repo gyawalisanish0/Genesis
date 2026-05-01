@@ -14,6 +14,7 @@ import { createUnit }       from '../core/unit'
 import {
   DUNGEON_DEFAULT_VISUAL_RANGE,
   DUNGEON_REVEAL_RADIUS,
+  DUNGEON_ENCOUNTER_BANNER_MS,
 } from '../core/constants'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -28,6 +29,12 @@ interface DungeonContextValue {
   entityPositions:  Record<string, { x: number; y: number }>
   defeatedEntityIds:Set<string>
   waveEnemies:      EnemyEntityDef[]
+  // Party leader summary — shown in the persistent HP pill so the player can
+  // see at a glance whose perspective is on screen.
+  partyLeader:      { name: string; hp: number; maxHp: number } | null
+  // Telegraph banner: short label shown before navigating into battle so the
+  // encounter feels intentional. Null while exploring/in wave UI.
+  encounterBanner:  string | null
   arenaRef:         RefObject<DungeonArenaHandle | null>
   moveParty:        (dx: number, dy: number) => void
   selectWaveEnemy:  (entityId: string) => void
@@ -62,6 +69,8 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
   const [entityPositions, setEntityPositions] = useState<Record<string, { x: number; y: number }>>({})
   const [defeatedEntityIds, setDefeatedEntityIds] = useState<Set<string>>(new Set())
   const [waveEnemies, setWaveEnemies] = useState<EnemyEntityDef[]>([])
+  const [encounterBanner, setEncounterBanner] = useState<string | null>(null)
+  const [partyLeader, setPartyLeader] = useState<{ name: string; hp: number; maxHp: number } | null>(null)
 
   const moveQueueRef  = useRef(false)   // true while animation in flight
   const stageDefRef   = useRef<StageDef | null>(null)
@@ -96,6 +105,10 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
       if (e.type !== 'trigger') positions[e.entityId] = { x: e.x, y: e.y }
     }
 
+    // Always load player units so the party HP pill + narrative registry are
+    // populated, regardless of whether we're resuming or starting fresh.
+    await registerPlayerUnits(stage)
+
     // Restore saved dungeon state or start fresh
     if (dungeonState?.stageId === stageId) {
       restoreState(dungeonState, map, positions)
@@ -105,9 +118,6 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
       partyRef.current = start
       setEntityPositions(positions)
       entityPosRef.current = positions
-
-      // Load player units for NarrativeUnits registry
-      await registerPlayerUnits(stage)
 
       // Wait for arena ref to attach + Phaser scene ready, then init + play intro
       waitForArenaReady(() => {
@@ -186,6 +196,12 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
     const loaded = await Promise.all(stage.playerUnits.units.map(loadCharacterWithSkills))
     const units  = loaded.map(({ characterDef }) => createUnit(characterDef, true))
     NarrativeUnits.register(units)
+    // Cache leader summary for the persistent HP pill. The first unit in
+    // stage.playerUnits.units is the party leader by convention.
+    const leader = units[0]
+    if (leader) {
+      setPartyLeader({ name: leader.name, hp: leader.hp, maxHp: leader.maxHp })
+    }
   }
 
   // ── Move party ─────────────────────────────────────────────────────────────
@@ -399,7 +415,15 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
     setCurrentEncounterEnemies([enemy.defId])
     setReturnScreen(SCREEN_IDS.DUNGEON)
 
-    navigateTo(SCREEN_IDS.BATTLE)
+    // Telegraph the encounter for a brief moment so the transition feels
+    // intentional rather than abrupt.
+    const enemyName = enemy.defId.replace(/_/g, ' ').toUpperCase()
+    setEncounterBanner(enemyName)
+    setPhase('transitioning')
+    setTimeout(() => {
+      setEncounterBanner(null)
+      navigateTo(SCREEN_IDS.BATTLE)
+    }, DUNGEON_ENCOUNTER_BANNER_MS)
   }
 
   // ── Resume after battle ────────────────────────────────────────────────────
@@ -441,7 +465,7 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
 
   const value: DungeonContextValue = {
     stageDef, mapDef, phase, partyTile, entityPositions,
-    defeatedEntityIds, waveEnemies, arenaRef,
+    defeatedEntityIds, waveEnemies, partyLeader, encounterBanner, arenaRef,
     moveParty, selectWaveEnemy,
   }
 

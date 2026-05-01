@@ -129,6 +129,55 @@
   overflow: hidden;
 }
 
+/* Wraps the BattleArena (Phaser canvas) so the tap-to-skip hotzone can sit
+ * absolutely over it without affecting layout. */
+.arenaWrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+/* Tap-to-skip dice hotzone — covers the arena while dice is animating.
+ * Transparent so the Phaser canvas reads through; only the hint chip is visible. */
+.diceSkipHotzone {
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: var(--s-sm);
+  z-index: 10;
+  font-family: var(--font-sans);
+  animation: diceSkipFadeIn 200ms ease-out both;
+}
+
+.diceSkipHotzone:active { transform: none; }
+
+.diceSkipHint {
+  background: var(--bg-overlay);
+  color: var(--text-secondary);
+  font-size: var(--t-micro-size);
+  letter-spacing: 0.12em;
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--r-md);
+  border: 1px solid var(--bg-elevated);
+  animation: diceSkipPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes diceSkipFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes diceSkipPulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}
+
 /* ── Battle log button row ──────────────────────────────────────────── */
 .logButtonRow {
   display: flex;
@@ -331,6 +380,19 @@
   flex-direction: column;
   padding: var(--s-sm);
   gap: var(--s-xs);
+  position: relative;
+  transition: box-shadow 200ms ease-out;
+}
+
+/* Player-turn pulse — soft inner ring breathes while phase === 'player'.
+ * Tells the player "your turn" at a glance without flashing anything bright. */
+.actionGridActive {
+  animation: actionGridPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes actionGridPulse {
+  0%, 100% { box-shadow: inset 0 0 0 1px rgba(139, 92, 246, 0.20); }
+  50%      { box-shadow: inset 0 0 0 2px rgba(139, 92, 246, 0.55); }
 }
 
 .actionRow {
@@ -417,6 +479,28 @@
   text-align: center;
   margin-top: 0.1rem;
 }
+
+/* Cooldown chips — amber (tick) and indigo (turn) so the player can distinguish
+ * elapsed-time cooldowns from action-count cooldowns at a glance. */
+.skillCdBadgeRow {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 0.2rem;
+  justify-content: center;
+  margin-top: 0.15rem;
+}
+
+.skillCdChip {
+  font-size: 0.6rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 0.625rem;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  border: 1px solid currentColor;
+}
+
+.skillCdChipTick { color: var(--accent-warn); }
+.skillCdChipTurn { color: var(--accent-info); }
 
 .skillBtnSelected {
   border-color: var(--accent-genesis);
