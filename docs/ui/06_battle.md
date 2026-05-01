@@ -203,6 +203,22 @@ keyframe) · `BattleScreen.tsx` (`TurnDisplayPanel` component, keyed by
 
 ---
 
+### Tap-to-Skip Dice
+
+During the 4-second `outcomeSlam` dice animation, the arena is wrapped in a
+transparent `.diceSkipHotzone` overlay (same dimensions as the arena). Any
+`onPointerDown` event on this overlay:
+
+1. Clears the React `diceTimerRef` dismiss timer
+2. Calls `arenaRef.current?.skipActiveDice()` which forwards to `BattleScene.skipActiveDice()` → `DicePanel.skip()`
+3. Inside `DicePanel.skip()`: cancels the Phaser `spinEvent`, `landTimer`, and `holdTimer`, then fires `onDone()` exactly once via the private `fire()` guard
+
+The React state (`diceResult = null`) and the Phaser canvas clean up in the same frame — no flash or double-resolution.
+
+A small `.diceSkipHint` label ("Tap to skip") appears at the bottom of the hotzone and fades in after 1 s (so it doesn't clutter fast reads), then fades out with the overlay.
+
+---
+
 ### Dice Result Overlay (full area, position:absolute)
 
 A full-screen centred outcome text burst that fires on every `runAttack` call
@@ -398,9 +414,23 @@ Column width: (202 − 8) / 2 = 97 dp per column; 8 dp gap.
 | Available | Full opacity; normal border |
 | Selected | `$accent-genesis` border 2 dp + inset shadow; ROLL button appears above portrait |
 | Insufficient AP | 50% opacity; border tinted `$accent-danger` |
+| On cooldown | Cooldown badges shown (see Cooldown Badges section); `aria-disabled` — tap disabled, hold still works |
 | Empty | 30% opacity; name label shows "—" |
-| Long-press | Opens `SkillDetailPopup` (read-only, no upgrade action) |
-| Enemy turn | `disabled=True`; 20% opacity |
+| Long-press (any state) | Opens `SkillInfoOverlay` — always available regardless of cooldown or turn phase |
+| Enemy turn | `aria-disabled`; 20% opacity — hold for info still works |
+
+> **`aria-disabled` not `disabled`:** Skill buttons intentionally use `aria-disabled` rather than the HTML `disabled` attribute so that long-press events still fire even when the skill cannot be used. This keeps the skill info overlay accessible at all times.
+
+#### Cooldown Badges
+
+Two distinct chips appear below the skill name when a skill is on cooldown:
+
+| Chip | Colour | Meaning |
+|---|---|---|
+| ⏳ `Nt` | Amber (`--accent-warn`) | **Tick cooldown** — N ticks must elapse on this unit's `tickPosition` |
+| ↻ `N` | Indigo | **Turn cooldown** — N of this unit's own actions must occur |
+
+Both chips may appear simultaneously if the skill has dual cooldowns. Both must clear before the skill is usable again.
 
 **Tap to select / deselect**: tapping an available skill calls `selectSkill(skillInst)`.
 Tapping the already-selected skill calls `selectSkill(null)`. After ROLL or End/Skip,
@@ -410,6 +440,69 @@ selection is cleared automatically.
 
 `$bg-elevated` `$r-md`; "End/Skip" `$t-label` `$text-secondary`.
 Advances the player's tick by 10 without using a skill. Disabled during enemy turn.
+
+---
+
+### Action Grid Player-Turn Pulse
+
+When `phase === 'player'`, the action grid container gains the `.actionGridActive`
+CSS class, which triggers a `@keyframes actionGridPulse` animation — a soft
+purple inner ring that breathes in and out (1.8 s ease-in-out infinite). The
+animation disappears the moment the player rolls or the enemy takes over,
+providing a non-intrusive "your turn" signal without obscuring the skills.
+
+---
+
+### Skill Info Overlay (`SkillInfoOverlay`)
+
+A centered modal that opens on **long-press** of any skill button. Unlike the
+old tooltip approach, this overlay is **always available** — regardless of
+cooldown state, AP availability, or whose turn it is. It freezes the battle
+while open.
+
+**Trigger:** `onHold` via `useScrollAwarePointer` after `LONG_PRESS_DURATION_MS` (500 ms).
+
+**Dismiss:** tap the ✕ button (top-right corner), tap the backdrop outside the
+card, or press the back button (back press closes the overlay before reaching
+the pause loop).
+
+**Freeze behaviour:** setting `inspectingSkill` in `BattleContext` is treated
+identically to `narrativePaused` — all four AI/effect guards check
+`if (narrativePaused || inspectingSkill) return`, halting the enemy telegraph
+timer, attack timer, apply timer, and phase derivation for the overlay's lifetime.
+
+**Content layout:**
+
+```
+┌──────────────────────────────────┐
+│ Skill Name              Lv N [✕]│
+├──────────────────────────────────┤
+│ "Skill description text…"        │
+│                                  │
+│  TU: N   AP: N   Rng: N   Tgt:N │
+│                                  │
+│  [physical] [melee] …            │
+│                                  │
+│  Cooldowns: ⏳ Nt  ↻ N          │
+│  Resolution: N% base hit chance  │
+│                                  │
+│  Effects:                        │
+│  • Deals Nstat% damage to target │
+│  • Heals caster for N            │
+└──────────────────────────────────┘
+```
+
+| Section | Content |
+|---|---|
+| Header | Skill name (left) · "Lv N" badge · ✕ close button (right) |
+| Description | Free-text from `SkillDef.description`; wraps as needed |
+| Stat row | TU cost · AP cost · Range · Target type — compact chips |
+| Tag row | `SkillDef.tags[]` displayed as pills |
+| Cooldown row | Amber ⏳ tick chip + Indigo ↻ turn chip (hidden if no cooldown) |
+| Resolution | Base hit chance as percentage |
+| Effects | Human-readable one-liner per effect (`effectLine()` helper) |
+
+**Implementation files:** `screens/SkillInfoOverlay.tsx` · `screens/SkillInfoOverlay.module.css` · `screens/BattleContext.tsx` (`inspectingSkill` state, freeze guards) · `screens/BattleScreen.tsx` (wiring `onHold`, rendering overlay)
 
 ---
 
@@ -444,22 +537,6 @@ Tapping an enemy row dispatches `on_target_selected(unit)` and dismisses the pop
 
 ---
 
-### Skill Detail Popup (`SkillDetailPopup`)
-
-Opens on long-press of any skill button. Read-only during battle.
-
-`ModalView` centred, 85% screen width.
-
-| Component | Properties |
-|---|---|
-| Skill name | `$t-subheading` `$text-primary` |
-| LVL badge | `$accent-gold` pill |
-| AP cost | "AP: N" `$t-label` |
-| TU cost | "TU: N" `$t-label` |
-| CHRG | "Charges: N" `$t-label` |
-| Description | `$t-body` `$text-secondary`; wrapping |
-| Close button | "Close" `$t-label` |
-
 ---
 
 ### Status Detail Popup (`StatusDetailPopup`)
@@ -476,6 +553,22 @@ When opened from a specific chip, shows that status at the top.
 | Duration | "N turns remaining" or "N ticks" `$t-micro` `$text-muted` |
 | Source | "Applied by: Unit Name" `$t-micro` `$text-muted` |
 | Close button | "Close" `$t-label` |
+
+---
+
+### First-Time Hint Toasters
+
+Three contextual hints appear the very first time a new player encounters each
+situation (backed by `localStorage` so they never repeat):
+
+| Hint ID | Message | Position | Trigger |
+|---|---|---|---|
+| `battle-skill` | "Tap a skill, then tap ROLL to attack." | top | Phase first enters `'player'` |
+| `battle-inspect` | "Long-press any skill to inspect it." | top | Same as above (after 2 s delay) |
+| `battle-skip-dice` | "Tap the arena to skip the dice animation." | top | First dice animation plays |
+
+Each toaster auto-dismisses after `HINT_TOASTER_DURATION_MS` (5 s) or on tap.
+Implementation: `components/HintToaster.tsx` + `HintToaster.module.css`.
 
 ---
 
@@ -503,9 +596,12 @@ When an enemy acts, four stages fire in strict sequence:
 | Turn display panel rows | `rowSlideIn` 400 ms `cubic-bezier(0.34,1.25,0.64,1)` + scale(0.96→1), staggered 0/250/500 ms | Action start |
 | Turn display panel dismiss | unmount after `TURN_DISPLAY_DISMISS_MS` (2 s) player / 6 s enemy | Action resolved |
 | Dice result overlay | `outcomeSlam` 4 s ease-out forwards | Every `runAttack` |
-| Dice result dismiss | unmount after `DICE_RESULT_DISMISS_MS` (4 s) | Timer after roll |
+| Dice result dismiss | unmount after `DICE_RESULT_DISMISS_MS` (4 s) or on arena tap | Timer after roll / skip |
+| Dice skip hint label | `hintFade` 0.5 s ease-in, delayed 1 s | Arena hotzone mounts |
 | Roll button pulse | `rollPulse` 250 ms opacity, "Rolling…" label | ROLL tapped |
 | Roll / action / skill button press | 60 ms `ease-in` press-down → 280 ms `cubic-bezier(0.34,1.56,0.64,1)` spring release | Pointer down/up |
+| Action grid player-turn pulse | `actionGridPulse` 1.8 s ease-in-out infinite, inner purple ring | `phase === 'player'` |
+| Skill info overlay mount | `slideUp` 280 ms ease-out | `inspectingSkill` set |
 | Now-line position | `--motion-timeline` (200 ms ease-in-out) | `tickValue` advance |
 | Unit marker position | 500 ms `cubic-bezier(0.34,1.56,0.64,1)` elastic spring | `registerTick` after dice ends |
 | Active marker pulse | `markerPulse` keyframe, 1.5 s ease-in-out infinite | Unit at now-line |
@@ -516,3 +612,4 @@ When an enemy acts, four stages fire in strict sequence:
 | Log entry appear | `logEntryIn` 200 ms ease-out (left-slide fade-in) | New log entry appended |
 | Log scroll | smooth scroll to bottom | New log entry |
 | Timeline track position | `transform: translateY`, `--motion-timeline` (200 ms ease-in-out) | tick advance, drag release + recenter |
+| Hint toaster (battle) | `hintDropIn` 280 ms cubic-bezier spring; auto-dismiss 5 s | First-time event |

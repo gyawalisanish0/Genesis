@@ -176,7 +176,7 @@ Genesis/
 │   └── src/
 │       ├── core/                 # Pure TS game logic — zero UI imports
 │       │   ├── types.ts          # StatBlockDef, CharacterDef, SkillDef, Unit, ModeDef, AppSettings, BattleResult, QualityTier
-│       │   ├── constants.ts      # All numeric constants: tick ranges, dice params, timing thresholds, BETWEEN_TURN_PAUSE_MS, NARRATIVE_* timings, QUALITY_* thresholds
+│       │   ├── constants.ts      # All numeric constants: tick ranges, dice params, timing thresholds, BETWEEN_TURN_PAUSE_MS, NARRATIVE_* timings, QUALITY_* thresholds, DUNGEON_ENCOUNTER_BANNER_MS, HINT_TOASTER_DURATION_MS, HINT_STORAGE_PREFIX
 │       │   ├── screen-types.ts   # ScreenId, ScreenConfig, SafeAreaMode, ScreenLifecycleHooks
 │       │   ├── unit.ts           # Immutable Unit factory + mutation helpers (createUnit, takeDamage, healUnit, incrementActionCount, …)
 │       │   ├── battleHistory.ts  # HistoryEntry type + makeHistoryEntry factory
@@ -226,15 +226,15 @@ Genesis/
 │       │   ├── SplashScreen.tsx          # Real DataService preload (characters + campaign + narrative) → auto-navigate to main menu
 │       │   ├── MainMenuScreen.tsx        # PLAY / ROSTER / SETTINGS nav; quit confirm on back
 │       │   ├── CampaignScreen.tsx        # Stage select + unlocking; primary game flow for public demo
-│       │   ├── DungeonScreen.tsx         # Turn-based dungeon exploration; party movement, enemy patrol, fog of war, wave phase
-│       │   ├── DungeonContext.tsx        # Turn loop: moveParty → advancePatrols → checkWavePhase → launchBattle → return
+│       │   ├── DungeonScreen.tsx         # Turn-based dungeon exploration; stage objective pill, party HP pill, encounter banner, HintToaster hints
+│       │   ├── DungeonContext.tsx        # Turn loop: moveParty → advancePatrols → checkWavePhase → encounterBanner (1200ms) → launchBattle → return; exposes partyLeader, encounterBanner
 │       │   ├── PreBattleScreen.tsx       # 3-step wizard (backup flow; not used in campaign mode)
 │       │   ├── PreBattleContext.tsx      # Wizard state: step, selectedModeId, selectedTeam, canContinue
 │       │   ├── PreBattleStepMode.tsx     # Step 0 — mode selection (story / ranked / draft)
 │       │   ├── PreBattleStepTeam.tsx     # Step 1 — character roster pick (1–2 units)
 │       │   ├── PreBattleStepItems.tsx    # Step 2 — equipment slots (stub)
-│       │   ├── BattleScreen.tsx          # Battle layout: timeline strip, arena, BATTLE LOG button, portrait col, action grid, overlays
-│       │   ├── BattleContext.tsx         # Screen-local context: arenaRef, phase, units, log, timeline, DiceResult, endBattle navigation, tick displacement at start, phase-gated arena animations, sequential AI timing
+│       │   ├── BattleScreen.tsx          # Battle layout: timeline strip, arena, BATTLE LOG button, portrait col, action grid, overlays; tap-to-skip dice hotzone; player-turn action grid pulse
+│       │   ├── BattleContext.tsx         # Screen-local context: arenaRef, phase, units, log, timeline, DiceResult, inspectingSkill, skipDice, endBattle navigation, tick displacement at start, phase-gated arena animations, sequential AI timing
 │       │   ├── BattleLogOverlay.tsx      # Slide-up battle log history panel; opened by BATTLE LOG button; closed by ✕, backdrop tap, or back button; auto-scrolls to latest entry
 │       │   ├── BattleLogOverlay.module.css
 │       │   ├── DiceResultOverlay.module.css
@@ -242,6 +242,8 @@ Genesis/
 │       │   ├── ClashQteOverlay.module.css
 │       │   ├── TeamCollisionOverlay.tsx  # Same-team Now/Later choice prompt for speed-tied allies
 │       │   ├── TeamCollisionOverlay.module.css
+│       │   ├── SkillInfoOverlay.tsx      # Long-press skill detail modal: stats, description, effects, cooldown breakdown; always available; freezes battle via inspectingSkill
+│       │   ├── SkillInfoOverlay.module.css
 │       │   ├── BattleResultScreen.tsx    # Victory/defeat banner, rewards, unit results, battle stats
 │       │   ├── RosterScreen.tsx          # Character grid with class + rarity + name filters
 │       │   └── SettingsScreen.tsx        # Audio / display / notification / account settings
@@ -250,7 +252,7 @@ Genesis/
 │       │   └── battle/           # BattleScene helper modules (one concern each)
 │       │       ├── TurnDisplayPanel.ts # Turn info overlay: actor (enemy-only), skill, target with HP/AP bars; slides in from top of canvas; exports TURN_PANEL_RESERVE = 200
 │       │       ├── UnitStage.ts      # Acting + target figure containers; slide, flash, dodge, collapse; topInset keeps content below TurnDisplayPanel zone
-│       │       ├── DicePanel.ts      # Die face spin → outcome landing animation; topInset keeps dice in content zone
+│       │       ├── DicePanel.ts      # Die face spin → outcome landing animation; topInset keeps dice in content zone; skip() cancels timers and fires onDone immediately
 │       │       ├── AttackPanel.ts    # Shove tween, target flash, particle burst, camera shake
 │       │       ├── FeedbackPanel.ts  # Rising damage/outcome text tween; topInset keeps text in content zone
 │       │       ├── ParticleEmitter.ts # One-shot burst effects per outcome; runtime-generated texture
@@ -260,13 +262,15 @@ Genesis/
 │       │   ├── ResourceBar.tsx           # Animated HP / AP / XP bar (400ms tween)
 │       │   ├── UnitPortrait.tsx          # Portrait circle: rarity-coloured border, 4 sizes, greyscale option
 │       │   ├── PagedGrid.tsx             # Generic paged grid: cols×rows, pointer swipe, arrows, dots, page counter
-│       │   ├── BattleArena.tsx           # Phaser wrapper; BattleArenaHandle ref (setTurnState, playDice, playAttack, playFeedback, playDeath, showTurnDisplay, hideTurnDisplay); exports TurnDisplayData type; no addLog — log is in BattleLogOverlay
+│       │   ├── BattleArena.tsx           # Phaser wrapper; BattleArenaHandle ref (setTurnState, playDice, playAttack, playFeedback, playDeath, showTurnDisplay, hideTurnDisplay, skipActiveDice); exports TurnDisplayData type; no addLog — log is in BattleLogOverlay
 │       │   ├── BattleArena.module.css    # flex: 1 container; canvas position: absolute inset: 0; Scale.NONE — no inline style conflict
 │       │   ├── NarrativeLayer.tsx        # Global narrative overlay (mounted in App.tsx); exports NarrativeUnits registry
 │       │   ├── NarrativeDialogueOverlay.tsx  # Dialogue box: portrait + nameplate + typewriter text
 │       │   ├── NarrativeScreenFlash.tsx  # Full-screen colour burst animation
 │       │   ├── NarrativePortraitFlyIn.tsx # Character portrait slides in from left/right
-│       │   └── NarrativeFloatingText.tsx # Floating impact text (e.g. "CRITICAL!")
+│       │   ├── NarrativeFloatingText.tsx # Floating impact text (e.g. "CRITICAL!")
+│       │   ├── HintToaster.tsx           # One-shot contextual hint chip; localStorage-backed; auto-dismiss + tap-dismiss
+│       │   └── HintToaster.module.css
 │       ├── styles/
 │       │   └── tokens.css        # Full design-token set (colours, typography, spacing, radius, motion, safe-area, --app-scale)
 │       ├── App.tsx               # Transform-scale viewport + HashRouter + ScreenProvider + 7-route declaration
