@@ -1,10 +1,11 @@
 // TilemapLayer — renders the dungeon tile grid and fog-of-war overlay.
 //
-// Sprite mode: when a textureMap is supplied (tileTypeId → Phaser texture key),
-// each tile renders as a scaled Image. Falls back to colored rectangles for any
-// tile type with no matching texture key, and when no textureMap is given at all.
+// tileSize is passed in on load() (computed by DungeonScene from canvas ÷ grid),
+// so the whole map always fits the canvas regardless of device screen size.
 //
-// Fog-of-war stays as a Graphics layer at depth 10 in both modes.
+// Sprite mode: when a textureMap is supplied (tileTypeId → Phaser texture key),
+// each tile renders as a scaled Image. Falls back to a colored rectangle for any
+// tile type with no matching texture key, and when no textureMap is given at all.
 
 import type { MapDef } from '../../core/types'
 
@@ -19,19 +20,22 @@ const FOG_ALPHA_VISIBLE = 0.0
 export class TilemapLayer {
   private scene:        Phaser.Scene
   private mapDef:       MapDef | null = null
+  private tileSize:     number = 48   // set by load(); computed from canvas + grid
   private tileGraphics: Phaser.GameObjects.Graphics | null = null
   private tileImages:   Phaser.GameObjects.Image[] = []
   private fogGraphics:  Phaser.GameObjects.Graphics | null = null
-  // "x,y" → fog state
   private fogState:     Map<string, 'hidden' | 'seen' | 'visible'> = new Map()
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene
   }
 
-  // textureMap: tileTypeId → Phaser texture key. Absent = graphics-only fallback.
-  load(mapDef: MapDef, textureMap?: Map<string, string>): void {
-    this.mapDef = mapDef
+  // tileSize: computed by DungeonScene (canvas ÷ grid cols/rows, take min).
+  // textureMap: tileTypeId → Phaser texture key. Absent = graphics-only mode.
+  load(mapDef: MapDef, tileSize: number, textureMap?: Map<string, string>): void {
+    this.mapDef   = mapDef
+    this.tileSize = tileSize
+
     this.tileGraphics?.destroy()
     this.tileGraphics = null
     this.destroyTileImages()
@@ -69,13 +73,11 @@ export class TilemapLayer {
   }
 
   tileToWorld(tx: number, ty: number): { x: number; y: number } {
-    const size = this.mapDef?.tileSize ?? 48
-    return { x: tx * size + size / 2, y: ty * size + size / 2 }
+    return { x: tx * this.tileSize + this.tileSize / 2, y: ty * this.tileSize + this.tileSize / 2 }
   }
 
   worldToTile(wx: number, wy: number): { x: number; y: number } {
-    const size = this.mapDef?.tileSize ?? 48
-    return { x: Math.floor(wx / size), y: Math.floor(wy / size) }
+    return { x: Math.floor(wx / this.tileSize), y: Math.floor(wy / this.tileSize) }
   }
 
   isPassable(tx: number, ty: number): boolean {
@@ -87,7 +89,7 @@ export class TilemapLayer {
   }
 
   getTileSize(): number {
-    return this.mapDef?.tileSize ?? 48
+    return this.tileSize
   }
 
   // ── Private helpers ────────────────────────────────────────────────────────
@@ -97,7 +99,7 @@ export class TilemapLayer {
   private drawSpriteTiles(textureMap: Map<string, string>): void {
     if (!this.mapDef) return
     const { cols, rows } = this.mapDef.grid
-    const size = this.mapDef.tileSize
+    const size = this.tileSize
     for (let y = 0; y < rows; y++) {
       for (let x = 0; x < cols; x++) {
         const tileCode = this.mapDef.tiles[y][x]
@@ -112,10 +114,7 @@ export class TilemapLayer {
           ).setDisplaySize(size, size)
           this.tileImages.push(img)
         } else {
-          // No texture available for this tile type — draw a colored rect.
-          if (!this.tileGraphics) {
-            this.tileGraphics = this.scene.add.graphics()
-          }
+          if (!this.tileGraphics) this.tileGraphics = this.scene.add.graphics()
           const colour = typeInfo?.passable ? FLOOR_COLOUR : WALL_COLOUR
           this.tileGraphics.fillStyle(colour)
           this.tileGraphics.fillRect(x * size, y * size, size, size)
@@ -134,7 +133,7 @@ export class TilemapLayer {
   private drawGraphicTiles(): void {
     if (!this.mapDef || !this.tileGraphics) return
     const { cols, rows } = this.mapDef.grid
-    const size = this.mapDef.tileSize
+    const size = this.tileSize
     for (let y = 0; y < rows; y++) {
       for (let x = 0; x < cols; x++) {
         const tileCode = this.mapDef.tiles[y][x]
@@ -152,7 +151,7 @@ export class TilemapLayer {
     if (!this.mapDef || !this.fogGraphics) return
     this.fogGraphics.clear()
     const { cols, rows } = this.mapDef.grid
-    const size = this.mapDef.tileSize
+    const size = this.tileSize
     for (let y = 0; y < rows; y++) {
       for (let x = 0; x < cols; x++) {
         const state = this.fogState.get(`${x},${y}`) ?? 'hidden'

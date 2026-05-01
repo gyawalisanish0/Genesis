@@ -191,7 +191,8 @@ export interface MapDef {
   type:         'map'
   stageId:      string
   grid:         { cols: number; rows: number }
-  tileSize:     number
+  // tileSize is computed at runtime from canvas dimensions ÷ grid size — not
+  // stored in JSON. DungeonScene derives it on loadMap so any device fits.
   tiles:        number[][]
   tileTypes:    Record<string, TileTypeDef>
   playerStart:  { x: number; y: number }

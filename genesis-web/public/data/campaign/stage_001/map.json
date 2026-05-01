@@ -2,7 +2,6 @@
   "type": "map",
   "stageId": "stage_001",
   "grid": { "cols": 8, "rows": 8 },
-  "tileSize": 48,
   "tiles": [
     [1, 1, 1, 0, 1, 1, 1, 0],
     [1, 0, 0, 0, 0, 0, 0, 1],

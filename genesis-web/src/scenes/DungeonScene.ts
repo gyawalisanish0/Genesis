@@ -1,45 +1,45 @@
 // DungeonScene — Phaser 3 scene that owns the dungeon canvas.
 //
-// Tileset support: loadMap() accepts an optional TilesetDef. When present, tile
-// PNGs are loaded dynamically (this.load.image + load.start) then TilemapLayer
-// renders Images scaled to tileSize. When loading fails for a tile type, that
-// type falls back to a colored rectangle — the map never hard-errors on missing art.
+// Tile size is computed at runtime from canvas dimensions ÷ grid size so the
+// entire map always fits the screen on any device — no fixed tileSize in JSON.
+//
+// Tileset art: TilesetLoader handles fetching, quality-tier downsampling
+// (512→256→128 per Medium/Low tier), per-tile error fallback, and Phaser
+// texture caching. DungeonScene just calls loadForScene and receives a ready
+// textureMap to pass into TilemapLayer.
 
 import type { MapDef, TilesetDef } from '../core/types'
-import { TilemapLayer } from './dungeon/TilemapLayer'
-import { EntityLayer }  from './dungeon/EntityLayer'
-import { PartyMarker }  from './dungeon/PartyMarker'
-import { WaveOverlay }  from './dungeon/WaveOverlay'
-
-// Normalize BASE_URL so image paths are always correct, matching the DataService
-// pattern. Vite's --base flag may produce a value without a trailing slash.
-const RAW_BASE = import.meta.env.BASE_URL
-const BASE_URL = RAW_BASE.endsWith('/') ? RAW_BASE : `${RAW_BASE}/`
+import { TilemapLayer }  from './dungeon/TilemapLayer'
+import { EntityLayer }   from './dungeon/EntityLayer'
+import { PartyMarker }   from './dungeon/PartyMarker'
+import { WaveOverlay }   from './dungeon/WaveOverlay'
+import { TilesetLoader } from './dungeon/TilesetLoader'
 
 export interface DungeonTapCallback {
   onTileTap: (tx: number, ty: number, entityId: string | null) => void
 }
 
 export class DungeonScene extends Phaser.Scene {
-  private tilemap!:     TilemapLayer
-  private entityLayer!: EntityLayer
-  private party!:       PartyMarker
-  private wave!:        WaveOverlay
-  private tapCallback: DungeonTapCallback | null = null
-  private canvasW:     number = 360
-  private canvasH:     number = 400
+  private tilemap!:       TilemapLayer
+  private entityLayer!:   EntityLayer
+  private party!:         PartyMarker
+  private wave!:          WaveOverlay
+  private tilesetLoader!: TilesetLoader
+  private tapCallback:    DungeonTapCallback | null = null
+  private canvasW:        number = 360
+  private canvasH:        number = 400
 
   constructor() {
     super({ key: 'DungeonScene' })
   }
 
   create(): void {
-    this.tilemap     = new TilemapLayer(this)
-    this.entityLayer = new EntityLayer(this)
-    this.party       = new PartyMarker(this)
-    this.wave        = new WaveOverlay(this)
+    this.tilemap       = new TilemapLayer(this)
+    this.entityLayer   = new EntityLayer(this)
+    this.party         = new PartyMarker(this)
+    this.wave          = new WaveOverlay(this)
+    this.tilesetLoader = new TilesetLoader(this)
 
-    // React owns input — forward pointer events via callback
     this.input.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
       this.handlePointer(ptr.x, ptr.y)
     })
@@ -50,17 +50,25 @@ export class DungeonScene extends Phaser.Scene {
   loadMap(mapDef: MapDef, tilesetDef?: TilesetDef | null, onTilesetError?: (msg: string) => void): void {
     this.canvasW = this.scale.width
     this.canvasH = this.scale.height
-    const size   = mapDef.tileSize
-    this.entityLayer.setTileSize(size)
-    this.party.setTileSize(size)
+
+    const tileSize = this.computeTileSize(mapDef)
+    this.entityLayer.setTileSize(tileSize)
+    this.party.setTileSize(tileSize)
 
     if (!tilesetDef) {
-      this.tilemap.load(mapDef)
+      this.tilemap.load(mapDef, tileSize)
       this.entityLayer.loadEntities(mapDef.entities)
       return
     }
 
-    this.loadTilesetThenRender(mapDef, tilesetDef, onTilesetError)
+    this.tilesetLoader.loadForScene(
+      tilesetDef,
+      (textureMap) => {
+        this.tilemap.load(mapDef, tileSize, textureMap)
+        this.entityLayer.loadEntities(mapDef.entities)
+      },
+      onTilesetError,
+    )
   }
 
   setPartyTile(tx: number, ty: number, animated: boolean, onDone?: () => void): void {
@@ -112,58 +120,12 @@ export class DungeonScene extends Phaser.Scene {
 
   // ── Private ──────────────────────────────────────────────────────────────────
 
-  // Build a textureMap for TilemapLayer, loading any missing tile PNGs first.
-  // Failed loads are excluded from textureMap so those tile types fall back
-  // to colored rectangles — the dungeon never hard-errors on missing art.
-  // onTilesetError is called (once, via React state) when any PNG fails so the
-  // player sees a brief warning chip in the UI.
-  private loadTilesetThenRender(
-    mapDef: MapDef,
-    tilesetDef: TilesetDef,
-    onTilesetError?: (msg: string) => void,
-  ): void {
-    const textureMap = new Map<string, string>()
-    const toLoad: Array<{ key: string; url: string }> = []
-
-    for (const [typeId, filename] of Object.entries(tilesetDef.tiles)) {
-      const texKey = `tileset_${tilesetDef.key}_${typeId}`
-      textureMap.set(typeId, texKey)
-      if (!this.textures.exists(texKey)) {
-        toLoad.push({
-          key: texKey,
-          url: `${BASE_URL}images/tilesets/${tilesetDef.key}/${filename}`,
-        })
-      }
-    }
-
-    if (toLoad.length === 0) {
-      this.tilemap.load(mapDef, textureMap)
-      this.entityLayer.loadEntities(mapDef.entities)
-      return
-    }
-
-    const failedKeys = new Set<string>()
-    const onError    = (file: Phaser.Loader.File) => failedKeys.add(file.key)
-
-    this.load.on('loaderror', onError)
-    this.load.once('complete', () => {
-      this.load.off('loaderror', onError)
-      // Remove any tile type whose texture failed; those tiles fall back to rects.
-      for (const [typeId, texKey] of Array.from(textureMap.entries())) {
-        if (failedKeys.has(texKey)) textureMap.delete(typeId)
-      }
-      if (failedKeys.size > 0) {
-        const word = failedKeys.size === toLoad.length ? 'Tile art' : 'Some tile art'
-        onTilesetError?.(`${word} failed to load — using fallback graphics`)
-      }
-      this.tilemap.load(mapDef, textureMap)
-      this.entityLayer.loadEntities(mapDef.entities)
-    })
-
-    for (const { key, url } of toLoad) {
-      this.load.image(key, url)
-    }
-    this.load.start()
+  // Compute the largest square tile size that fits the entire grid on screen.
+  // Taking min(floor(W/cols), floor(H/rows)) ensures both axes fit fully.
+  private computeTileSize(mapDef: MapDef): number {
+    const tileW = Math.floor(this.canvasW / mapDef.grid.cols)
+    const tileH = Math.floor(this.canvasH / mapDef.grid.rows)
+    return Math.min(tileW, tileH)
   }
 
   private handlePointer(wx: number, wy: number): void {
