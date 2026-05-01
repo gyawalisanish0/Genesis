@@ -21,7 +21,6 @@ import { BETWEEN_TURN_PAUSE_MS } from '../core/constants'
 import { ResolutionAdaptor }    from './battle/ResolutionAdaptor'
 
 // Pixels at the top of the canvas permanently reserved for the TurnDisplayPanel.
-// All other scene content (units, dice, feedback) is positioned below this.
 const TOP_INSET = TURN_PANEL_RESERVE
 
 // ── Design token colour map ───────────────────────────────────────────────────
@@ -49,8 +48,8 @@ export function tokenToHex(colour: string): string {
 const BG_COLOUR = 0x0a0a14
 
 export class BattleScene extends Phaser.Scene {
-  private bg!: Phaser.GameObjects.Rectangle
-
+  private bg!:               Phaser.GameObjects.Rectangle
+  private vignette!:         Phaser.GameObjects.Graphics
   private unitStage!:        UnitStage
   private dicePanel!:        DicePanel
   private attackPanel!:      AttackPanel
@@ -68,10 +67,11 @@ export class BattleScene extends Phaser.Scene {
 
   create(): void {
     const { width, height } = this.scale
-    this.bg = this.add.rectangle(0, 0, width, height, BG_COLOUR).setOrigin(0, 0)
+    this.bg       = this.add.rectangle(0, 0, width, height, BG_COLOUR).setOrigin(0, 0)
+    this.vignette = this.add.graphics()
+    this.drawVignette(width, height)
 
     // Generate a tiny white circle used as the particle texture.
-    // Second arg false = don't add to the display list (destroy right after).
     const gfx = this.make.graphics({}, false)
     gfx.fillStyle(0xffffff)
     gfx.fillCircle(4, 4, 4)
@@ -82,22 +82,20 @@ export class BattleScene extends Phaser.Scene {
     this.unitStage        = new UnitStage(this, TOP_INSET)
     this.dicePanel        = new DicePanel(this, TOP_INSET)
     this.attackPanel      = new AttackPanel(this, this.unitStage, particles)
-    this.feedbackPanel    = new FeedbackPanel(this, TOP_INSET)
+    // Pass unitStage so FeedbackPanel can spawn numbers at the target's position.
+    this.feedbackPanel    = new FeedbackPanel(this, TOP_INSET, this.unitStage)
     this.turnDisplayPanel = new TurnDisplayPanel(this)
-    // ResolutionAdaptor monitors FPS and promotes quality tier if sustained ≥58fps.
-    // Stored as a local (not field) since it self-manages via scene time events.
     void new ResolutionAdaptor(this)
 
-    // gameSize carries the new canvas dimensions; subsequent params are stale values.
     this.scale.on('resize', (gameSize: Phaser.Structs.Size) => {
       this.bg.setSize(gameSize.width, gameSize.height)
+      this.vignette.clear()
+      this.drawVignette(gameSize.width, gameSize.height)
     })
   }
 
   // ── Stage 2: unit figures ─────────────────────────────────────────────────
 
-  // If units are already on screen, hide them first then pause briefly so the
-  // transition feels intentional before the incoming units slide in.
   setTurnState(actingDefId: string, targetDefId: string): void {
     if (this.unitStage.isVisible) {
       this.unitStage.hide(() => {
@@ -152,5 +150,17 @@ export class BattleScene extends Phaser.Scene {
 
   hideTurnDisplay(): void {
     this.turnDisplayPanel.hide()
+  }
+
+  // ── Private helpers ───────────────────────────────────────────────────────
+
+  private drawVignette(w: number, h: number): void {
+    const edge = Math.floor(h * 0.2)
+    // Top edge: slightly stronger to add contrast behind TurnDisplayPanel.
+    this.vignette.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0.55, 0.55, 0, 0)
+    this.vignette.fillRect(0, 0, w, edge)
+    // Bottom edge.
+    this.vignette.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0, 0, 0.45, 0.45)
+    this.vignette.fillRect(0, h - edge, w, edge)
   }
 }
