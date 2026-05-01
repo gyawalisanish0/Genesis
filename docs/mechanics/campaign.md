@@ -147,6 +147,26 @@ multiple units, only one token — the **party leader** — is rendered on the
 grid. AI allies are implicit (alive in the roster, but not visible on the
 map) and only materialize when battle is engaged.
 
+#### Persistent HUD elements
+
+| Element | Location | Purpose |
+|---|---|---|
+| **Stage objective pill** | Header (right of stage name) | Shows `defeated / total` enemy count; turns green when all waves cleared; hidden when no enemies |
+| **Party HP pill** | Below header | Shows leader name + HP bar + `hp/maxHp`; pulses red (`hpPillLow` class) when fraction ≤ 30% |
+
+The HP pill is always visible and updates in real time after each battle return.
+The objective pill counts `mapDef.entities` entries of `type === 'enemy'` against
+the `defeatedEntityIds` set that DungeonContext maintains.
+
+#### First-time hints
+
+| Hint ID | Message | Shown when |
+|---|---|---|
+| `dungeon-move` | "Tap arrows to move. Step on enemies to engage." | Exploration phase starts |
+| `dungeon-wave` | "Multiple foes spotted — tap one to engage." | Wave phase starts |
+
+Both hints are backed by localStorage and fire at most once per browser install.
+
 #### State shape
 
 ```ts
@@ -187,12 +207,15 @@ When the party token and an enemy wave occupy adjacent cells (or same cell in
 Phase 1), **combat is initiated**:
 
 1. DungeonContext calls `launchBattle()`
-2. Builds a `ModeDef` from `stage.settings` (carrying `playerControl`)
-3. Calls `setSelectedMode(modeDef)` and `setSelectedTeamIds(stage.playerUnits.units)`
-   — the **first entry** of `units` becomes the leader inside BattleContext
-4. Sets `currentEncounterEnemies` to the enemy `defId` list from the wave
-5. Sets `returnScreen` to `SCREEN_IDS.DUNGEON`
-6. Navigates to `BATTLE` screen
+2. Shows the **encounter telegraph banner** — a slide-in overlay reading "ENCOUNTER!" with the enemy's name beneath; holds for `DUNGEON_ENCOUNTER_BANNER_MS` (1200 ms) so the player can register what they're about to fight
+3. After the banner, builds a `ModeDef` from `stage.settings` (carrying `playerControl`)
+4. Calls `setSelectedMode(modeDef)` and `setSelectedTeamIds(stage.playerUnits.units)` — the **first entry** of `units` becomes the leader inside BattleContext
+5. Sets `currentEncounterEnemies` to the enemy `defId` list from the wave
+6. Sets `returnScreen` to `SCREEN_IDS.DUNGEON`
+7. Navigates to `BATTLE` screen
+
+The phase transitions through `'transitioning'` during the banner hold to
+block further player input (movement, wave selection) until combat launches.
 
 Inside battle, the **leader** receives the portrait HUD. With the default
 `playerControl: 'single'`, all other party members enter as AI allies that

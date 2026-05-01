@@ -221,6 +221,41 @@ rendering — it stays `true` for both leader and ally history entries.
 
 ---
 
+## Battle Freeze — Skill Inspect and Narrative Pause
+
+`BattleContext` exposes two independent freeze flags that both halt AI
+progression and player action resolution:
+
+| Flag | Set by | Purpose |
+|---|---|---|
+| `narrativePaused: boolean` | `NarrativeLayer` | Dialogue box is visible — silently halts the battle |
+| `inspectingSkill: SkillInstance \| null` | `BattleScreen` | Skill info overlay is open |
+
+Both flags guard the same four async effects / callbacks:
+
+```ts
+// Telegraph timer (enemy turn start)
+if (narrativePaused || inspectingSkill) return
+
+// Attack timer (ENEMY_AI_DELAY_MS elapsed)
+if (narrativePaused || inspectingSkill) return
+
+// Apply timer (DICE_RESULT_DISMISS_MS elapsed)
+if (narrativePaused || inspectingSkill) return
+
+// Phase derivation (auto-advance after resolving)
+if (narrativePaused || inspectingSkill) return
+```
+
+When `inspectingSkill` is cleared (overlay dismissed), the timers resume from
+where they left off — no tick is lost and no animation replays.
+
+The player cannot execute skills or skip their turn while the overlay is open.
+Enemy AI is fully suspended. There is no visible "paused" indicator — the freeze
+is silent, just like the narrative pause.
+
+---
+
 ## Open questions (Phase 2)
 
 - **Leader swap mid-battle**: should the player be able to swap leader mid-
