@@ -47,7 +47,7 @@ export class DungeonScene extends Phaser.Scene {
 
   // ── Public command interface (called via DungeonArenaHandle) ─────────────────
 
-  loadMap(mapDef: MapDef, tilesetDef?: TilesetDef | null): void {
+  loadMap(mapDef: MapDef, tilesetDef?: TilesetDef | null, onTilesetError?: (msg: string) => void): void {
     this.canvasW = this.scale.width
     this.canvasH = this.scale.height
     const size   = mapDef.tileSize
@@ -60,7 +60,7 @@ export class DungeonScene extends Phaser.Scene {
       return
     }
 
-    this.loadTilesetThenRender(mapDef, tilesetDef)
+    this.loadTilesetThenRender(mapDef, tilesetDef, onTilesetError)
   }
 
   setPartyTile(tx: number, ty: number, animated: boolean, onDone?: () => void): void {
@@ -115,7 +115,13 @@ export class DungeonScene extends Phaser.Scene {
   // Build a textureMap for TilemapLayer, loading any missing tile PNGs first.
   // Failed loads are excluded from textureMap so those tile types fall back
   // to colored rectangles — the dungeon never hard-errors on missing art.
-  private loadTilesetThenRender(mapDef: MapDef, tilesetDef: TilesetDef): void {
+  // onTilesetError is called (once, via React state) when any PNG fails so the
+  // player sees a brief warning chip in the UI.
+  private loadTilesetThenRender(
+    mapDef: MapDef,
+    tilesetDef: TilesetDef,
+    onTilesetError?: (msg: string) => void,
+  ): void {
     const textureMap = new Map<string, string>()
     const toLoad: Array<{ key: string; url: string }> = []
 
@@ -142,9 +148,13 @@ export class DungeonScene extends Phaser.Scene {
     this.load.on('loaderror', onError)
     this.load.once('complete', () => {
       this.load.off('loaderror', onError)
-      // Remove any tile type whose texture failed to load.
+      // Remove any tile type whose texture failed; those tiles fall back to rects.
       for (const [typeId, texKey] of Array.from(textureMap.entries())) {
         if (failedKeys.has(texKey)) textureMap.delete(typeId)
+      }
+      if (failedKeys.size > 0) {
+        const word = failedKeys.size === toLoad.length ? 'Tile art' : 'Some tile art'
+        onTilesetError?.(`${word} failed to load — using fallback graphics`)
       }
       this.tilemap.load(mapDef, textureMap)
       this.entityLayer.loadEntities(mapDef.entities)

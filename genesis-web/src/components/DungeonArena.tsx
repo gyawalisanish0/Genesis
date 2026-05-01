@@ -6,7 +6,7 @@ import type { DungeonTapCallback } from '../scenes/DungeonScene'
 import styles from './DungeonArena.module.css'
 
 export interface DungeonArenaHandle {
-  loadMap(mapDef: MapDef, tilesetDef?: TilesetDef | null): void
+  loadMap(mapDef: MapDef, tilesetDef?: TilesetDef | null, onTilesetError?: (msg: string) => void): void
   setPartyTile(tx: number, ty: number, animated: boolean, onDone?: () => void): void
   revealTiles(cx: number, cy: number, radius: number): void
   setEntityPosition(entityId: string, tx: number, ty: number, animated: boolean, onDone?: () => void): void
@@ -59,7 +59,7 @@ export const DungeonArena = forwardRef<DungeonArenaHandle>(function DungeonArena
   }, [])
 
   useImperativeHandle(ref, () => ({
-    loadMap: (mapDef, tilesetDef) => sceneRef.current?.loadMap(mapDef, tilesetDef),
+    loadMap: (mapDef, tilesetDef, onTilesetError) => sceneRef.current?.loadMap(mapDef, tilesetDef, onTilesetError),
     setPartyTile: (tx, ty, animated, onDone) => {
       if (sceneRef.current) sceneRef.current.setPartyTile(tx, ty, animated, onDone)
       else onDone?.()

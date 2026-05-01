@@ -5,6 +5,7 @@ import { useBackButton }   from '../input/useBackButton'
 import { DungeonProvider, useDungeonScreen } from './DungeonContext'
 import { DungeonArena }    from '../components/DungeonArena'
 import { HintToaster }     from '../components/HintToaster'
+import { ErrorToaster }    from '../components/ErrorToaster'
 import styles from './DungeonScreen.module.css'
 
 export function DungeonScreen() {
@@ -18,7 +19,7 @@ export function DungeonScreen() {
 function DungeonLayout() {
   const { navigateTo } = useScreen()
   useBackButton(() => navigateTo(SCREEN_IDS.CAMPAIGN))
-  const { arenaRef, phase, stageDef, encounterBanner, mapDef, defeatedEntityIds, partyLeader } = useDungeonScreen()
+  const { arenaRef, phase, stageDef, encounterBanner, mapDef, defeatedEntityIds, partyLeader, tilesetError } = useDungeonScreen()
 
   // Compute enemy progress (defeated / total) so the player can see how close
   // they are to clearing the stage at a glance.
@@ -48,6 +49,7 @@ function DungeonLayout() {
         {phase === 'wave' && (
           <HintToaster id="dungeon-wave" message="Multiple foes spotted — tap one to engage." />
         )}
+        <ErrorToaster message={tilesetError} />
       </div>
     </ScreenShell>
   )

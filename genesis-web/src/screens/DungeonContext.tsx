@@ -35,6 +35,10 @@ interface DungeonContextValue {
   // Telegraph banner: short label shown before navigating into battle so the
   // encounter feels intentional. Null while exploring/in wave UI.
   encounterBanner:  string | null
+  // Non-null when one or more tile textures failed to load. Cleared once the
+  // ErrorToaster auto-dismisses; set to the same message string on each new
+  // map load that has failures.
+  tilesetError:     string | null
   arenaRef:         RefObject<DungeonArenaHandle | null>
   moveParty:        (dx: number, dy: number) => void
   selectWaveEnemy:  (entityId: string) => void
@@ -70,7 +74,8 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
   const [defeatedEntityIds, setDefeatedEntityIds] = useState<Set<string>>(new Set())
   const [waveEnemies, setWaveEnemies] = useState<EnemyEntityDef[]>([])
   const [encounterBanner, setEncounterBanner] = useState<string | null>(null)
-  const [partyLeader, setPartyLeader] = useState<{ name: string; hp: number; maxHp: number } | null>(null)
+  const [partyLeader, setPartyLeader]   = useState<{ name: string; hp: number; maxHp: number } | null>(null)
+  const [tilesetError, setTilesetError] = useState<string | null>(null)
 
   const moveQueueRef  = useRef(false)   // true while animation in flight
   const stageDefRef   = useRef<StageDef | null>(null)
@@ -175,7 +180,7 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
   ) {
     const arena = arenaRef.current
     if (!arena) return
-    arena.loadMap(map, tilesetRef.current)
+    arena.loadMap(map, tilesetRef.current, (msg) => setTilesetError(msg))
     arena.setPartyTile(start.x, start.y, false)
     arena.revealTiles(start.x, start.y, DUNGEON_REVEAL_RADIUS)
 
@@ -469,7 +474,7 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
 
   const value: DungeonContextValue = {
     stageDef, mapDef, phase, partyTile, entityPositions,
-    defeatedEntityIds, waveEnemies, partyLeader, encounterBanner, arenaRef,
+    defeatedEntityIds, waveEnemies, partyLeader, encounterBanner, tilesetError, arenaRef,
     moveParty, selectWaveEnemy,
   }
 
