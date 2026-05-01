@@ -1,12 +1,12 @@
 import { useRef, useEffect, useImperativeHandle, forwardRef } from 'react'
 import Phaser from 'phaser'
-import type { MapDef } from '../core/types'
+import type { MapDef, TilesetDef } from '../core/types'
 import { DungeonScene } from '../scenes/DungeonScene'
 import type { DungeonTapCallback } from '../scenes/DungeonScene'
 import styles from './DungeonArena.module.css'
 
 export interface DungeonArenaHandle {
-  loadMap(mapDef: MapDef): void
+  loadMap(mapDef: MapDef, tilesetDef?: TilesetDef | null): void
   setPartyTile(tx: number, ty: number, animated: boolean, onDone?: () => void): void
   revealTiles(cx: number, cy: number, radius: number): void
   setEntityPosition(entityId: string, tx: number, ty: number, animated: boolean, onDone?: () => void): void
@@ -59,7 +59,7 @@ export const DungeonArena = forwardRef<DungeonArenaHandle>(function DungeonArena
   }, [])
 
   useImperativeHandle(ref, () => ({
-    loadMap: (mapDef) => sceneRef.current?.loadMap(mapDef),
+    loadMap: (mapDef, tilesetDef) => sceneRef.current?.loadMap(mapDef, tilesetDef),
     setPartyTile: (tx, ty, animated, onDone) => {
       if (sceneRef.current) sceneRef.current.setPartyTile(tx, ty, animated, onDone)
       else onDone?.()

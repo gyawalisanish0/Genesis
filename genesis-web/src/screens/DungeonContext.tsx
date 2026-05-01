@@ -2,14 +2,14 @@ import {
   createContext, useContext, useRef, useState, useCallback,
   useEffect, type RefObject,
 } from 'react'
-import type { StageDef, MapDef, EnemyEntityDef, DungeonState } from '../core/types'
+import type { StageDef, MapDef, TilesetDef, EnemyEntityDef, DungeonState } from '../core/types'
 import type { DungeonArenaHandle } from '../components/DungeonArena'
 import { useGameStore }     from '../core/GameContext'
 import { useScreen }        from '../navigation/useScreen'
 import { SCREEN_IDS }       from '../navigation/screenRegistry'
 import { NarrativeService } from '../services/NarrativeService'
 import { NarrativeUnits }   from '../components/NarrativeLayer'
-import { loadStageDef, loadMapDef, loadCharacterWithSkills, loadLevelNarrative } from '../services/DataService'
+import { loadStageDef, loadMapDef, loadTilesetDef, loadCharacterWithSkills, loadLevelNarrative } from '../services/DataService'
 import { createUnit }       from '../core/unit'
 import {
   DUNGEON_DEFAULT_VISUAL_RANGE,
@@ -75,6 +75,7 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
   const moveQueueRef  = useRef(false)   // true while animation in flight
   const stageDefRef   = useRef<StageDef | null>(null)
   const mapDefRef     = useRef<MapDef | null>(null)
+  const tilesetRef    = useRef<TilesetDef | null>(null)
   const partyRef      = useRef({ x: 0, y: 0 })
   const entityPosRef  = useRef<Record<string, { x: number; y: number }>>({})
   const defeatedRef   = useRef<Set<string>>(new Set())
@@ -94,6 +95,9 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
     setMapDef(map)
     stageDefRef.current  = stage
     mapDefRef.current    = map
+
+    // Load the tileset definition if the map references one. Null = graphics fallback.
+    tilesetRef.current = map.tilesetKey ? await loadTilesetDef(map.tilesetKey) : null
 
     // Register narrative
     const narrative = await loadLevelNarrative(stageId)
@@ -171,7 +175,7 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
   ) {
     const arena = arenaRef.current
     if (!arena) return
-    arena.loadMap(map)
+    arena.loadMap(map, tilesetRef.current)
     arena.setPartyTile(start.x, start.y, false)
     arena.revealTiles(start.x, start.y, DUNGEON_REVEAL_RADIUS)
 

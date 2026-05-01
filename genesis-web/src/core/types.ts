@@ -199,6 +199,18 @@ export interface MapDef {
   revealRadius: number
   entities:     EntityDef[]
   wavePhase:    WavePhaseConfig
+  // Optional tileset key — when present, tiles render as sprites instead of colored rects.
+  // Points to public/data/tilesets/{tilesetKey}/tileset.json
+  tilesetKey?:  string
+}
+
+// ── Tileset ────────────────────────────────────────────────────────────────────
+
+export interface TilesetDef {
+  type:  'tileset'
+  key:   string
+  // Maps TileTypeDef.id → PNG filename under public/images/tilesets/{key}/
+  tiles: Record<string, string>
 }
 
 export interface PlayerUnitsDef {

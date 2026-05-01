@@ -87,5 +87,6 @@
       "narrativeId": "stage_001_tutorial_combat"
     }
   ],
-  "wavePhase": { "mode": "player-select" }
+  "wavePhase": { "mode": "player-select" },
+  "tilesetKey": "dungeon_classic"
 }

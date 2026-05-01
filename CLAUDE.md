@@ -171,11 +171,16 @@ Genesis/
 │   │   │   ├── levels/           # Level-specific narrative (one subfolder per level)
 │   │   │   │   └── story_001/
 │   │   │   │       └── narrative.json # LevelNarrativeDef — story beats, cutscenes
+│   │   │   ├── tilesets/         # Visual tileset definitions (one subfolder per tileset key)
+│   │   │   │   └── dungeon_classic/
+│   │   │   │       └── tileset.json   # TilesetDef — maps tileType id → PNG filename
 │   │   │   └── modes/            # story.json, ranked.json
 │   │   └── images/               # 3x PNG assets (primary density)
+│   │       └── tilesets/         # Tile art — one subfolder per tileset key
+│   │           └── dungeon_classic/  # 512×512 individual PNGs: floor.png, wall.png, …
 │   └── src/
 │       ├── core/                 # Pure TS game logic — zero UI imports
-│       │   ├── types.ts          # StatBlockDef, CharacterDef, SkillDef, Unit, ModeDef, AppSettings, BattleResult, QualityTier
+│       │   ├── types.ts          # StatBlockDef, CharacterDef, SkillDef, Unit, ModeDef, AppSettings, BattleResult, QualityTier, TilesetDef
 │       │   ├── constants.ts      # All numeric constants: tick ranges, dice params, timing thresholds, BETWEEN_TURN_PAUSE_MS, NARRATIVE_* timings, QUALITY_* thresholds, DUNGEON_ENCOUNTER_BANNER_MS, HINT_TOASTER_DURATION_MS, HINT_STORAGE_PREFIX
 │       │   ├── screen-types.ts   # ScreenId, ScreenConfig, SafeAreaMode, ScreenLifecycleHooks
 │       │   ├── unit.ts           # Immutable Unit factory + mutation helpers (createUnit, takeDamage, healUnit, incrementActionCount, …)
@@ -212,7 +217,7 @@ Genesis/
 │       │   ├── backButtonRegistry.ts  # Module-level singleton: register/unregister/invoke one handler at a time
 │       │   └── useBackButton.ts       # Hook: registers handler, pushes URL-sentinel for web popstate interception
 │       ├── services/             # Side-effectful singletons; Capacitor allowed
-│       │   ├── DataService.ts    # JSON loader: loadCharacter, loadCharacterSkillDefs, loadMode, loadCharacterWithSkills, loadCharacterDialogue, loadLevelNarrative (all cached)
+│       │   ├── DataService.ts    # JSON loader: loadCharacter, loadCharacterSkillDefs, loadMode, loadCharacterWithSkills, loadCharacterDialogue, loadLevelNarrative, loadTilesetDef (all cached)
 │       │   ├── DisplayService.ts # Full-screen + StatusBar: Capacitor StatusBar.hide() on native; Fullscreen API on web
 │       │   ├── NarrativeService.ts # Global narrative bus: emit(), play(), subscribe(), subscribeDirect(), registerEntries(), unregisterEntries(), getAllEntries()
 │       │   ├── ResolutionService.ts # Quality tier: rAF benchmark → High/Medium/Low; localStorage persistence; stepUp(); subscribe()
@@ -482,8 +487,10 @@ public/data/characters/{id}/skills.json        # SkillDef[] for that character
 public/data/characters/{id}/dialogue.json      # CharacterDialogueDef — universal battle reactions (optional)
 public/data/campaign/index.json                # stage discovery list ["stage_001", ...]
 public/data/campaign/{stageId}/stage.json      # StageDef (playerUnits, moveRange, enemyAi, playerControl)
-public/data/campaign/{stageId}/map.json        # MapDef (tilemap, entities, entities, wavePhase, fogOfWar)
+public/data/campaign/{stageId}/map.json        # MapDef (tilemap, entities, wavePhase, fogOfWar, tilesetKey?)
 public/data/campaign/{stageId}/narrative.json  # LevelNarrativeDef — dungeon-specific story beats + cutscenes
+public/data/tilesets/{key}/tileset.json        # TilesetDef — maps TileTypeDef.id → PNG filename
+public/images/tilesets/{key}/{filename}.png    # Tile art — individual 512×512 PNGs (e.g. floor.png, wall.png)
 public/data/modes/story.json
 ```
 

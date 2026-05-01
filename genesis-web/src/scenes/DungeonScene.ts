@@ -1,8 +1,20 @@
-import type { MapDef } from '../core/types'
+// DungeonScene — Phaser 3 scene that owns the dungeon canvas.
+//
+// Tileset support: loadMap() accepts an optional TilesetDef. When present, tile
+// PNGs are loaded dynamically (this.load.image + load.start) then TilemapLayer
+// renders Images scaled to tileSize. When loading fails for a tile type, that
+// type falls back to a colored rectangle — the map never hard-errors on missing art.
+
+import type { MapDef, TilesetDef } from '../core/types'
 import { TilemapLayer } from './dungeon/TilemapLayer'
 import { EntityLayer }  from './dungeon/EntityLayer'
 import { PartyMarker }  from './dungeon/PartyMarker'
 import { WaveOverlay }  from './dungeon/WaveOverlay'
+
+// Normalize BASE_URL so image paths are always correct, matching the DataService
+// pattern. Vite's --base flag may produce a value without a trailing slash.
+const RAW_BASE = import.meta.env.BASE_URL
+const BASE_URL = RAW_BASE.endsWith('/') ? RAW_BASE : `${RAW_BASE}/`
 
 export interface DungeonTapCallback {
   onTileTap: (tx: number, ty: number, entityId: string | null) => void
@@ -35,14 +47,20 @@ export class DungeonScene extends Phaser.Scene {
 
   // ── Public command interface (called via DungeonArenaHandle) ─────────────────
 
-  loadMap(mapDef: MapDef): void {
+  loadMap(mapDef: MapDef, tilesetDef?: TilesetDef | null): void {
     this.canvasW = this.scale.width
     this.canvasH = this.scale.height
     const size   = mapDef.tileSize
-    this.tilemap.load(mapDef)
     this.entityLayer.setTileSize(size)
     this.party.setTileSize(size)
-    this.entityLayer.loadEntities(mapDef.entities)
+
+    if (!tilesetDef) {
+      this.tilemap.load(mapDef)
+      this.entityLayer.loadEntities(mapDef.entities)
+      return
+    }
+
+    this.loadTilesetThenRender(mapDef, tilesetDef)
   }
 
   setPartyTile(tx: number, ty: number, animated: boolean, onDone?: () => void): void {
@@ -93,6 +111,50 @@ export class DungeonScene extends Phaser.Scene {
   }
 
   // ── Private ──────────────────────────────────────────────────────────────────
+
+  // Build a textureMap for TilemapLayer, loading any missing tile PNGs first.
+  // Failed loads are excluded from textureMap so those tile types fall back
+  // to colored rectangles — the dungeon never hard-errors on missing art.
+  private loadTilesetThenRender(mapDef: MapDef, tilesetDef: TilesetDef): void {
+    const textureMap = new Map<string, string>()
+    const toLoad: Array<{ key: string; url: string }> = []
+
+    for (const [typeId, filename] of Object.entries(tilesetDef.tiles)) {
+      const texKey = `tileset_${tilesetDef.key}_${typeId}`
+      textureMap.set(typeId, texKey)
+      if (!this.textures.exists(texKey)) {
+        toLoad.push({
+          key: texKey,
+          url: `${BASE_URL}images/tilesets/${tilesetDef.key}/${filename}`,
+        })
+      }
+    }
+
+    if (toLoad.length === 0) {
+      this.tilemap.load(mapDef, textureMap)
+      this.entityLayer.loadEntities(mapDef.entities)
+      return
+    }
+
+    const failedKeys = new Set<string>()
+    const onError    = (file: Phaser.Loader.File) => failedKeys.add(file.key)
+
+    this.load.on('loaderror', onError)
+    this.load.once('complete', () => {
+      this.load.off('loaderror', onError)
+      // Remove any tile type whose texture failed to load.
+      for (const [typeId, texKey] of Array.from(textureMap.entries())) {
+        if (failedKeys.has(texKey)) textureMap.delete(typeId)
+      }
+      this.tilemap.load(mapDef, textureMap)
+      this.entityLayer.loadEntities(mapDef.entities)
+    })
+
+    for (const { key, url } of toLoad) {
+      this.load.image(key, url)
+    }
+    this.load.start()
+  }
 
   private handlePointer(wx: number, wy: number): void {
     if (!this.tapCallback) return
