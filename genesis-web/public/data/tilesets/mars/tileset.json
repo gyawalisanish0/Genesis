@@ -2,6 +2,7 @@
   "type": "tileset",
   "key": "mars",
   "sourceSize": 1024,
+  "bgColor": "#1a0a05",
   "tiles": {
     "floor": "mars_floor.png"
   },

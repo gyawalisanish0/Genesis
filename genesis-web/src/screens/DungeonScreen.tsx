@@ -19,7 +19,7 @@ export function DungeonScreen() {
 function DungeonLayout() {
   const { navigateTo } = useScreen()
   useBackButton(() => navigateTo(SCREEN_IDS.CAMPAIGN))
-  const { arenaRef, phase, stageDef, encounterBanner, mapDef, defeatedEntityIds, partyLeader, tilesetError } = useDungeonScreen()
+  const { arenaRef, phase, stageDef, encounterBanner, mapDef, defeatedEntityIds, partyLeader, tilesetError, bgColor } = useDungeonScreen()
 
   // Compute enemy progress (defeated / total) so the player can see how close
   // they are to clearing the stage at a glance.
@@ -37,7 +37,7 @@ function DungeonLayout() {
           total={totalEnemies}
           onExit={() => navigateTo(SCREEN_IDS.CAMPAIGN)}
         />
-        <DungeonArena ref={arenaRef} />
+        <DungeonArena ref={arenaRef} bgColor={bgColor ?? undefined} />
         {phase === 'exploring' && <DPad />}
         {phase === 'wave'      && <WavePhaseUI />}
         {phase === 'loading'   && <LoadingOverlay />}

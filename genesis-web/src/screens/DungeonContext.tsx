@@ -39,6 +39,7 @@ interface DungeonContextValue {
   // ErrorToaster auto-dismisses; set to the same message string on each new
   // map load that has failures.
   tilesetError:     string | null
+  bgColor:          string | null   // from tileset.json — drives arena container + Phaser camera
   arenaRef:         RefObject<DungeonArenaHandle | null>
   moveParty:        (dx: number, dy: number) => void
   selectWaveEnemy:  (entityId: string) => void
@@ -76,6 +77,7 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
   const [encounterBanner, setEncounterBanner] = useState<string | null>(null)
   const [partyLeader, setPartyLeader]   = useState<{ name: string; hp: number; maxHp: number } | null>(null)
   const [tilesetError, setTilesetError] = useState<string | null>(null)
+  const [bgColor,      setBgColor]      = useState<string | null>(null)
 
   const moveQueueRef  = useRef(false)   // true while animation in flight
   const stageDefRef   = useRef<StageDef | null>(null)
@@ -103,6 +105,7 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
 
     // Load the tileset definition if the map references one. Null = graphics fallback.
     tilesetRef.current = map.tilesetKey ? await loadTilesetDef(map.tilesetKey) : null
+    setBgColor(tilesetRef.current?.bgColor ?? null)
 
     // Register narrative
     const narrative = await loadLevelNarrative(stageId)
@@ -474,7 +477,7 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
 
   const value: DungeonContextValue = {
     stageDef, mapDef, phase, partyTile, entityPositions,
-    defeatedEntityIds, waveEnemies, partyLeader, encounterBanner, tilesetError, arenaRef,
+    defeatedEntityIds, waveEnemies, partyLeader, encounterBanner, tilesetError, bgColor, arenaRef,
     moveParty, selectWaveEnemy,
   }
 

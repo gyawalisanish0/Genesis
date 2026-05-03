@@ -52,6 +52,7 @@ export class DungeonScene extends Phaser.Scene {
     this.canvasH = this.scale.height
 
     const tileSize = this.computeTileSize(mapDef)
+    this.cameras.main.setBackgroundColor(tilesetDef?.bgColor ?? '#0a0a14')
     this.entityLayer.setTileSize(tileSize)
     this.party.setTileSize(tileSize)
 

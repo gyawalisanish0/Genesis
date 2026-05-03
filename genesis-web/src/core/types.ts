@@ -211,6 +211,7 @@ export interface TilesetDef {
   type:       'tileset'
   key:        string
   sourceSize: number    // native resolution of each PNG (e.g. 1024 for 1024×1024)
+  bgColor?:   string    // CSS hex color for the Phaser canvas + container background
   // Maps TileTypeDef.id → PNG filename under public/images/tilesets/{key}/
   tiles:      Record<string, string>
   // Tile type ids planned but not yet asset-ready. Listed here for documentation;

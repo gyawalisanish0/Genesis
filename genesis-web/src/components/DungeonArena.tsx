@@ -18,7 +18,12 @@ export interface DungeonArenaHandle {
   setTapCallback(cb: DungeonTapCallback | null): void
 }
 
-export const DungeonArena = forwardRef<DungeonArenaHandle>(function DungeonArena(_, ref) {
+interface DungeonArenaProps {
+  bgColor?: string   // drives container CSS before Phaser canvas appears
+}
+
+export const DungeonArena = forwardRef<DungeonArenaHandle, DungeonArenaProps>(
+function DungeonArena({ bgColor }, ref) {
   const containerRef = useRef<HTMLDivElement>(null)
   const sceneRef     = useRef<DungeonScene | null>(null)
 
@@ -77,5 +82,5 @@ export const DungeonArena = forwardRef<DungeonArenaHandle>(function DungeonArena
     setTapCallback:    (cb)                  => sceneRef.current?.setTapCallback(cb),
   }))
 
-  return <div ref={containerRef} className={styles.arena} />
+  return <div ref={containerRef} className={styles.arena} style={bgColor ? { backgroundColor: bgColor } : undefined} />
 })
