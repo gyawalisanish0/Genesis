@@ -1,8 +1,0 @@
-{
-  "type": "tileset",
-  "key": "dungeon_classic",
-  "tiles": {
-    "floor": "floor.png",
-    "wall": "wall.png"
-  }
-}

@@ -208,10 +208,14 @@ export interface MapDef {
 // ── Tileset ────────────────────────────────────────────────────────────────────
 
 export interface TilesetDef {
-  type:  'tileset'
-  key:   string
+  type:       'tileset'
+  key:        string
+  sourceSize: number    // native resolution of each PNG (e.g. 1024 for 1024×1024)
   // Maps TileTypeDef.id → PNG filename under public/images/tilesets/{key}/
-  tiles: Record<string, string>
+  tiles:      Record<string, string>
+  // Tile type ids planned but not yet asset-ready. Listed here for documentation;
+  // the engine never tries to load these — they fall back to colored rects silently.
+  pending?:   string[]
 }
 
 export interface PlayerUnitsDef {

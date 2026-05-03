@@ -172,12 +172,12 @@ Genesis/
 │   │   │   │   └── story_001/
 │   │   │   │       └── narrative.json # LevelNarrativeDef — story beats, cutscenes
 │   │   │   ├── tilesets/         # Visual tileset definitions (one subfolder per tileset key)
-│   │   │   │   └── dungeon_classic/
-│   │   │   │       └── tileset.json   # TilesetDef — maps tileType id → PNG filename
+│   │   │   │   └── mars/
+│   │   │   │       └── tileset.json   # TilesetDef — sourceSize, tiles map, pending stubs
 │   │   │   └── modes/            # story.json, ranked.json
 │   │   └── images/               # 3x PNG assets (primary density)
 │   │       └── tilesets/         # Tile art — one subfolder per tileset key
-│   │           └── dungeon_classic/  # 512×512 individual PNGs: floor.png, wall.png, …
+│   │           └── mars/         # 1024×1024 individual PNGs: mars_floor.png, …
 │   └── src/
 │       ├── core/                 # Pure TS game logic — zero UI imports
 │       │   ├── types.ts          # StatBlockDef, CharacterDef, SkillDef, Unit, ModeDef, AppSettings, BattleResult, QualityTier, TilesetDef
@@ -489,8 +489,8 @@ public/data/campaign/index.json                # stage discovery list ["stage_00
 public/data/campaign/{stageId}/stage.json      # StageDef (playerUnits, moveRange, enemyAi, playerControl)
 public/data/campaign/{stageId}/map.json        # MapDef (tilemap, entities, wavePhase, fogOfWar, tilesetKey?)
 public/data/campaign/{stageId}/narrative.json  # LevelNarrativeDef — dungeon-specific story beats + cutscenes
-public/data/tilesets/{key}/tileset.json        # TilesetDef — maps TileTypeDef.id → PNG filename
-public/images/tilesets/{key}/{filename}.png    # Tile art — individual 512×512 PNGs (e.g. floor.png, wall.png)
+public/data/tilesets/{key}/tileset.json        # TilesetDef — sourceSize, tiles (id→PNG), optional pending stubs
+public/images/tilesets/{key}/{filename}.png    # Tile art — individual PNGs at sourceSize (e.g. mars_floor.png @ 1024×1024)
 public/data/modes/story.json
 ```
 

@@ -1,0 +1,9 @@
+{
+  "type": "tileset",
+  "key": "mars",
+  "sourceSize": 1024,
+  "tiles": {
+    "floor": "mars_floor.png"
+  },
+  "pending": ["crater", "rock"]
+}

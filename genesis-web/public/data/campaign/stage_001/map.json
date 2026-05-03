@@ -87,5 +87,5 @@
     }
   ],
   "wavePhase": { "mode": "player-select" },
-  "tilesetKey": "dungeon_classic"
+  "tilesetKey": "mars"
 }
