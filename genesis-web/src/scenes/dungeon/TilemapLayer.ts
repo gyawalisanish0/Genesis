@@ -112,6 +112,7 @@ export class TilemapLayer {
             y * size + size / 2,
             texKey,
           ).setDisplaySize(size, size)
+            .setAngle(typeInfo?.rotation ?? 0)
           this.tileImages.push(img)
         } else {
           if (!this.tileGraphics) this.tileGraphics = this.scene.add.graphics()
