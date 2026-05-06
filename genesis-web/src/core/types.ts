@@ -168,9 +168,17 @@ export interface NpcEntityDef extends EntityBase {
   blocksMovement?: boolean
 }
 
+export interface ChestReward {
+  gold?:          number
+  xp?:            number
+  items?:         string[]   // item defIds — future use
+  narrativeText?: string
+}
+
 export interface InteractableEntityDef extends EntityBase {
   type:     'interactable'
   subtype?: string   // 'chest' | 'switch' | etc.
+  reward?:  ChestReward
 }
 
 export interface ExitEntityDef extends EntityBase {

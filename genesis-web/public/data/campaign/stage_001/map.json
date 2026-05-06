@@ -62,7 +62,11 @@
       "type": "interactable",
       "subtype": "chest",
       "x": 3, "y": 0,
-      "narrativeId": "stage_001_first_chest"
+      "reward": {
+        "gold": 50,
+        "xp": 25,
+        "narrativeText": "An emergency supply cache left by the previous squad."
+      }
     },
     {
       "entityId": "exit_a",
