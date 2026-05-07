@@ -1494,9 +1494,15 @@ export function BattleProvider({ children }: Props) {
     setSelectedSkill(null)
     setSelectedTarget(null)
     setShowTargetPicker(false)
-    const fromTick = actor.tickPosition
+    const fromTick  = actor.tickPosition
+    const apFrozen  = actor.statusSlots.some(s => s.id === 'hugo_001_ap_regen_freeze')
+    const apGained  = apFrozen ? 0 : calculateApGained(SKIP_TU_COST, actor.apRegenRate)
     pushHistory(makeHistoryEntry(actor.id, actor.name, fromTick, actor.isAlly))
-    setPlayerUnits((prev) => prev.map((u) => u.id === actor.id ? incrementActionCount(u) : u))
+    setPlayerUnits((prev) => prev.map((u) =>
+      u.id === actor.id
+        ? incrementActionCount({ ...u, ap: Math.min(u.maxAp, u.ap + apGained) })
+        : u
+    ))
     registerTick(actor.id, fromTick + SKIP_TU_COST)
     appendLog({ text: 'You skipped your turn.' })
     arenaRef.current?.clearTurn()
