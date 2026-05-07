@@ -81,8 +81,12 @@ The Commander wakes. Talks to **KALI** to get bearings.
 > Developed by Kognitive Tech Limited
 
 KALI is the Commander's primary interface throughout the demo —
-briefings, status updates, alarms, deployment orders. Functional
-by design but with her own voice and personality (TBD).
+briefings, status updates, alarms, deployment orders.
+
+**KALI's voice:** Precise, professional, clinical. No small talk.
+Every word is the right word. She does not speculate — she reports.
+She does not comfort — she informs. Not cold, just exact.
+A deliberate contrast to the Creator's chaos.
 
 The dream sits uneasily but there is no time to process it.
 KALI has no record of the dream. It did not happen in any system
