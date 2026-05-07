@@ -8,7 +8,7 @@
 | Profession | Material Engineer |
 | Combat Role | Front-line suit fighter |
 | Rarity | 4 |
-| Affiliation | Commander's deployed team — Mars mission |
+| Affiliation | Sekkar Peace Fleet — Commander's deployed team, Mars mission |
 | Data ID | `hugo_001` |
 
 First playable character in Genesis.
@@ -25,8 +25,10 @@ ANBOT is inspired by the same principle as venom symbiosis: the suit and the
 wearer act as one. Hugo's commands are instant — there is no interface, no
 delay. The nanites respond to intent.
 
-Hugo built ANBOT himself. The backstory behind its creation is developed
-separately — see future lore entries.
+ANBOT was drafted at the military contracting firm where Hugo first worked after
+graduation. He walked away from the firm — and from the people who wanted to
+weaponise it — before it could be taken from him. He finished it on his own terms
+inside the Sekkar Peace Fleet.
 
 ---
 
@@ -60,13 +62,26 @@ develops.
 
 ## Personality
 
-Hugo is funny and precise — but not deliberately funny. The humor comes from the gap between how seriously he takes himself and how often things go spectacularly wrong around him.
+Hugo is funny and precise — but not deliberately funny. The humor comes from
+the gap between how seriously he takes himself and how often things go
+spectacularly wrong around him.
 
-He is **defensive by default**. When something fails he already has the technical justification built before anyone asks. Precise language is his shield — "the environmental variables were outside the test parameters" is easier than admitting he miscalculated. Years of being underestimated as a new recruit in institutions that couldn't keep up with him calcified this habit. He pre-justifies everything before anyone can question it.
+He is **defensive by default**. When something fails he already has the
+technical justification built before anyone asks. Precise language is his
+shield — "the environmental variables were outside the test parameters" is
+easier than admitting he miscalculated. Years of being underestimated as a
+new recruit in institutions that couldn't keep up with him calcified this
+habit. He pre-justifies everything before anyone can question it.
 
-His school convention record — multiple failures from chaotic inventions — follows him. The inventions were never wrong. The context just wasn't ready for them. That's his position and he holds it.
+His school convention record — multiple failures from chaotic inventions —
+follows him. The inventions were never wrong. The context just wasn't ready
+for them. That's his position and he holds it.
 
-**In battle, the near-death state strips all of that away.** When HP drops to critical and Primal Awareness fires, Hugo goes quiet. No deflection, no justification. Just him and the suit operating on instinct and biology. The contrast is stark — the loudest person in the room suddenly becomes the calmest presence on the battlefield.
+**In battle, the near-death state strips all of that away.** When HP drops to
+critical and Primal Awareness fires, Hugo goes quiet. No deflection, no
+justification. Just him and the suit operating on instinct and biology. The
+contrast is stark — the loudest person in the room suddenly becomes the
+calmest presence on the battlefield.
 
 ### Voice notes
 
@@ -80,22 +95,33 @@ His school convention record — multiple failures from chaotic inventions — f
 
 ## Background
 
----
+New recruit in the fleet — but a veteran by experience. He carries more field
+knowledge than most of the people outranking him, and that gap is the source
+of most of his friction.
 
-## Background
+**The arc:**
 
-New recruit in the fleet — but a veteran by experience. He carries more
-field knowledge than most of the people outranking him, and that gap is the
-source of most of his friction. Institutions kept failing to contain what he
-was building; he kept getting into trouble for inventions that worked too
-chaotically for the environments they were tested in.
+1. Troubled academic record — repeated school convention failures from
+   inventions too ambitious for the environments they were tested in
+2. Graduates → joins a military contracting firm as a material engineer
+3. Drafts ANBOT at the firm — their resources give him what he needs to build
+   it seriously for the first time
+4. Realises what a weapon like that becomes in military hands — decides to walk
+5. His best friend and colleague tries to convince him to stay, citing fame and
+   wealth they could achieve together. Hugo refuses.
+6. Leaves the firm. First contact with the Sekkar Peace Fleet is not a
+   recruitment — it is an abduction. They detected the ANBOT draft and treated
+   it as a threat.
+7. Eventually earns his place in the fleet. Finishes ANBOT fully there, on his
+   own terms.
 
-ANBOT is what he built outside of all that. On his own terms. The thing that
-finally worked the way he intended. His attachment to it is not sentimental —
-it is the proof that he was right all along.
+ANBOT is not sentimental to him. It is the proof he was right all along.
 
-The circumstances behind ANBOT's creation, his hybrid upbringing, and his
-path to the Mars mission are in development.
+**Open threads (for later chapters):**
+- The best friend who stayed at the firm — that relationship and where it goes
+- The full circumstances of the abduction and what followed
+- His hybrid upbringing and what being Sekkar-human means to him personally
+- His relationship with the Commander
 
 ---
 
@@ -162,21 +188,19 @@ prevents spam — use it when a big window opens, not as a rotation filler.
 | AP Cost | 20 |
 | TU Cost | 6 |
 | Shield | 25% of current HP |
-| Regen | 4% max HP per 10 ticks while shield is active |
-| Break Penalty | The hit that shatters the shield deals 2× damage to Hugo |
-| Cooldown | 48 ticks — starts on shield break (not on activation) |
-
-**Design note**: The cooldown is unusual — it is silent on cast and begins only
-when the shield breaks. If the shield never breaks, there is no cooldown.
-This mechanic requires engine support beyond the standard tickCooldown field.
+| Regen | 56 HP every 10 of Hugo's own turns while shield is active |
+| Break Penalty | If shield breaks within 9 turns of cast: overflow damage is doubled |
+| Cooldown | 48 ticks — starts on shield break, not on activation |
+| Restriction | Cannot cast while shield is already active |
 
 The regen window rewards commitment — pop it early when HP is healthy for
 maximum shield value and recovery time. Using it as a panic button at low HP
-produces a thin shield that breaks easily, triggering both the 2× spike and the
-long cooldown at the worst possible moment.
+produces a thin shield that breaks easily, triggering both the doubled overflow
+and the long cooldown at the worst possible moment.
 
 Interaction with Primal Awareness: at 10% HP the shield is minimal. A burst
-through it punishes hard when there is no HP left to absorb the 2× hit.
+through it during the penalty window punishes hard when there is no HP left
+to absorb the spike.
 
 ---
 
@@ -203,20 +227,18 @@ Replaces Normal Mode when **both** conditions are met:
 - Primal Awareness is active (HP below 10%)
 - Fewer than 2 dodge points remaining
 
+Action grid shows **Hyper Sense ★** with updated costs when this unlocks.
+
 | Field | Value |
 |---|---|
 | AP Cost | 20 |
 | TU Cost | 6 |
 | Effect | 90% melee dodge / 50% ranged dodge for the Primal Awareness duration |
 | On Expiry | Counter: 200% Power energy damage |
-| Cooldown | 8 turns |
+| Cooldown | 8 turns (shared slot — overwrites Normal Mode cooldown) |
 
-**Design note**: Hyper Mode is tied to the Primal Awareness window — it expires
-when the passive expires. The cost, TU, and cooldown differ from Normal Mode.
-Conditional cost-switching requires engine support.
-
-The counter on expiry is automatic — no additional input. The Hyper Mode window
-ending is itself the trigger.
+The counter on expiry is automatic. The Hyper Mode window ending is itself
+the trigger.
 
 ---
 
@@ -228,11 +250,11 @@ ending is itself the trigger.
 |---|---|
 | Trigger | HP drops below 10% |
 | Activation | Guaranteed — no RNG on trigger |
-| Dodge Points | 5 |
+| Dodge Points | 5 stacks |
 | Dodge Chance | 70% per hit attempt |
-| Dodge Consumption | One point consumed per incoming hit attempt (successful dodge or not) |
+| Dodge Consumption | One stack consumed per incoming hit attempt (successful dodge or not) |
 | AP Regen | Frozen for 3 of Hugo's own turns |
-| Reactivation Gate | Cannot trigger again until AP returns to 80%+ |
+| Reactivation Gate | Cannot trigger again until AP returns to 80%+ and dodge status is gone |
 
 **Biological basis**: Hugo's Sekkar skin receptors detect incoming attack
 pressure shifts. ANBOT reads the signal and reroutes before the hit lands.
@@ -243,37 +265,36 @@ reserves. AP regen is sacrificed for the survival window. With AP already
 spent, the 20 AP cost of Hyper Sense becomes a meaningful decision.
 
 **Reactivation gate**: prevents the passive from being a permanent escape
-valve. Hugo must rebuild his AP economy before the safety net resets.
+valve. Hugo must burn through the dodge window and rebuild his AP economy
+before the safety net resets.
 
 ---
 
 ## Status IDs Referenced
 
-These statuses are applied by Hugo's skills and passive. Each requires a
-status definition file to be authored separately.
-
 | Status ID | Applied By | Purpose |
 |---|---|---|
-| `hugo_001_shelling_point_active` | Shelling Point | Carries shield HP, tick regen, break penalty logic |
-| `hugo_001_primal_awareness_dodge` | Primal Awareness | 5-stack dodge at 70% per hit attempt |
+| `hugo_001_shelling_point_active` | Shelling Point | Shield HP pool + tick regen (56 HP / 10 turns) |
+| `hugo_001_shelling_point_penalty_window` | Shelling Point | 9-turn penalty window — break during this doubles overflow damage |
+| `hugo_001_primal_awareness_dodge` | Primal Awareness | 5-stack dodge at 70% per hit attempt, consumed per attempt |
 | `hugo_001_ap_regen_freeze` | Primal Awareness | Halts AP regen for 3 turns |
 | `hugo_001_hyper_sense_ranged_dodge` | Hyper Sense (Normal) | 30% ranged dodge for 15 ticks |
-| `hugo_001_hyper_sense_hyper_active` | Hyper Sense (Hyper) | 90% melee / 50% ranged dodge + end-of-duration counter |
+| `hugo_001_hyper_sense_hyper_active` | Hyper Sense (Hyper) | 90% melee / 50% ranged dodge + onExpire 200% Power counter |
 
 ---
 
-## Engine Work Required
+## Engine Implementation Notes
 
-| Mechanic | Skill | Notes |
-|---|---|---|
-| Break-triggered cooldown | Shelling Point | Cooldown starts on shield break, not on cast |
-| Conditional cost-switching | Hyper Sense | AP cost and TU cost differ between Normal and Hyper mode |
-| Shield absorption + break penalty | Shelling Point status | Requires `onTakeDamage` shield logic in status engine |
-| Dodge point stacks with per-attempt consumption | Primal Awareness status | Stacked status with 70% chance, consumed on each hit attempt |
-| AP regen halt | Primal Awareness status | `apRegenRate` is not a current StatKey — needs engine support |
+All core mechanics are wired. Remaining known approximation:
+
+| Item | Note |
+|---|---|
+| Shelling Point regen amount | Currently flat 56 HP. Should be 4% of maxHp — needs maxHp as a ValueExpr stat key |
+| onTickInterval timing | Fires per Hugo's own turns, not per battle tick. Accurate when the battle is mostly sequential; may drift in multi-unit fights |
 
 ---
 
 ## Status
 
-Kit locked. Personality in development. Backstory TBD.
+Kit complete. Engine wired. Personality documented. Backstory foundation laid.
+Commander relationship and best-friend thread reserved for later chapters.
