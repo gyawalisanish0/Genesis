@@ -12,7 +12,7 @@ docs/characters/
 ├── README.md                      ← this file
 ├── the-creator.md                 ← cosmic entity, ???, the dream
 ├── kali.md                        ← AI assistant, Kognitive Tech Limited
-├── team/
+├── in-game/
 │   └── hugo-rekrot.md             ← Material Engineer, sekkar-human hybrid
 └── civilizations/
     └── sekkars.md                 ← first alien species in Genesis
