@@ -54,7 +54,9 @@ export class DungeonScene extends Phaser.Scene {
     const tileSize = this.computeTileSize(mapDef)
     this.cameras.main.setBackgroundColor(tilesetDef?.bgColor ?? '#0a0a14')
     this.entityLayer.setTileSize(tileSize)
+    this.entityLayer.setMapDef(mapDef)
     this.party.setTileSize(tileSize)
+    this.party.setMapDef(mapDef)
 
     if (!tilesetDef) {
       this.tilemap.load(mapDef, tileSize)

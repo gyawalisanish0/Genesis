@@ -83,7 +83,6 @@ export const QUALITY_STEP_UP_CHECKS      = 10     // consecutive 1-s checks at â
 export const DUNGEON_DEFAULT_MOVE_RANGE    = 1    // tiles the party can move per turn
 export const DUNGEON_DEFAULT_VISUAL_RANGE  = 1    // Chebyshev detection radius for entities
 export const DUNGEON_REVEAL_RADIUS         = 2    // fog-of-war reveal radius around party
-export const DUNGEON_ENTITY_Y_OFFSET       = 0.20 // fraction of tileSize â€” entities sit above tile centre for depth
 export const DUNGEON_MOVE_ANIM_MS          = 180  // ms per tile movement tween
 export const DUNGEON_PATROL_ANIM_MS        = 200  // ms per tile for enemy patrol step
 export const DUNGEON_WAVE_VIGNETTE_OPACITY = 0.65 // overlay opacity during wave phase

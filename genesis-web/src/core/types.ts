@@ -133,11 +133,14 @@ export type QualityTier = 'High' | 'Medium' | 'Low'
 // ── Campaign / dungeon definitions ─────────────────────────────────────────────
 
 export interface TileTypeDef {
-  passable:   boolean
-  id:         string
-  // Clockwise rotation in degrees (0/90/180/270). Used to cover all orientations
-  // of directional tiles (e.g. rift_edge, rift_corner) from a single source PNG.
-  rotation?:  number
+  passable:      boolean
+  id:            string
+  // Clockwise rotation in degrees (0/90/180/270). Covers all orientations of a
+  // directional tile (edge, corner) from a single source PNG.
+  rotation?:     number
+  // Fraction of tileSize to shift the entity visual toward the surface side.
+  // Absent on floor/wall/rift/hill/crater — entity stays centred on those.
+  entityOffset?: { x: number; y: number }
 }
 
 export interface WavePhaseConfig {

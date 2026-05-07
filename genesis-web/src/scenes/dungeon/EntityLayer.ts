@@ -1,5 +1,5 @@
-import type { EntityDef, InteractableEntityDef } from '../../core/types'
-import { DUNGEON_PATROL_ANIM_MS, DUNGEON_ENTITY_Y_OFFSET } from '../../core/constants'
+import type { EntityDef, InteractableEntityDef, MapDef } from '../../core/types'
+import { DUNGEON_PATROL_ANIM_MS } from '../../core/constants'
 
 const COLOURS: Record<string, number> = {
   enemy:        0xe74c3c,
@@ -31,8 +31,8 @@ interface EntitySprite {
 export class EntityLayer {
   private scene:    Phaser.Scene
   private tileSize: number = 48
+  private mapDef:   MapDef | null = null
   private sprites:  Map<string, EntitySprite> = new Map()
-  // entityIds currently highlighted for wave selection
   private highlighted: Set<string> = new Set()
 
   constructor(scene: Phaser.Scene) {
@@ -41,6 +41,10 @@ export class EntityLayer {
 
   setTileSize(size: number): void {
     this.tileSize = size
+  }
+
+  setMapDef(mapDef: MapDef): void {
+    this.mapDef = mapDef
   }
 
   loadEntities(entities: EntityDef[]): void {
@@ -160,10 +164,18 @@ export class EntityLayer {
   }
 
   private entityCenter(tx: number, ty: number): { wx: number; wy: number } {
+    const off = this.tileEntityOffset(tx, ty)
     return {
-      wx: tx * this.tileSize + this.tileSize / 2,
-      wy: ty * this.tileSize + this.tileSize * (0.5 - DUNGEON_ENTITY_Y_OFFSET),
+      wx: tx * this.tileSize + this.tileSize * (0.5 + off.x),
+      wy: ty * this.tileSize + this.tileSize * (0.5 + off.y),
     }
+  }
+
+  private tileEntityOffset(tx: number, ty: number): { x: number; y: number } {
+    if (!this.mapDef) return { x: 0, y: 0 }
+    const code = this.mapDef.tiles[ty]?.[tx]
+    if (code === undefined) return { x: 0, y: 0 }
+    return this.mapDef.tileTypes[String(code)]?.entityOffset ?? { x: 0, y: 0 }
   }
 
   private drawSpriteAt(sprite: EntitySprite, wx: number, wy: number): void {

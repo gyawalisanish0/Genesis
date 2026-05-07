@@ -1,4 +1,5 @@
-import { DUNGEON_MOVE_ANIM_MS, DUNGEON_ENTITY_Y_OFFSET } from '../../core/constants'
+import type { MapDef } from '../../core/types'
+import { DUNGEON_MOVE_ANIM_MS } from '../../core/constants'
 
 const MARKER_COLOUR  = 0x8b5cf6  // --accent-genesis
 const MARKER_RADIUS  = 14
@@ -8,6 +9,7 @@ export class PartyMarker {
   private graphics: Phaser.GameObjects.Graphics
   private label:    Phaser.GameObjects.Text
   private tileSize: number = 48
+  private mapDef:   MapDef | null = null
 
   constructor(scene: Phaser.Scene) {
     this.scene    = scene
@@ -20,6 +22,10 @@ export class PartyMarker {
 
   setTileSize(size: number): void {
     this.tileSize = size
+  }
+
+  setMapDef(mapDef: MapDef): void {
+    this.mapDef = mapDef
   }
 
   place(tx: number, ty: number): void {
@@ -55,9 +61,12 @@ export class PartyMarker {
   }
 
   private tileCenter(tx: number, ty: number): { wx: number; wy: number } {
+    const off = this.mapDef?.tileTypes[
+      String(this.mapDef.tiles[ty]?.[tx] ?? 0)
+    ]?.entityOffset ?? { x: 0, y: 0 }
     return {
-      wx: tx * this.tileSize + this.tileSize / 2,
-      wy: ty * this.tileSize + this.tileSize * (0.5 - DUNGEON_ENTITY_Y_OFFSET),
+      wx: tx * this.tileSize + this.tileSize * (0.5 + off.x),
+      wy: ty * this.tileSize + this.tileSize * (0.5 + off.y),
     }
   }
 
