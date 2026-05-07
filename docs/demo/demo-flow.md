@@ -11,6 +11,12 @@ The player never controls the Commander directly on the battlefield.
 The Commander is the strategist. The deployed team is the player's
 instrument on the ground.
 
+**The dream is not an introduction. It is a sign of something untold.**
+The Creator finding the player is not a random curiosity — it matters
+in ways neither the Creator nor the player understands yet. The threat
+on Mars and the dream are connected. The demo is chapter one of
+something that began before the player pressed play.
+
 ---
 
 ## Character Creation
@@ -56,6 +62,12 @@ The player is confused. The Creator is confused. Neither has words for
 what is happening.
 
 The dream ends. No explanation. No resolution.
+
+**Design note:** The dream is a foreshadowing beat — not flavour, not
+tutorial. Its true meaning is understood only later. On a first
+playthrough it feels like a strange opening. On a second it feels like
+a warning that was always there. Write the Creator's lines with this
+double meaning in mind — they must hold up to retrospection.
 
 ---
 
