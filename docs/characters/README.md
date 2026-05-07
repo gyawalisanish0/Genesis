@@ -9,10 +9,13 @@ chapters. Each character gets their own file when development begins.
 
 ```
 docs/characters/
-├── README.md               ← this file
-├── the-creator.md          ← cosmic entity, ???, the dream
-├── kali.md                 ← AI assistant, Kognitive Tech Limited
-└── team/                   ← deployed team characters (TBD)
+├── README.md                      ← this file
+├── the-creator.md                 ← cosmic entity, ???, the dream
+├── kali.md                        ← AI assistant, Kognitive Tech Limited
+├── team/
+│   └── hugo-rekrot.md             ← Material Engineer, sekkar-human hybrid
+└── civilizations/
+    └── sekkars.md                 ← first alien species in Genesis
 ```
 
 ---
@@ -24,7 +27,7 @@ docs/characters/
 | The Creator | Cosmic entity — the dream | In development |
 | KALI | AI assistant to the Commander | In development |
 | Commander | The player — custom name | Defined in demo-flow.md |
-| Team members | Deployed to Mars | TBD |
+| Hugo Rekrot | Material Engineer — Mars team | In development |
 | Faction | Intergalactic antagonists | Withheld by design |
 
 ---
