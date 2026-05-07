@@ -21,6 +21,11 @@
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
 }
 
+/* ErrorToaster variant — amber border signals a warning, not a hint */
+.toasterError {
+  border-color: var(--accent-warn);
+}
+
 .toasterTop {
   top: calc(var(--safe-top) + 4.25rem);
   transform: translateX(-50%);

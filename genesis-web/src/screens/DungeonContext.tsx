@@ -2,14 +2,14 @@ import {
   createContext, useContext, useRef, useState, useCallback,
   useEffect, type RefObject,
 } from 'react'
-import type { StageDef, MapDef, EnemyEntityDef, DungeonState } from '../core/types'
+import type { StageDef, MapDef, TilesetDef, EnemyEntityDef, InteractableEntityDef, DungeonState } from '../core/types'
 import type { DungeonArenaHandle } from '../components/DungeonArena'
 import { useGameStore }     from '../core/GameContext'
 import { useScreen }        from '../navigation/useScreen'
 import { SCREEN_IDS }       from '../navigation/screenRegistry'
 import { NarrativeService } from '../services/NarrativeService'
 import { NarrativeUnits }   from '../components/NarrativeLayer'
-import { loadStageDef, loadMapDef, loadCharacterWithSkills, loadLevelNarrative } from '../services/DataService'
+import { loadStageDef, loadMapDef, loadTilesetDef, loadCharacterWithSkills, loadLevelNarrative } from '../services/DataService'
 import { createUnit }       from '../core/unit'
 import {
   DUNGEON_DEFAULT_VISUAL_RANGE,
@@ -35,9 +35,16 @@ interface DungeonContextValue {
   // Telegraph banner: short label shown before navigating into battle so the
   // encounter feels intentional. Null while exploring/in wave UI.
   encounterBanner:  string | null
+  // Non-null when one or more tile textures failed to load. Cleared once the
+  // ErrorToaster auto-dismisses; set to the same message string on each new
+  // map load that has failures.
+  tilesetError:     string | null
+  bgColor:          string | null   // from tileset.json — drives arena container + Phaser camera
+  openChest:        InteractableEntityDef | null
   arenaRef:         RefObject<DungeonArenaHandle | null>
   moveParty:        (dx: number, dy: number) => void
   selectWaveEnemy:  (entityId: string) => void
+  collectChest:     () => void
 }
 
 // ── Context ───────────────────────────────────────────────────────────────────
@@ -70,14 +77,24 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
   const [defeatedEntityIds, setDefeatedEntityIds] = useState<Set<string>>(new Set())
   const [waveEnemies, setWaveEnemies] = useState<EnemyEntityDef[]>([])
   const [encounterBanner, setEncounterBanner] = useState<string | null>(null)
-  const [partyLeader, setPartyLeader] = useState<{ name: string; hp: number; maxHp: number } | null>(null)
+  const [partyLeader, setPartyLeader]   = useState<{ name: string; hp: number; maxHp: number } | null>(null)
+  const [tilesetError, setTilesetError] = useState<string | null>(null)
+  const [bgColor,      setBgColor]      = useState<string | null>(null)
+  const [openChest,    setOpenChestState] = useState<InteractableEntityDef | null>(null)
 
-  const moveQueueRef  = useRef(false)   // true while animation in flight
-  const stageDefRef   = useRef<StageDef | null>(null)
-  const mapDefRef     = useRef<MapDef | null>(null)
-  const partyRef      = useRef({ x: 0, y: 0 })
-  const entityPosRef  = useRef<Record<string, { x: number; y: number }>>({})
-  const defeatedRef   = useRef<Set<string>>(new Set())
+  const moveQueueRef   = useRef(false)   // true while animation in flight
+  const openChestRef   = useRef<InteractableEntityDef | null>(null)
+  const stageDefRef    = useRef<StageDef | null>(null)
+  const mapDefRef      = useRef<MapDef | null>(null)
+  const tilesetRef     = useRef<TilesetDef | null>(null)
+  const partyRef       = useRef({ x: 0, y: 0 })
+  const entityPosRef   = useRef<Record<string, { x: number; y: number }>>({})
+  const defeatedRef    = useRef<Set<string>>(new Set())
+
+  function setOpenChest(chest: InteractableEntityDef | null) {
+    openChestRef.current = chest
+    setOpenChestState(chest)
+  }
 
   // ── Load stage on mount ────────────────────────────────────────────────────
 
@@ -94,6 +111,10 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
     setMapDef(map)
     stageDefRef.current  = stage
     mapDefRef.current    = map
+
+    // Load the tileset definition if the map references one. Null = graphics fallback.
+    tilesetRef.current = map.tilesetKey ? await loadTilesetDef(map.tilesetKey) : null
+    setBgColor(tilesetRef.current?.bgColor ?? null)
 
     // Register narrative
     const narrative = await loadLevelNarrative(stageId)
@@ -171,7 +192,7 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
   ) {
     const arena = arenaRef.current
     if (!arena) return
-    arena.loadMap(map)
+    arena.loadMap(map, tilesetRef.current, (msg) => setTilesetError(msg))
     arena.setPartyTile(start.x, start.y, false)
     arena.revealTiles(start.x, start.y, DUNGEON_REVEAL_RADIUS)
 
@@ -207,7 +228,7 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
   // ── Move party ─────────────────────────────────────────────────────────────
 
   const moveParty = useCallback((dx: number, dy: number) => {
-    if (phase !== 'exploring' || moveQueueRef.current) return
+    if (phase !== 'exploring' || moveQueueRef.current || openChestRef.current) return
     const map = mapDefRef.current
     if (!map) return
 
@@ -296,11 +317,25 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
       if (e.type !== 'interactable' && e.type !== 'exit') continue
       if (defeatedRef.current.has(e.entityId)) continue
       const pos = entityPosRef.current[e.entityId]
-      if (pos && pos.x === tx && pos.y === ty && e.narrativeId) {
-        NarrativeService.play(e.narrativeId)
-        if (e.type === 'exit') handleExit(e as any)
+      if (!pos || pos.x !== tx || pos.y !== ty) continue
+
+      if (e.type === 'interactable' && (e as InteractableEntityDef).subtype === 'chest') {
+        setOpenChest(e as InteractableEntityDef)
+        continue
       }
+
+      if (e.narrativeId) NarrativeService.play(e.narrativeId)
+      if (e.type === 'exit') handleExit(e as any)
     }
+  }
+
+  function collectChest() {
+    const chest = openChestRef.current
+    if (!chest) return
+    defeatedRef.current = new Set([...defeatedRef.current, chest.entityId])
+    setDefeatedEntityIds(new Set(defeatedRef.current))
+    arenaRef.current?.removeEntity(chest.entityId)
+    setOpenChest(null)
   }
 
   function handleExit(_e: { leadsTo?: string }) {
@@ -465,8 +500,8 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
 
   const value: DungeonContextValue = {
     stageDef, mapDef, phase, partyTile, entityPositions,
-    defeatedEntityIds, waveEnemies, partyLeader, encounterBanner, arenaRef,
-    moveParty, selectWaveEnemy,
+    defeatedEntityIds, waveEnemies, partyLeader, encounterBanner, tilesetError, bgColor,
+    openChest, arenaRef, moveParty, selectWaveEnemy, collectChest,
   }
 
   return <DungeonContext.Provider value={value}>{children}</DungeonContext.Provider>

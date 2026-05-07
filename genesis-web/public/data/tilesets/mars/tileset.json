@@ -1,0 +1,10 @@
+{
+  "type": "tileset",
+  "key": "mars",
+  "sourceSize": 1024,
+  "bgColor": "#1a0a05",
+  "tiles": {
+    "floor": "mars_floor.png"
+  },
+  "pending": ["rift", "edge", "surface_corner", "rift_corner", "hill", "crater"]
+}

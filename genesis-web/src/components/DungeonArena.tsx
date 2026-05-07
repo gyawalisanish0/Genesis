@@ -1,12 +1,12 @@
 import { useRef, useEffect, useImperativeHandle, forwardRef } from 'react'
 import Phaser from 'phaser'
-import type { MapDef } from '../core/types'
+import type { MapDef, TilesetDef } from '../core/types'
 import { DungeonScene } from '../scenes/DungeonScene'
 import type { DungeonTapCallback } from '../scenes/DungeonScene'
 import styles from './DungeonArena.module.css'
 
 export interface DungeonArenaHandle {
-  loadMap(mapDef: MapDef): void
+  loadMap(mapDef: MapDef, tilesetDef?: TilesetDef | null, onTilesetError?: (msg: string) => void): void
   setPartyTile(tx: number, ty: number, animated: boolean, onDone?: () => void): void
   revealTiles(cx: number, cy: number, radius: number): void
   setEntityPosition(entityId: string, tx: number, ty: number, animated: boolean, onDone?: () => void): void
@@ -18,7 +18,12 @@ export interface DungeonArenaHandle {
   setTapCallback(cb: DungeonTapCallback | null): void
 }
 
-export const DungeonArena = forwardRef<DungeonArenaHandle>(function DungeonArena(_, ref) {
+interface DungeonArenaProps {
+  bgColor?: string   // drives container CSS before Phaser canvas appears
+}
+
+export const DungeonArena = forwardRef<DungeonArenaHandle, DungeonArenaProps>(
+function DungeonArena({ bgColor }, ref) {
   const containerRef = useRef<HTMLDivElement>(null)
   const sceneRef     = useRef<DungeonScene | null>(null)
 
@@ -59,7 +64,7 @@ export const DungeonArena = forwardRef<DungeonArenaHandle>(function DungeonArena
   }, [])
 
   useImperativeHandle(ref, () => ({
-    loadMap: (mapDef) => sceneRef.current?.loadMap(mapDef),
+    loadMap: (mapDef, tilesetDef, onTilesetError) => sceneRef.current?.loadMap(mapDef, tilesetDef, onTilesetError),
     setPartyTile: (tx, ty, animated, onDone) => {
       if (sceneRef.current) sceneRef.current.setPartyTile(tx, ty, animated, onDone)
       else onDone?.()
@@ -77,5 +82,5 @@ export const DungeonArena = forwardRef<DungeonArenaHandle>(function DungeonArena
     setTapCallback:    (cb)                  => sceneRef.current?.setTapCallback(cb),
   }))
 
-  return <div ref={containerRef} className={styles.arena} />
+  return <div ref={containerRef} className={styles.arena} style={bgColor ? { backgroundColor: bgColor } : undefined} />
 })

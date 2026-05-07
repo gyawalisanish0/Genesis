@@ -3,7 +3,7 @@
 // Layer rules: no React imports; Capacitor platform check guards native paths.
 // All callers receive typed data; Zod validation is deferred to Wave C.
 
-import type { CharacterDef, ModeDef, StageDef, MapDef } from '../core/types'
+import type { CharacterDef, ModeDef, StageDef, MapDef, TilesetDef } from '../core/types'
 import type { SkillDef } from '../core/effects/types'
 import type { CharacterDialogueDef, LevelNarrativeDef } from '../core/narrative'
 
@@ -19,6 +19,7 @@ const cache = {
   levelNarrative:    new Map<string, LevelNarrativeDef>(),
   stages:            new Map<string, StageDef>(),
   maps:              new Map<string, MapDef>(),
+  tilesets:          new Map<string, TilesetDef>(),
 }
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
@@ -158,6 +159,20 @@ export async function loadMapDef(stageId: string): Promise<MapDef | null> {
   }
 }
 
+/** Load tileset visual definition. Returns null silently when absent. */
+export async function loadTilesetDef(key: string): Promise<TilesetDef | null> {
+  const cached = cache.tilesets.get(key)
+  if (cached) return cached
+  try {
+    const raw = await fetchJson(`data/tilesets/${key}/tileset.json`)
+    const def = raw as TilesetDef
+    cache.tilesets.set(key, def)
+    return def
+  } catch {
+    return null
+  }
+}
+
 /** Test utility — clears all cached data between test cases. */
 export function clearCache(): void {
   cache.characterIndex = null
@@ -169,4 +184,5 @@ export function clearCache(): void {
   cache.levelNarrative.clear()
   cache.stages.clear()
   cache.maps.clear()
+  cache.tilesets.clear()
 }

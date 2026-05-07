@@ -1,0 +1,84 @@
+Business Source License 1.1
+
+Licensor:             Sanish Gyawali
+Licensed Work:        Genesis — a multi-world tactical RPG engine
+                      (c) 2026 Sanish Gyawali. All rights reserved.
+Additional Use Grant: Non-commercial use is permitted free of charge,
+                      provided attribution is given to Sanish Gyawali
+                      and a link to the original repository is included.
+Change Date:          2030-05-04
+Change License:       Apache License, Version 2.0
+
+Contact:              gyawalisanish0@gmail.com
+
+---
+
+TERMS AND CONDITIONS
+
+1. DEFINITIONS
+
+   "Licensed Work" means the Genesis codebase, including all source code,
+   architecture, game engine systems, data schemas, and documentation
+   found in this repository.
+
+   "Commercial Use" means any use intended for or directed toward commercial
+   advantage or monetary compensation, including but not limited to:
+   - Shipping a game or product built on this codebase
+   - Selling access to a service powered by this engine
+   - Using this codebase in a funded or revenue-generating project
+
+   "Non-Commercial Use" means personal projects, educational use, research,
+   and open-source contributions with no commercial advantage.
+
+2. GRANT OF RIGHTS
+
+   Subject to the terms of this License, the Licensor grants you a
+   non-exclusive, worldwide, royalty-free right to:
+
+   a) Copy and use the Licensed Work for Non-Commercial Use only.
+   b) Modify the Licensed Work for Non-Commercial Use only.
+   c) Distribute copies of the Licensed Work for Non-Commercial Use only,
+      provided this License file is included in full and unmodified.
+
+3. RESTRICTIONS
+
+   You may not:
+
+   a) Use the Licensed Work for Commercial Use without a separate written
+      agreement from the Licensor.
+   b) Remove or alter any copyright notices or this License from any copy
+      of the Licensed Work.
+   c) Sublicense the Licensed Work to any third party for Commercial Use.
+   d) Use the name "Genesis", the Licensor's name, or any associated
+      branding to endorse or promote products derived from this work
+      without prior written permission.
+
+4. ATTRIBUTION
+
+   Any permitted use or distribution must include the following notice:
+
+      "Genesis engine by Sanish Gyawali — gyawalisanish0@gmail.com"
+
+5. COMMERCIAL LICENSING
+
+   To obtain a commercial license, contact: gyawalisanish0@gmail.com
+
+   Commercial licenses are available and negotiated individually.
+   Partnership and revenue-share arrangements are welcomed.
+
+6. CHANGE DATE
+
+   On 2030-05-04, the Licensed Work will be made available under the
+   Apache License, Version 2.0. From that date forward, the Apache 2.0
+   terms will apply in addition to any commercial licenses already granted.
+
+7. DISCLAIMER
+
+   THE LICENSED WORK IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+   THE LICENSOR SHALL NOT BE LIABLE FOR ANY DAMAGES ARISING FROM USE
+   OF THE LICENSED WORK.
+
+---
+
+Full license text reference: https://mariadb.com/bsl11/
+Apache License 2.0 reference: https://www.apache.org/licenses/LICENSE-2.0

@@ -1,33 +1,45 @@
-import type { MapDef } from '../core/types'
-import { TilemapLayer } from './dungeon/TilemapLayer'
-import { EntityLayer }  from './dungeon/EntityLayer'
-import { PartyMarker }  from './dungeon/PartyMarker'
-import { WaveOverlay }  from './dungeon/WaveOverlay'
+// DungeonScene — Phaser 3 scene that owns the dungeon canvas.
+//
+// Tile size is computed at runtime from canvas dimensions ÷ grid size so the
+// entire map always fits the screen on any device — no fixed tileSize in JSON.
+//
+// Tileset art: TilesetLoader handles fetching, quality-tier downsampling
+// (512→256→128 per Medium/Low tier), per-tile error fallback, and Phaser
+// texture caching. DungeonScene just calls loadForScene and receives a ready
+// textureMap to pass into TilemapLayer.
+
+import type { MapDef, TilesetDef } from '../core/types'
+import { TilemapLayer }  from './dungeon/TilemapLayer'
+import { EntityLayer }   from './dungeon/EntityLayer'
+import { PartyMarker }   from './dungeon/PartyMarker'
+import { WaveOverlay }   from './dungeon/WaveOverlay'
+import { TilesetLoader } from './dungeon/TilesetLoader'
 
 export interface DungeonTapCallback {
   onTileTap: (tx: number, ty: number, entityId: string | null) => void
 }
 
 export class DungeonScene extends Phaser.Scene {
-  private tilemap!:     TilemapLayer
-  private entityLayer!: EntityLayer
-  private party!:       PartyMarker
-  private wave!:        WaveOverlay
-  private tapCallback: DungeonTapCallback | null = null
-  private canvasW:     number = 360
-  private canvasH:     number = 400
+  private tilemap!:       TilemapLayer
+  private entityLayer!:   EntityLayer
+  private party!:         PartyMarker
+  private wave!:          WaveOverlay
+  private tilesetLoader!: TilesetLoader
+  private tapCallback:    DungeonTapCallback | null = null
+  private canvasW:        number = 360
+  private canvasH:        number = 400
 
   constructor() {
     super({ key: 'DungeonScene' })
   }
 
   create(): void {
-    this.tilemap     = new TilemapLayer(this)
-    this.entityLayer = new EntityLayer(this)
-    this.party       = new PartyMarker(this)
-    this.wave        = new WaveOverlay(this)
+    this.tilemap       = new TilemapLayer(this)
+    this.entityLayer   = new EntityLayer(this)
+    this.party         = new PartyMarker(this)
+    this.wave          = new WaveOverlay(this)
+    this.tilesetLoader = new TilesetLoader(this)
 
-    // React owns input — forward pointer events via callback
     this.input.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
       this.handlePointer(ptr.x, ptr.y)
     })
@@ -35,14 +47,31 @@ export class DungeonScene extends Phaser.Scene {
 
   // ── Public command interface (called via DungeonArenaHandle) ─────────────────
 
-  loadMap(mapDef: MapDef): void {
+  loadMap(mapDef: MapDef, tilesetDef?: TilesetDef | null, onTilesetError?: (msg: string) => void): void {
     this.canvasW = this.scale.width
     this.canvasH = this.scale.height
-    const size   = mapDef.tileSize
-    this.tilemap.load(mapDef)
-    this.entityLayer.setTileSize(size)
-    this.party.setTileSize(size)
-    this.entityLayer.loadEntities(mapDef.entities)
+
+    const tileSize = this.computeTileSize(mapDef)
+    this.cameras.main.setBackgroundColor(tilesetDef?.bgColor ?? '#0a0a14')
+    this.entityLayer.setTileSize(tileSize)
+    this.entityLayer.setMapDef(mapDef)
+    this.party.setTileSize(tileSize)
+    this.party.setMapDef(mapDef)
+
+    if (!tilesetDef) {
+      this.tilemap.load(mapDef, tileSize)
+      this.entityLayer.loadEntities(mapDef.entities)
+      return
+    }
+
+    this.tilesetLoader.loadForScene(
+      tilesetDef,
+      (textureMap) => {
+        this.tilemap.load(mapDef, tileSize, textureMap)
+        this.entityLayer.loadEntities(mapDef.entities)
+      },
+      onTilesetError,
+    )
   }
 
   setPartyTile(tx: number, ty: number, animated: boolean, onDone?: () => void): void {
@@ -93,6 +122,14 @@ export class DungeonScene extends Phaser.Scene {
   }
 
   // ── Private ──────────────────────────────────────────────────────────────────
+
+  // Compute the largest square tile size that fits the entire grid on screen.
+  // Taking min(floor(W/cols), floor(H/rows)) ensures both axes fit fully.
+  private computeTileSize(mapDef: MapDef): number {
+    const tileW = Math.floor(this.canvasW / mapDef.grid.cols)
+    const tileH = Math.floor(this.canvasH / mapDef.grid.rows)
+    return Math.min(tileW, tileH)
+  }
 
   private handlePointer(wx: number, wy: number): void {
     if (!this.tapCallback) return

@@ -1,3 +1,4 @@
+import type { MapDef } from '../../core/types'
 import { DUNGEON_MOVE_ANIM_MS } from '../../core/constants'
 
 const MARKER_COLOUR  = 0x8b5cf6  // --accent-genesis
@@ -8,6 +9,7 @@ export class PartyMarker {
   private graphics: Phaser.GameObjects.Graphics
   private label:    Phaser.GameObjects.Text
   private tileSize: number = 48
+  private mapDef:   MapDef | null = null
 
   constructor(scene: Phaser.Scene) {
     this.scene    = scene
@@ -22,9 +24,12 @@ export class PartyMarker {
     this.tileSize = size
   }
 
+  setMapDef(mapDef: MapDef): void {
+    this.mapDef = mapDef
+  }
+
   place(tx: number, ty: number): void {
-    const wx = tx * this.tileSize + this.tileSize / 2
-    const wy = ty * this.tileSize + this.tileSize / 2
+    const { wx, wy } = this.tileCenter(tx, ty)
     this.graphics.clear()
     this.graphics.fillStyle(MARKER_COLOUR, 1)
     this.graphics.fillCircle(wx, wy, MARKER_RADIUS)
@@ -34,8 +39,7 @@ export class PartyMarker {
   }
 
   moveTo(tx: number, ty: number, onDone: () => void): void {
-    const wx = tx * this.tileSize + this.tileSize / 2
-    const wy = ty * this.tileSize + this.tileSize / 2
+    const { wx, wy } = this.tileCenter(tx, ty)
     // Tween label position as a proxy; redraw graphics each step
     this.scene.tweens.add({
       targets:  this.label,
@@ -54,6 +58,16 @@ export class PartyMarker {
       },
       onComplete: onDone,
     })
+  }
+
+  private tileCenter(tx: number, ty: number): { wx: number; wy: number } {
+    const off = this.mapDef?.tileTypes[
+      String(this.mapDef.tiles[ty]?.[tx] ?? 0)
+    ]?.entityOffset ?? { x: 0, y: 0 }
+    return {
+      wx: tx * this.tileSize + this.tileSize * (0.5 + off.x),
+      wy: ty * this.tileSize + this.tileSize * (0.5 + off.y),
+    }
   }
 
   destroy(): void {

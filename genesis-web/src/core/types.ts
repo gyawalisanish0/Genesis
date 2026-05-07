@@ -133,8 +133,14 @@ export type QualityTier = 'High' | 'Medium' | 'Low'
 // ── Campaign / dungeon definitions ─────────────────────────────────────────────
 
 export interface TileTypeDef {
-  passable: boolean
-  id:       string
+  passable:      boolean
+  id:            string
+  // Clockwise rotation in degrees (0/90/180/270). Covers all orientations of a
+  // directional tile (edge, corner) from a single source PNG.
+  rotation?:     number
+  // Fraction of tileSize to shift the entity visual toward the surface side.
+  // Absent on floor/wall/rift/hill/crater — entity stays centred on those.
+  entityOffset?: { x: number; y: number }
 }
 
 export interface WavePhaseConfig {
@@ -165,9 +171,17 @@ export interface NpcEntityDef extends EntityBase {
   blocksMovement?: boolean
 }
 
+export interface ChestReward {
+  gold?:          number
+  xp?:            number
+  items?:         string[]   // item defIds — future use
+  narrativeText?: string
+}
+
 export interface InteractableEntityDef extends EntityBase {
   type:     'interactable'
   subtype?: string   // 'chest' | 'switch' | etc.
+  reward?:  ChestReward
 }
 
 export interface ExitEntityDef extends EntityBase {
@@ -191,7 +205,8 @@ export interface MapDef {
   type:         'map'
   stageId:      string
   grid:         { cols: number; rows: number }
-  tileSize:     number
+  // tileSize is computed at runtime from canvas dimensions ÷ grid size — not
+  // stored in JSON. DungeonScene derives it on loadMap so any device fits.
   tiles:        number[][]
   tileTypes:    Record<string, TileTypeDef>
   playerStart:  { x: number; y: number }
@@ -199,6 +214,23 @@ export interface MapDef {
   revealRadius: number
   entities:     EntityDef[]
   wavePhase:    WavePhaseConfig
+  // Optional tileset key — when present, tiles render as sprites instead of colored rects.
+  // Points to public/data/tilesets/{tilesetKey}/tileset.json
+  tilesetKey?:  string
+}
+
+// ── Tileset ────────────────────────────────────────────────────────────────────
+
+export interface TilesetDef {
+  type:       'tileset'
+  key:        string
+  sourceSize: number    // native resolution of each PNG (e.g. 1024 for 1024×1024)
+  bgColor?:   string    // CSS hex color for the Phaser canvas + container background
+  // Maps TileTypeDef.id → PNG filename under public/images/tilesets/{key}/
+  tiles:      Record<string, string>
+  // Tile type ids planned but not yet asset-ready. Listed here for documentation;
+  // the engine never tries to load these — they fall back to colored rects silently.
+  pending?:   string[]
 }
 
 export interface PlayerUnitsDef {
