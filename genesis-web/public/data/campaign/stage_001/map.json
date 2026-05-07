@@ -13,8 +13,23 @@
     [1, 1, 1, 1, 1, 1, 1, 1]
   ],
   "tileTypes": {
-    "0": { "passable": true,  "id": "floor" },
-    "1": { "passable": false, "id": "wall"  }
+    "0":  { "passable": true,  "id": "floor" },
+    "1":  { "passable": false, "id": "wall"  },
+    "2":  { "passable": false, "id": "hill" },
+    "3":  { "passable": false, "id": "crater" },
+    "4":  { "passable": false, "id": "rift" },
+    "5":  { "passable": true,  "id": "edge",           "rotation": 0   },
+    "6":  { "passable": true,  "id": "edge",           "rotation": 90  },
+    "7":  { "passable": true,  "id": "edge",           "rotation": 180 },
+    "8":  { "passable": true,  "id": "edge",           "rotation": 270 },
+    "9":  { "passable": true,  "id": "surface_corner", "rotation": 0   },
+    "10": { "passable": true,  "id": "surface_corner", "rotation": 90  },
+    "11": { "passable": true,  "id": "surface_corner", "rotation": 180 },
+    "12": { "passable": true,  "id": "surface_corner", "rotation": 270 },
+    "13": { "passable": true,  "id": "rift_corner",    "rotation": 0   },
+    "14": { "passable": true,  "id": "rift_corner",    "rotation": 90  },
+    "15": { "passable": true,  "id": "rift_corner",    "rotation": 180 },
+    "16": { "passable": true,  "id": "rift_corner",    "rotation": 270 }
   },
   "playerStart": { "x": 1, "y": 6 },
   "fogOfWar": true,

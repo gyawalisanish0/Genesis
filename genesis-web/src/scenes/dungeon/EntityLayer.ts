@@ -1,5 +1,5 @@
 import type { EntityDef, InteractableEntityDef } from '../../core/types'
-import { DUNGEON_PATROL_ANIM_MS } from '../../core/constants'
+import { DUNGEON_PATROL_ANIM_MS, DUNGEON_ENTITY_Y_OFFSET } from '../../core/constants'
 
 const COLOURS: Record<string, number> = {
   enemy:        0xe74c3c,
@@ -63,8 +63,7 @@ export class EntityLayer {
       onDone?.()
       return
     }
-    const wx = tx * this.tileSize + this.tileSize / 2
-    const wy = ty * this.tileSize + this.tileSize / 2
+    const { wx, wy } = this.entityCenter(tx, ty)
     this.scene.tweens.add({
       targets:    sprite.label,
       x:          wx,
@@ -142,8 +141,7 @@ export class EntityLayer {
 
   private createSprite(entityId: string, type: string, tx: number, ty: number, subtype?: string): void {
     const graphics = this.scene.add.graphics().setDepth(4)
-    const wx = tx * this.tileSize + this.tileSize / 2
-    const wy = ty * this.tileSize + this.tileSize / 2
+    const { wx, wy } = this.entityCenter(tx, ty)
     const isChest = type === 'interactable' && subtype === 'chest'
     const label = this.scene.add.text(wx, wy, isChest ? '' : (ICONS[type] ?? ''), {
       fontSize: '16px', color: '#ffffff', fontFamily: 'monospace',
@@ -155,11 +153,17 @@ export class EntityLayer {
   }
 
   private drawSprite(sprite: EntitySprite): void {
-    const wx = sprite.tx * this.tileSize + this.tileSize / 2
-    const wy = sprite.ty * this.tileSize + this.tileSize / 2
+    const { wx, wy } = this.entityCenter(sprite.tx, sprite.ty)
     sprite.graphics.clear()
     this.drawSpriteAt(sprite, wx, wy)
     sprite.label.setPosition(wx, wy)
+  }
+
+  private entityCenter(tx: number, ty: number): { wx: number; wy: number } {
+    return {
+      wx: tx * this.tileSize + this.tileSize / 2,
+      wy: ty * this.tileSize + this.tileSize * (0.5 - DUNGEON_ENTITY_Y_OFFSET),
+    }
   }
 
   private drawSpriteAt(sprite: EntitySprite, wx: number, wy: number): void {

@@ -6,5 +6,5 @@
   "tiles": {
     "floor": "mars_floor.png"
   },
-  "pending": ["crater", "rock", "rift", "rift_edge", "rift_corner", "rift_corner_inverted"]
+  "pending": ["rift", "edge", "surface_corner", "rift_corner", "hill", "crater"]
 }
