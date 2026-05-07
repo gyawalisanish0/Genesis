@@ -3,7 +3,7 @@
     "type": "skill",
     "id": "hugo_001_basic_attack",
     "name": "Basic Attack",
-    "tuCost": 8,
+    "tuCost": 11,
     "apCost": 0,
     "tags": ["physical", "melee", "basic"],
     "maxLevel": 1,
