@@ -25,13 +25,14 @@ const handle: EffectHandler<ApplyStatusEffect> = (effect, ctx) => {
     }
 
     const incoming: StatusEffect = {
-      id:   def.id,
-      name: def.name,
+      id:                 def.id,
+      name:               def.name,
       duration,
       durationUnit,
-      source: ctx.caster.id,
-      stacks: def.maxStacks ?? 1,
+      source:             ctx.caster.id,
+      stacks:             def.maxStacks ?? 1,
       payload,
+      ticksSinceInterval: 0,
     }
 
     ctx.battle.setUnit(mergeStatus(target, incoming, def.stacking, def.maxStacks))
@@ -41,13 +42,14 @@ const handle: EffectHandler<ApplyStatusEffect> = (effect, ctx) => {
       const penaltyDef = getStatusDef('hugo_001_shelling_point_penalty_window')
       if (penaltyDef) {
         const penaltySlot: StatusEffect = {
-          id:           penaltyDef.id,
-          name:         penaltyDef.name,
-          duration:     effect.penaltyWindowTurns,
-          durationUnit: 'turns',
-          source:       ctx.caster.id,
-          stacks:       1,
-          payload:      {},
+          id:                 penaltyDef.id,
+          name:               penaltyDef.name,
+          duration:           effect.penaltyWindowTurns,
+          durationUnit:       'turns',
+          source:             ctx.caster.id,
+          stacks:             1,
+          payload:            {},
+          ticksSinceInterval: 0,
         }
         const afterShield = ctx.battle.getUnit(target.id) ?? target
         ctx.battle.setUnit(mergeStatus(afterShield, penaltySlot, penaltyDef.stacking, undefined))

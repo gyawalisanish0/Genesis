@@ -12,7 +12,7 @@ import type { SkillInstance, BattleState as EngineBattleState, EffectContext, Ta
 import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, CLASH_ANNOUNCE_MS, ENEMY_AI_DELAY_MS, COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE, BATTLE_FEEDBACK_HOLD_MS } from '../core/constants'
 import { resolveTickDisplacement } from '../core/combat/TickDisplacer'
 import { resolveClashWinner, factionAvgSpeed } from '../core/combat/ClashResolver'
-import { createUnit, isAlive, setTickPosition, incrementActionCount, tickStatusDurations, consumeStatusStack } from '../core/unit'
+import { createUnit, isAlive, setTickPosition, incrementActionCount, tickStatusDurations, consumeStatusStack, resetStatusInterval } from '../core/unit'
 import { calculateStartingTick, advanceTick, calculateApGained } from '../core/combat/TickCalculator'
 import { calculateFinalChance, shiftProbabilities } from '../core/combat/HitChanceEvaluator'
 import { roll, calculateTumblingDelay, resolveCounterRoll, type DiceOutcome } from '../core/combat/DiceResolver'
@@ -990,13 +990,36 @@ export function BattleProvider({ children }: Props) {
       })
     }
 
-    // Tick down caster's turn-based statuses and fire onExpire effects.
+    // Tick down caster's turn-based statuses, fire interval heals and onExpire.
     const casterAfter = snap.get(caster.id) ?? caster
     const { unit: casterTicked, expired } = tickStatusDurations(casterAfter)
-    snap.set(caster.id, casterTicked)
+    let casterFinal = casterTicked
+
+    for (const slot of casterTicked.statusSlots) {
+      const def = statusDefsRef.current.get(slot.id)
+      if (!def) continue
+      for (const effect of def.effects) {
+        if (effect.when.event !== 'onTickInterval') continue
+        const interval = (effect.when as { event: 'onTickInterval'; interval: number }).interval
+        if (slot.ticksSinceInterval < interval) continue
+        const ctx: EffectContext = {
+          caster: casterFinal,
+          target: casterFinal,
+          battle: snapshotToBattleState(snap),
+          source: 'status',
+          event:  effect.when,
+        }
+        applyEffect(effect, ctx)
+        casterFinal = snap.get(caster.id) ?? casterFinal
+        casterFinal = resetStatusInterval(casterFinal, slot.id)
+        snap.set(caster.id, casterFinal)
+      }
+    }
+
+    snap.set(caster.id, casterFinal)
     for (const expiredSlot of expired) {
       const def = statusDefsRef.current.get(expiredSlot.id)
-      if (def) fireStatusExpiry(casterTicked, def, snap)
+      if (def) fireStatusExpiry(casterFinal, def, snap)
     }
 
     const damage = Math.max(0, targetHpBefore - (snap.get(target.id)?.hp ?? targetHpBefore))
