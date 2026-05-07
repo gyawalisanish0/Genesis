@@ -9,7 +9,7 @@ import {
 import { useNavigate } from 'react-router-dom'
 import type { Unit } from '../core/types'
 import type { SkillInstance, BattleState as EngineBattleState, EffectContext, TargetSelector } from '../core/effects/types'
-import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, CLASH_ANNOUNCE_MS, ENEMY_AI_DELAY_MS, COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE, BATTLE_FEEDBACK_HOLD_MS } from '../core/constants'
+import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, CLASH_ANNOUNCE_MS, ENEMY_AI_DELAY_MS, COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE, BATTLE_FEEDBACK_HOLD_MS, SKIP_TU_COST } from '../core/constants'
 import { resolveTickDisplacement } from '../core/combat/TickDisplacer'
 import { resolveClashWinner, factionAvgSpeed } from '../core/combat/ClashResolver'
 import { createUnit, isAlive, setTickPosition, incrementActionCount, tickStatusDurations, consumeStatusStack, updateStatusIntervalTick } from '../core/unit'
@@ -1364,7 +1364,7 @@ export function BattleProvider({ children }: Props) {
         if (!availableSkills.length) {
           const fromTick = aiUnit.tickPosition
           pushHistory(makeHistoryEntry(aiUnit.id, aiUnit.name, fromTick, aiUnit.isAlly))
-          registerTick(aiUnit.id, advanceTick(fromTick, 10))
+          registerTick(aiUnit.id, advanceTick(fromTick, SKIP_TU_COST))
           appendLog({ text: `${aiUnit.name} is gathering strength…`, colour: 'var(--text-muted)' })
           arenaRef.current?.clearTurn()
           continue
@@ -1497,7 +1497,7 @@ export function BattleProvider({ children }: Props) {
     const fromTick = actor.tickPosition
     pushHistory(makeHistoryEntry(actor.id, actor.name, fromTick, actor.isAlly))
     setPlayerUnits((prev) => prev.map((u) => u.id === actor.id ? incrementActionCount(u) : u))
-    registerTick(actor.id, fromTick + 10)
+    registerTick(actor.id, fromTick + SKIP_TU_COST)
     appendLog({ text: 'You skipped your turn.' })
     arenaRef.current?.clearTurn()
   }, [phase, narrativePaused, inspectingSkill, pushHistory, registerTick, appendLog])
