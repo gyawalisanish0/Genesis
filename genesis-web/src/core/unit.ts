@@ -14,7 +14,7 @@ export function createUnit(def: CharacterDef, isAlly: boolean): Unit {
     maxHp:        def.maxHp,
     hp:           def.maxHp,   // starts at full HP
     maxAp:        def.maxAp,
-    ap:           0,           // AP starts empty each battle
+    ap:           def.startingAp ?? 0,
     apRegenRate:  def.apRegenRate,
     tickPosition:       0,
     actionCount:        0,

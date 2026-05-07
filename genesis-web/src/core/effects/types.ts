@@ -43,6 +43,7 @@ export type Tag =
   | 'misc'
   | 'counter'        // standard reactive counter — triggers on Evasion
   | 'uniqueCounter'  // character-specific counter with custom effects; same dice + chain rules
+  | 'basic'          // default attack — no AP cost, always available
 
 // ── ValueExpr — the only mini-syntax ─────────────────────────────────────────
 

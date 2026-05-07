@@ -29,6 +29,7 @@ export interface CharacterDef {
   maxHp:         number
   maxAp:         number
   apRegenRate:   number
+  startingAp?:   number
   passive:       string | null
   skillPath:     string
   clash?:        CharacterClashDef

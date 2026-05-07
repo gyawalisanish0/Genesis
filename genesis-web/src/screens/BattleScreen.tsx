@@ -279,16 +279,35 @@ function ActionGrid() {
   const createHandler = useScrollAwarePointer()
   const disabled = phase !== 'player'
 
-  const playerSkills = activePlayerUnit ? getUnitSkills(activePlayerUnit.id) : []
+  const playerSkills  = activePlayerUnit ? getUnitSkills(activePlayerUnit.id) : []
+  const basicSkill    = playerSkills.find(s => s.baseDef.tags.includes('basic')) ?? null
+  const activeSkills  = playerSkills.filter(s => !s.baseDef.tags.includes('basic'))
 
   // Pad skill list to always show 4 slots.
-  const slots = Array.from({ length: 4 }, (_, i) => playerSkills[i] ?? null)
+  const slots = Array.from({ length: 4 }, (_, i) => activeSkills[i] ?? null)
 
   return (
     <div className={[styles.actionGrid, phase === 'player' ? styles.actionGridActive : ''].join(' ')}>
       {!gridCollapsed && (
         <>
           <div className={styles.actionRow}>
+            {basicSkill && (() => {
+              const isSelected  = selectedSkill?.defId === basicSkill.defId
+              const tapHandler  = !disabled ? () => selectSkill(isSelected ? null : basicSkill) : undefined
+              const holdHandler = () => setInspectingSkill(basicSkill)
+              const targetLabel = isSelected && selectedTarget ? selectedTarget.name : null
+              return (
+                <button
+                  className={`${styles.actionBtn} ${styles.actionBtnBasic} ${isSelected ? styles.skillBtnSelected : ''}`}
+                  onPointerDown={createHandler({ onTap: tapHandler, onHold: holdHandler })}
+                  aria-disabled={disabled}
+                >
+                  <span className={styles.actionBtnName}>Attack</span>
+                  <span className={styles.skillTu}>TU: {basicSkill.cachedCosts.tuCost}</span>
+                  {targetLabel && <span className={styles.skillTargetBadge}>→ {targetLabel}</span>}
+                </button>
+              )
+            })()}
             <button className={`${styles.actionBtn} ${styles.actionBtnEnd}`} onPointerDown={createHandler({ onTap: skipTurn })} disabled={disabled}>
               <span className={styles.actionBtnName}>End/Skip</span>
             </button>
