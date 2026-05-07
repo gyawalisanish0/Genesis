@@ -1,0 +1,74 @@
+[
+  {
+    "type": "skill",
+    "id": "hugo_001_tectonic_slam",
+    "name": "Tectonic Slam",
+    "description": "Hugo drives his mass into the target using precise fracture-point knowledge — the hit lands where the structure gives first.",
+    "tuCost": 10,
+    "apCost": 25,
+    "tags": ["physical", "melee"],
+    "maxLevel": 5,
+    "targeting": {
+      "selector": "enemy",
+      "range": "melee"
+    },
+    "resolution": {
+      "baseChance": 0.9
+    },
+    "effects": [
+      {
+        "id": "dmg",
+        "when": { "event": "onCast" },
+        "type": "damage",
+        "amount": { "sum": [
+          { "stat": "strength",  "percent": 55 },
+          { "stat": "endurance", "percent": 25 }
+        ]},
+        "damageType": "physical"
+      }
+    ],
+    "levelUpgrades": [
+      { "level": 2, "patch": { "effects.dmg.amount.sum.0.percent": 63,  "effects.dmg.amount.sum.1.percent": 28 } },
+      { "level": 3, "patch": { "effects.dmg.amount.sum.0.percent": 72,  "effects.dmg.amount.sum.1.percent": 32 } },
+      { "level": 4, "patch": { "effects.dmg.amount.sum.0.percent": 83,  "effects.dmg.amount.sum.1.percent": 36 } },
+      { "level": 5, "patch": { "effects.dmg.amount.sum.0.percent": 95,  "effects.dmg.amount.sum.1.percent": 40 } }
+    ]
+  },
+  {
+    "type": "skill",
+    "id": "hugo_001_scale_ward",
+    "name": "Scale Ward",
+    "description": "Sekkar scales along Hugo's back harden on reflex. He absorbs the blow and drives back with the stored force.",
+    "tuCost": 0,
+    "apCost": 18,
+    "tickCooldown": 25,
+    "tags": ["uniqueCounter", "physical", "melee"],
+    "maxLevel": 1,
+    "targeting": {
+      "selector": "enemy",
+      "range": "melee"
+    },
+    "resolution": {
+      "baseChance": 0.85
+    },
+    "effects": [
+      {
+        "id": "hugo_001_scale_ward_dmg",
+        "when": { "event": "onCast" },
+        "type": "damage",
+        "amount": { "stat": "strength", "percent": 50 },
+        "damageType": "physical"
+      },
+      {
+        "id": "hugo_001_scale_ward_buff",
+        "when": { "event": "onCast" },
+        "type": "modifyStat",
+        "target": "self",
+        "stat": "endurance",
+        "delta": 20,
+        "duration": 15
+      }
+    ],
+    "levelUpgrades": []
+  }
+]
