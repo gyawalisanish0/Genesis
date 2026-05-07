@@ -14,8 +14,8 @@
   },
   "maxHp": 1400,
   "maxAp": 100,
-  "apRegenRate": 0.5,
-  "startingAp": 10,
+  "apRegenRate": 0.6,
+  "startingAp": 15,
   "passive": "hugo_001_primal_awareness",
   "skillPath": "hugo_path"
 }

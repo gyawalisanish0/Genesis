@@ -24,7 +24,7 @@
     "name": "Nanites Slash",
     "description": "ANBOT reshapes its nanite mass into a blade and slashes the target.",
     "tuCost": 8,
-    "apCost": 15,
+    "apCost": 12,
     "tags": ["physical", "melee"],
     "maxLevel": 5,
     "targeting": {
