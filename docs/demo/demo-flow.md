@@ -75,12 +75,18 @@ double meaning in mind — they must hold up to retrospection.
 
 **Screen: Commander's quarters / command deck.**
 
-The Commander wakes. Talks to their **AI assistant** — name and
-personality TBD — to get bearings. Basic orientation. The dream sits
-uneasily but there is no time to process it.
+The Commander wakes. Talks to **KALI** to get bearings.
 
-The AI assistant is the Commander's interface to the world throughout
-the demo. Functional but with its own voice.
+> **KALI** — Kinetic Autonomous Learning Intelligence, v1.1.2
+> Developed by Kognitive Tech Limited
+
+KALI is the Commander's primary interface throughout the demo —
+briefings, status updates, alarms, deployment orders. Functional
+by design but with her own voice and personality (TBD).
+
+The dream sits uneasily but there is no time to process it.
+KALI has no record of the dream. It did not happen in any system
+she can see.
 
 ---
 
