@@ -86,7 +86,9 @@
         "when": { "event": "onCast" },
         "type": "applyStatus",
         "target": "self",
-        "status": "hugo_001_shelling_point_active"
+        "status": "hugo_001_shelling_point_active",
+        "shieldPercent": 25,
+        "penaltyWindowTurns": 9
       }
     ],
     "levelUpgrades": []

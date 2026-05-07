@@ -16,18 +16,43 @@ const handle: EffectHandler<ApplyStatusEffect> = (effect, ctx) => {
   const duration     = effect.duration ?? def.duration
   const durationUnit = def.tags?.includes('turn-based') ? 'turns' : 'ticks'
 
-  const incoming: StatusEffect = {
-    id:           def.id,
-    name:         def.name,
-    duration,
-    durationUnit,
-    source:       ctx.caster.id,
-    stacks:       1,
-    payload:      {},
-  }
-
   for (const target of resolveRecipients(ctx)) {
+    const payload: Record<string, unknown> = {}
+
+    // Shield initialisation — calculate HP from caster's current HP at cast time.
+    if (effect.shieldPercent !== undefined) {
+      payload.shieldHp = Math.floor(target.hp * effect.shieldPercent / 100)
+    }
+
+    const incoming: StatusEffect = {
+      id:   def.id,
+      name: def.name,
+      duration,
+      durationUnit,
+      source: ctx.caster.id,
+      stacks: def.maxStacks ?? 1,
+      payload,
+    }
+
     ctx.battle.setUnit(mergeStatus(target, incoming, def.stacking, def.maxStacks))
+
+    // Apply the penalty window status alongside the shield.
+    if (effect.penaltyWindowTurns !== undefined) {
+      const penaltyDef = getStatusDef('hugo_001_shelling_point_penalty_window')
+      if (penaltyDef) {
+        const penaltySlot: StatusEffect = {
+          id:           penaltyDef.id,
+          name:         penaltyDef.name,
+          duration:     effect.penaltyWindowTurns,
+          durationUnit: 'turns',
+          source:       ctx.caster.id,
+          stacks:       1,
+          payload:      {},
+        }
+        const afterShield = ctx.battle.getUnit(target.id) ?? target
+        ctx.battle.setUnit(mergeStatus(afterShield, penaltySlot, penaltyDef.stacking, undefined))
+      }
+    }
   }
 }
 

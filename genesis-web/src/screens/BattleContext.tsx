@@ -17,7 +17,7 @@ import { calculateStartingTick, advanceTick, calculateApGained } from '../core/c
 import { calculateFinalChance, shiftProbabilities } from '../core/combat/HitChanceEvaluator'
 import { roll, calculateTumblingDelay, resolveCounterRoll, type DiceOutcome } from '../core/combat/DiceResolver'
 import { findCounterSkill, canCounter, isSingleTarget } from '../core/combat/CounterResolver'
-import { isOnCooldown, applyCooldown } from '../core/combat/CooldownResolver'
+import { isOnCooldown, applyCooldown, applyTickCooldown, applyTurnCooldown } from '../core/combat/CooldownResolver'
 import { applyEffect } from '../core/effects/applyEffect'
 import { createSkillInstance, getCachedSkill } from '../core/engines/skill/SkillInstance'
 import { loadCharacterWithSkills, loadStatusDef } from '../services/DataService'
@@ -97,7 +97,9 @@ interface BattleContextValue {
   registeredTicks: Map<string, number>
   scrollBounds:    { min: number; max: number }
   // Skill access
-  getUnitSkills:   (unitId: string) => SkillInstance[]
+  getUnitSkills:     (unitId: string) => SkillInstance[]
+  /** True when the active player unit meets Hyper Mode conditions for Hyper Sense. */
+  hyperSenseModeActive: boolean
   // Actions
   executeSkill:          (skill: SkillInstance) => void
   skipTurn:              () => void
@@ -221,6 +223,68 @@ function resolveIncomingDodge(
   }
 
   return { dodged: false, consumed: false }
+}
+
+/**
+ * Builds a BattleState that intercepts HP reductions and routes them through
+ * any active shield on the target unit. Returns the state plus a set that is
+ * populated with the IDs of units whose shield broke during effect application.
+ */
+function makeShieldedBattleState(
+  snap:          Map<string, Unit>,
+  shieldBrokeIds: Set<string>,
+): ReturnType<typeof snapshotToBattleState> {
+  return {
+    getUnit:     (id) => snap.get(id),
+    getAllUnits: () => [...snap.values()],
+    setUnit:     (unit) => {
+      const prev = snap.get(unit.id)
+      if (!prev || unit.hp >= prev.hp) { snap.set(unit.id, unit); return }
+
+      const shieldSlot = prev.statusSlots.find(s => s.id === 'hugo_001_shelling_point_active')
+      const shieldHp   = typeof shieldSlot?.payload?.shieldHp === 'number' ? shieldSlot.payload.shieldHp : 0
+      if (!shieldSlot || shieldHp <= 0) { snap.set(unit.id, unit); return }
+
+      const damage   = prev.hp - unit.hp
+      const absorbed = Math.min(damage, shieldHp)
+      const overflow = damage - absorbed
+      const newShieldHp = shieldHp - absorbed
+
+      if (newShieldHp <= 0) {
+        // Shield broke — remove it, apply overflow, then check penalty window.
+        const withoutShield: Unit = {
+          ...prev,
+          hp: Math.max(0, prev.hp - overflow),
+          statusSlots: prev.statusSlots.filter(
+            s => s.id !== 'hugo_001_shelling_point_active' &&
+                 s.id !== 'hugo_001_shelling_point_penalty_window',
+          ),
+        }
+        const penaltyActive = prev.statusSlots.some(s => s.id === 'hugo_001_shelling_point_penalty_window')
+        if (penaltyActive && overflow > 0) {
+          snap.set(unit.id, { ...withoutShield, hp: Math.max(0, withoutShield.hp - overflow) })
+        } else {
+          snap.set(unit.id, withoutShield)
+        }
+        shieldBrokeIds.add(unit.id)
+      } else {
+        // Shield absorbed everything — update shield HP, restore HP to prev.
+        const updatedSlot = { ...shieldSlot, payload: { ...shieldSlot.payload, shieldHp: newShieldHp } }
+        snap.set(unit.id, {
+          ...prev,
+          statusSlots: prev.statusSlots.map(s =>
+            s.id === 'hugo_001_shelling_point_active' ? updatedSlot : s,
+          ),
+        })
+      }
+    },
+  }
+}
+
+/** Returns true when Hyper Sense Hyper Mode conditions are met for a unit. */
+function isHyperSenseMode(unit: Unit): boolean {
+  const dodgeSlot = unit.statusSlots.find(s => s.id === 'hugo_001_primal_awareness_dodge')
+  return dodgeSlot !== undefined && dodgeSlot.stacks < 2
 }
 
 /** Fire onExpire effects for a StatusDef using the owning unit as caster. */
@@ -861,7 +925,8 @@ export function BattleProvider({ children }: Props) {
       NarrativeService.emit({ type: 'evaded', actorId: target.defId, targetId: caster.defId })
     }
 
-    const battle = snapshotToBattleState(snap)
+    const shieldBrokeIds = new Set<string>()
+    const battle = makeShieldedBattleState(snap, shieldBrokeIds)
     // AP regen for the caster — skipped when AP regen freeze status is active.
     const casterSnap   = snap.get(caster.id)
     const apFrozen     = casterSnap?.statusSlots.some(s => s.id === 'hugo_001_ap_regen_freeze') ?? false
@@ -905,6 +970,24 @@ export function BattleProvider({ children }: Props) {
     // Fire passive onHpThreshold for the caster too (self-damage skills, recoil, etc.).
     if (caster.id !== target.id) {
       fireHpThresholdPassives(caster.id, casterHpBefore, passiveDefsRef.current.get(caster.id) ?? null, snap)
+    }
+
+    // Apply 48-tick cooldown to Shelling Point on any unit whose shield broke.
+    if (shieldBrokeIds.size > 0) {
+      setUnitSkillsMap((prev) => {
+        const next = new Map(prev)
+        for (const brokenUnitId of shieldBrokeIds) {
+          const unitInSnap = snap.get(brokenUnitId)
+          if (!unitInSnap) continue
+          const skills = next.get(brokenUnitId) ?? []
+          next.set(brokenUnitId, skills.map(s =>
+            s.defId === 'hugo_001_shelling_point'
+              ? applyTickCooldown(s, unitInSnap.tickPosition + 48)
+              : s,
+          ))
+        }
+        return next
+      })
     }
 
     // Tick down caster's turn-based statuses and fire onExpire effects.
@@ -1025,7 +1108,13 @@ export function BattleProvider({ children }: Props) {
     if (narrativePaused || inspectingSkill) return
     if (isOnCooldown(actor, skillInst)) return
 
-    const skill      = getCachedSkill(skillInst)
+    const skill = getCachedSkill(skillInst)
+
+    // Shelling Point cannot be cast while the shield is already active.
+    if (
+      skill.id === 'hugo_001_shelling_point' &&
+      actor.statusSlots.some(s => s.id === 'hugo_001_shelling_point_active')
+    ) return
     const snap       = makeSnapshot(playerUnitsRef.current, enemiesRef.current)
     const allTargets = resolveSkillTargets(actor, skill.targeting.selector, snap, selectedTarget)
     if (!allTargets.length) return
@@ -1062,7 +1151,11 @@ export function BattleProvider({ children }: Props) {
     const totalDamage = primaryDamage + extraDamage
 
     // Apply cooldown immediately at cast time so the badge updates right away.
-    const withCooldown = applyCooldown(actor, skillInst, skill)
+    // Hyper Sense in Hyper Mode uses 8-turn CD instead of the normal 20-tick CD.
+    const isHyperCast = skill.id === 'hugo_001_hyper_sense' && isHyperSenseMode(actor)
+    const withCooldown = isHyperCast
+      ? applyTurnCooldown(actor, skillInst, 8)
+      : applyCooldown(actor, skillInst, skill)
     setUnitSkillsMap((prev) => {
       const next   = new Map(prev)
       const skills = next.get(actor.id) ?? []
@@ -1232,7 +1325,15 @@ export function BattleProvider({ children }: Props) {
       const sortedAIUnits = [...allAIUnits].sort((a, b) => b.stats.speed - a.stats.speed)
       for (const aiUnit of sortedAIUnits) {
         const allUnitSkills   = currentSkills.get(aiUnit.id) ?? []
-        const availableSkills = allUnitSkills.filter((s) => !isOnCooldown(aiUnit, s))
+        const availableSkills = allUnitSkills.filter((s) => {
+          if (isOnCooldown(aiUnit, s)) return false
+          const def = getCachedSkill(s)
+          if (
+            def.id === 'hugo_001_shelling_point' &&
+            aiUnit.statusSlots.some(st => st.id === 'hugo_001_shelling_point_active')
+          ) return false
+          return true
+        })
         if (!availableSkills.length) {
           const fromTick = aiUnit.tickPosition
           pushHistory(makeHistoryEntry(aiUnit.id, aiUnit.name, fromTick, aiUnit.isAlly))
@@ -1424,6 +1525,11 @@ export function BattleProvider({ children }: Props) {
     return unitSkillsMap.get(unitId) ?? []
   }, [unitSkillsMap])
 
+  const hyperSenseModeActive = useMemo(
+    () => leader !== null && isHyperSenseMode(leader),
+    [leader],
+  )
+
   // ── Provide ────────────────────────────────────────────────────────────────
 
   return (
@@ -1439,7 +1545,7 @@ export function BattleProvider({ children }: Props) {
       diceResult, pendingCounterDecision,
       pendingClash, pendingTeamCollision,
       registeredTicks, scrollBounds,
-      getUnitSkills, executeSkill, skipTurn, confirmCounter, skipCounter,
+      getUnitSkills, hyperSenseModeActive, executeSkill, skipTurn, confirmCounter, skipCounter,
       resolveClash, resolveTeamCollision,
       registerTick, unregisterTick, pushHistory,
       setPhase, appendLog, selectSkill, selectTarget, toggleGrid, setPaused,
