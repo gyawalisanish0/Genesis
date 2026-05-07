@@ -104,10 +104,17 @@ she can see.
 
 **Sudden alert.**
 
-A threat is detected on Mars. Nature of the threat: TBD by designer.
+KALI reports a threat detected on Mars. The threat is an **intergalactic
+faction** — an organised force with reach beyond the solar system.
+Their presence on Mars is deliberate, not accidental.
 
-The Commander does not go to Mars. He is the strategist. He assesses,
-decides, and acts through his team.
+Their name, motivation, and connection to the Creator's dream are
+intentionally withheld in the demo. Details are revealed progressively
+as the story unfolds across worlds and chapters. The demo establishes
+their existence — nothing more.
+
+The Commander does not go to Mars. He assesses, decides, acts through
+his team.
 
 ---
 
