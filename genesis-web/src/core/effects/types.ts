@@ -50,10 +50,13 @@ export type Tag =
  * A numeric field that may either be a flat value or a reference to a
  * character stat scaled by a percent. This is the ONLY expression form
  * in the contract — no DSL, no parser, no runtime eval.
+ *
+ * In addition to the six combat stats, 'maxHp' and 'maxAp' are valid
+ * pool references resolved directly from the Unit (not from StatBlockDef).
  */
 export type ValueExpr =
   | number
-  | { stat: StatKey; percent: number; of?: 'caster' | 'target' }
+  | { stat: StatKey | 'maxHp' | 'maxAp'; percent: number; of?: 'caster' | 'target' }
   | { sum: ValueExpr[] }
 
 // ── WhenClause — trigger events ──────────────────────────────────────────────
@@ -348,6 +351,8 @@ export interface EffectContext {
   event:    WhenClause
   /** Present during onDiceRoll / onHit / onAfterHit. */
   dice?:    DiceOutcome
+  /** Current global battle tick — passed when effects that initialise status intervals are applied. */
+  currentTick?: number
 }
 
 // ── Effect handler signature ─────────────────────────────────────────────────

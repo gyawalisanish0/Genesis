@@ -99,8 +99,8 @@ export interface StatusEffect {
   stacks:       number
   /** Custom per-status payload (shield HP, dodge config, etc.). */
   payload:      Record<string, unknown>
-  /** Turns elapsed since last onTickInterval fire. Resets when interval threshold is crossed. */
-  ticksSinceInterval: number
+  /** Absolute battle tick at which the next onTickInterval fires. 0 = no interval effect. */
+  nextIntervalFireTick: number
 }
 
 export interface Unit {

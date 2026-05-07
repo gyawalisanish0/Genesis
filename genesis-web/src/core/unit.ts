@@ -57,17 +57,17 @@ export function setTickPosition(unit: Unit, tick: number): Unit {
 }
 
 /**
- * Ticks all status slots down by 1 turn and advances their interval counters.
+ * Ticks all status slots down by 1 turn.
  * Returns the updated unit and any statuses that expired (duration reached 0).
- * Expired slots are removed. BattleContext inspects ticksSinceInterval against
- * each status def's interval value to decide whether to fire interval effects.
+ * Expired slots are removed. BattleContext compares nextIntervalFireTick against
+ * the current battle tick to decide whether to fire interval effects.
  */
 export function tickStatusDurations(unit: Unit): { unit: Unit; expired: typeof unit.statusSlots } {
   const expired:   typeof unit.statusSlots = []
   const remaining: typeof unit.statusSlots = []
 
   for (const slot of unit.statusSlots) {
-    const next = { ...slot, duration: slot.duration - 1, ticksSinceInterval: slot.ticksSinceInterval + 1 }
+    const next = { ...slot, duration: slot.duration - 1 }
     if (next.duration <= 0) {
       expired.push(slot)
     } else {
@@ -79,14 +79,14 @@ export function tickStatusDurations(unit: Unit): { unit: Unit; expired: typeof u
 }
 
 /**
- * Resets the interval counter on a named status slot back to 0.
+ * Advances the nextIntervalFireTick on a named status slot to the given absolute tick.
  * Called by BattleContext after firing onTickInterval effects.
  */
-export function resetStatusInterval(unit: Unit, statusId: string): Unit {
+export function updateStatusIntervalTick(unit: Unit, statusId: string, nextTick: number): Unit {
   return {
     ...unit,
     statusSlots: unit.statusSlots.map(s =>
-      s.id === statusId ? { ...s, ticksSinceInterval: 0 } : s,
+      s.id === statusId ? { ...s, nextIntervalFireTick: nextTick } : s,
     ),
   }
 }

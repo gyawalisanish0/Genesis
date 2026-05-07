@@ -285,12 +285,7 @@ before the safety net resets.
 
 ## Engine Implementation Notes
 
-All core mechanics are wired. Remaining known approximation:
-
-| Item | Note |
-|---|---|
-| Shelling Point regen amount | Currently flat 56 HP. Should be 4% of maxHp — needs maxHp as a ValueExpr stat key |
-| onTickInterval timing | Fires per Hugo's own turns, not per battle tick. Accurate when the battle is mostly sequential; may drift in multi-unit fights |
+All core mechanics are fully wired. No known approximations.
 
 ---
 

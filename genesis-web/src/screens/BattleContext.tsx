@@ -12,7 +12,7 @@ import type { SkillInstance, BattleState as EngineBattleState, EffectContext, Ta
 import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, CLASH_ANNOUNCE_MS, ENEMY_AI_DELAY_MS, COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE, BATTLE_FEEDBACK_HOLD_MS } from '../core/constants'
 import { resolveTickDisplacement } from '../core/combat/TickDisplacer'
 import { resolveClashWinner, factionAvgSpeed } from '../core/combat/ClashResolver'
-import { createUnit, isAlive, setTickPosition, incrementActionCount, tickStatusDurations, consumeStatusStack, resetStatusInterval } from '../core/unit'
+import { createUnit, isAlive, setTickPosition, incrementActionCount, tickStatusDurations, consumeStatusStack, updateStatusIntervalTick } from '../core/unit'
 import { calculateStartingTick, advanceTick, calculateApGained } from '../core/combat/TickCalculator'
 import { calculateFinalChance, shiftProbabilities } from '../core/combat/HitChanceEvaluator'
 import { roll, calculateTumblingDelay, resolveCounterRoll, type DiceOutcome } from '../core/combat/DiceResolver'
@@ -167,12 +167,13 @@ function fireHpThresholdPassives(
   hpBefore:    number,
   passive:     PassiveDef | null,
   snap:        Map<string, Unit>,
+  currentTick: number,
 ): void {
   if (!passive) return
   const unit = snap.get(unitId)
   if (!unit) return
 
-  const maxHp         = unit.maxHp
+  const maxHp          = unit.maxHp
   const fractionBefore = hpBefore / maxHp
   const fractionAfter  = unit.hp   / maxHp
 
@@ -189,6 +190,7 @@ function fireHpThresholdPassives(
       battle: snapshotToBattleState(snap),
       source: 'passive',
       event:  effect.when,
+      currentTick,
     }
     applyEffect(effect, ctx)
   }
@@ -938,11 +940,12 @@ export function BattleProvider({ children }: Props) {
 
     const ctx: EffectContext = {
       caster,
-      target: noDamage ? undefined : target,
+      target:      noDamage ? undefined : target,
       battle,
-      source: 'skill',
-      event:  { event: 'onCast' },
-      dice:   diceOutcome,
+      source:      'skill',
+      event:       { event: 'onCast' },
+      dice:        diceOutcome,
+      currentTick: tickValue,
     }
 
     for (const effect of skillInst.cachedEffects) {
@@ -966,10 +969,10 @@ export function BattleProvider({ children }: Props) {
     }
 
     // Fire passive onHpThreshold for the target if HP crossed below a threshold.
-    fireHpThresholdPassives(target.id, targetHpBefore, passiveDefsRef.current.get(target.id) ?? null, snap)
+    fireHpThresholdPassives(target.id, targetHpBefore, passiveDefsRef.current.get(target.id) ?? null, snap, tickValue)
     // Fire passive onHpThreshold for the caster too (self-damage skills, recoil, etc.).
     if (caster.id !== target.id) {
-      fireHpThresholdPassives(caster.id, casterHpBefore, passiveDefsRef.current.get(caster.id) ?? null, snap)
+      fireHpThresholdPassives(caster.id, casterHpBefore, passiveDefsRef.current.get(caster.id) ?? null, snap, tickValue)
     }
 
     // Apply 48-tick cooldown to Shelling Point on any unit whose shield broke.
@@ -1001,7 +1004,7 @@ export function BattleProvider({ children }: Props) {
       for (const effect of def.effects) {
         if (effect.when.event !== 'onTickInterval') continue
         const interval = (effect.when as { event: 'onTickInterval'; interval: number }).interval
-        if (slot.ticksSinceInterval < interval) continue
+        if (slot.nextIntervalFireTick === 0 || tickValue < slot.nextIntervalFireTick) continue
         const ctx: EffectContext = {
           caster: casterFinal,
           target: casterFinal,
@@ -1011,7 +1014,7 @@ export function BattleProvider({ children }: Props) {
         }
         applyEffect(effect, ctx)
         casterFinal = snap.get(caster.id) ?? casterFinal
-        casterFinal = resetStatusInterval(casterFinal, slot.id)
+        casterFinal = updateStatusIntervalTick(casterFinal, slot.id, tickValue + interval)
         snap.set(caster.id, casterFinal)
       }
     }
@@ -1156,12 +1159,13 @@ export function BattleProvider({ children }: Props) {
         if (!isAlive(extraSnap)) continue
         const hpBefore = extraSnap.hp
         const ctx: EffectContext = {
-          caster: actor,
-          target: noDamage ? undefined : extra,
-          battle: snapshotToBattleState(snap),
-          source: 'skill',
-          event:  { event: 'onCast' },
-          dice:   outcome,
+          caster:      actor,
+          target:      noDamage ? undefined : extra,
+          battle:      snapshotToBattleState(snap),
+          source:      'skill',
+          event:       { event: 'onCast' },
+          dice:        outcome,
+          currentTick: tickValue,
         }
         for (const effect of skillInst.cachedEffects) {
           if (effect.when.event === 'onCast') applyEffect(effect, ctx)
@@ -1388,12 +1392,13 @@ export function BattleProvider({ children }: Props) {
             if (!isAlive(extraSnap)) continue
             const hpBefore = extraSnap.hp
             const ctx: EffectContext = {
-              caster: aiUnit,
-              target: noDamage ? undefined : extra,
-              battle: snapshotToBattleState(snap),
-              source: 'skill',
-              event:  { event: 'onCast' },
-              dice:   outcome,
+              caster:      aiUnit,
+              target:      noDamage ? undefined : extra,
+              battle:      snapshotToBattleState(snap),
+              source:      'skill',
+              event:       { event: 'onCast' },
+              dice:        outcome,
+              currentTick: tickValue,
             }
             for (const effect of skillInst.cachedEffects) {
               if (effect.when.event === 'onCast') applyEffect(effect, ctx)

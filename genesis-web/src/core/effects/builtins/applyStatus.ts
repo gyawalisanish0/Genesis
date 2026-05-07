@@ -16,6 +16,8 @@ const handle: EffectHandler<ApplyStatusEffect> = (effect, ctx) => {
   const duration     = effect.duration ?? def.duration
   const durationUnit = def.tags?.includes('turn-based') ? 'turns' : 'ticks'
 
+  const firstInterval = findIntervalValue(def)
+
   for (const target of resolveRecipients(ctx)) {
     const payload: Record<string, unknown> = {}
 
@@ -25,14 +27,15 @@ const handle: EffectHandler<ApplyStatusEffect> = (effect, ctx) => {
     }
 
     const incoming: StatusEffect = {
-      id:                 def.id,
-      name:               def.name,
+      id:           def.id,
+      name:         def.name,
       duration,
       durationUnit,
-      source:             ctx.caster.id,
-      stacks:             def.maxStacks ?? 1,
+      source:       ctx.caster.id,
+      stacks:       def.maxStacks ?? 1,
       payload,
-      ticksSinceInterval: 0,
+      // nextIntervalFireTick = 0 when no interval effect exists (never fires).
+      nextIntervalFireTick: firstInterval > 0 ? (ctx.currentTick ?? 0) + firstInterval : 0,
     }
 
     ctx.battle.setUnit(mergeStatus(target, incoming, def.stacking, def.maxStacks))
@@ -42,14 +45,14 @@ const handle: EffectHandler<ApplyStatusEffect> = (effect, ctx) => {
       const penaltyDef = getStatusDef('hugo_001_shelling_point_penalty_window')
       if (penaltyDef) {
         const penaltySlot: StatusEffect = {
-          id:                 penaltyDef.id,
-          name:               penaltyDef.name,
-          duration:           effect.penaltyWindowTurns,
-          durationUnit:       'turns',
-          source:             ctx.caster.id,
-          stacks:             1,
-          payload:            {},
-          ticksSinceInterval: 0,
+          id:                   penaltyDef.id,
+          name:                 penaltyDef.name,
+          duration:             effect.penaltyWindowTurns,
+          durationUnit:         'turns',
+          source:               ctx.caster.id,
+          stacks:               1,
+          payload:              {},
+          nextIntervalFireTick: 0,
         }
         const afterShield = ctx.battle.getUnit(target.id) ?? target
         ctx.battle.setUnit(mergeStatus(afterShield, penaltySlot, penaltyDef.stacking, undefined))
@@ -96,6 +99,12 @@ function replaceSlot(unit: Unit, updated: StatusEffect): Unit {
     ...unit,
     statusSlots: unit.statusSlots.map(s => s.id === updated.id ? updated : s),
   }
+}
+
+/** Returns the interval value from the first onTickInterval effect in a StatusDef, or 0. */
+function findIntervalValue(def: { effects: Array<{ when: { event: string; interval?: number } }> }): number {
+  const found = def.effects.find(e => e.when.event === 'onTickInterval')
+  return found?.when.interval ?? 0
 }
 
 export function register(): void {
