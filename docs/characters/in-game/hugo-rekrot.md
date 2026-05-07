@@ -60,15 +60,42 @@ develops.
 
 ## Personality
 
-TBD — to be developed in the next design session.
+Hugo is funny and precise — but not deliberately funny. The humor comes from the gap between how seriously he takes himself and how often things go spectacularly wrong around him.
+
+He is **defensive by default**. When something fails he already has the technical justification built before anyone asks. Precise language is his shield — "the environmental variables were outside the test parameters" is easier than admitting he miscalculated. Years of being underestimated as a new recruit in institutions that couldn't keep up with him calcified this habit. He pre-justifies everything before anyone can question it.
+
+His school convention record — multiple failures from chaotic inventions — follows him. The inventions were never wrong. The context just wasn't ready for them. That's his position and he holds it.
+
+**In battle, the near-death state strips all of that away.** When HP drops to critical and Primal Awareness fires, Hugo goes quiet. No deflection, no justification. Just him and the suit operating on instinct and biology. The contrast is stark — the loudest person in the room suddenly becomes the calmest presence on the battlefield.
+
+### Voice notes
+
+- Explains things nobody asked him to explain
+- Corrects people mid-sentence with unnecessary precision
+- Funny in spite of himself — the chaos finds him even when he's being careful
+- At critical HP: clipped, calm, economical — a completely different register
+- Does not take compliments well; redirects them to the suit
 
 ---
 
 ## Background
 
-Hugo invented ANBOT. The circumstances behind its creation, his path to the
-Mars mission, and what he carries from his hybrid upbringing are all in
-development.
+---
+
+## Background
+
+New recruit in the fleet — but a veteran by experience. He carries more
+field knowledge than most of the people outranking him, and that gap is the
+source of most of his friction. Institutions kept failing to contain what he
+was building; he kept getting into trouble for inventions that worked too
+chaotically for the environments they were tested in.
+
+ANBOT is what he built outside of all that. On his own terms. The thing that
+finally worked the way he intended. His attachment to it is not sentimental —
+it is the proof that he was right all along.
+
+The circumstances behind ANBOT's creation, his hybrid upbringing, and his
+path to the Mars mission are in development.
 
 ---
 
