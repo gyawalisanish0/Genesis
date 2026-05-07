@@ -25,9 +25,9 @@ Two distinct organizations exist. Confusing them corrupts the timeline.
 peacekeeping mandate. Fleet 13 covers Earth's region. Hugo's home from
 2099 to 2109. Team 6 belongs here.
 
-**Sekkar Peace Fleet** — the Commander's fleet (the player). Created
-independently. Hugo joins this in 2109 as a new recruit. This is the
-game's primary organization.
+**The Commander's fleet** — the player's fleet. Named by the player during
+character creation. Created independently of the Defense Force. Hugo joins
+this in 2109 as a new recruit. No canonical name.
 
 ---
 

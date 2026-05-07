@@ -8,7 +8,7 @@
 | Profession | Material Engineer |
 | Combat Role | Front-line suit fighter |
 | Rarity | 4 |
-| Affiliation (game) | Sekkar Peace Fleet — Commander's deployed team, Mars mission |
+| Affiliation (game) | Commander's deployed team, Mars mission |
 | Affiliation (2099–2109) | Sekkarian Defense Force — Fleet 13, Team 6 |
 | Data ID | `hugo_001` |
 
@@ -29,7 +29,7 @@ delay. The nanites respond to intent.
 ANBOT was drafted at the military contracting firm where Hugo first worked after
 graduation. He walked away from the firm — and from the people who wanted to
 weaponise it — before it could be taken from him. He finished it on his own terms
-inside the Sekkar Peace Fleet.
+inside the Sekkarian Defense Force.
 
 ---
 
@@ -110,7 +110,7 @@ of most of his friction.
 4. Realises what a weapon like that becomes in military hands — decides to walk
 5. His best friend and colleague tries to convince him to stay, citing fame and
    wealth they could achieve together. Hugo refuses.
-6. Leaves the firm. First contact with the Sekkar Peace Fleet is not a
+6. Leaves the firm. First contact with the Sekkarian Defense Force is not a
    recruitment — it is an abduction. They detected the ANBOT draft and treated
    it as a threat.
 7. Eventually earns his place in the fleet. Finishes ANBOT fully there, on his

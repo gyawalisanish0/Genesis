@@ -14,30 +14,21 @@
 |---|---|
 | **2078** | Hugo Rekrot born, Voltas |
 | **2099** | Hugo abducted by Sekkarian Defense Force Fleet 13 — joins Team 6 |
-| **2109** | Game begins — Commander recruits Hugo into the Sekkar Peace Fleet, Mars deployment |
+| **2109** | Game begins — Hugo joins the Commander's fleet, Mars deployment |
 
 ---
 
-## The Two Organizations
-
-These are distinct. Confusing them breaks the timeline.
+## Organizations
 
 ### Sekkarian Defense Force
-- Celan's organization. 20+ fleets, solar-system-wide mandate.
-- Fleet 13, Team 6 — Hugo's home from 2099 to 2109.
-- Where Hugo trains, completes ANBOT, becomes who he is.
-- Arc 01 takes place entirely within this world.
+Celan's organization. 20+ fleets, solar-system-wide peacekeeping mandate.
+Fleet 13 covers Earth's region. Hugo's home from 2099 to 2109.
+Team 6 belongs here.
 
-### Sekkar Peace Fleet
-- The Commander's fleet. Created by the Commander (the player).
-- A separate organization from the Defense Force.
-- Hugo joins this in 2109 as a new recruit — new to the Commander, new to this team.
-- This is the game's primary organization. The player is the Commander.
-
-**Hugo is a new recruit in the Sekkar Peace Fleet, not in the Sekkarian Defense Force.**
-At 31 he arrives with a decade of Defense Force experience, a finished ANBOT, and
-credentials nobody on the Commander's team has seen proved yet. That gap — veteran
-capability, unproven trust — is the tension "new recruit" describes.
+### The Commander's Fleet
+The player's fleet. Name is set by the player during character creation —
+no canonical name exists. Created independently of the Defense Force.
+Hugo joins this in 2109 as a new recruit.
 
 ---
 
@@ -56,9 +47,6 @@ What's established:
 - Argument with Albert (best friend, colleague) who urges him to stay
 - 2099: leaving Voltas outskirts at night → abducted
 
-Nothing in this era has been dramatized beyond Arc 01's opening and Hugo's
-internal monologue. All of it is backstory until an arc addresses it directly.
-
 ---
 
 ### 2099 — Arc 01: First Contact *(doc exists)*
@@ -73,16 +61,13 @@ Locked: Celan, Zorin, Luka, Dyson, Morter, Arina, Husty, Lisa, Voltas.
 ### 2099–2109 — The Fleet Years *(story block, arcs TBD)*
 *Ten years inside the Sekkarian Defense Force. Hugo's whole formation.*
 
-This decade is its own story — multiple arcs. Nothing is locked yet beyond
-what Arc 01 established (team composition, ship, Hugo's starting position).
-
 **What needs to happen somewhere in this block:**
-- ANBOT completed in full — inside the fleet, on Hugo's terms
+- ANBOT completed in full — inside the Defense Force, on Hugo's terms
 - Hugo finds his footing as a fighter and as a Sekkarian
 - The team develops — who they become to each other
 - Hugo's Sekkarian heritage opens up — what his father was, what it means
 - At some point: Earth. Lisa. Possibly Albert.
-- Whatever shapes Hugo into the 31-year-old who joins the Commander's fleet
+- Whatever shapes Hugo into the 31-year-old who joins the Commander
 
 **Open threads carried from Arc 01:**
 
@@ -93,7 +78,6 @@ what Arc 01 established (team composition, ship, Hugo's starting position).
 | Hugo's father — his Sekkarian lineage, who he was | TBD |
 | Lisa — what were the plans that night? What does she do next? | TBD |
 | Arina — chromatic language (what does violet mean?) | TBD |
-| Hugo's lab access in the Defense Force | TBD |
 | Husty's two flaws in the coolant calculation | TBD |
 | Hugo's ANBOT draft — did the firm copy it? | TBD |
 
@@ -105,27 +89,23 @@ what Arc 01 established (team composition, ship, Hugo's starting position).
 **What's locked:**
 - Year 2109
 - Hugo's age: 31
-- Organization: Sekkar Peace Fleet — Commander's deployed team
-- Hugo is a new recruit to the Commander's fleet (new to the player, not to space or combat)
+- Hugo is a new recruit in the Commander's fleet
 - First deployment: Mars
-- The demo / first stage takes place here
 
 **What's TBD:**
-- The Mars mission itself: objective, antagonist, stakes
+- The Mars mission: objective, antagonist, stakes
+- The Commander's fleet name (player-defined at character creation)
 - Which (if any) Defense Force figures appear or are referenced
-- What state Team 6 and the Defense Force are in
-- Whether any Earth threads (Lisa, Albert, the firm) are still live in 2109
-- The Commander's identity, background, and how they formed the Peace Fleet
+- How the demo ends
 
 ---
 
 ## The Commander
 
-The player character. Created the Sekkar Peace Fleet independently of the
-Sekkarian Defense Force. Recruited Hugo in 2109 as one of their early members.
+The player character. Custom name and fleet name set during character
+creation — after the dream, before KALI's briefing. No canonical identity.
 
-Identity, species, background, and history: TBD. To be developed as its own
-character thread.
+See `docs/demo/demo-flow.md` for the full character creation flow.
 
 ---
 
@@ -140,7 +120,6 @@ character thread.
 | Luka | TBD (~late teens, youngest) | TBD |
 | Arina | TBD | TBD |
 | Husty | TBD | TBD |
-| The Commander | TBD | TBD |
 
 ---
 
@@ -150,10 +129,10 @@ character thread.
 |---|---|---|
 | Voltas | 2099 | Earth city. Hugo's hometown. Lisa lives there. |
 | Sekkarian Defense Force | 2099 | Celan's org. 20+ fleets. Hugo's home 2099–2109. |
-| Fleet 13, Team 6 | 2099 | Hugo's Defense Force unit. Zorin, Luka, Arina, Husty, Dyson, Morter. |
-| Sekkar Peace Fleet | 2109 | The Commander's fleet. The game's primary organization. |
-| Mars | 2109 | Demo deployment. First dramatized off-ship location. |
-| Pexelas civilization | 2099 | Arina is half-Pexelas. Chromatic skin is their trait. Details TBD. |
+| Fleet 13, Team 6 | 2099 | Hugo's Defense Force unit. |
+| The Commander's fleet | 2109 | Player-named. The game's primary organization. |
+| Mars | 2109 | Demo deployment. |
+| Pexelas civilization | 2099 | Arina is half-Pexelas. Details TBD. |
 
 ---
 
@@ -161,6 +140,6 @@ character thread.
 
 | Arc | Year | Org | Status |
 |---|---|---|---|
-| Arc 01 — First Contact | 2099 | Sekkarian Defense Force | Written — `docs/story/arc-01-hugo-first-contact.md` |
-| Arc 02 – ? — Fleet Years | 2099–2109 | Sekkarian Defense Force | TBD — whole block open |
-| The Game — Mars | 2109 | Sekkar Peace Fleet | TBD |
+| Arc 01 — First Contact | 2099 | Sekkarian Defense Force | Written |
+| Arc 02 – ? — Fleet Years | 2099–2109 | Sekkarian Defense Force | TBD |
+| The Game — Mars | 2109 | Commander's fleet | TBD |
