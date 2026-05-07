@@ -21,15 +21,19 @@ something that began before the player pressed play.
 
 ## Character Creation
 
-Before the demo begins the player sets:
+Character creation happens **after the dream** — not before it.
+
+The dream plays with no name, no identity. Then the player wakes into
+the character creation screen. Entering a name is the moment identity
+crystallises out of the dream. KALI greets the Commander by name
+immediately after — the world snaps into focus.
 
 | Field | Purpose |
 |---|---|
-| Commander name | Used by the Creator in the dream, by the AI assistant throughout |
+| Commander name | Set after the dream — KALI uses it from this point forward |
 | Fleet name | Shown on briefing screens, alarm UI, deployment orders |
 
-No other customisation in the demo. Name and fleet are enough to make
-the fourth-wall moment land.
+The Creator never learns the name in the demo. That may matter later.
 
 ---
 
@@ -45,8 +49,10 @@ and mundane observations without warning. It has never been perceived
 before — it is perception itself — and this tiny signal looking back
 at it is genuinely new.
 
-It addresses the player **by their commander name**. Not a character.
-The player.
+Neither presence has a name yet. The Creator is **???**. The player
+is **???**. Two unknown consciousnesses in the dark finding each other.
+The Creator does not know what the player is. The player does not know
+where they are. Names do not exist here yet.
 
 The tone is not horror. Not religious awe. Something quieter — two
 consciousnesses at completely different scales trying to make sense of
