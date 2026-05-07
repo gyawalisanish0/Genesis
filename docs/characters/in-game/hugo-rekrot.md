@@ -8,7 +8,8 @@
 | Profession | Material Engineer |
 | Combat Role | Front-line suit fighter |
 | Rarity | 4 |
-| Affiliation | Sekkar Peace Fleet — Commander's deployed team, Mars mission |
+| Affiliation (game) | Sekkar Peace Fleet — Commander's deployed team, Mars mission |
+| Affiliation (2099–2109) | Sekkarian Defense Force — Fleet 13, Team 6 |
 | Data ID | `hugo_001` |
 
 First playable character in Genesis.

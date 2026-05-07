@@ -17,19 +17,17 @@ more advanced. The first non-human civilization documented in Genesis.
 
 ---
 
-## The Sekkarian Defense Force
+## The Two Sekkarian Organizations
 
-A multi-fleet military organization maintaining stability across the solar
-system. More than 20 fleets operate throughout it, each covering a distinct
-region.
+Two distinct organizations exist. Confusing them corrupts the timeline.
 
-**Fleet 13** covers Earth and surrounding space. Commander: Celan.
-Fleet 13 is organized into numbered teams; Hugo is assigned to **Team 6**.
+**Sekkarian Defense Force** — Celan's org. 20+ fleets, solar-system-wide
+peacekeeping mandate. Fleet 13 covers Earth's region. Hugo's home from
+2099 to 2109. Team 6 belongs here.
 
-The Force is not purely combative — it monitors threats, maintains balance
-between civilizations, and intervenes in situations that could destabilize
-the system. Whether that mandate is benevolent or self-serving is a thread
-the story has not resolved.
+**Sekkar Peace Fleet** — the Commander's fleet (the player). Created
+independently. Hugo joins this in 2109 as a new recruit. This is the
+game's primary organization.
 
 ---
 
