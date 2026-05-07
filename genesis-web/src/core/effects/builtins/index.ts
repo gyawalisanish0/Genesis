@@ -6,12 +6,13 @@
 // `__resetRegistry()` between cases.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { register as registerDamage }     from './damage'
-import { register as registerHeal }       from './heal'
-import { register as registerGainAp }     from './gainAp'
-import { register as registerSpendAp }    from './spendAp'
-import { register as registerTickShove }  from './tickShove'
-import { register as registerModifyStat } from './modifyStat'
+import { register as registerDamage }      from './damage'
+import { register as registerHeal }        from './heal'
+import { register as registerGainAp }      from './gainAp'
+import { register as registerSpendAp }     from './spendAp'
+import { register as registerTickShove }   from './tickShove'
+import { register as registerModifyStat }  from './modifyStat'
+import { register as registerApplyStatus } from './applyStatus'
 
 export function registerBuiltins(): void {
   registerDamage()
@@ -20,4 +21,5 @@ export function registerBuiltins(): void {
   registerSpendAp()
   registerTickShove()
   registerModifyStat()
+  registerApplyStatus()
 }

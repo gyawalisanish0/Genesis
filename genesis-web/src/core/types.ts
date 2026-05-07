@@ -88,10 +88,17 @@ export interface SkillInstance {
 }
 
 export interface StatusEffect {
-  id:       string
-  name:     string
-  duration: number
-  source:   string
+  id:           string
+  name:         string
+  /** Remaining duration. Unit depends on durationUnit. */
+  duration:     number
+  /** 'turns' = owner's own action count; 'ticks' = tick-interval (v0.1: treated as turns). */
+  durationUnit: 'turns' | 'ticks'
+  source:       string
+  /** Current stack count (1 for non-stackable statuses). */
+  stacks:       number
+  /** Custom per-status payload (shield HP, dodge config, etc.). */
+  payload:      Record<string, unknown>
 }
 
 export interface Unit {

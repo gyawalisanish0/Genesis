@@ -12,7 +12,7 @@ import type { SkillInstance, BattleState as EngineBattleState, EffectContext, Ta
 import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, CLASH_ANNOUNCE_MS, ENEMY_AI_DELAY_MS, COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE, BATTLE_FEEDBACK_HOLD_MS } from '../core/constants'
 import { resolveTickDisplacement } from '../core/combat/TickDisplacer'
 import { resolveClashWinner, factionAvgSpeed } from '../core/combat/ClashResolver'
-import { createUnit, isAlive, setTickPosition, incrementActionCount } from '../core/unit'
+import { createUnit, isAlive, setTickPosition, incrementActionCount, tickStatusDurations, consumeStatusStack } from '../core/unit'
 import { calculateStartingTick, advanceTick, calculateApGained } from '../core/combat/TickCalculator'
 import { calculateFinalChance, shiftProbabilities } from '../core/combat/HitChanceEvaluator'
 import { roll, calculateTumblingDelay, resolveCounterRoll, type DiceOutcome } from '../core/combat/DiceResolver'
@@ -20,7 +20,9 @@ import { findCounterSkill, canCounter, isSingleTarget } from '../core/combat/Cou
 import { isOnCooldown, applyCooldown } from '../core/combat/CooldownResolver'
 import { applyEffect } from '../core/effects/applyEffect'
 import { createSkillInstance, getCachedSkill } from '../core/engines/skill/SkillInstance'
-import { loadCharacterWithSkills } from '../services/DataService'
+import { loadCharacterWithSkills, loadStatusDef } from '../services/DataService'
+import { registerStatusDef, clearStatusRegistry }  from '../core/effects/statusRegistry'
+import type { PassiveDef, StatusDef, Effect }       from '../core/effects/types'
 import { NarrativeService } from '../services/NarrativeService'
 import { NarrativeUnits }   from '../components/NarrativeLayer'
 import type { BattleArenaHandle, TurnDisplayData } from '../components/BattleArena'
@@ -148,6 +150,98 @@ function snapshotToBattleState(snap: Map<string, Unit>): EngineBattleState {
   }
 }
 
+// ── Status / passive helpers ──────────────────────────────────────────────────
+
+/** Collect all status IDs referenced by applyStatus effects in a set of effects. */
+function collectStatusIds(effects: readonly Effect[]): string[] {
+  return effects
+    .filter((e): e is Extract<Effect, { type: 'applyStatus' }> => e.type === 'applyStatus')
+    .map(e => e.status)
+}
+
+/** After a skill resolves, fire any passive onHpThreshold effects whose threshold was crossed. */
+function fireHpThresholdPassives(
+  unitId:      string,
+  hpBefore:    number,
+  passive:     PassiveDef | null,
+  snap:        Map<string, Unit>,
+): void {
+  if (!passive) return
+  const unit = snap.get(unitId)
+  if (!unit) return
+
+  const maxHp         = unit.maxHp
+  const fractionBefore = hpBefore / maxHp
+  const fractionAfter  = unit.hp   / maxHp
+
+  for (const effect of passive.effects) {
+    if (effect.when.event !== 'onHpThreshold') continue
+    const threshold = (effect.when as { event: 'onHpThreshold'; below?: number }).below
+    if (threshold === undefined) continue
+    if (fractionBefore < threshold) continue   // already below — don't re-fire
+    if (fractionAfter  >= threshold) continue  // didn't cross this threshold
+
+    const ctx: EffectContext = {
+      caster: unit,
+      target: unit,
+      battle: snapshotToBattleState(snap),
+      source: 'passive',
+      event:  effect.when,
+    }
+    applyEffect(effect, ctx)
+  }
+}
+
+/** Check dodge statuses on target before applying damage. Returns the effective outcome. */
+function resolveIncomingDodge(
+  target:     Unit,
+  skillRange: 'melee' | 'ranged' | 'global',
+  snap:       Map<string, Unit>,
+): { dodged: boolean; consumed: boolean } {
+  const targetSnap = snap.get(target.id) ?? target
+
+  // Primal Awareness — 70% per hit attempt, consumes a stack regardless of success
+  const primal = targetSnap.statusSlots.find(s => s.id === 'hugo_001_primal_awareness_dodge')
+  if (primal && primal.stacks > 0) {
+    snap.set(target.id, consumeStatusStack(targetSnap, 'hugo_001_primal_awareness_dodge'))
+    return { dodged: Math.random() < 0.70, consumed: true }
+  }
+
+  // Hyper Sense hyper mode — 90% melee / 50% ranged
+  const hyper = targetSnap.statusSlots.find(s => s.id === 'hugo_001_hyper_sense_hyper_active')
+  if (hyper) {
+    const chance = skillRange === 'ranged' ? 0.50 : 0.90
+    return { dodged: Math.random() < chance, consumed: false }
+  }
+
+  // Hyper Sense normal mode — 30% vs ranged only
+  const rangedDodge = targetSnap.statusSlots.find(s => s.id === 'hugo_001_hyper_sense_ranged_dodge')
+  if (rangedDodge && skillRange === 'ranged') {
+    return { dodged: Math.random() < 0.30, consumed: false }
+  }
+
+  return { dodged: false, consumed: false }
+}
+
+/** Fire onExpire effects for a StatusDef using the owning unit as caster. */
+function fireStatusExpiry(
+  owner:  Unit,
+  def:    StatusDef,
+  snap:   Map<string, Unit>,
+): void {
+  const expireEffects = def.effects.filter(e => e.when.event === 'onExpire')
+  if (!expireEffects.length) return
+  const ctx: EffectContext = {
+    caster: snap.get(owner.id) ?? owner,
+    battle: snapshotToBattleState(snap),
+    source: 'status',
+    event:  { event: 'onExpire' },
+  }
+  for (const effect of expireEffects) {
+    applyEffect(effect, ctx)
+  }
+}
+
 // ── Caster-relative target resolution ────────────────────────────────────────
 
 /**
@@ -253,6 +347,12 @@ export function BattleProvider({ children }: Props) {
 
   // Guard: fires only once per battle — prevents double-navigation on multi-kill.
   const battleEndedRef = useRef(false)
+
+  // Maps unitId → PassiveDef (null when the unit has no passive).
+  const passiveDefsRef = useRef<Map<string, PassiveDef | null>>(new Map())
+
+  // Maps statusId → StatusDef — populated at load, used by status expiry processing.
+  const statusDefsRef  = useRef<Map<string, StatusDef>>(new Map())
 
   // ── Core unit state ────────────────────────────────────────────────────────
   const [isLoading, setIsLoading]     = useState(true)
@@ -399,6 +499,47 @@ export function BattleProvider({ children }: Props) {
         const skillsMap = new Map<string, SkillInstance[]>()
         playerDataArr.forEach((d, i) => skillsMap.set(displacedPlayers[i].id, d.skillDefs.map(createSkillInstance)))
         enemyDataArr.forEach((d, i)  => skillsMap.set(displacedEnemies[i].id, d.skillDefs.map(createSkillInstance)))
+
+        // Load passives and referenced status defs; register statuses for sync lookup.
+        clearStatusRegistry()
+        const passiveDefs = new Map<string, PassiveDef | null>()
+        const allData = [
+          ...playerDataArr.map((d, i) => ({ unitId: displacedPlayers[i].id, data: d })),
+          ...enemyDataArr.map((d, i)  => ({ unitId: displacedEnemies[i].id, data: d })),
+        ]
+        const passiveResults = await Promise.all(
+          allData.map(({ unitId, data }) =>
+            data.passiveDef
+              ? Promise.resolve(data.passiveDef).then(p => ({ unitId, passive: p }))
+              : Promise.resolve({ unitId, passive: null }),
+          ),
+        )
+        passiveResults.forEach(({ unitId, passive }) => passiveDefs.set(unitId, passive))
+        passiveDefsRef.current = passiveDefs
+
+        const allEffects = [
+          ...allData.flatMap(({ data }) => data.skillDefs.flatMap(s => s.effects)),
+          ...passiveResults.flatMap(({ passive }) => passive ? passive.effects : []),
+        ]
+        const statusIds = [...new Set(collectStatusIds(allEffects))]
+        const statusDefs = new Map<string, StatusDef>()
+        const loadedStatuses = await Promise.all(statusIds.map(id => loadStatusDef(id)))
+        statusIds.forEach((id, idx) => {
+          const def = loadedStatuses[idx]
+          if (def) {
+            registerStatusDef(def)
+            statusDefs.set(id, def)
+            // Also collect status IDs referenced inside the status's own effects.
+            const nestedIds = collectStatusIds(def.effects)
+            Promise.all(nestedIds.map(nid => loadStatusDef(nid))).then(nested => {
+              nestedIds.forEach((nid, ni) => {
+                const nd = nested[ni]
+                if (nd) { registerStatusDef(nd); statusDefs.set(nid, nd) }
+              })
+            })
+          }
+        })
+        statusDefsRef.current = statusDefs
 
         if (!cancelled) {
           setPlayerUnits(displacedPlayers)
@@ -699,13 +840,18 @@ export function BattleProvider({ children }: Props) {
     chainDepth = 0,
   ): { tumbleDelay: number; outcome: DiceOutcome; damage: number } => {
     const skill       = getCachedSkill(skillInst)
+
+    // Dodge status check: resolve before dice so status-based evasion overrides the roll.
+    const { dodged } = resolveIncomingDodge(target, skill.targeting.range, snap)
+
     const finalChance = calculateFinalChance(caster.stats.precision, skill.resolution?.baseChance ?? 1.0)
-    const diceOutcome = roll(shiftProbabilities(finalChance))
+    const diceOutcome = dodged ? 'Evasion' : roll(shiftProbabilities(finalChance))
     const tumbleDelay = diceOutcome === 'Tumbling' ? calculateTumblingDelay() : 0
     const noDamage    = diceOutcome === 'Evasion' || diceOutcome === 'Fail'
 
     showDiceResult(diceOutcome, buildOutcomeMessage(diceOutcome, caster.name, target.name, tumbleDelay))
-    const targetHpBefore = snap.get(target.id)?.hp ?? target.hp
+    const targetHpBefore  = snap.get(target.id)?.hp ?? target.hp
+    const casterHpBefore  = snap.get(caster.id)?.hp ?? caster.hp
 
     NarrativeService.emit({ type: 'skill_used', actorId: caster.defId, targetId: target.defId })
     if (diceOutcome === 'Boosted') {
@@ -716,12 +862,13 @@ export function BattleProvider({ children }: Props) {
     }
 
     const battle = snapshotToBattleState(snap)
-    // AP regen for the caster based on ticks elapsed since last action.
+    // AP regen for the caster — skipped when AP regen freeze status is active.
+    const casterSnap   = snap.get(caster.id)
+    const apFrozen     = casterSnap?.statusSlots.some(s => s.id === 'hugo_001_ap_regen_freeze') ?? false
     const ticksElapsed = tickValue > 0 ? skill.tuCost : 0
-    const apGained     = calculateApGained(ticksElapsed, caster.apRegenRate)
-    if (apGained > 0) {
-      const casterSnap = snap.get(caster.id)
-      if (casterSnap) snap.set(caster.id, { ...casterSnap, ap: Math.min(casterSnap.maxAp, casterSnap.ap + apGained) })
+    const apGained     = apFrozen ? 0 : calculateApGained(ticksElapsed, caster.apRegenRate)
+    if (apGained > 0 && casterSnap) {
+      snap.set(caster.id, { ...casterSnap, ap: Math.min(casterSnap.maxAp, casterSnap.ap + apGained) })
     }
 
     const ctx: EffectContext = {
@@ -751,6 +898,22 @@ export function BattleProvider({ children }: Props) {
       if (counterSkill && canCounter(defenderSnap, counterSkill)) {
         scheduleCounterChainRef.current?.(defenderSnap, caster, counterSkill, snap, chainDepth)
       }
+    }
+
+    // Fire passive onHpThreshold for the target if HP crossed below a threshold.
+    fireHpThresholdPassives(target.id, targetHpBefore, passiveDefsRef.current.get(target.id) ?? null, snap)
+    // Fire passive onHpThreshold for the caster too (self-damage skills, recoil, etc.).
+    if (caster.id !== target.id) {
+      fireHpThresholdPassives(caster.id, casterHpBefore, passiveDefsRef.current.get(caster.id) ?? null, snap)
+    }
+
+    // Tick down caster's turn-based statuses and fire onExpire effects.
+    const casterAfter = snap.get(caster.id) ?? caster
+    const { unit: casterTicked, expired } = tickStatusDurations(casterAfter)
+    snap.set(caster.id, casterTicked)
+    for (const expiredSlot of expired) {
+      const def = statusDefsRef.current.get(expiredSlot.id)
+      if (def) fireStatusExpiry(casterTicked, def, snap)
     }
 
     const damage = Math.max(0, targetHpBefore - (snap.get(target.id)?.hp ?? targetHpBefore))

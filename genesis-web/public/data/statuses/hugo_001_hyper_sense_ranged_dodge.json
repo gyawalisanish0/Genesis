@@ -1,0 +1,9 @@
+{
+  "type": "status",
+  "id": "hugo_001_hyper_sense_ranged_dodge",
+  "name": "Hyper Sense",
+  "stacking": "refresh",
+  "duration": 15,
+  "tags": ["dodge", "ranged-dodge"],
+  "effects": []
+}

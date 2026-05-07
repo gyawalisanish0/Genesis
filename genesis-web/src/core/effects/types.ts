@@ -98,7 +98,8 @@ export type Condition =
   | { targetHpAbove: number }
   | { selfApBelow: number }
   | { selfApAbove: number }
-  | { hasStatus: string }
+  | { hasStatus:     string }   // checks ctx.target's status slots
+  | { selfHasStatus: string }   // checks ctx.caster's status slots
   | { hasTag: string }
   | { diceOutcome: DiceOutcome }
   | { not: Condition }

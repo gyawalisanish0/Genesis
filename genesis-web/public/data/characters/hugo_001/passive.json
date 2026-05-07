@@ -7,7 +7,10 @@
     {
       "id": "hugo_001_primal_awareness_dodge",
       "when": { "event": "onHpThreshold", "below": 0.10 },
-      "condition": { "selfApAbove": 80 },
+      "condition": { "all": [
+        { "selfApAbove": 80 },
+        { "not": { "selfHasStatus": "hugo_001_primal_awareness_dodge" } }
+      ]},
       "type": "applyStatus",
       "target": "self",
       "status": "hugo_001_primal_awareness_dodge"
@@ -15,7 +18,10 @@
     {
       "id": "hugo_001_primal_awareness_ap_freeze",
       "when": { "event": "onHpThreshold", "below": 0.10 },
-      "condition": { "selfApAbove": 80 },
+      "condition": { "all": [
+        { "selfApAbove": 80 },
+        { "not": { "selfHasStatus": "hugo_001_primal_awareness_dodge" } }
+      ]},
       "type": "applyStatus",
       "target": "self",
       "status": "hugo_001_ap_regen_freeze",

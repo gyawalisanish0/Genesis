@@ -1,0 +1,10 @@
+{
+  "type": "status",
+  "id": "hugo_001_primal_awareness_dodge",
+  "name": "Primal Awareness",
+  "stacking": "refresh",
+  "maxStacks": 5,
+  "duration": 40,
+  "tags": ["dodge", "primal", "turn-based"],
+  "effects": []
+}
