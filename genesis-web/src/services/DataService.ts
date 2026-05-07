@@ -4,7 +4,7 @@
 // All callers receive typed data; Zod validation is deferred to Wave C.
 
 import type { CharacterDef, ModeDef, StageDef, MapDef, TilesetDef } from '../core/types'
-import type { SkillDef } from '../core/effects/types'
+import type { SkillDef, PassiveDef, StatusDef } from '../core/effects/types'
 import type { CharacterDialogueDef, LevelNarrativeDef } from '../core/narrative'
 
 // ── In-memory cache ───────────────────────────────────────────────────────────
@@ -14,6 +14,8 @@ const cache = {
   campaignIndex:     null as string[] | null,
   characters:        new Map<string, CharacterDef>(),
   characterSkills:   new Map<string, SkillDef[]>(),  // keyed by characterId
+  passives:          new Map<string, PassiveDef>(),   // keyed by passiveId
+  statuses:          new Map<string, StatusDef>(),    // keyed by statusId
   modes:             new Map<string, ModeDef>(),
   characterDialogue: new Map<string, CharacterDialogueDef>(),
   levelNarrative:    new Map<string, LevelNarrativeDef>(),
@@ -77,16 +79,55 @@ export async function loadMode(id: string): Promise<ModeDef> {
   return def
 }
 
-/** Load a character definition together with all of its skill definitions. */
+/**
+ * Load a character's passive definition.
+ * Returns null silently when absent or when the character has no passive.
+ */
+export async function loadCharacterPassive(id: string): Promise<PassiveDef | null> {
+  const def = await loadCharacter(id)
+  if (!def.passive) return null
+
+  const cached = cache.passives.get(def.passive)
+  if (cached) return cached
+  try {
+    const raw    = await fetchJson(`data/characters/${id}/passive.json`)
+    const result = raw as PassiveDef
+    cache.passives.set(def.passive, result)
+    return result
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Load a status definition by ID.
+ * Returns null silently when absent.
+ */
+export async function loadStatusDef(id: string): Promise<StatusDef | null> {
+  const cached = cache.statuses.get(id)
+  if (cached) return cached
+  try {
+    const raw    = await fetchJson(`data/statuses/${id}.json`)
+    const result = raw as StatusDef
+    cache.statuses.set(id, result)
+    return result
+  } catch {
+    return null
+  }
+}
+
+/** Load a character definition together with all of its skill definitions and passive. */
 export async function loadCharacterWithSkills(id: string): Promise<{
   characterDef: CharacterDef
   skillDefs:    SkillDef[]
+  passiveDef:   PassiveDef | null
 }> {
-  const [characterDef, skillDefs] = await Promise.all([
+  const [characterDef, skillDefs, passiveDef] = await Promise.all([
     loadCharacter(id),
     loadCharacterSkillDefs(id),
+    loadCharacterPassive(id),
   ])
-  return { characterDef, skillDefs }
+  return { characterDef, skillDefs, passiveDef }
 }
 
 /**
@@ -179,6 +220,8 @@ export function clearCache(): void {
   cache.campaignIndex  = null
   cache.characters.clear()
   cache.characterSkills.clear()
+  cache.passives.clear()
+  cache.statuses.clear()
   cache.modes.clear()
   cache.characterDialogue.clear()
   cache.levelNarrative.clear()

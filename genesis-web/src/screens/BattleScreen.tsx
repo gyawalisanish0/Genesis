@@ -274,7 +274,7 @@ function ActionGrid() {
   const {
     phase, gridCollapsed, toggleGrid,
     activePlayerUnit, getUnitSkills, selectedSkill, selectedTarget, selectSkill, skipTurn,
-    setInspectingSkill,
+    setInspectingSkill, hyperSenseModeActive,
   } = useBattleScreen()
   const createHandler = useScrollAwarePointer()
   const disabled = phase !== 'player'
@@ -295,11 +295,12 @@ function ActionGrid() {
           </div>
           <div className={styles.skillRows}>
             {slots.map((skillInst, i) => {
-              const hasSkill   = skillInst !== null
-              const isSelected = hasSkill && selectedSkill?.defId === skillInst.defId
-              const tuCost     = hasSkill ? skillInst.cachedCosts.tuCost : null
-              const name       = hasSkill ? skillInst.baseDef.name : '—'
-              const onCooldown = hasSkill && !!activePlayerUnit && isOnCooldown(activePlayerUnit, skillInst)
+              const hasSkill    = skillInst !== null
+              const isSelected  = hasSkill && selectedSkill?.defId === skillInst.defId
+              const isHyperSlot = hasSkill && hyperSenseModeActive && skillInst.baseDef.id === 'hugo_001_hyper_sense'
+              const tuCost      = hasSkill ? (isHyperSlot ? 6  : skillInst.cachedCosts.tuCost) : null
+              const name        = hasSkill ? (isHyperSlot ? 'Hyper Sense ★' : skillInst.baseDef.name) : '—'
+              const onCooldown  = hasSkill && !!activePlayerUnit && isOnCooldown(activePlayerUnit, skillInst)
               const tickCD     = onCooldown && activePlayerUnit ? ticksRemaining(activePlayerUnit, skillInst) : 0
               const turnCD     = onCooldown && activePlayerUnit ? turnsRemaining(activePlayerUnit, skillInst) : 0
               const isDisabled = !hasSkill || disabled || onCooldown

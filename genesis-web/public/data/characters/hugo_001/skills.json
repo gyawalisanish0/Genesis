@@ -1,0 +1,134 @@
+[
+  {
+    "type": "skill",
+    "id": "hugo_001_nanites_slash",
+    "name": "Nanites Slash",
+    "description": "ANBOT reshapes its nanite mass into a blade and slashes the target.",
+    "tuCost": 8,
+    "apCost": 15,
+    "tags": ["physical", "melee"],
+    "maxLevel": 5,
+    "targeting": {
+      "selector": "enemy",
+      "range": "melee"
+    },
+    "resolution": {
+      "baseChance": 1.0
+    },
+    "effects": [
+      {
+        "id": "hugo_001_nanites_slash_dmg",
+        "when": { "event": "onCast" },
+        "type": "damage",
+        "amount": { "stat": "strength", "percent": 60 },
+        "damageType": "physical"
+      }
+    ],
+    "levelUpgrades": [
+      { "level": 2, "patch": { "effects.hugo_001_nanites_slash_dmg.amount.percent": 72  } },
+      { "level": 3, "patch": { "effects.hugo_001_nanites_slash_dmg.amount.percent": 85  } },
+      { "level": 4, "patch": { "effects.hugo_001_nanites_slash_dmg.amount.percent": 100 } },
+      { "level": 5, "patch": { "effects.hugo_001_nanites_slash_dmg.amount.percent": 115 } }
+    ]
+  },
+  {
+    "type": "skill",
+    "id": "hugo_001_hammer_bash",
+    "name": "Hammer Bash",
+    "description": "ANBOT consolidates its nanite mass into a crushing hammer limb and drives it into the target.",
+    "tuCost": 13,
+    "apCost": 25,
+    "turnCooldown": 2,
+    "tags": ["physical", "melee"],
+    "maxLevel": 5,
+    "targeting": {
+      "selector": "enemy",
+      "range": "melee"
+    },
+    "resolution": {
+      "baseChance": 0.9
+    },
+    "effects": [
+      {
+        "id": "hugo_001_hammer_bash_dmg",
+        "when": { "event": "onCast" },
+        "type": "damage",
+        "amount": { "stat": "strength", "percent": 125 },
+        "damageType": "physical"
+      }
+    ],
+    "levelUpgrades": [
+      { "level": 2, "patch": { "effects.hugo_001_hammer_bash_dmg.amount.percent": 140 } },
+      { "level": 3, "patch": { "effects.hugo_001_hammer_bash_dmg.amount.percent": 158 } },
+      { "level": 4, "patch": { "effects.hugo_001_hammer_bash_dmg.amount.percent": 178 } },
+      { "level": 5, "patch": { "effects.hugo_001_hammer_bash_dmg.amount.percent": 200 } }
+    ]
+  },
+  {
+    "type": "skill",
+    "id": "hugo_001_shelling_point",
+    "name": "Shelling Point",
+    "description": "ANBOT redistributes nanite density into a protective shell. Regenerates 4% max HP per 10 ticks while active. Shattering the shield deals 2x damage to Hugo from the breaking hit. 48-tick cooldown begins only on shield break.",
+    "tuCost": 6,
+    "apCost": 20,
+    "tags": ["utility"],
+    "maxLevel": 1,
+    "targeting": {
+      "selector": "self",
+      "range": "global"
+    },
+    "resolution": {
+      "baseChance": 1.0
+    },
+    "effects": [
+      {
+        "id": "hugo_001_shelling_point_shield",
+        "when": { "event": "onCast" },
+        "type": "applyStatus",
+        "target": "self",
+        "status": "hugo_001_shelling_point_active",
+        "shieldPercent": 25,
+        "penaltyWindowTurns": 9
+      }
+    ],
+    "levelUpgrades": []
+  },
+  {
+    "type": "skill",
+    "id": "hugo_001_hyper_sense",
+    "name": "Hyper Sense",
+    "description": "Normal: ANBOT amplifies Sekkar receptor sensitivity — 30% dodge vs ranged for 15 ticks. 10 AP / 7 TU / 20-tick cooldown. Hyper (Primal Awareness active + fewer than 2 dodge points): 90% melee dodge and 50% ranged dodge for the passive duration; on expiry, counter with 200% Power energy damage. 20 AP / 6 TU / 8-turn cooldown.",
+    "tuCost": 7,
+    "apCost": 10,
+    "tickCooldown": 20,
+    "tags": ["utility", "unique"],
+    "maxLevel": 1,
+    "targeting": {
+      "selector": "self",
+      "range": "global"
+    },
+    "resolution": {
+      "baseChance": 1.0
+    },
+    "effects": [
+      {
+        "id": "hugo_001_hyper_sense_normal",
+        "when": { "event": "onCast" },
+        "condition": { "not": { "hasStatus": "hugo_001_primal_awareness" } },
+        "type": "applyStatus",
+        "target": "self",
+        "status": "hugo_001_hyper_sense_ranged_dodge",
+        "duration": 15
+      },
+      {
+        "id": "hugo_001_hyper_sense_hyper",
+        "when": { "event": "onCast" },
+        "condition": { "hasStatus": "hugo_001_primal_awareness" },
+        "type": "applyStatus",
+        "target": "self",
+        "status": "hugo_001_hyper_sense_hyper_active"
+      }
+    ],
+    "levelUpgrades": []
+  }
+]

@@ -50,3 +50,13 @@ export function applyCooldown(
       : 0,
   }
 }
+
+/** Apply a fixed tick cooldown directly — used for event-triggered cooldowns (e.g. shield break). */
+export function applyTickCooldown(inst: SkillInstance, readyAtTick: number): SkillInstance {
+  return { ...inst, cooldownReadyAtTick: readyAtTick, cooldownReadyAtAction: 0 }
+}
+
+/** Apply a fixed turn cooldown directly — used for Hyper Mode override. */
+export function applyTurnCooldown(unit: Unit, inst: SkillInstance, turns: number): SkillInstance {
+  return { ...inst, cooldownReadyAtTick: 0, cooldownReadyAtAction: unit.actionCount + turns }
+}

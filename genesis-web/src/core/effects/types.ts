@@ -98,7 +98,8 @@ export type Condition =
   | { targetHpAbove: number }
   | { selfApBelow: number }
   | { selfApAbove: number }
-  | { hasStatus: string }
+  | { hasStatus:     string }   // checks ctx.target's status slots
+  | { selfHasStatus: string }   // checks ctx.caster's status slots
   | { hasTag: string }
   | { diceOutcome: DiceOutcome }
   | { not: Condition }
@@ -164,7 +165,7 @@ export type Effect =
   | (EffectBase & { type: 'gainAp';            amount: number })
   | (EffectBase & { type: 'spendAp';           amount: number })
   | (EffectBase & { type: 'modifyStat';        stat: StatKey; delta: number; duration: ModDuration })
-  | (EffectBase & { type: 'applyStatus';       status: string; duration?: number; chance?: number })
+  | (EffectBase & { type: 'applyStatus';       status: string; duration?: number; chance?: number; shieldPercent?: number; penaltyWindowTurns?: number })
   | (EffectBase & { type: 'removeStatus';      status?: string; tag?: string })
   | (EffectBase & { type: 'shiftProbability';  outcome: DiceOutcome; delta: number })
   | (EffectBase & { type: 'rerollDice';        outcome?: DiceOutcome; uses: number; perBattle?: boolean })

@@ -1,0 +1,20 @@
+{
+  "type": "character",
+  "id": "hugo_001",
+  "name": "Hugo Rekrot",
+  "className": "Material Engineer",
+  "rarity": 4,
+  "stats": {
+    "strength": 65,
+    "endurance": 75,
+    "power": 20,
+    "resistance": 60,
+    "speed": 30,
+    "precision": 50
+  },
+  "maxHp": 1400,
+  "maxAp": 100,
+  "apRegenRate": 7,
+  "passive": "hugo_001_primal_awareness",
+  "skillPath": "hugo_path"
+}

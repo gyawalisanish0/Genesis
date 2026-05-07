@@ -1,0 +1,17 @@
+{
+  "type": "status",
+  "id": "hugo_001_shelling_point_active",
+  "name": "Shelling Point",
+  "stacking": "refresh",
+  "duration": 999,
+  "tags": ["shield"],
+  "effects": [
+    {
+      "id": "hugo_001_shelling_point_regen",
+      "when": { "event": "onTickInterval", "interval": 10 },
+      "target": "self",
+      "type": "heal",
+      "amount": 56
+    }
+  ]
+}

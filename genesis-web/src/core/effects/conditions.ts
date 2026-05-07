@@ -23,6 +23,7 @@ export function evaluateCondition(cond: Condition, ctx: EffectContext): boolean 
   if ('selfApBelow'   in cond) return apFraction(ctx.caster) <  cond.selfApBelow
   if ('selfApAbove'   in cond) return apFraction(ctx.caster) >  cond.selfApAbove
   if ('hasStatus'     in cond) return targetHasStatus(ctx.target, cond.hasStatus)
+  if ('selfHasStatus' in cond) return unitHasStatus(ctx.caster, cond.selfHasStatus)
   if ('hasTag'        in cond) return targetHasTag(ctx.target, cond.hasTag)
   if ('diceOutcome'   in cond) return ctx.dice === cond.diceOutcome
   if ('not'           in cond) return !evaluateCondition(cond.not, ctx)
@@ -40,9 +41,13 @@ function apFraction(unit: Unit): number {
   return unit.maxAp > 0 ? unit.ap / unit.maxAp : 0
 }
 
+function unitHasStatus(unit: Unit, statusId: string): boolean {
+  return unit.statusSlots.some(s => s.id === statusId)
+}
+
 function targetHasStatus(target: Unit | undefined, statusId: string): boolean {
   if (!target) return false
-  return target.statusSlots.some(s => s.id === statusId)
+  return unitHasStatus(target, statusId)
 }
 
 // Tag lookup currently resolves against the status slot id because the

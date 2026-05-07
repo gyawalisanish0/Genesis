@@ -55,3 +55,59 @@ export function isAlive(unit: Unit): boolean {
 export function setTickPosition(unit: Unit, tick: number): Unit {
   return { ...unit, tickPosition: tick }
 }
+
+/**
+ * Ticks all status slots down by 1 turn and advances their interval counters.
+ * Returns the updated unit and any statuses that expired (duration reached 0).
+ * Expired slots are removed. BattleContext inspects ticksSinceInterval against
+ * each status def's interval value to decide whether to fire interval effects.
+ */
+export function tickStatusDurations(unit: Unit): { unit: Unit; expired: typeof unit.statusSlots } {
+  const expired:   typeof unit.statusSlots = []
+  const remaining: typeof unit.statusSlots = []
+
+  for (const slot of unit.statusSlots) {
+    const next = { ...slot, duration: slot.duration - 1, ticksSinceInterval: slot.ticksSinceInterval + 1 }
+    if (next.duration <= 0) {
+      expired.push(slot)
+    } else {
+      remaining.push(next)
+    }
+  }
+
+  return { unit: { ...unit, statusSlots: remaining }, expired }
+}
+
+/**
+ * Resets the interval counter on a named status slot back to 0.
+ * Called by BattleContext after firing onTickInterval effects.
+ */
+export function resetStatusInterval(unit: Unit, statusId: string): Unit {
+  return {
+    ...unit,
+    statusSlots: unit.statusSlots.map(s =>
+      s.id === statusId ? { ...s, ticksSinceInterval: 0 } : s,
+    ),
+  }
+}
+
+/** Decrements stacks on a named status by 1. Removes it when stacks reach 0. */
+export function consumeStatusStack(unit: Unit, statusId: string): Unit {
+  const slot = unit.statusSlots.find(s => s.id === statusId)
+  if (!slot) return unit
+
+  if (slot.stacks <= 1) {
+    return { ...unit, statusSlots: unit.statusSlots.filter(s => s.id !== statusId) }
+  }
+  return {
+    ...unit,
+    statusSlots: unit.statusSlots.map(s =>
+      s.id === statusId ? { ...s, stacks: s.stacks - 1 } : s,
+    ),
+  }
+}
+
+/** Removes a status slot by ID. No-op if not present. */
+export function removeStatus(unit: Unit, statusId: string): Unit {
+  return { ...unit, statusSlots: unit.statusSlots.filter(s => s.id !== statusId) }
+}
