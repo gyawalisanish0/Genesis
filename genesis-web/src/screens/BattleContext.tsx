@@ -308,6 +308,32 @@ function fireStatusExpiry(
   }
 }
 
+/** Fire onUnitTurnStart status effects for a unit at the start of its turn. */
+function fireTurnStartEffects(
+  unit:       Unit,
+  statusDefs: Map<string, StatusDef>,
+  snap:       Map<string, Unit>,
+  tick:       number,
+): void {
+  const current = snap.get(unit.id) ?? unit
+  for (const slot of current.statusSlots) {
+    const def = statusDefs.get(slot.id)
+    if (!def) continue
+    for (const effect of def.effects) {
+      if (effect.when.event !== 'onUnitTurnStart') continue
+      const ctx: EffectContext = {
+        caster: snap.get(unit.id) ?? current,
+        target: snap.get(unit.id) ?? current,
+        battle: snapshotToBattleState(snap),
+        source: 'status',
+        event:  { event: 'onUnitTurnStart' },
+        currentTick: tick,
+      }
+      applyEffect(effect, ctx)
+    }
+  }
+}
+
 // ── Caster-relative target resolution ────────────────────────────────────────
 
 /**
@@ -419,6 +445,9 @@ export function BattleProvider({ children }: Props) {
 
   // Maps statusId → StatusDef — populated at load, used by status expiry processing.
   const statusDefsRef  = useRef<Map<string, StatusDef>>(new Map())
+
+  // Tracks "{unitId}:{tickValue}" keys where onUnitTurnStart was already fired this turn.
+  const turnStartFiredRef = useRef(new Set<string>())
 
   // ── Core unit state ────────────────────────────────────────────────────────
   const [isLoading, setIsLoading]     = useState(true)
@@ -607,14 +636,36 @@ export function BattleProvider({ children }: Props) {
         })
         statusDefsRef.current = statusDefs
 
+        // Fire onBattleStart passive effects for all units before committing state.
+        const battleStartSnap = makeSnapshot(displacedPlayers, displacedEnemies)
+        for (const { unitId, passive } of passiveResults) {
+          if (!passive) continue
+          const unit = battleStartSnap.get(unitId)
+          if (!unit) continue
+          for (const effect of passive.effects) {
+            if (effect.when.event !== 'onBattleStart') continue
+            const ctx: EffectContext = {
+              caster: unit,
+              target: unit,
+              battle: snapshotToBattleState(battleStartSnap),
+              source: 'passive',
+              event:  { event: 'onBattleStart' },
+              currentTick: 0,
+            }
+            applyEffect(effect, ctx)
+          }
+        }
+        const startedPlayers = displacedPlayers.map(u => battleStartSnap.get(u.id) ?? u)
+        const startedEnemies = displacedEnemies.map(u => battleStartSnap.get(u.id) ?? u)
+
         if (!cancelled) {
-          setPlayerUnits(displacedPlayers)
-          setEnemies(displacedEnemies)
+          setPlayerUnits(startedPlayers)
+          setEnemies(startedEnemies)
           setUnitSkillsMap(skillsMap)
           setRegisteredTicks(ticks)
           setLog([{ id: '1', text: 'Battle started!', colour: 'var(--accent-genesis)' }])
           setIsLoading(false)
-          NarrativeUnits.register([...displacedPlayers, ...displacedEnemies])
+          NarrativeUnits.register([...startedPlayers, ...startedEnemies])
           NarrativeService.emit({
             type:     'battle_start',
             actorId:  displacedPlayers[0]?.defId,
@@ -842,10 +893,19 @@ export function BattleProvider({ children }: Props) {
     }
 
     if (activeControlled.length === 1) {
+      const activeUnit = activeControlled[0]
+      const turnKey    = `${activeUnit.id}:${tickValue}`
+      if (!turnStartFiredRef.current.has(turnKey)) {
+        turnStartFiredRef.current.add(turnKey)
+        const snap = makeSnapshot(playerUnitsRef.current, enemiesRef.current)
+        fireTurnStartEffects(activeUnit, statusDefsRef.current, snap, tickValue)
+        const updated = snap.get(activeUnit.id)
+        if (updated) setPlayerUnits(prev => prev.map(u => u.id === updated.id ? updated : u))
+      }
       setPhase('player')
       // Canvas stays blank until player selects a target — setTurnState is called in selectTarget/selectSkill.
     }
-  }, [activeUnitIds, playerUnits, enemies, controlledIds, isLoading, narrativePaused, inspectingSkill, appendLog])
+  }, [activeUnitIds, playerUnits, enemies, controlledIds, isLoading, narrativePaused, inspectingSkill, appendLog, tickValue])
 
   // Clear pending target selection whenever it is no longer the player's turn.
   useEffect(() => {
@@ -950,6 +1010,24 @@ export function BattleProvider({ children }: Props) {
 
     for (const effect of skillInst.cachedEffects) {
       if (effect.when.event === 'onCast') applyEffect(effect, ctx)
+    }
+
+    // Dispatch outcome-specific events after onCast.
+    if (!noDamage) {
+      const hitCtx = { ...ctx, event: { event: 'onHit' } as const }
+      for (const effect of skillInst.cachedEffects) {
+        if (effect.when.event === 'onHit') applyEffect(effect, hitCtx)
+      }
+    } else if (diceOutcome === 'Evasion') {
+      const evadeCtx = { ...ctx, event: { event: 'onEvade' } as const }
+      for (const effect of skillInst.cachedEffects) {
+        if (effect.when.event === 'onEvade') applyEffect(effect, evadeCtx)
+      }
+    } else {
+      const missCtx = { ...ctx, event: { event: 'onMiss' } as const }
+      for (const effect of skillInst.cachedEffects) {
+        if (effect.when.event === 'onMiss') applyEffect(effect, missCtx)
+      }
     }
 
     const logMsg =
@@ -1353,6 +1431,23 @@ export function BattleProvider({ children }: Props) {
       if (!currentPlayers.some(isAlive) && !currentEnemies.some(isAlive)) return
 
       const sortedAIUnits = [...allAIUnits].sort((a, b) => b.stats.speed - a.stats.speed)
+
+      // Fire onUnitTurnStart status effects for each AI unit before it acts.
+      {
+        const snap = makeSnapshot(currentPlayers, currentEnemies)
+        for (const aiUnit of sortedAIUnits) {
+          const key = `${aiUnit.id}:${tickValue}`
+          if (!turnStartFiredRef.current.has(key)) {
+            turnStartFiredRef.current.add(key)
+            fireTurnStartEffects(aiUnit, statusDefsRef.current, snap, tickValue)
+          }
+        }
+        const updatedPlayers = currentPlayers.map(u => snap.get(u.id) ?? u)
+        const updatedEnemies = currentEnemies.map(u => snap.get(u.id) ?? u)
+        setPlayerUnits(updatedPlayers)
+        setEnemies(updatedEnemies)
+      }
+
       for (const aiUnit of sortedAIUnits) {
         const allUnitSkills   = currentSkills.get(aiUnit.id) ?? []
         const availableSkills = allUnitSkills.filter((s) => {

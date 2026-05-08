@@ -1,0 +1,14 @@
+{
+  "type": "passive",
+  "id": "husty_001_precise_calibration",
+  "name": "Precise Calibration",
+  "description": "Husty's methodical approach builds power with every action. Gains 1–3 Power Surge per turn (max 45), which Cached Shockwave converts to damage.",
+  "effects": [
+    {
+      "when": { "event": "onBattleStart" },
+      "type": "applyStatus",
+      "target": "self",
+      "status": "husty_001_power_surge"
+    }
+  ]
+}

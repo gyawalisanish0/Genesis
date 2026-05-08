@@ -12,7 +12,8 @@ import { register as registerGainAp }      from './gainAp'
 import { register as registerSpendAp }     from './spendAp'
 import { register as registerTickShove }   from './tickShove'
 import { register as registerModifyStat }  from './modifyStat'
-import { register as registerApplyStatus } from './applyStatus'
+import { register as registerApplyStatus }        from './applyStatus'
+import { register as registerSecondaryResource }  from './secondaryResource'
 
 export function registerBuiltins(): void {
   registerDamage()
@@ -22,4 +23,5 @@ export function registerBuiltins(): void {
   registerTickShove()
   registerModifyStat()
   registerApplyStatus()
+  registerSecondaryResource()
 }

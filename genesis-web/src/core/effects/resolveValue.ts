@@ -19,7 +19,8 @@ const PERCENT_DIVISOR = 100
 
 export function resolveValueExpr(expr: ValueExpr, ctx: EffectContext): number {
   if (typeof expr === 'number') return expr
-  if ('sum' in expr) return expr.sum.reduce<number>((acc, sub) => acc + resolveValueExpr(sub, ctx), 0)
+  if ('sum'       in expr) return expr.sum.reduce<number>((acc, sub) => acc + resolveValueExpr(sub, ctx), 0)
+  if ('secondary' in expr) return ctx.caster.secondaryResource * expr.secondary
   return resolveStatExpr(expr.stat, expr.percent, expr.of, ctx)
 }
 

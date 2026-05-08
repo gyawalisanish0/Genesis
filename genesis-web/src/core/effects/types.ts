@@ -61,6 +61,8 @@ export type ValueExpr =
   | number
   | { stat: StatKey | 'maxHp' | 'maxAp'; percent: number; of?: 'caster' | 'target' }
   | { sum: ValueExpr[] }
+  /** Reads caster.secondaryResource and multiplies by `secondary`. */
+  | { secondary: number }
 
 // ── WhenClause — trigger events ──────────────────────────────────────────────
 
@@ -177,7 +179,15 @@ export type Effect =
   | (EffectBase & { type: 'rerollDice';        outcome?: DiceOutcome; uses: number; perBattle?: boolean })
   | (EffectBase & { type: 'forceOutcome';      outcome: DiceOutcome })
   | (EffectBase & { type: 'triggerSkill';      skillId: string; ignoreCost?: boolean })
-  | (EffectBase & { type: 'secondaryResource'; delta: number })
+  | (EffectBase & {
+      type:   'secondaryResource'
+      /** Flat amount or [min, max] inclusive random range to add. Ignored when `set` is provided. */
+      delta?: number | [number, number]
+      /** Cap after addition. */
+      max?:   number
+      /** If present, sets secondaryResource to this exact value (overrides delta). */
+      set?:   number
+    })
 
 /** Discriminator union of all primitive `type` values. */
 export type EffectType = Effect['type']

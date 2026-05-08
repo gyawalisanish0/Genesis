@@ -18,8 +18,9 @@ interface Props {
 
 // Render a ValueExpr as concise human-readable text.
 function valueText(v: ValueExpr): string {
-  if (typeof v === 'number') return String(v)
-  if ('sum' in v) return v.sum.map(valueText).join(' + ')
+  if (typeof v === 'number')    return String(v)
+  if ('sum'       in v)         return v.sum.map(valueText).join(' + ')
+  if ('secondary' in v)         return `${v.secondary * 100}% surge`
   const of = v.of ?? 'caster'
   return `${v.percent}% ${of} ${v.stat}`
 }
@@ -41,7 +42,11 @@ function effectLine(e: Effect): string {
     case 'rerollDice':        return `${trigger}Reroll ${e.outcome ?? 'any'} (${e.uses} use${e.uses === 1 ? '' : 's'}${e.perBattle ? ', per battle' : ''})`
     case 'forceOutcome':      return `${trigger}Force outcome: ${e.outcome}`
     case 'triggerSkill':      return `${trigger}Trigger skill: ${e.skillId}${e.ignoreCost ? ' (free)' : ''}`
-    case 'secondaryResource': return `${trigger}Resource ${e.delta > 0 ? '+' : ''}${e.delta}`
+    case 'secondaryResource': {
+      if (e.set !== undefined) return `${trigger}Reset surge to ${e.set}`
+      if (Array.isArray(e.delta)) return `${trigger}Surge +${e.delta[0]}–${e.delta[1]}`
+      return `${trigger}Surge ${(e.delta ?? 0) >= 0 ? '+' : ''}${e.delta ?? 0}`
+    }
   }
 }
 
