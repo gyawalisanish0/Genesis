@@ -153,7 +153,7 @@ Sense available is a genuine crisis for the opponent.
 
 | Field | Value |
 |---|---|
-| AP Cost | 15 |
+| AP Cost | 12 |
 | TU Cost | 8 |
 | Damage | 60% STR (physical, melee) |
 | Max Level | 5 |
@@ -189,7 +189,7 @@ prevents spam — use it when a big window opens, not as a rotation filler.
 | AP Cost | 20 |
 | TU Cost | 6 |
 | Shield | 25% of current HP |
-| Regen | 56 HP every 10 of Hugo's own turns while shield is active |
+| Regen | 4% max HP every 10 ticks while shield is active |
 | Break Penalty | If shield breaks within 9 turns of cast: overflow damage is doubled |
 | Cooldown | 48 ticks — starts on shield break, not on activation |
 | Restriction | Cannot cast while shield is already active |
