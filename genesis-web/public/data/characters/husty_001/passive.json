@@ -5,6 +5,12 @@
   "description": "After spending 60 AP, Husty's precision sharpens: gains +80 Precision for 4 turns. Resets on proc.",
   "effects": [
     {
+      "when": { "event": "onBattleStart" },
+      "type": "applyStatus",
+      "target": "self",
+      "status": "husty_001_power_surge"
+    },
+    {
       "when": { "event": "onApSpent" },
       "condition": {
         "all": [
