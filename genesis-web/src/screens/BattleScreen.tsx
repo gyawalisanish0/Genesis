@@ -22,7 +22,7 @@ import {
   TIMELINE_RECENTER_DELAY_MS, BACK_DEBOUNCE_MS,
 } from '../core/constants'
 import { getCachedSkill } from '../core/engines/skill/SkillInstance'
-import { isAlive } from '../core/unit'
+import { isAlive, isSkillTagBlocked } from '../core/unit'
 import { ResourceBar } from '../components/ResourceBar'
 import styles from './BattleScreen.module.css'
 
@@ -320,12 +320,13 @@ function ActionGrid() {
               const tuCost      = hasSkill ? (isHyperSlot ? 6  : skillInst.cachedCosts.tuCost) : null
               const name        = hasSkill ? (isHyperSlot ? 'Hyper Sense ★' : skillInst.baseDef.name) : '—'
               const onCooldown  = hasSkill && !!activePlayerUnit && isOnCooldown(activePlayerUnit, skillInst)
+              const tagBlocked  = hasSkill && !!activePlayerUnit && isSkillTagBlocked(activePlayerUnit, skillInst.baseDef.tags)
               const tickCD     = onCooldown && activePlayerUnit ? ticksRemaining(activePlayerUnit, skillInst) : 0
               const turnCD     = onCooldown && activePlayerUnit ? turnsRemaining(activePlayerUnit, skillInst) : 0
-              const isDisabled = !hasSkill || disabled || onCooldown
+              const isDisabled = !hasSkill || disabled || onCooldown || tagBlocked
               // Show selected target name on the active skill button.
               const targetLabel = isSelected && selectedTarget ? selectedTarget.name : null
-              const tapHandler = (hasSkill && !disabled && !onCooldown)
+              const tapHandler = (hasSkill && !disabled && !onCooldown && !tagBlocked)
                 ? () => selectSkill(isSelected ? null : skillInst)
                 : undefined
               const holdHandler = hasSkill
@@ -338,6 +339,7 @@ function ActionGrid() {
                     styles.skillBtn,
                     (!hasSkill || disabled) ? styles.skillBtnDisabled : '',
                     onCooldown              ? styles.skillBtnCooldown  : '',
+                    tagBlocked              ? styles.skillBtnBlocked   : '',
                     isSelected              ? styles.skillBtnSelected  : '',
                   ].join(' ')}
                   // Note: no `disabled` attribute — long-press for skill info must

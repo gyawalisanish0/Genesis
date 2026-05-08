@@ -10,7 +10,7 @@ function ctx(opts: { casterHp?: number; targetHp?: number; targetStatusId?: stri
     hp: opts.targetHp ?? 100,
     isAlly: false,
     statusSlots: opts.targetStatusId
-      ? [{ id: opts.targetStatusId, name: 'x', duration: 1, source: 'test' }]
+      ? [{ id: opts.targetStatusId, name: 'x', duration: 1, durationUnit: 'ticks' as const, source: 'test', stacks: 1, payload: {}, nextIntervalFireTick: 0 }]
       : [],
   })
   return {

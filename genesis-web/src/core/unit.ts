@@ -111,3 +111,16 @@ export function consumeStatusStack(unit: Unit, statusId: string): Unit {
 export function removeStatus(unit: Unit, statusId: string): Unit {
   return { ...unit, statusSlots: unit.statusSlots.filter(s => s.id !== statusId) }
 }
+
+/**
+ * Returns true when any active status on the unit carries a blockedTags payload
+ * that overlaps with the given skill tags. Used by executeSkill and ActionGrid.
+ */
+export function isSkillTagBlocked(unit: Unit, skillTags: readonly string[]): boolean {
+  for (const slot of unit.statusSlots) {
+    const blocked = slot.payload?.blockedTags
+    if (!Array.isArray(blocked)) continue
+    if (skillTags.some(t => (blocked as string[]).includes(t))) return true
+  }
+  return false
+}

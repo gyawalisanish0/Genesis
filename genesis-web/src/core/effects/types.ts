@@ -256,6 +256,8 @@ export interface StatusDef {
   /** Base duration in ticks; may be overridden by the applying skill. */
   duration:   number
   tags?:      string[]
+  /** Skill tags that are locked while this status is active on the unit. */
+  blockedTags?: string[]
   effects:    Effect[]
 }
 

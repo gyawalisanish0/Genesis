@@ -12,7 +12,7 @@ import type { SkillInstance, BattleState as EngineBattleState, EffectContext, Ta
 import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, CLASH_ANNOUNCE_MS, ENEMY_AI_DELAY_MS, COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE, BATTLE_FEEDBACK_HOLD_MS, SKIP_TU_COST } from '../core/constants'
 import { resolveTickDisplacement } from '../core/combat/TickDisplacer'
 import { resolveClashWinner, factionAvgSpeed } from '../core/combat/ClashResolver'
-import { createUnit, isAlive, setTickPosition, incrementActionCount, tickStatusDurations, consumeStatusStack, updateStatusIntervalTick } from '../core/unit'
+import { createUnit, isAlive, setTickPosition, incrementActionCount, tickStatusDurations, consumeStatusStack, updateStatusIntervalTick, isSkillTagBlocked } from '../core/unit'
 import { calculateStartingTick, advanceTick, calculateApGained } from '../core/combat/TickCalculator'
 import { calculateFinalChance, shiftProbabilities } from '../core/combat/HitChanceEvaluator'
 import { roll, calculateTumblingDelay, resolveCounterRoll, type DiceOutcome } from '../core/combat/DiceResolver'
@@ -1141,6 +1141,9 @@ export function BattleProvider({ children }: Props) {
       skill.id === 'hugo_001_shelling_point' &&
       actor.statusSlots.some(s => s.id === 'hugo_001_shelling_point_active')
     ) return
+
+    // Block skills whose tags are locked by an active status on the caster.
+    if (isSkillTagBlocked(actor, skill.tags)) return
     const snap       = makeSnapshot(playerUnitsRef.current, enemiesRef.current)
     const allTargets = resolveSkillTargets(actor, skill.targeting.selector, snap, selectedTarget)
     if (!allTargets.length) return
@@ -1294,7 +1297,7 @@ export function BattleProvider({ children }: Props) {
       const currentPlayers = playerUnitsRef.current
       const currentEnemies = enemiesRef.current
       const previewSkills  = (unitSkillsMapRef.current.get(firstAIUnit.id) ?? [])
-        .filter((s) => !isOnCooldown(firstAIUnit, s))
+        .filter((s) => !isOnCooldown(firstAIUnit, s) && !isSkillTagBlocked(firstAIUnit, getCachedSkill(s).tags))
       if (!previewSkills.length) return
 
       // Foe count for this unit: allies count enemies as foes, enemies count player units.
@@ -1359,6 +1362,7 @@ export function BattleProvider({ children }: Props) {
             def.id === 'hugo_001_shelling_point' &&
             aiUnit.statusSlots.some(st => st.id === 'hugo_001_shelling_point_active')
           ) return false
+          if (isSkillTagBlocked(aiUnit, def.tags)) return false
           return true
         })
         if (!availableSkills.length) {
