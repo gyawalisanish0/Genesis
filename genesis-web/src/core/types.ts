@@ -122,6 +122,8 @@ export interface Unit {
   clashUniqueEnabled:  boolean  // true → activates QTE path when this unit is in a clash
   skills:              SkillInstance[]
   statusSlots:         StatusEffect[]
+  /** Per-character accumulator for mechanics like Power Surge. Starts at 0; bounded by the skill/passive max. */
+  secondaryResource:   number
   isAlly:              boolean
 }
 

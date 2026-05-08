@@ -22,6 +22,7 @@ export function createUnit(def: CharacterDef, isAlly: boolean): Unit {
     clashUniqueEnabled: def.clash?.uniqueClash   ?? false,
     skills:             [],
     statusSlots:        [],
+    secondaryResource:  0,
     isAlly,
   }
 }
@@ -110,6 +111,16 @@ export function consumeStatusStack(unit: Unit, statusId: string): Unit {
 /** Removes a status slot by ID. No-op if not present. */
 export function removeStatus(unit: Unit, statusId: string): Unit {
   return { ...unit, statusSlots: unit.statusSlots.filter(s => s.id !== statusId) }
+}
+
+/** Adds `amount` to secondaryResource, capped at `max` (default: no cap). */
+export function addSecondaryResource(unit: Unit, amount: number, max = Infinity): Unit {
+  return { ...unit, secondaryResource: Math.min(max, unit.secondaryResource + amount) }
+}
+
+/** Resets secondaryResource to 0. */
+export function clearSecondaryResource(unit: Unit): Unit {
+  return { ...unit, secondaryResource: 0 }
 }
 
 /**
