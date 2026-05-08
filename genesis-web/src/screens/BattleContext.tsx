@@ -15,7 +15,7 @@ import { resolveClashWinner, factionAvgSpeed } from '../core/combat/ClashResolve
 import { createUnit, isAlive, setTickPosition, incrementActionCount, tickStatusDurations, consumeStatusStack, updateStatusIntervalTick, isSkillTagBlocked, addApSpent } from '../core/unit'
 import { calculateStartingTick, advanceTick, calculateApGained } from '../core/combat/TickCalculator'
 import { calculateFinalChance, shiftProbabilities } from '../core/combat/HitChanceEvaluator'
-import { roll, calculateTumblingDelay, resolveCounterRoll, type DiceOutcome } from '../core/combat/DiceResolver'
+import { roll, resolveCounterRoll, type DiceOutcome } from '../core/combat/DiceResolver'
 import { findCounterSkill, canCounter, isSingleTarget } from '../core/combat/CounterResolver'
 import { isOnCooldown, applyCooldown, applyTickCooldown, applyTurnCooldown } from '../core/combat/CooldownResolver'
 import { applyEffect } from '../core/effects/applyEffect'
@@ -413,12 +413,10 @@ function pickAiSkill(
 
 function outcomeColour(outcome: DiceOutcome): string {
   switch (outcome) {
-    case 'Boosted':  return 'var(--accent-gold)'
-    case 'Tumbling': return 'var(--accent-danger)'
-    case 'Evasion':  return 'var(--accent-evasion)'
-    case 'Fail':     return 'var(--text-muted)'
-    case 'GuardUp':  return 'var(--accent-info)'
-    default:         return 'var(--text-primary)'  // Success
+    case 'Boosted': return 'var(--accent-gold)'
+    case 'Evade':   return 'var(--accent-evasion)'
+    case 'Fail':    return 'var(--text-muted)'
+    default:        return 'var(--text-primary)'  // Hit
   }
 }
 
@@ -426,30 +424,21 @@ function buildOutcomeMessage(
   outcome: DiceOutcome,
   actorName: string,
   targetName: string,
-  tumbleDelay: number,
 ): string {
   switch (outcome) {
-    case 'Boosted':
-      return `${actorName} gets +50% skill value boost until next turn`
-    case 'Success':
-      return `${actorName} successfully hits`
-    case 'GuardUp':
-      return `${actorName} hits and gains 35% damage reduction for next attack`
-    case 'Evasion':
-      return `${targetName} evaded`
-    case 'Tumbling':
-      return `${actorName} hits with half effectiveness, tumbled for ${tumbleDelay} ticks`
-    case 'Fail':
-      return `${actorName} misses`
+    case 'Boosted': return `${actorName} lands a boosted hit`
+    case 'Hit':     return `${actorName} hits`
+    case 'Evade':   return `${targetName} evades`
+    case 'Fail':    return `${actorName} misses`
   }
 }
 
 // ── Arena feedback helpers ────────────────────────────────────────────────────
 
 function buildFeedbackText(outcome: DiceOutcome, damage: number): string {
-  if (outcome === 'Evasion') return 'EVADED!'
-  if (outcome === 'Fail')    return 'MISS!'
-  if (damage <= 0)           return outcome.toUpperCase()
+  if (outcome === 'Evade') return 'EVADED!'
+  if (outcome === 'Fail')  return 'MISS!'
+  if (damage <= 0)         return outcome.toUpperCase()
   const prefix = outcome === 'Boosted' ? '★ ' : ''
   return `${prefix}−${damage} HP`
 }
@@ -979,7 +968,7 @@ export function BattleProvider({ children }: Props) {
   // Refs for mutual recursion between runAttack and scheduleCounterChain.
   // Both useCallbacks reference each other only through these refs so neither
   // has the other in its dependency array.
-  const runAttackRef            = useRef<((caster: Unit, target: Unit, skillInst: SkillInstance, snap: Map<string, Unit>, chainDepth?: number) => { tumbleDelay: number; outcome: DiceOutcome; damage: number }) | null>(null)
+  const runAttackRef            = useRef<((caster: Unit, target: Unit, skillInst: SkillInstance, snap: Map<string, Unit>, chainDepth?: number) => { outcome: DiceOutcome; damage: number }) | null>(null)
   const scheduleCounterChainRef = useRef<((defender: Unit, originalCaster: Unit, counterSkill: SkillInstance, snap: Map<string, Unit>, depth: number) => void) | null>(null)
 
   /** Execute one attack: caster hits target using the given SkillInstance. */
@@ -989,7 +978,7 @@ export function BattleProvider({ children }: Props) {
     skillInst: SkillInstance,
     snap: Map<string, Unit>,
     chainDepth = 0,
-  ): { tumbleDelay: number; outcome: DiceOutcome; damage: number } => {
+  ): { outcome: DiceOutcome; damage: number } => {
     const skill       = getCachedSkill(skillInst)
 
     // Dodge status check: resolve before dice so status-based evasion overrides the roll.
@@ -1004,11 +993,10 @@ export function BattleProvider({ children }: Props) {
         }, 0)
       : 0
     const finalChance = calculateFinalChance(caster.stats.precision, baseChance + rangedBonus)
-    const diceOutcome = dodged ? 'Evasion' : roll(shiftProbabilities(finalChance))
-    const tumbleDelay = diceOutcome === 'Tumbling' ? calculateTumblingDelay() : 0
-    const noDamage    = diceOutcome === 'Evasion' || diceOutcome === 'Fail'
+    const diceOutcome = dodged ? 'Evade' : roll(shiftProbabilities(finalChance))
+    const noDamage    = diceOutcome === 'Evade' || diceOutcome === 'Fail'
 
-    showDiceResult(diceOutcome, buildOutcomeMessage(diceOutcome, caster.name, target.name, tumbleDelay))
+    showDiceResult(diceOutcome, buildOutcomeMessage(diceOutcome, caster.name, target.name))
     const targetHpBefore  = snap.get(target.id)?.hp ?? target.hp
     const casterHpBefore  = snap.get(caster.id)?.hp ?? caster.hp
 
@@ -1016,7 +1004,7 @@ export function BattleProvider({ children }: Props) {
     if (diceOutcome === 'Boosted') {
       NarrativeService.emit({ type: 'boosted_hit', actorId: caster.defId, targetId: target.defId })
     }
-    if (diceOutcome === 'Evasion') {
+    if (diceOutcome === 'Evade') {
       NarrativeService.emit({ type: 'evaded', actorId: target.defId, targetId: caster.defId })
     }
 
@@ -1051,7 +1039,7 @@ export function BattleProvider({ children }: Props) {
       for (const effect of skillInst.cachedEffects) {
         if (effect.when.event === 'onHit') applyEffect(effect, hitCtx)
       }
-    } else if (diceOutcome === 'Evasion') {
+    } else if (diceOutcome === 'Evade') {
       // onEvade effects always receive the target so partial-damage mechanics work.
       const evadeCtx = { ...ctx, target, event: { event: 'onEvade' } as const }
       for (const effect of skillInst.cachedEffects) {
@@ -1065,13 +1053,13 @@ export function BattleProvider({ children }: Props) {
     }
 
     const logMsg =
-      diceOutcome === 'Evasion' ? `${target.name} evaded ${skill.name}!` :
-      diceOutcome === 'Fail'    ? `${caster.name} missed with ${skill.name}!` :
+      diceOutcome === 'Evade' ? `${target.name} evaded ${skill.name}!` :
+      diceOutcome === 'Fail'  ? `${caster.name} missed with ${skill.name}!` :
       `${caster.name} → ${skill.name} on ${target.name} [${diceOutcome}]`
     appendLog({ text: logMsg, colour: outcomeColour(diceOutcome) })
 
     // Reactive counter: check if the evading unit can counter-attack.
-    if (diceOutcome === 'Evasion' && isSingleTarget(skill)) {
+    if (diceOutcome === 'Evade' && isSingleTarget(skill)) {
       const defenderSnap   = snap.get(target.id) ?? target
       const defenderSkills = unitSkillsMapRef.current.get(target.id) ?? []
       const counterSkill   = findCounterSkill(defenderSkills)
@@ -1138,7 +1126,7 @@ export function BattleProvider({ children }: Props) {
     }
 
     const damage = Math.max(0, targetHpBefore - (snap.get(target.id)?.hp ?? targetHpBefore))
-    return { tumbleDelay, outcome: diceOutcome, damage }
+    return { outcome: diceOutcome, damage }
   }, [tickValue, appendLog, showDiceResult])
 
   // Keep both refs current so the mutual-recursion closures always see the
@@ -1197,13 +1185,13 @@ export function BattleProvider({ children }: Props) {
     snap: Map<string, Unit>,
     depth: number,
   ): void => {
-    showDiceResult('Evasion', `${defender.name} attempts a counter!`)
+    showDiceResult('Evade', `${defender.name} attempts a counter!`)
 
     setTimeout(() => {
       const succeeded     = resolveCounterRoll(depth)
       const chancePercent = Math.round(Math.max(COUNTER_MIN, COUNTER_BASE - depth * COUNTER_STEP) * 100)
       showDiceResult(
-        succeeded ? 'Success' : 'Fail',
+        succeeded ? 'Hit' : 'Fail',
         succeeded ? `Counter! (${chancePercent}% chance)` : 'Counter blocked!',
       )
 
@@ -1271,12 +1259,12 @@ export function BattleProvider({ children }: Props) {
     const primaryTarget = allTargets[0]
 
     // Primary target: full dice roll + narrative + effects.
-    const { tumbleDelay, outcome, damage: primaryDamage } = runAttack(actor, primaryTarget, skillInst, snap)
+    const { outcome, damage: primaryDamage } = runAttack(actor, primaryTarget, skillInst, snap)
 
     // Additional targets (multi-target skills): same outcome, effects re-applied without re-rolling.
     let extraDamage = 0
     if (allTargets.length > 1) {
-      const noDamage = outcome === 'Evasion' || outcome === 'Fail'
+      const noDamage = outcome === 'Evade' || outcome === 'Fail'
       for (const extra of allTargets.slice(1)) {
         const extraSnap = snap.get(extra.id) ?? extra
         if (!isAlive(extraSnap)) continue
@@ -1314,7 +1302,7 @@ export function BattleProvider({ children }: Props) {
     })
 
     const fromTick = actor.tickPosition
-    const nextTick = advanceTick(fromTick, skill.tuCost + tumbleDelay)
+    const nextTick = advanceTick(fromTick, skill.tuCost)
 
     pushHistory(makeHistoryEntry(actor.id, actor.name, fromTick, actor.isAlly))
 
@@ -1530,12 +1518,12 @@ export function BattleProvider({ children }: Props) {
         }
 
         const primaryTarget = allTargets[0]
-        const { tumbleDelay, outcome, damage: primaryDamage } = runAttack(aiUnit, primaryTarget, skillInst, snap)
+        const { outcome, damage: primaryDamage } = runAttack(aiUnit, primaryTarget, skillInst, snap)
 
         // Additional targets for multi-target skills.
         let extraDamage = 0
         if (allTargets.length > 1) {
-          const noDamage = outcome === 'Evasion' || outcome === 'Fail'
+          const noDamage = outcome === 'Evade' || outcome === 'Fail'
           for (const extra of allTargets.slice(1)) {
             const extraSnap = snap.get(extra.id) ?? extra
             if (!isAlive(extraSnap)) continue
@@ -1572,7 +1560,7 @@ export function BattleProvider({ children }: Props) {
           setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
           const fromTick = aiUnit.tickPosition
           pushHistory(makeHistoryEntry(aiUnit.id, aiUnit.name, fromTick, aiUnit.isAlly))
-          registerTick(aiUnit.id, advanceTick(fromTick, skill.tuCost + tumbleDelay))
+          registerTick(aiUnit.id, advanceTick(fromTick, skill.tuCost))
 
           const arena = arenaRef.current
           arena?.hideTurnDisplay()

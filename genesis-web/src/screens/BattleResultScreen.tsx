@@ -24,7 +24,7 @@ const MOCK_SURVIVING = [
 const BATTLE_STATS = [
   { label: 'Total ticks elapsed',  value: 148 },
   { label: 'Boosted outcomes',     value: 3 },
-  { label: 'Evasion chains',       value: 1 },
+  { label: 'Evade chains',         value: 1 },
   { label: 'Highest damage hit',   value: 234 },
 ]
 

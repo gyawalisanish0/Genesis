@@ -26,17 +26,15 @@ describe('shiftProbabilities', () => {
   it('at finalChance=1.0 matches base probabilities', () => {
     const shifted = shiftProbabilities(1.0)
     expect(shifted.Boosted).toBeCloseTo(0.10)
-    expect(shifted.Success).toBeCloseTo(0.40)
-    expect(shifted.Tumbling).toBeCloseTo(0.10)
-    expect(shifted.GuardUp).toBeCloseTo(0.20)
-    expect(shifted.Evasion).toBeCloseTo(0.10)
-    expect(shifted.Fail).toBeCloseTo(0.10)
+    expect(shifted.Hit).toBeCloseTo(0.40)
+    expect(shifted.Evade).toBeCloseTo(0.20)
+    expect(shifted.Fail).toBeCloseTo(0.30)
   })
 
   it('higher chance increases positive pool', () => {
     const low  = shiftProbabilities(0.5)
     const high = shiftProbabilities(1.5)
-    expect(high.Boosted + high.Success).toBeGreaterThan(low.Boosted + low.Success)
+    expect(high.Boosted + high.Hit).toBeGreaterThan(low.Boosted + low.Hit)
   })
 
   it('all values are non-negative', () => {

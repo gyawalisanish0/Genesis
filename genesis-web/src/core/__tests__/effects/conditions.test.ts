@@ -50,10 +50,10 @@ describe('evaluateCondition', () => {
       battle: makeBattleState([c]),
       source: 'skill',
       event:  { event: 'onDiceRoll' },
-      dice:   'Tumbling',
+      dice:   'Evade',
     }
-    expect(evaluateCondition({ diceOutcome: 'Tumbling' }, base)).toBe(true)
-    expect(evaluateCondition({ diceOutcome: 'Boosted'  }, base)).toBe(false)
+    expect(evaluateCondition({ diceOutcome: 'Evade'   }, base)).toBe(true)
+    expect(evaluateCondition({ diceOutcome: 'Boosted' }, base)).toBe(false)
   })
 
   it('boolean composition: not / all / any', () => {

@@ -25,9 +25,7 @@ export const tagSchema = z.enum([
   'movement',
 ])
 
-export const diceOutcomeSchema = z.enum([
-  'Boosted', 'Success', 'Tumbling', 'GuardUp', 'Evasion',
-])
+export const diceOutcomeSchema = z.enum(['Boosted', 'Hit', 'Evade', 'Fail'])
 
 // ── ValueExpr (recursive) ────────────────────────────────────────────────────
 

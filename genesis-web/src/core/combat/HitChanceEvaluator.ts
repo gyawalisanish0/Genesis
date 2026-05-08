@@ -1,5 +1,4 @@
 // Hit-chance calculation and probability table shifting.
-// Port of app/core/combat/hit_chance_evaluator.py
 
 import { DICE_BASE_PROBABILITIES } from '../constants'
 
@@ -12,17 +11,16 @@ export function calculateFinalChance(precision: number, baseChance: number): num
 }
 
 // Shift the base dice probability table by the final chance multiplier.
-// - finalChance > 1.0 → positive outcomes (Boosted + Success) scaled up
-// - finalChance < 1.0 → negative outcomes (Tumbling + GuardUp + Evasion) scaled up
+// - finalChance > 1.0 → positive outcomes (Boosted + Hit) scaled up
+// - finalChance < 1.0 → negative outcomes (Evade + Fail) scaled up
 // Probabilities always sum to 1.0.
 export function shiftProbabilities(finalChance: number): DiceProbabilities {
   const base = { ...DICE_BASE_PROBABILITIES }
-  const positivePool = base.Boosted + base.Success
-  const negativePool = base.Tumbling + base.GuardUp + base.Evasion + base.Fail
+  const positivePool = base.Boosted + base.Hit
+  const negativePool = base.Evade   + base.Fail
 
-  // Cap ratio so newPositive never exceeds 1.0 (which would give negative negPool)
-  const maxRatio = positivePool > 0 ? 1.0 / positivePool : 1.0
-  const ratio = Math.min(finalChance, maxRatio)
+  const maxRatio  = positivePool > 0 ? 1.0 / positivePool : 1.0
+  const ratio     = Math.min(finalChance, maxRatio)
   const newPositive = positivePool * ratio
   const newNegative = 1 - newPositive
 
@@ -30,11 +28,9 @@ export function shiftProbabilities(finalChance: number): DiceProbabilities {
   const negFrac = negativePool > 0 ? newNegative / negativePool : 0
 
   return {
-    Boosted:  base.Boosted  * posFrac,
-    Success:  base.Success  * posFrac,
-    Tumbling: base.Tumbling * negFrac,
-    GuardUp:  base.GuardUp  * negFrac,
-    Evasion:  base.Evasion  * negFrac,
-    Fail:     base.Fail     * negFrac,
+    Boosted: base.Boosted * posFrac,
+    Hit:     base.Hit     * posFrac,
+    Evade:   base.Evade   * negFrac,
+    Fail:    base.Fail    * negFrac,
   }
 }

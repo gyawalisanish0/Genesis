@@ -41,7 +41,7 @@ export type Tag =
   | 'special'
   | 'awakened'
   | 'misc'
-  | 'counter'        // standard reactive counter — triggers on Evasion
+  | 'counter'        // standard reactive counter — triggers on Evade
   | 'uniqueCounter'  // character-specific counter with custom effects; same dice + chain rules
   | 'basic'          // default attack — no AP cost, always available
   | 'movement'       // repositioning / tick displacement skills

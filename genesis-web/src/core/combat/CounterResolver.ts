@@ -1,5 +1,5 @@
 // Pure helpers for evaluating counter eligibility.
-// Called by BattleContext when an Evasion outcome is detected.
+// Called by BattleContext when an Evade outcome is detected.
 
 import type { Unit } from '../types'
 import type { SkillDef, SkillInstance } from '../effects/types'

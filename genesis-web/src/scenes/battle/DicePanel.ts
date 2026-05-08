@@ -17,21 +17,17 @@ const HOLD_MS          = 800   // pause on final face before onDone fires
 const ENTER_MS         = 160   // panel slide-in animation duration
 
 const FACE: Record<string, string> = {
-  Boosted:  '★ BOOSTED',
-  Success:  '⚔ HIT',
-  GuardUp:  '⛊ GUARD',
-  Tumbling: '↻ TUMBLE',
-  Evasion:  '◎ EVADE',
-  Fail:     '✕ MISS',
+  Boosted: '★ BOOSTED',
+  Hit:     '⚔ HIT',
+  Evade:   '◎ EVADE',
+  Fail:    '✕ MISS',
 }
 
 const COLOUR: Record<string, string> = {
-  Boosted:  'var(--accent-gold)',
-  Success:  'var(--text-primary)',
-  GuardUp:  'var(--accent-info)',
-  Tumbling: 'var(--accent-warn)',
-  Evasion:  'var(--accent-evasion)',
-  Fail:     'var(--text-muted)',
+  Boosted: 'var(--accent-gold)',
+  Hit:     'var(--text-primary)',
+  Evade:   'var(--accent-evasion)',
+  Fail:    'var(--text-muted)',
 }
 
 const OUTCOMES = Object.keys(FACE)
