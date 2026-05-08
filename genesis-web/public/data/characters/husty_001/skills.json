@@ -80,7 +80,7 @@
         "id": "husty_001_cached_shockwave_dmg",
         "when": { "event": "onCast" },
         "type": "damage",
-        "amount": { "sum": [{ "secondary": 1.5 }, { "stat": "power", "percent": 15 }] },
+        "amount": { "sum": [{ "secondary": 2.5 }, { "stat": "power", "percent": 15 }] },
         "damageType": "energy"
       },
       {
