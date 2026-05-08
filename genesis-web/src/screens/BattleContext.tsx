@@ -1040,7 +1040,8 @@ export function BattleProvider({ children }: Props) {
         if (effect.when.event === 'onHit') applyEffect(effect, hitCtx)
       }
     } else if (diceOutcome === 'Evasion') {
-      const evadeCtx = { ...ctx, event: { event: 'onEvade' } as const }
+      // onEvade effects always receive the target so partial-damage mechanics work.
+      const evadeCtx = { ...ctx, target, event: { event: 'onEvade' } as const }
       for (const effect of skillInst.cachedEffects) {
         if (effect.when.event === 'onEvade') applyEffect(effect, evadeCtx)
       }
