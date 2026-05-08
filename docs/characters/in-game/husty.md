@@ -64,15 +64,19 @@ His Power Surge mechanic accumulates passively every turn. Cached Shockwave cash
 
 Neural Barrier gives him a defensive layer and a precision debuff simultaneously — a dual-purpose cooldown that rewards using it proactively rather than reactively.
 
-Precise Calibration rewards AP discipline. Spend efficiently, reach 60 cumulative AP spent, gain a significant precision window. Then the cycle resets.
+Precise Calibration rewards AP discipline. Every non-zero AP skill spend counts toward the 60 AP threshold — Basic Attack contributes nothing. Reach the threshold and the whole party's ranged skills near-guarantee hits for 4 turns. That window is when Cached Shockwave lands hardest.
+
+The rotation has a natural shape: spend AP on Disruption and Neural Barrier to push the accumulator, let surge build in parallel, then dump Shockwave during the proc window. AP accumulation and surge accumulation run concurrently — the challenge is aligning both peaks at the same moment.
+
+**Composition note:** The party accuracy buff only applies to ranged-tagged skills. In melee-heavy parties it is effectively a self-buff. Value scales with how many ranged skills the rest of the team carries.
 
 **Playstyle arc:**
 
-1. Open with **Disruption** to lock enemy movement and deal immediate AoE energy damage
-2. Use **Neural Barrier** when enemy pressure builds — shield absorbs incoming, debuff pressures their accuracy
-3. Let **Power Surge** accumulate through the midgame; play **Basic Attack** and cooldown management around it
-4. Watch the AP accumulator — when Precise Calibration procs, the +80 Precision window is the right moment to cast **Cached Shockwave**
-5. Repeat the cycle: Surge resets on cast, AP accumulator resets on proc, Neural Barrier refreshes on cooldown
+1. Open with **Disruption** — AoE energy damage, movement lock on all enemies for 15 ticks
+2. Use **Neural Barrier** when pressure builds — shield absorbs damage, precision debuff taxes enemy accuracy
+3. Let **Power Surge** accumulate; use **Basic Attack** to fill turns without burning AP
+4. Watch the AP accumulator — when **Precise Calibration** procs, all allies' ranged skills near-guarantee hits for 4 turns; fire **Cached Shockwave** in this window
+5. Repeat: surge resets on cast, accumulator resets on proc, Neural Barrier refreshes on cooldown
 
 ---
 
@@ -181,7 +185,7 @@ After the buff expires, the gate lifts and the accumulator resumes. The cycle is
 | Status ID | Applied By | Purpose |
 |---|---|---|
 | `husty_001_power_surge` | Precise Calibration (battle start) | Accumulates surge: +1–5 per turn, max 45 |
-| `husty_001_precision_buff` | Precise Calibration (on 60 AP spent) | +80 Precision for 4 turns; gates next proc |
+| `husty_001_precision_buff` | Precise Calibration (on 60 AP spent, all-allies) | +80% base accuracy on ranged skills for 4 turns; gates next proc |
 | `husty_001_movement_block` | Disruption (on hit) | Locks movement-tagged skills for 15 ticks |
 | `husty_001_neural_barrier` | Neural Barrier (on hit, self) | Flat HP shield carrier; no effect entries |
 | `husty_001_neural_disruption` | Neural Barrier (on hit, all-enemies) | −15% Precision for 8 ticks |
@@ -190,7 +194,7 @@ After the buff expires, the gate lifts and the accumulator resumes. The cycle is
 
 ## Engine Implementation Notes
 
-All core mechanics are wired. `deltaPercent` on `modifyStat` handles the Neural Disruption precision debuff (percentage-based, not flat). AP accumulation is tracked via `unit.apSpentAccum`; the `onApSpent` event fires after every AP deduction in the battle engine; `resetApAccum` clears the counter on proc.
+All core mechanics are wired. `deltaPercent` on `modifyStat` handles the Neural Disruption precision debuff (percentage-based, not flat). AP accumulation is tracked via `unit.apSpentAccum`; the `onApSpent` event fires after every AP deduction in the battle engine; `resetApAccum` clears the counter on proc. The Precise Calibration buff stores `rangedBaseChanceBonus: 0.8` in the status slot payload; BattleContext reads this at dice resolution and adds it to `baseChance` when the casting unit has a ranged skill active — no teardown needed, the bonus stops contributing automatically when the slot expires.
 
 ---
 
