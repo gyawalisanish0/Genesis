@@ -157,7 +157,7 @@ unsub()
 | `'battle_defeat'`  | Player unit HP reaches 0 |
 | `'skill_used'`     | Skill fires after dice resolves; actorId = caster defId |
 | `'boosted_hit'`    | Dice outcome is `Boosted`; actorId = caster defId |
-| `'evaded'`         | Dice outcome is `Evasion`; actorId = evader defId |
+| `'evaded'`         | Dice outcome is `Evade`; actorId = evader defId |
 | `'unit_death'`     | Any unit HP reaches 0; actorId = dead unit defId |
 | `'counter'`        | Counter roll succeeds; actorId = defender defId |
 | `'clash_resolved'` | Clash winner determined; actorId = winning unit defId |

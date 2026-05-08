@@ -100,7 +100,7 @@ See `docs/mechanics/party-leader.md` for the full spec.
 
 ### 5. Reactive mechanics use hooks, not hardcoded branches
 
-The counter mechanic is the canonical example: the framework detects Evasion
+The counter mechanic is the canonical example: the framework detects Evade
 and checks for a `counter`/`uniqueCounter`-tagged skill — it does **not**
 hardcode "warriors can counter" anywhere. New reactive mechanics follow the
 same pattern:
@@ -188,8 +188,8 @@ Genesis/
 │       │   ├── GameContext.ts    # Zustand store: selectedMode, selectedTeam, selectedTeamIds, enemies, battleResult, settings
 │       │   ├── combat/
 │       │   │   ├── TickCalculator.ts     # calculateStartingTick, advanceTick, calculateApGained
-│       │   │   ├── HitChanceEvaluator.ts # calculateFinalChance, shiftProbabilities (6-outcome table)
-│       │   │   ├── DiceResolver.ts       # roll, applyOutcome, calculateTumblingDelay, resolveCounterRoll
+│       │   │   ├── HitChanceEvaluator.ts # calculateFinalChance, shiftProbabilities (4-outcome table)
+│       │   │   ├── DiceResolver.ts       # roll, applyOutcome, resolveCounterRoll
 │       │   │   ├── CounterResolver.ts    # findCounterSkill, canCounter, isSingleTarget
 │       │   │   ├── CooldownResolver.ts   # isOnCooldown, ticksRemaining, turnsRemaining, applyCooldown
 │       │   │   ├── TickDisplacer.ts      # rollD8Displacement, resolveTickDisplacement (tick occupancy cap)
@@ -602,10 +602,10 @@ Any string is valid — add new events by adding JSON entries, no code change ne
 --accent-genesis   /* primary purple — selection, focus, Roll button */
 --accent-gold      /* Boosted outcome, legendary rarity */
 --accent-info      /* AP bars, ally highlights */
---accent-heal      /* Success outcome, heal effects */
---accent-warn      /* Tumbling / GuardUp outcome */
+--accent-heal      /* Hit outcome, heal effects */
+--accent-warn      /* general warning colour */
 --accent-danger    /* HP bars, damage, defeat */
---accent-evasion   /* Evasion outcome */
+--accent-evasion   /* Evade outcome */
 
 /* Text */
 --text-primary, --text-secondary, --text-muted, --text-on-accent

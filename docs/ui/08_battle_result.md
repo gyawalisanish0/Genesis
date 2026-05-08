@@ -56,7 +56,7 @@ Side pad   : 16 dp
 ├──────────────────────────────────────────┤  y=344
 │  Total ticks elapsed      ·        148   │  28dp stat row
 │  Boosted outcomes         ·          3   │  28dp
-│  Evasion chains           ·          1   │  28dp
+│  Evade chains             ·          1   │  28dp
 │  Highest damage hit       ·        234   │  28dp
 ├──────────────────────────────────────────┤  y=456
 │                                          │  40dp  spacer

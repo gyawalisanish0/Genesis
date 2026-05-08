@@ -284,13 +284,13 @@ damaging outcome. Colour and count match the outcome:
 
 | Outcome | Colour | Count |
 |---|---|---|
-| `Boosted` | `--accent-gold` | 22 |
-| `Success` | `--accent-danger` | 12 |
-| `GuardUp` | `--accent-info` | 10 |
-| `Tumbling` | `--accent-warn` | 12 |
+| `Boosted` | `--accent-gold`    | 22 |
+| `Hit`     | `--accent-danger`  | 12 |
+| `Evade`   | `--accent-evasion` |  8 |
 
-Evasion and Fail produce no particles. Particle texture is a white circle
-generated at runtime in `BattleScene.create()` — no image file needed.
+Fail produces no particles (small dust puff on empty air). Particle texture
+is a white circle generated at runtime in `BattleScene.create()` — no image
+file needed.
 
 ### Camera shake
 Applied on hit via `this.cameras.main.shake(durationMs, intensity)`:
@@ -298,12 +298,10 @@ Applied on hit via `this.cameras.main.shake(durationMs, intensity)`:
 | Outcome | Duration | Intensity |
 |---|---|---|
 | `Boosted` | 320 ms | 0.024 |
-| `Success` | 160 ms | 0.010 |
-| `GuardUp` | 120 ms | 0.007 |
-| `Tumbling` | 160 ms | 0.010 |
+| `Hit`     | 160 ms | 0.010 |
 
-### Evasion dodge
-When `outcome === 'Evasion'`: the attacker shoves (`shoveActing`) and the
+### Evade dodge
+When `outcome === 'Evade'`: the attacker shoves (`shoveActing`) and the
 target slides away (`evasionDodge`) simultaneously. A two-counter `both()`
 callback fires `onDone` only after both tweens complete.
 

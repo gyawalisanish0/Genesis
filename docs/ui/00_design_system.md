@@ -103,9 +103,9 @@ These values appear in screen schematics for layout illustration. They are **not
 | `$accent-gold` | `$F59E0B` | Boosted outcome, rare rarity |
 | `$accent-info` | `#3B82F6` | AP bar, information |
 | `$accent-heal` | `#10B981` | Healing, positive buffs |
-| `$accent-warn` | `#F97316` | Tumbling outcome, Guard Up |
+| `$accent-warn` | `#F97316` | Warnings, alerts |
 | `$accent-danger` | `#EF4444` | HP bar, damage numbers, death |
-| `$accent-evasion` | `#06B6D4` | Evasion outcome, dodge |
+| `$accent-evasion` | `#06B6D4` | Evade outcome, dodge |
 
 ### Text
 | Token | Hex | Use |
@@ -118,11 +118,10 @@ These values appear in screen schematics for layout illustration. They are **not
 ### Dice Outcome Colours
 | Outcome | Token | Colour |
 |---|---|---|
-| Boosted | `$accent-gold` | `#F59E0B` |
-| Success | `$accent-heal` | `#10B981` |
-| Tumbling | `$accent-danger` | `#EF4444` |
-| Guard Up | `$accent-info` | `#3B82F6` |
-| Evasion | `$accent-evasion` | `#06B6D4` |
+| Boosted | `$accent-gold`    | `#F59E0B` |
+| Hit     | `$text-primary`   | `#F1F0FF` |
+| Evade   | `$accent-evasion` | `#06B6D4` |
+| Fail    | `$text-muted`     | `#5C5480` |
 
 ### Rarity Colours
 | Tier | Token | Colour |

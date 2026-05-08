@@ -2,7 +2,7 @@
 
 ## Overview
 
-When an attack resolves as **Evasion** against a **single-target** skill, the
+When an attack resolves as **Evade** against a **single-target** skill, the
 evading unit may fire a reactive counter-attack as a **free action** — no TU
 cost; only AP is spent. A separate counter dice roll (see formula below)
 determines success. Chains are unbounded: each successful counter gives the
@@ -15,7 +15,7 @@ every link.
 
 | Condition | Rule |
 |---|---|
-| Dice outcome | `Evasion` |
+| Dice outcome | `Evade` |
 | Skill targeting | `targeting.selector === 'enemy'` (single-target only — AOE and self skills do not trigger) |
 | Counter skill exists | The evading unit owns a skill tagged `counter` or `uniqueCounter` |
 | AP available | `unit.ap >= counterSkill.apCost` at the time the counter fires |
@@ -44,7 +44,7 @@ Constants in `src/core/constants.ts`:
 - `COUNTER_BASE = 0.15`
 - `COUNTER_STEP = 0.02`
 - `COUNTER_MIN  = 0.01`
-- `COUNTER_ANNOUNCE_MS = 800` — delay between Evasion display and the counter
+- `COUNTER_ANNOUNCE_MS = 800` — delay between Evade display and the counter
   dice roll appearing
 
 ---

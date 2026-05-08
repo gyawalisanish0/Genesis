@@ -89,7 +89,7 @@ button reflects cooldown state as soon as the player acts.
 player and enemy:
 
 - When a `counter`- or `uniqueCounter`-tagged skill fires as a **reactive
-  counter** (triggered by Evasion), no cooldown is applied and no CD check is
+  counter** (triggered by Evade), no cooldown is applied and no CD check is
   performed — even if the skill is already on cooldown from a prior normal use.
 - When the same skill is used on a **normal offensive turn** (action grid +
   Roll), cooldown applies as usual.
