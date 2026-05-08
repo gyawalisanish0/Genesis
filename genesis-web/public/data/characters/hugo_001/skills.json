@@ -120,7 +120,7 @@
     "tuCost": 7,
     "apCost": 10,
     "tickCooldown": 20,
-    "tags": ["utility", "unique", "energy", "ranged"],
+    "tags": ["utility", "unique"],
     "maxLevel": 1,
     "targeting": {
       "selector": "self",

@@ -218,10 +218,12 @@ function resolveIncomingDodge(
     return { dodged: Math.random() < chance, consumed: false }
   }
 
-  // Hyper Sense normal mode — 30% vs ranged only
+  // Hyper Sense normal mode — 30% vs ranged only; consumes 1 stack on success
   const rangedDodge = targetSnap.statusSlots.find(s => s.id === 'hugo_001_hyper_sense_ranged_dodge')
   if (rangedDodge && skillRange === 'ranged') {
-    return { dodged: Math.random() < 0.30, consumed: false }
+    const dodged = Math.random() < 0.30
+    if (dodged) snap.set(target.id, consumeStatusStack(targetSnap, 'hugo_001_hyper_sense_ranged_dodge'))
+    return { dodged, consumed: dodged }
   }
 
   return { dodged: false, consumed: false }
@@ -289,8 +291,9 @@ function makeShieldedBattleState(
 
 /** Returns true when Hyper Sense Hyper Mode conditions are met for a unit. */
 function isHyperSenseMode(unit: Unit): boolean {
-  const dodgeSlot = unit.statusSlots.find(s => s.id === 'hugo_001_primal_awareness_dodge')
-  return dodgeSlot !== undefined && dodgeSlot.stacks < 2
+  const hasPrimalAwareness = unit.statusSlots.some(s => s.id === 'hugo_001_primal_awareness_dodge')
+  const rangedDodgeSlot    = unit.statusSlots.find(s => s.id === 'hugo_001_hyper_sense_ranged_dodge')
+  return hasPrimalAwareness && rangedDodgeSlot !== undefined && rangedDodgeSlot.stacks < 2
 }
 
 /** Fire onExpire effects for a StatusDef using the owning unit as caster. */
