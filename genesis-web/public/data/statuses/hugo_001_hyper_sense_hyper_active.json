@@ -4,7 +4,7 @@
   "name": "Hyper Mode",
   "stacking": "refresh",
   "duration": 30,
-  "tags": ["dodge", "hyper", "melee-dodge", "turn-based"],
+  "tags": ["dodge", "hyper", "melee-dodge", "turn-based", "energy", "ranged"],
   "effects": [
     {
       "id": "hugo_001_hyper_sense_expire_counter",
