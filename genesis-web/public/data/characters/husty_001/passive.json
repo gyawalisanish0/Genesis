@@ -2,13 +2,24 @@
   "type": "passive",
   "id": "husty_001_precise_calibration",
   "name": "Precise Calibration",
-  "description": "Husty's methodical approach builds power with every action. Gains 1–3 Power Surge per turn (max 45), which Cached Shockwave converts to damage.",
+  "description": "After spending 60 AP, Husty's precision sharpens: gains +80 Precision for 4 turns. Resets on proc.",
   "effects": [
     {
-      "when": { "event": "onBattleStart" },
+      "when": { "event": "onApSpent" },
+      "condition": {
+        "all": [
+          { "apAccumGte": 60 },
+          { "not": { "selfHasStatus": "husty_001_precision_buff" } }
+        ]
+      },
       "type": "applyStatus",
       "target": "self",
-      "status": "husty_001_power_surge"
+      "status": "husty_001_precision_buff"
+    },
+    {
+      "when": { "event": "onApSpent" },
+      "condition": { "apAccumGte": 60 },
+      "type": "resetApAccum"
     }
   ]
 }

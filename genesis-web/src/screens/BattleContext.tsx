@@ -12,7 +12,7 @@ import type { SkillInstance, BattleState as EngineBattleState, EffectContext, Ta
 import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, CLASH_ANNOUNCE_MS, ENEMY_AI_DELAY_MS, COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE, BATTLE_FEEDBACK_HOLD_MS, SKIP_TU_COST } from '../core/constants'
 import { resolveTickDisplacement } from '../core/combat/TickDisplacer'
 import { resolveClashWinner, factionAvgSpeed } from '../core/combat/ClashResolver'
-import { createUnit, isAlive, setTickPosition, incrementActionCount, tickStatusDurations, consumeStatusStack, updateStatusIntervalTick, isSkillTagBlocked } from '../core/unit'
+import { createUnit, isAlive, setTickPosition, incrementActionCount, tickStatusDurations, consumeStatusStack, updateStatusIntervalTick, isSkillTagBlocked, addApSpent } from '../core/unit'
 import { calculateStartingTick, advanceTick, calculateApGained } from '../core/combat/TickCalculator'
 import { calculateFinalChance, shiftProbabilities } from '../core/combat/HitChanceEvaluator'
 import { roll, calculateTumblingDelay, resolveCounterRoll, type DiceOutcome } from '../core/combat/DiceResolver'
@@ -305,6 +305,27 @@ function fireStatusExpiry(
   }
   for (const effect of expireEffects) {
     applyEffect(effect, ctx)
+  }
+}
+
+/** Fire onApSpent passive effects after a unit spends AP on a skill. */
+function fireOnApSpent(
+  unit:       Unit,
+  _apCost:    number,
+  passive:    PassiveDef | null,
+  snap:       Map<string, Unit>,
+  tick:       number,
+): void {
+  if (!passive) return
+  const ctx: EffectContext = {
+    caster:      snap.get(unit.id) ?? unit,
+    battle:      snapshotToBattleState(snap),
+    source:      'passive',
+    event:       { event: 'onApSpent' },
+    currentTick: tick,
+  }
+  for (const effect of passive.effects) {
+    if (effect.when.event === 'onApSpent') applyEffect(effect, ctx)
   }
 }
 
@@ -1226,6 +1247,14 @@ export function BattleProvider({ children }: Props) {
     const allTargets = resolveSkillTargets(actor, skill.targeting.selector, snap, selectedTarget)
     if (!allTargets.length) return
 
+    // Deduct AP cost and track accumulated spend for passive procs.
+    if (skill.apCost > 0) {
+      const actorSnap = snap.get(actor.id) ?? actor
+      const withAp    = addApSpent({ ...actorSnap, ap: Math.max(0, actorSnap.ap - skill.apCost) }, skill.apCost)
+      snap.set(actor.id, withAp)
+      fireOnApSpent(withAp, skill.apCost, passiveDefsRef.current.get(actor.id) ?? null, snap, tickValue)
+    }
+
     const primaryTarget = allTargets[0]
 
     // Primary target: full dice roll + narrative + effects.
@@ -1478,6 +1507,14 @@ export function BattleProvider({ children }: Props) {
         const snap       = makeSnapshot(currentPlayers, currentEnemies)
         const allTargets = resolveSkillTargets(aiUnit, skill.targeting.selector, snap)
         if (!allTargets.length) { arenaRef.current?.clearTurn(); continue }
+
+        // Deduct AP cost and track accumulated spend for passive procs.
+        if (skill.apCost > 0) {
+          const aiSnap = snap.get(aiUnit.id) ?? aiUnit
+          const withAp = addApSpent({ ...aiSnap, ap: Math.max(0, aiSnap.ap - skill.apCost) }, skill.apCost)
+          snap.set(aiUnit.id, withAp)
+          fireOnApSpent(withAp, skill.apCost, passiveDefsRef.current.get(aiUnit.id) ?? null, snap, tickValue)
+        }
 
         const primaryTarget = allTargets[0]
         const { tumbleDelay, outcome, damage: primaryDamage } = runAttack(aiUnit, primaryTarget, skillInst, snap)

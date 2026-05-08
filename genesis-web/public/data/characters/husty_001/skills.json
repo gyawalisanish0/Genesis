@@ -62,7 +62,7 @@
     "type": "skill",
     "id": "husty_001_cached_shockwave",
     "name": "Cached Shockwave",
-    "description": "Releases all stored Power Surge as a focused energy blast. Deals 150% of current surge + 15% Power. Surge always resets on cast. Builds 1–3 surge each turn, up to 45.",
+    "description": "Releases all stored Power Surge as a focused energy blast. Deals 250% of current surge + 15% Power. Surge always resets on cast. Builds 1–5 surge per turn (max 45) — begins accumulating on first cast.",
     "tuCost": 16,
     "apCost": 25,
     "tickCooldown": 25,
@@ -76,6 +76,12 @@
       "baseChance": 1.0
     },
     "effects": [
+      {
+        "when": { "event": "onCast" },
+        "type": "applyStatus",
+        "target": "self",
+        "status": "husty_001_power_surge"
+      },
       {
         "id": "husty_001_cached_shockwave_dmg",
         "when": { "event": "onCast" },

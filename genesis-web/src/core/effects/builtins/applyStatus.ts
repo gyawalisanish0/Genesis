@@ -4,6 +4,7 @@
 
 import { registerEffect }  from '../registry'
 import { getStatusDef }    from '../statusRegistry'
+import { applyEffect }     from '../applyEffect'
 import type { Effect, EffectContext, EffectHandler } from '../types'
 import type { StatusEffect, Unit }                   from '../../types'
 
@@ -44,6 +45,14 @@ const handle: EffectHandler<ApplyStatusEffect> = (effect, ctx) => {
     }
 
     ctx.battle.setUnit(mergeStatus(target, incoming, def.stacking, def.maxStacks))
+
+    // Fire onApply effects in the status def.
+    const applyEffects = def.effects.filter(e => e.when.event === 'onApply')
+    if (applyEffects.length > 0) {
+      const recipient = ctx.battle.getUnit(target.id) ?? target
+      const applyCtx: EffectContext = { ...ctx, target: recipient, event: { event: 'onApply' } }
+      for (const eff of applyEffects) applyEffect(eff, applyCtx)
+    }
 
     // Apply the penalty window status alongside the shield.
     if (effect.penaltyWindowTurns !== undefined) {

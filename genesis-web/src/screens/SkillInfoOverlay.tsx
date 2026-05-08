@@ -47,6 +47,7 @@ function effectLine(e: Effect): string {
       if (Array.isArray(e.delta)) return `${trigger}Surge +${e.delta[0]}–${e.delta[1]}`
       return `${trigger}Surge ${(e.delta ?? 0) >= 0 ? '+' : ''}${e.delta ?? 0}`
     }
+    case 'resetApAccum':     return `${trigger}Reset AP accumulator`
   }
 }
 

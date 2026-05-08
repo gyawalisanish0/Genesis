@@ -23,6 +23,7 @@ export function createUnit(def: CharacterDef, isAlly: boolean): Unit {
     skills:             [],
     statusSlots:        [],
     secondaryResource:  0,
+    apSpentAccum:       0,
     isAlly,
   }
 }
@@ -121,6 +122,16 @@ export function addSecondaryResource(unit: Unit, amount: number, max = Infinity)
 /** Resets secondaryResource to 0. */
 export function clearSecondaryResource(unit: Unit): Unit {
   return { ...unit, secondaryResource: 0 }
+}
+
+/** Adds `amount` to apSpentAccum. */
+export function addApSpent(unit: Unit, amount: number): Unit {
+  return { ...unit, apSpentAccum: unit.apSpentAccum + amount }
+}
+
+/** Resets apSpentAccum to 0. */
+export function clearApSpent(unit: Unit): Unit {
+  return { ...unit, apSpentAccum: 0 }
 }
 
 /**

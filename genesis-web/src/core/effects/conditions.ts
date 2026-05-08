@@ -22,6 +22,7 @@ export function evaluateCondition(cond: Condition, ctx: EffectContext): boolean 
   if ('targetHpAbove' in cond) return ctx.target !== undefined && hpFraction(ctx.target) >  cond.targetHpAbove
   if ('selfApBelow'   in cond) return apFraction(ctx.caster) <  cond.selfApBelow
   if ('selfApAbove'   in cond) return apFraction(ctx.caster) >  cond.selfApAbove
+  if ('apAccumGte'    in cond) return ctx.caster.apSpentAccum >= cond.apAccumGte
   if ('hasStatus'     in cond) return targetHasStatus(ctx.target, cond.hasStatus)
   if ('selfHasStatus' in cond) return unitHasStatus(ctx.caster, cond.selfHasStatus)
   if ('hasTag'        in cond) return targetHasTag(ctx.target, cond.hasTag)

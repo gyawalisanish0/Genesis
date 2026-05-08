@@ -88,6 +88,7 @@ export type WhenClause =
   | { event: 'onApChange' }
   | { event: 'onBattleStart' }
   | { event: 'onBattleEnd' }
+  | { event: 'onApSpent' }
 
 export type EventName = WhenClause['event']
 
@@ -110,6 +111,7 @@ export type Condition =
   | { selfHasStatus: string }   // checks ctx.caster's status slots
   | { hasTag: string }
   | { diceOutcome: DiceOutcome }
+  | { apAccumGte: number }
   | { not: Condition }
   | { all: Condition[] }
   | { any: Condition[] }
@@ -188,6 +190,7 @@ export type Effect =
       /** If present, sets secondaryResource to this exact value (overrides delta). */
       set?:   number
     })
+  | (EffectBase & { type: 'resetApAccum' })
 
 /** Discriminator union of all primitive `type` values. */
 export type EffectType = Effect['type']

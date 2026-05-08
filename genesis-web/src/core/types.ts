@@ -134,6 +134,8 @@ export interface Unit {
   statusSlots:         StatusEffect[]
   /** Per-character accumulator for mechanics like Power Surge. Starts at 0; bounded by the skill/passive max. */
   secondaryResource:   number
+  /** Tracks cumulative AP spent this session for passive procs like Precise Calibration. Resets on proc. */
+  apSpentAccum:        number
   isAlly:              boolean
 }
 
