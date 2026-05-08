@@ -2,7 +2,7 @@
   "type": "passive",
   "id": "husty_001_precise_calibration",
   "name": "Precise Calibration",
-  "description": "After spending 60 AP, Husty's precision sharpens: gains +80 Precision for 4 turns. Resets on proc.",
+  "description": "After spending 60 AP, Husty locks in firing solutions for the whole party: all allies gain +80% base accuracy on ranged skills for 4 turns. Resets on proc.",
   "effects": [
     {
       "when": { "event": "onBattleStart" },
@@ -19,8 +19,9 @@
         ]
       },
       "type": "applyStatus",
-      "target": "self",
-      "status": "husty_001_precision_buff"
+      "target": "all-allies",
+      "status": "husty_001_precision_buff",
+      "rangedBaseChanceBonus": 0.8
     },
     {
       "when": { "event": "onApSpent" },

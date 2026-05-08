@@ -129,7 +129,7 @@ export const effectSchema = z.discriminatedUnion('type', [
   z.object({ ...effectCommon, type: z.literal('gainAp'),            amount: z.number() }).strict(),
   z.object({ ...effectCommon, type: z.literal('spendAp'),           amount: z.number() }).strict(),
   z.object({ ...effectCommon, type: z.literal('modifyStat'),        stat: statKeySchema, delta: z.number(), duration: modDurationSchema }).strict(),
-  z.object({ ...effectCommon, type: z.literal('applyStatus'),       status: z.string(), duration: z.number().optional(), chance: z.number().optional() }).strict(),
+  z.object({ ...effectCommon, type: z.literal('applyStatus'),       status: z.string(), duration: z.number().optional(), chance: z.number().optional(), shieldPercent: z.number().optional(), shieldFlat: z.number().optional(), penaltyWindowTurns: z.number().optional(), rangedBaseChanceBonus: z.number().optional() }).strict(),
   z.object({ ...effectCommon, type: z.literal('removeStatus'),      status: z.string().optional(), tag: z.string().optional() }).strict(),
   z.object({ ...effectCommon, type: z.literal('shiftProbability'),  outcome: diceOutcomeSchema, delta: z.number() }).strict(),
   z.object({ ...effectCommon, type: z.literal('rerollDice'),        outcome: diceOutcomeSchema.optional(), uses: z.number().int().positive(), perBattle: z.boolean().optional() }).strict(),

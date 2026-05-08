@@ -156,13 +156,13 @@ Dual-purpose. The shield buys survival; the precision debuff taxes enemy accurac
 
 ## Passive — Precise Calibration
 
-> *Husty's combat calculations are never approximate. AP spent in battle feeds directly into a precision amplifier that fires on threshold.*
+> *Husty's combat calculations are never approximate. AP spent in battle feeds a firing solution that locks in accuracy for the whole party.*
 
 | Field | Value |
 |---|---|
-| Battle Start | Applies **Power Surge** status to self (permanent until used) |
+| Battle Start | Applies **Power Surge** status to self (permanent) |
 | Proc Condition | 60 cumulative AP spent since last proc |
-| Proc Effect | Applies **Precise Calibration** buff: +80 Precision for 4 turns |
+| Proc Effect | Applies **Precise Calibration** buff to **all allies**: +80% base accuracy on ranged skills for 4 turns |
 | Gate | Will not proc while the buff is already active |
 | Reset | AP accumulator clears to 0 on proc |
 
@@ -170,9 +170,9 @@ Two mechanics live in this passive.
 
 **Power Surge** is the Cached Shockwave fuel system — applied at battle start, accumulates 1–5 per turn, capped at 45. Without this passive, Cached Shockwave has nothing to release.
 
-**Precise Calibration** rewards AP economy. Every skill spend counts toward the 60 AP threshold. When it procs, the +80 Precision significantly raises hit chance for the next 4 turns — the window to use Cached Shockwave. After the buff expires, the accumulator is already resetting toward the next proc.
+**Precise Calibration** rewards AP economy. Every skill spend counts toward the 60 AP threshold. When it procs, the entire party's ranged skills gain +0.8 added directly to `baseChance` in the hit resolution formula (`finalChance = precision/100 × (baseChance + 0.8)`). For most party members this pushes ranged hit chance near or above 1.0 — effectively guaranteeing hits for 4 turns. The window is the right moment to dump Cached Shockwave.
 
-The 4-turn buff acts as a natural cooldown on the proc — it cannot fire again while it is active, which makes the cycle predictable and plannable.
+After the buff expires, the gate lifts and the accumulator resumes. The cycle is predictable and plannable.
 
 ---
 

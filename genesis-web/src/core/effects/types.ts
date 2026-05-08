@@ -175,7 +175,7 @@ export type Effect =
   | (EffectBase & { type: 'gainAp';            amount: number })
   | (EffectBase & { type: 'spendAp';           amount: number })
   | (EffectBase & { type: 'modifyStat'; stat: StatKey; delta?: number; deltaPercent?: number; duration: ModDuration })
-  | (EffectBase & { type: 'applyStatus';       status: string; duration?: number; chance?: number; shieldPercent?: number; shieldFlat?: number; penaltyWindowTurns?: number })
+  | (EffectBase & { type: 'applyStatus';       status: string; duration?: number; chance?: number; shieldPercent?: number; shieldFlat?: number; penaltyWindowTurns?: number; rangedBaseChanceBonus?: number })
   | (EffectBase & { type: 'removeStatus';      status?: string; tag?: string })
   | (EffectBase & { type: 'shiftProbability';  outcome: DiceOutcome; delta: number })
   | (EffectBase & { type: 'rerollDice';        outcome?: DiceOutcome; uses: number; perBattle?: boolean })

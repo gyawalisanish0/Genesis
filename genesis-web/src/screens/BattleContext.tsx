@@ -995,7 +995,15 @@ export function BattleProvider({ children }: Props) {
     // Dodge status check: resolve before dice so status-based evasion overrides the roll.
     const { dodged } = resolveIncomingDodge(target, skill.targeting.range, snap)
 
-    const finalChance = calculateFinalChance(caster.stats.precision, skill.resolution?.baseChance ?? 1.0)
+    const baseChance = skill.resolution?.baseChance ?? 1.0
+    const casterForDice = snap.get(caster.id) ?? caster
+    const rangedBonus = skill.tags.includes('ranged')
+      ? casterForDice.statusSlots.reduce((sum, slot) => {
+          const b = slot.payload?.rangedBaseChanceBonus
+          return typeof b === 'number' ? sum + b : sum
+        }, 0)
+      : 0
+    const finalChance = calculateFinalChance(caster.stats.precision, baseChance + rangedBonus)
     const diceOutcome = dodged ? 'Evasion' : roll(shiftProbabilities(finalChance))
     const tumbleDelay = diceOutcome === 'Tumbling' ? calculateTumblingDelay() : 0
     const noDamage    = diceOutcome === 'Evasion' || diceOutcome === 'Fail'

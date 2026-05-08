@@ -29,6 +29,10 @@ const handle: EffectHandler<ApplyStatusEffect> = (effect, ctx) => {
       payload.shieldHp = Math.floor(target.hp * effect.shieldPercent / 100)
     }
 
+    if (effect.rangedBaseChanceBonus !== undefined) {
+      payload.rangedBaseChanceBonus = effect.rangedBaseChanceBonus
+    }
+
     // Copy blocked skill tags so executeSkill can check without registry access.
     if (def.blockedTags && def.blockedTags.length > 0) {
       payload.blockedTags = def.blockedTags
