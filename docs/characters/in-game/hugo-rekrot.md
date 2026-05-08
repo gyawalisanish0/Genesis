@@ -217,16 +217,18 @@ Active when Primal Awareness is **not** running.
 |---|---|
 | AP Cost | 10 |
 | TU Cost | 7 |
-| Effect | 30% dodge chance vs all ranged attacks for 15 ticks |
+| Effect | 30% dodge chance vs ranged attacks |
+| Duration | 15 ticks — 2 dodge charges |
 | Cooldown | 20 ticks |
 
-Solid utility option in the early and mid fight. Low cost, ranged coverage,
-regular cooldown. Use freely.
+Grants 2 dodge charges. Each successful ranged dodge consumes one charge.
+When both charges are spent the status expires. Use freely in the early and
+mid fight — the charges are the resource that unlocks Hyper Mode later.
 
 #### Hyper Mode
 Replaces Normal Mode when **both** conditions are met:
 - Primal Awareness is active (HP below 10%)
-- Fewer than 2 dodge points remaining
+- Fewer than 2 dodge charges remain on the Normal Mode status (at least one ranged dodge already absorbed)
 
 Action grid shows **Hyper Sense ★** with updated costs when this unlocks.
 
@@ -235,11 +237,14 @@ Action grid shows **Hyper Sense ★** with updated costs when this unlocks.
 | AP Cost | 20 |
 | TU Cost | 6 |
 | Effect | 90% melee dodge / 50% ranged dodge for the Primal Awareness duration |
-| On Expiry | Counter: 200% Power energy damage |
+| On Expiry | Counter: 200% Power energy damage (energy, ranged) |
 | Cooldown | 8 turns (shared slot — overwrites Normal Mode cooldown) |
 
-The counter on expiry is automatic. The Hyper Mode window ending is itself
-the trigger.
+The counter on expiry is automatic and always hits — it bypasses the dice
+pipeline entirely. The Hyper Mode window ending is itself the trigger.
+
+The intended sequence: cast Normal Mode early → absorb a ranged hit → enter
+Primal Awareness at critical HP → Hyper Mode unlocks on the next Hyper Sense cast.
 
 ---
 
@@ -279,8 +284,8 @@ before the safety net resets.
 | `hugo_001_shelling_point_penalty_window` | Shelling Point | 9-turn penalty window — break during this doubles overflow damage |
 | `hugo_001_primal_awareness_dodge` | Primal Awareness | 5-stack dodge at 70% per hit attempt, consumed per attempt |
 | `hugo_001_ap_regen_freeze` | Primal Awareness | Halts AP regen for 3 turns |
-| `hugo_001_hyper_sense_ranged_dodge` | Hyper Sense (Normal) | 30% ranged dodge for 15 ticks |
-| `hugo_001_hyper_sense_hyper_active` | Hyper Sense (Hyper) | 90% melee / 50% ranged dodge + onExpire 200% Power counter |
+| `hugo_001_hyper_sense_ranged_dodge` | Hyper Sense (Normal) | 30% ranged dodge; 2 stacks — each successful dodge consumes 1; expires at 0 |
+| `hugo_001_hyper_sense_hyper_active` | Hyper Sense (Hyper) | 90% melee / 50% ranged dodge; onExpire fires 200% Power energy counter (always hits) |
 
 ---
 
