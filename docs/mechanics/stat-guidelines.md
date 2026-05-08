@@ -19,7 +19,8 @@ Endurance governs physical durability and mitigation — it is not a HP multipli
 | Ranger | 320 – 510 | Ranged precision; shares backline positioning with Caster |
 | Enchanter | 280 – 440 | Squishiest class; must stay protected to contribute |
 
-Custom classes (e.g. Material Engineer) map to the closest archetype for HP reference.
+`className` is the single field used by both the engine and the UI.
+It must match a `BattleClass` value exactly (Warrior, Caster, Hunter, Guardian, Ranger, Enchanter).
 
 ### Rarity scaling within a range
 
@@ -59,7 +60,7 @@ A basic attack chain alone should never be the primary kill path.
 
 ## Existing characters
 
-| Character | Class | Rarity | HP |
+| Character | className | Rarity | HP |
 |---|---|---|---|
-| Hugo Rekrot | Material Engineer (≈ Warrior) | 4 – Epic | 500 |
+| Hugo Rekrot | Warrior | 4 – Epic | 500 |
 | Husty | Caster | 3 – Super | 336 |

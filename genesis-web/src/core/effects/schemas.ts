@@ -21,7 +21,8 @@ export const statKeySchema = z.enum([
 
 export const tagSchema = z.enum([
   'physical', 'energy', 'melee', 'ranged',
-  'utility', 'unique', 'special', 'awakened', 'misc',
+  'utility', 'unique', 'special', 'awakened', 'misc', 'basic',
+  'movement',
 ])
 
 export const diceOutcomeSchema = z.enum([

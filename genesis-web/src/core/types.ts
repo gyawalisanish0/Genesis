@@ -1,5 +1,14 @@
 // ── Static definitions — loaded from JSON via DataService ─────────────────────
 
+/** The six combat roles. Used as className — one field, same value. */
+export type BattleClass =
+  | 'Warrior'
+  | 'Caster'
+  | 'Hunter'
+  | 'Guardian'
+  | 'Ranger'
+  | 'Enchanter'
+
 export interface StatBlockDef {
   strength:   number  // Physical damage output
   endurance:  number  // Max HP and physical defence
@@ -23,7 +32,8 @@ export interface CharacterDef {
   type:          'character'
   id:            string
   name:          string
-  className:     string
+  /** Combat role — also the display class name shown in the UI. */
+  className:     BattleClass
   rarity:        number
   stats:         StatBlockDef
   maxHp:         number
@@ -108,7 +118,7 @@ export interface Unit {
   id:           string   // unique runtime id (crypto.randomUUID())
   defId:        string   // CharacterDef.id this was created from
   name:         string
-  className:    string
+  className:    BattleClass
   rarity:       number
   stats:        StatBlockDef
   maxHp:        number

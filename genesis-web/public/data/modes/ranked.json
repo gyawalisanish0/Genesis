@@ -8,6 +8,6 @@
     "respawn": false,
     "timeLimitTicks": 500,
     "playerControl": "single",
-    "enemies": ["hunter_001"]
+    "enemies": ["husty_001"]
   }
 }

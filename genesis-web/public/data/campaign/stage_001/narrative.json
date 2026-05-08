@@ -9,9 +9,9 @@
       "priority": 20,
       "animations": [{ "type": "dialogue" }],
       "lines": [
-        { "speakerId": "warrior_001", "text": "This outpost shouldn't be this quiet." },
-        { "speakerId": "hunter_001",  "text": "Something's wrong. I can feel it." },
-        { "speakerId": "warrior_001", "text": "Stay sharp. We move together." }
+        { "speakerId": "hugo_001",  "text": "This outpost shouldn't be this quiet." },
+        { "speakerId": "husty_001", "text": "Something's wrong. I can feel it." },
+        { "speakerId": "hugo_001",  "text": "Stay sharp. We move together." }
       ]
     },
     {
@@ -20,8 +20,8 @@
       "sequence": true,
       "animations": [{ "type": "dialogue" }],
       "lines": [
-        { "speakerId": "hunter_001",  "text": "Tap the arrows to move. One tile at a time." },
-        { "speakerId": "warrior_001", "text": "Watch the fog. Don't walk blind." }
+        { "speakerId": "husty_001", "text": "Tap the arrows to move. One tile at a time." },
+        { "speakerId": "hugo_001",  "text": "Watch the fog. Don't walk blind." }
       ]
     },
     {
@@ -30,8 +30,8 @@
       "sequence": true,
       "animations": [{ "type": "dialogue" }],
       "lines": [
-        { "speakerId": "hunter_001",  "text": "Guard ahead. If they see us — we fight." },
-        { "speakerId": "warrior_001", "text": "Stay out of their line of sight." }
+        { "speakerId": "husty_001", "text": "Guard ahead. If they see us — we fight." },
+        { "speakerId": "hugo_001",  "text": "Stay out of their line of sight." }
       ]
     },
     {
@@ -49,9 +49,9 @@
       "priority": 10,
       "animations": [{ "type": "dialogue" }],
       "lines": [
-        { "speakerId": "warrior_001", "text": "Elder — what happened here?" },
-        { "speakerId": "warrior_001", "text": "The garrison fell three nights ago. Something old came through the eastern pass." },
-        { "speakerId": "hunter_001",  "text": "The exit is north. We need to move." }
+        { "speakerId": "hugo_001",  "text": "Elder — what happened here?" },
+        { "speakerId": "hugo_001",  "text": "The garrison fell three nights ago. Something old came through the eastern pass." },
+        { "speakerId": "husty_001", "text": "The exit is north. We need to move." }
       ]
     },
     {
@@ -68,8 +68,8 @@
       "priority": 20,
       "animations": [{ "type": "dialogue" }],
       "lines": [
-        { "speakerId": "hunter_001",  "text": "There's the pass. We made it." },
-        { "speakerId": "warrior_001", "text": "This is just the beginning." }
+        { "speakerId": "husty_001", "text": "There's the pass. We made it." },
+        { "speakerId": "hugo_001",  "text": "This is just the beginning." }
       ]
     }
   ]
