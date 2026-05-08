@@ -174,7 +174,7 @@ export type Effect =
   | (EffectBase & { type: 'tickShove';         amount: number })
   | (EffectBase & { type: 'gainAp';            amount: number })
   | (EffectBase & { type: 'spendAp';           amount: number })
-  | (EffectBase & { type: 'modifyStat';        stat: StatKey; delta: number; duration: ModDuration })
+  | (EffectBase & { type: 'modifyStat'; stat: StatKey; delta?: number; deltaPercent?: number; duration: ModDuration })
   | (EffectBase & { type: 'applyStatus';       status: string; duration?: number; chance?: number; shieldPercent?: number; shieldFlat?: number; penaltyWindowTurns?: number })
   | (EffectBase & { type: 'removeStatus';      status?: string; tag?: string })
   | (EffectBase & { type: 'shiftProbability';  outcome: DiceOutcome; delta: number })

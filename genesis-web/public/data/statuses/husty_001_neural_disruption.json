@@ -9,16 +9,17 @@
     {
       "when": { "event": "onApply" },
       "type": "modifyStat",
-      "target": "self",
       "stat": "precision",
-      "delta": -15
+      "deltaPercent": -15,
+      "duration": 8
     },
     {
       "when": { "event": "onExpire" },
       "type": "modifyStat",
       "target": "self",
       "stat": "precision",
-      "delta": 15
+      "deltaPercent": 15,
+      "duration": 0
     }
   ]
 }

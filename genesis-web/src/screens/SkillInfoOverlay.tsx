@@ -35,7 +35,11 @@ function effectLine(e: Effect): string {
     case 'tickShove':         return `${trigger}Shove tick: ${e.amount > 0 ? '+' : ''}${e.amount}`
     case 'gainAp':            return `${trigger}Gain AP: ${e.amount}`
     case 'spendAp':           return `${trigger}Spend AP: ${e.amount}`
-    case 'modifyStat':        return `${trigger}${e.stat} ${e.delta > 0 ? '+' : ''}${e.delta} for ${e.duration} ticks`
+    case 'modifyStat': {
+      if (e.deltaPercent !== undefined) return `${trigger}${e.stat} ${e.deltaPercent > 0 ? '+' : ''}${e.deltaPercent}% for ${e.duration} ticks`
+      const d = e.delta ?? 0
+      return `${trigger}${e.stat} ${d > 0 ? '+' : ''}${d} for ${e.duration} ticks`
+    }
     case 'applyStatus':       return `${trigger}Apply ${e.status}${e.duration ? ` (${e.duration}t)` : ''}${e.chance != null ? ` @ ${Math.round(e.chance * 100)}%` : ''}`
     case 'removeStatus':      return `${trigger}Remove ${e.status ?? `status[tag=${e.tag}]`}`
     case 'shiftProbability':  return `${trigger}Shift ${e.outcome} probability ${e.delta > 0 ? '+' : ''}${e.delta}`
