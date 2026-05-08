@@ -12,7 +12,7 @@
     "speed": 45,
     "precision": 65
   },
-  "maxHp": 950,
+  "maxHp": 336,
   "maxAp": 100,
   "apRegenRate": 0.7,
   "startingAp": 10,
