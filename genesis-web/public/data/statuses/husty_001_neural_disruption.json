@@ -1,0 +1,24 @@
+{
+  "type": "status",
+  "id": "husty_001_neural_disruption",
+  "name": "Neural Disruption",
+  "stacking": "refresh",
+  "duration": 8,
+  "tags": ["debuff"],
+  "effects": [
+    {
+      "when": { "event": "onApply" },
+      "type": "modifyStat",
+      "target": "self",
+      "stat": "precision",
+      "delta": -15
+    },
+    {
+      "when": { "event": "onExpire" },
+      "type": "modifyStat",
+      "target": "self",
+      "stat": "precision",
+      "delta": 15
+    }
+  ]
+}

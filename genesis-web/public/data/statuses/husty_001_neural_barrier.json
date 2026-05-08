@@ -1,0 +1,9 @@
+{
+  "type": "status",
+  "id": "husty_001_neural_barrier",
+  "name": "Neural Barrier",
+  "stacking": "refresh",
+  "duration": 9999,
+  "tags": ["buff", "shield"],
+  "effects": []
+}

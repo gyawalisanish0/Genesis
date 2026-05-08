@@ -22,8 +22,10 @@ const handle: EffectHandler<ApplyStatusEffect> = (effect, ctx) => {
   for (const target of resolveRecipients(ctx)) {
     const payload: Record<string, unknown> = {}
 
-    // Shield initialisation — calculate HP from caster's current HP at cast time.
-    if (effect.shieldPercent !== undefined) {
+    // Shield initialisation — flat value or % of recipient's current HP.
+    if (effect.shieldFlat !== undefined) {
+      payload.shieldHp = effect.shieldFlat
+    } else if (effect.shieldPercent !== undefined) {
       payload.shieldHp = Math.floor(target.hp * effect.shieldPercent / 100)
     }
 

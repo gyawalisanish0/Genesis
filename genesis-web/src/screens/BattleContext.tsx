@@ -243,26 +243,30 @@ function makeShieldedBattleState(
       const prev = snap.get(unit.id)
       if (!prev || unit.hp >= prev.hp) { snap.set(unit.id, unit); return }
 
-      const shieldSlot = prev.statusSlots.find(s => s.id === 'hugo_001_shelling_point_active')
+      const shieldSlot = prev.statusSlots.find(
+        s => typeof s.payload?.shieldHp === 'number' && (s.payload.shieldHp as number) > 0,
+      )
       const shieldHp   = typeof shieldSlot?.payload?.shieldHp === 'number' ? shieldSlot.payload.shieldHp : 0
       if (!shieldSlot || shieldHp <= 0) { snap.set(unit.id, unit); return }
 
-      const damage   = prev.hp - unit.hp
-      const absorbed = Math.min(damage, shieldHp)
-      const overflow = damage - absorbed
+      const damage      = prev.hp - unit.hp
+      const absorbed    = Math.min(damage, shieldHp)
+      const overflow    = damage - absorbed
       const newShieldHp = shieldHp - absorbed
 
       if (newShieldHp <= 0) {
-        // Shield broke — remove it, apply overflow, then check penalty window.
+        // Shield broke — remove it and apply overflow damage.
         const withoutShield: Unit = {
           ...prev,
           hp: Math.max(0, prev.hp - overflow),
           statusSlots: prev.statusSlots.filter(
-            s => s.id !== 'hugo_001_shelling_point_active' &&
+            s => s.id !== shieldSlot.id &&
                  s.id !== 'hugo_001_shelling_point_penalty_window',
           ),
         }
-        const penaltyActive = prev.statusSlots.some(s => s.id === 'hugo_001_shelling_point_penalty_window')
+        // Hugo-specific: double overflow when penalty window is active.
+        const penaltyActive = shieldSlot.id === 'hugo_001_shelling_point_active' &&
+          prev.statusSlots.some(s => s.id === 'hugo_001_shelling_point_penalty_window')
         if (penaltyActive && overflow > 0) {
           snap.set(unit.id, { ...withoutShield, hp: Math.max(0, withoutShield.hp - overflow) })
         } else {
@@ -275,7 +279,7 @@ function makeShieldedBattleState(
         snap.set(unit.id, {
           ...prev,
           statusSlots: prev.statusSlots.map(s =>
-            s.id === 'hugo_001_shelling_point_active' ? updatedSlot : s,
+            s.id === shieldSlot.id ? updatedSlot : s,
           ),
         })
       }
