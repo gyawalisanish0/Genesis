@@ -44,6 +44,8 @@ export type Tag =
   | 'counter'        // standard reactive counter — triggers on Evasion
   | 'uniqueCounter'  // character-specific counter with custom effects; same dice + chain rules
   | 'basic'          // default attack — no AP cost, always available
+  | 'movement'       // repositioning / tick displacement skills
+  | 'tempo'          // tick-synergy skills — effects tied to timeline timing or position
 
 // ── ValueExpr — the only mini-syntax ─────────────────────────────────────────
 
