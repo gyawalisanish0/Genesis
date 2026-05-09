@@ -46,6 +46,7 @@ export type Tag =
   | 'basic'          // default attack — no AP cost, always available
   | 'movement'       // repositioning / tick displacement skills
   | 'tempo'          // tick-synergy skills — effects tied to timeline timing or position
+  | 'hyper'          // skill has a conditional hyper-mode variant with alternate cooldown/effects
 
 // ── ValueExpr — the only mini-syntax ─────────────────────────────────────────
 
@@ -63,6 +64,8 @@ export type ValueExpr =
   | { sum: ValueExpr[] }
   /** Reads caster.secondaryResource and multiplies by `secondary`. */
   | { secondary: number }
+  /** Reads the global AP spent pool accumulated since the last passive trigger for this unit. */
+  | { globalApSpentPercent: number }
 
 // ── WhenClause — trigger events ──────────────────────────────────────────────
 
@@ -89,6 +92,8 @@ export type WhenClause =
   | { event: 'onBattleStart' }
   | { event: 'onBattleEnd' }
   | { event: 'onApSpent' }
+  /** Fires on a global battle-tick interval — N ticks of battle time since last trigger. */
+  | { event: 'onBattleTickInterval'; interval: number }
 
 export type EventName = WhenClause['event']
 
@@ -175,7 +180,22 @@ export type Effect =
   | (EffectBase & { type: 'gainAp';            amount: number })
   | (EffectBase & { type: 'spendAp';           amount: number })
   | (EffectBase & { type: 'modifyStat'; stat: StatKey; delta?: number; deltaPercent?: number; duration: ModDuration })
-  | (EffectBase & { type: 'applyStatus';       status: string; duration?: number; chance?: number; shieldPercent?: number; shieldFlat?: number; penaltyWindowTurns?: number; rangedBaseChanceBonus?: number })
+  | (EffectBase & {
+      type:                  'applyStatus'
+      status:                string
+      duration?:             number
+      chance?:               number
+      shieldPercent?:        number
+      shieldFlat?:           number
+      /** Companion status applied alongside this one (e.g. penalty window alongside a shield). */
+      companionStatus?:      string
+      companionDuration?:    number
+      /** When the shield breaks, apply a tick cooldown to this skill on the shield owner. */
+      onBreakTickCooldown?:  { skillId: string; ticks: number }
+      /** Prevents the skill with this ID from being re-cast while this status is active. */
+      blocksRecastOfSkill?:  string
+      rangedBaseChanceBonus?: number
+    })
   | (EffectBase & { type: 'removeStatus';      status?: string; tag?: string })
   | (EffectBase & { type: 'shiftProbability';  outcome: DiceOutcome; delta: number })
   | (EffectBase & { type: 'rerollDice';        outcome?: DiceOutcome; uses: number; perBattle?: boolean })
@@ -257,6 +277,23 @@ export interface SkillDef {
 export type StatusStacking = 'refresh' | 'extend' | 'stack' | 'independent'
 
 /**
+ * Dodge configuration declared on a status def. Copied to the status slot
+ * payload at apply time so BattleContext can resolve dodge without ID checks.
+ */
+export interface DodgeConfig {
+  /** Dodge chance applied to all attack types. */
+  allChance?:        number
+  /** Dodge chance applied to melee attacks only. */
+  meleeChance?:      number
+  /** Dodge chance applied to ranged attacks only. */
+  rangedChance?:     number
+  /** Consume one stack per incoming hit attempt regardless of dodge result. */
+  consumeOnAttempt?: boolean
+  /** Consume one stack only when a dodge succeeds. */
+  consumeOnSuccess?: boolean
+}
+
+/**
  * Status definition — the JSON file under public/data/statuses/<id>.json.
  */
 export interface StatusDef {
@@ -271,6 +308,8 @@ export interface StatusDef {
   tags?:      string[]
   /** Skill tags that are locked while this status is active on the unit. */
   blockedTags?: string[]
+  /** Dodge behaviour copied to slot payload at apply time. */
+  dodgeConfig?: DodgeConfig
   effects:    Effect[]
 }
 
@@ -371,6 +410,8 @@ export interface EffectContext {
   dice?:    DiceOutcome
   /** Current global battle tick — passed when effects that initialise status intervals are applied. */
   currentTick?: number
+  /** AP accumulated by all units since the last onBattleTickInterval trigger for this caster. */
+  globalApSpentPool?: number
 }
 
 // ── Effect handler signature ─────────────────────────────────────────────────

@@ -107,7 +107,10 @@
         "target": "self",
         "status": "hugo_001_shelling_point_active",
         "shieldPercent": 25,
-        "penaltyWindowTurns": 9
+        "companionStatus": "hugo_001_shelling_point_penalty_window",
+        "companionDuration": 9,
+        "onBreakTickCooldown": { "skillId": "hugo_001_shelling_point", "ticks": 48 },
+        "blocksRecastOfSkill": "hugo_001_shelling_point"
       }
     ],
     "levelUpgrades": []
@@ -120,7 +123,7 @@
     "tuCost": 7,
     "apCost": 10,
     "tickCooldown": 20,
-    "tags": ["utility", "unique"],
+    "tags": ["utility", "unique", "hyper"],
     "maxLevel": 1,
     "targeting": {
       "selector": "self",

@@ -6,5 +6,9 @@
   "maxStacks": 2,
   "duration": 15,
   "tags": ["dodge", "ranged-dodge"],
+  "dodgeConfig": {
+    "rangedChance": 0.30,
+    "consumeOnSuccess": true
+  },
   "effects": []
 }

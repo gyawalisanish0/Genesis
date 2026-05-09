@@ -8,7 +8,7 @@ import {
 } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Unit } from '../core/types'
-import type { SkillInstance, BattleState as EngineBattleState, EffectContext, TargetSelector } from '../core/effects/types'
+import type { SkillInstance, BattleState as EngineBattleState, EffectContext, TargetSelector, DodgeConfig } from '../core/effects/types'
 import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, CLASH_ANNOUNCE_MS, ENEMY_AI_DELAY_MS, COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE, BATTLE_FEEDBACK_HOLD_MS, SKIP_TU_COST } from '../core/constants'
 import { resolveTickDisplacement } from '../core/combat/TickDisplacer'
 import { resolveClashWinner, factionAvgSpeed } from '../core/combat/ClashResolver'
@@ -196,7 +196,11 @@ function fireHpThresholdPassives(
   }
 }
 
-/** Check dodge statuses on target before applying damage. Returns the effective outcome. */
+/**
+ * Check dodge statuses on target before applying damage.
+ * Iterates status slots in apply-order (first match wins); each slot's
+ * payload.dodgeConfig drives the chance and stack-consumption rules.
+ */
 function resolveIncomingDodge(
   target:     Unit,
   skillRange: 'melee' | 'ranged' | 'global',
@@ -204,26 +208,27 @@ function resolveIncomingDodge(
 ): { dodged: boolean; consumed: boolean } {
   const targetSnap = snap.get(target.id) ?? target
 
-  // Primal Awareness — 70% per hit attempt, consumes a stack regardless of success
-  const primal = targetSnap.statusSlots.find(s => s.id === 'hugo_001_primal_awareness_dodge')
-  if (primal && primal.stacks > 0) {
-    snap.set(target.id, consumeStatusStack(targetSnap, 'hugo_001_primal_awareness_dodge'))
-    return { dodged: Math.random() < 0.70, consumed: true }
-  }
+  for (const slot of targetSnap.statusSlots) {
+    if (slot.stacks <= 0) continue
+    const cfg = slot.payload?.dodgeConfig as DodgeConfig | undefined
+    if (!cfg) continue
 
-  // Hyper Sense hyper mode — 90% melee / 50% ranged
-  const hyper = targetSnap.statusSlots.find(s => s.id === 'hugo_001_hyper_sense_hyper_active')
-  if (hyper) {
-    const chance = skillRange === 'ranged' ? 0.50 : 0.90
-    return { dodged: Math.random() < chance, consumed: false }
-  }
+    // allChance applies to every range; otherwise use range-specific key.
+    const chance = cfg.allChance ?? (skillRange === 'ranged' ? cfg.rangedChance : cfg.meleeChance)
+    if (chance === undefined) continue
 
-  // Hyper Sense normal mode — 30% vs ranged only; consumes 1 stack on success
-  const rangedDodge = targetSnap.statusSlots.find(s => s.id === 'hugo_001_hyper_sense_ranged_dodge')
-  if (rangedDodge && skillRange === 'ranged') {
-    const dodged = Math.random() < 0.30
-    if (dodged) snap.set(target.id, consumeStatusStack(targetSnap, 'hugo_001_hyper_sense_ranged_dodge'))
-    return { dodged, consumed: dodged }
+    const dodged   = Math.random() < chance
+    let   consumed = false
+
+    if (cfg.consumeOnAttempt) {
+      snap.set(target.id, consumeStatusStack(snap.get(target.id) ?? targetSnap, slot.id))
+      consumed = true
+    } else if (cfg.consumeOnSuccess && dodged) {
+      snap.set(target.id, consumeStatusStack(snap.get(target.id) ?? targetSnap, slot.id))
+      consumed = true
+    }
+
+    if (dodged) return { dodged: true, consumed }
   }
 
   return { dodged: false, consumed: false }
@@ -236,7 +241,7 @@ function resolveIncomingDodge(
  */
 function makeShieldedBattleState(
   snap:          Map<string, Unit>,
-  shieldBrokeIds: Set<string>,
+  shieldBrokeIds: Map<string, { skillId: string; ticks: number } | undefined>,
 ): ReturnType<typeof snapshotToBattleState> {
   return {
     getUnit:     (id) => snap.get(id),
@@ -257,24 +262,23 @@ function makeShieldedBattleState(
       const newShieldHp = shieldHp - absorbed
 
       if (newShieldHp <= 0) {
-        // Shield broke — remove it and apply overflow damage.
+        // Shield broke — capture break metadata, remove shield + any overflow-doubling companion.
+        const breakCd = shieldSlot.payload?.onBreakTickCooldown as { skillId: string; ticks: number } | undefined
+        const penaltyActive = prev.statusSlots.some(s => s.payload?.doublesShieldOverflow === true)
         const withoutShield: Unit = {
           ...prev,
           hp: Math.max(0, prev.hp - overflow),
           statusSlots: prev.statusSlots.filter(
-            s => s.id !== shieldSlot.id &&
-                 s.id !== 'hugo_001_shelling_point_penalty_window',
+            s => s.id !== shieldSlot.id && !s.payload?.doublesShieldOverflow,
           ),
         }
-        // Hugo-specific: double overflow when penalty window is active.
-        const penaltyActive = shieldSlot.id === 'hugo_001_shelling_point_active' &&
-          prev.statusSlots.some(s => s.id === 'hugo_001_shelling_point_penalty_window')
+        // Double the overflow when a penalty-window companion status was active.
         if (penaltyActive && overflow > 0) {
           snap.set(unit.id, { ...withoutShield, hp: Math.max(0, withoutShield.hp - overflow) })
         } else {
           snap.set(unit.id, withoutShield)
         }
-        shieldBrokeIds.add(unit.id)
+        shieldBrokeIds.set(unit.id, breakCd)
       } else {
         // Shield absorbed everything — update shield HP, restore HP to prev.
         const updatedSlot = { ...shieldSlot, payload: { ...shieldSlot.payload, shieldHp: newShieldHp } }
@@ -1011,11 +1015,11 @@ export function BattleProvider({ children }: Props) {
       NarrativeService.emit({ type: 'evaded', actorId: target.defId, targetId: caster.defId })
     }
 
-    const shieldBrokeIds = new Set<string>()
+    const shieldBrokeIds = new Map<string, { skillId: string; ticks: number } | undefined>()
     const battle = makeShieldedBattleState(snap, shieldBrokeIds)
-    // AP regen for the caster — skipped when AP regen freeze status is active.
+    // AP regen for the caster — skipped when any status has freezesApRegen in its payload.
     const casterSnap   = snap.get(caster.id)
-    const apFrozen     = casterSnap?.statusSlots.some(s => s.id === 'hugo_001_ap_regen_freeze') ?? false
+    const apFrozen     = casterSnap?.statusSlots.some(s => s.payload?.freezesApRegen === true) ?? false
     const ticksElapsed = tickValue > 0 ? skill.tuCost : 0
     const apGained     = apFrozen ? 0 : calculateApGained(ticksElapsed, caster.apRegenRate)
     if (apGained > 0 && casterSnap) {
@@ -1078,17 +1082,18 @@ export function BattleProvider({ children }: Props) {
       fireHpThresholdPassives(caster.id, casterHpBefore, passiveDefsRef.current.get(caster.id) ?? null, snap, tickValue)
     }
 
-    // Apply 48-tick cooldown to Shelling Point on any unit whose shield broke.
+    // Apply break cooldown to the relevant skill on any unit whose shield broke.
     if (shieldBrokeIds.size > 0) {
       setUnitSkillsMap((prev) => {
         const next = new Map(prev)
-        for (const brokenUnitId of shieldBrokeIds) {
+        for (const [brokenUnitId, breakCd] of shieldBrokeIds) {
+          if (!breakCd) continue
           const unitInSnap = snap.get(brokenUnitId)
           if (!unitInSnap) continue
           const skills = next.get(brokenUnitId) ?? []
           next.set(brokenUnitId, skills.map(s =>
-            s.defId === 'hugo_001_shelling_point'
-              ? applyTickCooldown(s, unitInSnap.tickPosition + 48)
+            s.defId === breakCd.skillId
+              ? applyTickCooldown(s, unitInSnap.tickPosition + breakCd.ticks)
               : s,
           ))
         }
@@ -1239,11 +1244,8 @@ export function BattleProvider({ children }: Props) {
 
     const skill = getCachedSkill(skillInst)
 
-    // Shelling Point cannot be cast while the shield is already active.
-    if (
-      skill.id === 'hugo_001_shelling_point' &&
-      actor.statusSlots.some(s => s.id === 'hugo_001_shelling_point_active')
-    ) return
+    // Block skills that are guarded by an active status's blocksRecastOfSkill payload.
+    if (actor.statusSlots.some(s => s.payload?.blocksRecastOfSkill === skill.id)) return
 
     // Block skills whose tags are locked by an active status on the caster.
     if (isSkillTagBlocked(actor, skill.tags)) return
@@ -1293,7 +1295,7 @@ export function BattleProvider({ children }: Props) {
 
     // Apply cooldown immediately at cast time so the badge updates right away.
     // Hyper Sense in Hyper Mode uses 8-turn CD instead of the normal 20-tick CD.
-    const isHyperCast = skill.id === 'hugo_001_hyper_sense' && isHyperSenseMode(actor)
+    const isHyperCast = skill.tags.includes('hyper') && isHyperSenseMode(actor)
     const withCooldown = isHyperCast
       ? applyTurnCooldown(actor, skillInst, 8)
       : applyCooldown(actor, skillInst, skill)
@@ -1486,10 +1488,7 @@ export function BattleProvider({ children }: Props) {
         const availableSkills = allUnitSkills.filter((s) => {
           if (isOnCooldown(aiUnit, s)) return false
           const def = getCachedSkill(s)
-          if (
-            def.id === 'hugo_001_shelling_point' &&
-            aiUnit.statusSlots.some(st => st.id === 'hugo_001_shelling_point_active')
-          ) return false
+          if (aiUnit.statusSlots.some(st => st.payload?.blocksRecastOfSkill === def.id)) return false
           if (isSkillTagBlocked(aiUnit, def.tags)) return false
           return true
         })
@@ -1635,7 +1634,7 @@ export function BattleProvider({ children }: Props) {
     setSelectedTarget(null)
     setShowTargetPicker(false)
     const fromTick  = actor.tickPosition
-    const apFrozen  = actor.statusSlots.some(s => s.id === 'hugo_001_ap_regen_freeze')
+    const apFrozen  = actor.statusSlots.some(s => s.payload?.freezesApRegen === true)
     const apGained  = apFrozen ? 0 : calculateApGained(SKIP_TU_COST, actor.apRegenRate)
     pushHistory(makeHistoryEntry(actor.id, actor.name, fromTick, actor.isAlly))
     setPlayerUnits((prev) => prev.map((u) =>

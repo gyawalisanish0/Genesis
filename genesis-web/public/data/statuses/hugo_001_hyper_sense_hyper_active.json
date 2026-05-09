@@ -5,6 +5,10 @@
   "stacking": "refresh",
   "duration": 30,
   "tags": ["dodge", "hyper", "melee-dodge", "turn-based", "energy", "ranged"],
+  "dodgeConfig": {
+    "meleeChance": 0.90,
+    "rangedChance": 0.50
+  },
   "effects": [
     {
       "id": "hugo_001_hyper_sense_expire_counter",

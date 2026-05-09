@@ -4,6 +4,6 @@
   "name": "Shelling Point: Penalty Window",
   "stacking": "refresh",
   "duration": 9,
-  "tags": ["turn-based"],
+  "tags": ["turn-based", "shield-penalty-window"],
   "effects": []
 }

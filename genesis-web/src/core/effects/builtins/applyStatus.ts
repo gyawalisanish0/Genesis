@@ -5,8 +5,8 @@
 import { registerEffect }  from '../registry'
 import { getStatusDef }    from '../statusRegistry'
 import { applyEffect }     from '../applyEffect'
-import type { Effect, EffectContext, EffectHandler } from '../types'
-import type { StatusEffect, Unit }                   from '../../types'
+import type { Effect, EffectContext, EffectHandler, StatusDef } from '../types'
+import type { StatusEffect, Unit }                              from '../../types'
 
 type ApplyStatusEffect = Extract<Effect, { type: 'applyStatus' }>
 
@@ -38,6 +38,26 @@ const handle: EffectHandler<ApplyStatusEffect> = (effect, ctx) => {
       payload.blockedTags = def.blockedTags
     }
 
+    // Dodge config — copied from StatusDef so BattleContext never needs ID checks.
+    if (def.dodgeConfig) {
+      payload.dodgeConfig = def.dodgeConfig
+    }
+
+    // Tag-driven payload flags — BattleContext reads these; no ID checks needed.
+    if (def.tags?.includes('ap-regen-freeze'))     payload.freezesApRegen       = true
+    if (def.tags?.includes('shield-penalty-window')) payload.doublesShieldOverflow = true
+    if (def.tags?.includes('hp-ap-swap'))           payload.hpApSwapped          = true
+
+    // Shield break metadata — stored so BattleContext can act after the slot is removed.
+    if (effect.onBreakTickCooldown) {
+      payload.onBreakTickCooldown = effect.onBreakTickCooldown
+    }
+
+    // Recast guard — checked by BattleContext before allowing the named skill to fire.
+    if (effect.blocksRecastOfSkill) {
+      payload.blocksRecastOfSkill = effect.blocksRecastOfSkill
+    }
+
     const incoming: StatusEffect = {
       id:           def.id,
       name:         def.name,
@@ -60,25 +80,37 @@ const handle: EffectHandler<ApplyStatusEffect> = (effect, ctx) => {
       for (const eff of applyEffects) applyEffect(eff, applyCtx)
     }
 
-    // Apply the penalty window status alongside the shield.
-    if (effect.penaltyWindowTurns !== undefined) {
-      const penaltyDef = getStatusDef('hugo_001_shelling_point_penalty_window')
-      if (penaltyDef) {
-        const penaltySlot: StatusEffect = {
-          id:                   penaltyDef.id,
-          name:                 penaltyDef.name,
-          duration:             effect.penaltyWindowTurns,
-          durationUnit:         'turns',
+    // Apply companion status alongside the primary one (e.g. penalty window with a shield).
+    if (effect.companionStatus) {
+      const companionDef = getStatusDef(effect.companionStatus)
+      if (companionDef) {
+        const companionDuration  = effect.companionDuration ?? companionDef.duration
+        const companionSlot: StatusEffect = {
+          id:                   companionDef.id,
+          name:                 companionDef.name,
+          duration:             companionDuration,
+          durationUnit:         companionDef.tags?.includes('turn-based') ? 'turns' : 'ticks',
           source:               ctx.caster.id,
-          stacks:               1,
-          payload:              {},
+          stacks:               companionDef.maxStacks ?? 1,
+          payload:              buildCompanionPayload(companionDef),
           nextIntervalFireTick: 0,
         }
-        const afterShield = ctx.battle.getUnit(target.id) ?? target
-        ctx.battle.setUnit(mergeStatus(afterShield, penaltySlot, penaltyDef.stacking, undefined))
+        const afterPrimary = ctx.battle.getUnit(target.id) ?? target
+        ctx.battle.setUnit(mergeStatus(afterPrimary, companionSlot, companionDef.stacking, companionDef.maxStacks))
       }
     }
   }
+}
+
+/** Mirrors the tag-driven flag logic for companion statuses. */
+function buildCompanionPayload(def: StatusDef): Record<string, unknown> {
+  const payload: Record<string, unknown> = {}
+  if (def.dodgeConfig)                              payload.dodgeConfig           = def.dodgeConfig
+  if (def.tags?.includes('ap-regen-freeze'))        payload.freezesApRegen        = true
+  if (def.tags?.includes('shield-penalty-window'))  payload.doublesShieldOverflow = true
+  if (def.tags?.includes('hp-ap-swap'))             payload.hpApSwapped           = true
+  if (def.blockedTags && def.blockedTags.length > 0) payload.blockedTags          = def.blockedTags
+  return payload
 }
 
 function resolveRecipients(ctx: EffectContext): readonly Unit[] {

@@ -18,9 +18,10 @@ interface Props {
 
 // Render a ValueExpr as concise human-readable text.
 function valueText(v: ValueExpr): string {
-  if (typeof v === 'number')    return String(v)
-  if ('sum'       in v)         return v.sum.map(valueText).join(' + ')
-  if ('secondary' in v)         return `${v.secondary * 100}% surge`
+  if (typeof v === 'number')            return String(v)
+  if ('sum'                in v)        return v.sum.map(valueText).join(' + ')
+  if ('secondary'          in v)        return `${v.secondary * 100}% surge`
+  if ('globalApSpentPercent' in v)      return `${v.globalApSpentPercent}% AP pool`
   const of = v.of ?? 'caster'
   return `${v.percent}% ${of} ${v.stat}`
 }
