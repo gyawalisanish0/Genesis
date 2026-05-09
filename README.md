@@ -86,22 +86,22 @@ Guardian  [10–20 ticks ]   most durable opener
 Starting tick is drawn from a class-specific range — no two units ever land on
 exactly the same tick without triggering the displacement or collision system.
 
-### Dice Resolution — 6 Outcomes
+### Dice Resolution — 4 Outcomes
 
 Every attack rolls through a probability table built from caster precision, skill
 `baseChance`, and any probability-shift effects active on either unit.
 
 | Outcome | Base % | Effect |
 |---|---|---|
-| **Boosted** | 10% | +50% skill value · gold particles · heavy camera shake |
+| **Boosted** | 10% | ×1.5 skill value · gold particles · heavy camera shake |
 | **Hit** | 40% | Clean hit · red particles · standard shake |
-| **GuardUp** | 20% | Hit + 35% damage reduction on next incoming attack |
-| **Evasion** | 10% | Target evades · cyan particles · triggers counter chain check |
-| **Tumbling** | 10% | Half effectiveness + attacker pushed 1–5 ticks forward |
-| **Fail** | 10% | Miss · no particles |
+| **Evade** | 20% | Target evades · cyan particles · triggers counter chain check |
+| **Fail** | 30% | Miss · no particles |
 
-The table always sums to 1.0. Higher precision and `baseChance` shift weight
-toward Boosted and Hit. Probability-shift effects (`shiftProbability`) and
+The table always sums to 1.0. Higher caster precision and skill `baseChance`
+scale the positive pool (Boosted + Hit) up and compress the negative pool
+(Evade + Fail) proportionally — the ratio between Boosted and Hit, and between
+Evade and Fail, stays fixed. Probability-shift effects (`shiftProbability`) and
 forced outcomes (`forceOutcome`) can bend the table further.
 
 **Tap the arena during the dice animation to skip it** — the outcome resolves
