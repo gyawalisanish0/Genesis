@@ -275,19 +275,23 @@ STR 65  END 75  PWR 20  RES 60  SPD 30  PRC 50
 HP 500  AP 100  Regen 0.6/tick  Starting AP 15
 ```
 
-Sustained brawler. Builds a rotating shield on a tight cooldown, punishes
-break attempts, and shifts into a hyper-aware dodge stance that reacts to
-ranged attacks.
+Last-stand fighter. His companion ANBOT — a nanite mass that reshapes itself
+into weapons and armour on command — grows harder to stop the closer Hugo
+gets to death. The passive is the kit's engine: survive to 10% HP and the
+whole threat profile changes.
 
 | Skill | AP | TU | Notes |
 |---|---|---|---|
-| Crush (basic) | 0 | 7 | 80% STR physical melee |
-| Primal Strike | 20 | 10 | 110% STR melee; on hit: AP regen freeze 15 ticks |
-| Shelling Point | 25 | 8 | Shield (250 flat + 5% STR) · on break: 48-tick CD, double overflow; companion penalty window 9 turns |
-| Battle Surge | 15 | 14 | 60% STR melee burst; on hit: +20 AP to self |
-| Hyper Sense | 30 | 10 | Hyper mode: 90% melee / 50% ranged dodge stance · passive +30% ranged dodge on non-hyper |
+| Basic Attack | 0 | 11 | 45% STR physical melee |
+| Nanites Slash | 12 | 8 | 60% STR physical melee |
+| Hammer Bash | 25 | 13 | 125% STR physical melee · 0.9 baseChance · 2-turn CD |
+| Shelling Point | 20 | 6 | Shield = 25% max HP · on break: 48-tick CD + double overflow · blocks recast · 9-turn penalty window |
+| Hyper Sense | 10 | 7 | Normal: +30% ranged dodge 15 ticks · 20-tick CD · Hyper (Primal Awareness active): 90% melee / 50% ranged dodge for passive duration |
 
-**Passive — Primal Awareness:** On evade, enters hyper dodge stance (30 ticks).
+**Passive — Primal Awareness:** When HP drops below 10% and AP ≥ 80% — ANBOT
+emergency-reroutes all power into evasion: 5 dodge points at 70% each
+(consumed per hit attempt), AP regen freezes for 3 turns. Cannot reactivate
+until AP returns to 80%+.
 
 ---
 
@@ -298,18 +302,23 @@ STR 20  END 50  PWR 75  RES 45  SPD 45  PRC 65
 HP 336  AP 100  Regen 0.7/tick  Starting AP 10
 ```
 
-Fragile precision striker. Stacks precision buffs from her passive, applies
-neural disruption to drain enemy AP, and surges power for a high-damage window.
+Control-and-burst caster. Wins through resource management and a single
+high-power window earned by patient play. Power Surge accumulates silently
+every turn — Cached Shockwave dumps it all at once. Precise Calibration turns
+AP discipline into a near-accuracy guarantee for the whole party, and that
+window is when the Shockwave lands hardest.
 
 | Skill | AP | TU | Notes |
 |---|---|---|---|
-| Data Bolt (basic) | 0 | 8 | 55% PWR energy ranged |
-| Neural Pulse | 18 | 10 | 90% PWR energy; on hit: Neural Disruption 12 ticks (enemy -5 AP/tick) |
-| Neural Barrier | 22 | 6 | Shield (180 flat) · +15% dodge; companion disruption 8 ticks |
-| Power Surge | 25 | 12 | +40% Power · +20% precision, self, 10 ticks |
-| System Override | 35 | 14 | 200% PWR energy; bonus 80% PWR if target has Neural Disruption |
+| Basic Attack | 0 | 11 | 40% PWR energy ranged |
+| Disruption | 16 | 12 | AoE — 15 flat + 20% PWR energy · on hit: movement block all enemies 15 ticks |
+| Cached Shockwave | 25 | 16 | Single target · on hit: 250% surge + 15% PWR · on evade: 125% surge + 15% PWR · resets surge · 25-tick CD |
+| Neural Barrier | 14 | 12 | On hit: 20 HP shield (self) + neural disruption all enemies · 5-turn CD |
 
-**Passive — Precise Calibration:** Every 3 own actions gains +8 precision (stacks).
+**Passive — Precise Calibration:** Applies Power Surge at battle start — gains
++1–5 per own turn (cap 45), fuelling Cached Shockwave. After spending 60 AP
+total: all allies gain +0.8 ranged `baseChance` for 4 turns (near-guarantees
+hits); accumulator resets and the cycle repeats.
 
 ---
 
