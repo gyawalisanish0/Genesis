@@ -32,6 +32,8 @@ export function makeUnit(overrides: Partial<Unit> = {}): Unit {
     clashUniqueEnabled:  false,
     skills:              [],
     statusSlots:         [],
+    secondaryResource:   0,
+    apSpentAccum:        0,
     isAlly:              true,
     ...overrides,
   }

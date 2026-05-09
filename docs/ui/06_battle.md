@@ -226,16 +226,14 @@ A full-screen centred outcome text burst that fires on every `runAttack` call
 `BattleScreen.tsx`, rendered at `z-index: 40` inside `.root`
 (`position: relative`). `pointer-events: none` — never blocks battle taps.
 
-**Outcomes and colours (6 total):**
+**Outcomes and colours (4 total):**
 
 | Outcome | Token | Hex |
 |---|---|---|
-| Boosted  | `--accent-gold`    | `#F59E0B` |
-| Success  | `--accent-heal`    | `#10B981` |
-| GuardUp  | `--accent-info`    | `#3B82F6` |
-| Evasion  | `--accent-evasion` | `#06B6D4` |
-| Tumbling | `--accent-danger`  | `#EF4444` |
-| Fail     | `--text-muted`     | dimmed text |
+| Boosted | `--accent-gold`    | `#F59E0B` |
+| Hit     | `--text-primary`   | `#F1F0FF` |
+| Evade   | `--accent-evasion` | `#06B6D4` |
+| Fail    | `--text-muted`     | dimmed text |
 
 **Layout inside the burst:**
 
@@ -245,16 +243,14 @@ A full-screen centred outcome text burst that fires on every `runAttack` call
     [flavour message]       ← .outcomeMsg — body size; inherited colour, 85% opacity
 ```
 
-The flavour message is built by `buildOutcomeMessage(outcome, actorName, targetName, tumbleDelay)`:
+The flavour message is built by `buildOutcomeMessage(outcome, actorName, targetName)`:
 
 | Outcome | Message |
 |---|---|
-| Boosted  | `{actor} gets +50% skill value boost until next turn` |
-| Success  | `{actor} successfully hits` |
-| GuardUp  | `{actor} hits and gains 35% damage reduction for next attack` |
-| Evasion  | `{target} evaded` |
-| Tumbling | `{actor} hits with half effectiveness, tumbled for N ticks` |
-| Fail     | `{actor} misses` |
+| Boosted | `{actor} lands a boosted hit` |
+| Hit     | `{actor} hits` |
+| Evade   | `{target} evades` |
+| Fail    | `{actor} misses` |
 
 **`outcomeSlam` keyframe (4 s, `animation-fill-mode: forwards`):**
 

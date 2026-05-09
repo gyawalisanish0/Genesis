@@ -1,0 +1,32 @@
+{
+  "type": "passive",
+  "id": "husty_001_precise_calibration",
+  "name": "Precise Calibration",
+  "description": "After spending 60 AP, Husty locks in firing solutions for the whole party: all allies gain +80% base accuracy on ranged skills for 4 turns. Resets on proc.",
+  "effects": [
+    {
+      "when": { "event": "onBattleStart" },
+      "type": "applyStatus",
+      "target": "self",
+      "status": "husty_001_power_surge"
+    },
+    {
+      "when": { "event": "onApSpent" },
+      "condition": {
+        "all": [
+          { "apAccumGte": 60 },
+          { "not": { "selfHasStatus": "husty_001_precision_buff" } }
+        ]
+      },
+      "type": "applyStatus",
+      "target": "all-allies",
+      "status": "husty_001_precision_buff",
+      "rangedBaseChanceBonus": 0.8
+    },
+    {
+      "when": { "event": "onApSpent" },
+      "condition": { "apAccumGte": 60 },
+      "type": "resetApAccum"
+    }
+  ]
+}

@@ -5,7 +5,7 @@
   "description": "A ruined outpost at the edge of the frontier. Something has gone very wrong here.",
   "playerUnits": {
     "mode": "fixed",
-    "units": ["warrior_001", "hunter_001"]
+    "units": ["hugo_001", "husty_001"]
   },
   "moveRange": 1,
   "settings": {

@@ -1,11 +1,30 @@
 [
   {
     "type": "skill",
+    "id": "hugo_001_basic_attack",
+    "name": "Basic Attack",
+    "tuCost": 11,
+    "apCost": 0,
+    "tags": ["physical", "melee", "basic"],
+    "maxLevel": 1,
+    "targeting": { "selector": "enemy", "range": "melee" },
+    "resolution": { "baseChance": 1.0 },
+    "effects": [
+      {
+        "when": { "event": "onHit" },
+        "type": "damage",
+        "amount": { "stat": "strength", "percent": 45 }
+      }
+    ],
+    "levelUpgrades": []
+  },
+  {
+    "type": "skill",
     "id": "hugo_001_nanites_slash",
     "name": "Nanites Slash",
     "description": "ANBOT reshapes its nanite mass into a blade and slashes the target.",
     "tuCost": 8,
-    "apCost": 15,
+    "apCost": 12,
     "tags": ["physical", "melee"],
     "maxLevel": 5,
     "targeting": {
@@ -88,7 +107,10 @@
         "target": "self",
         "status": "hugo_001_shelling_point_active",
         "shieldPercent": 25,
-        "penaltyWindowTurns": 9
+        "companionStatus": "hugo_001_shelling_point_penalty_window",
+        "companionDuration": 9,
+        "onBreakTickCooldown": { "skillId": "hugo_001_shelling_point", "ticks": 48 },
+        "blocksRecastOfSkill": "hugo_001_shelling_point"
       }
     ],
     "levelUpgrades": []
@@ -101,7 +123,7 @@
     "tuCost": 7,
     "apCost": 10,
     "tickCooldown": 20,
-    "tags": ["utility", "unique"],
+    "tags": ["utility", "unique", "hyper"],
     "maxLevel": 1,
     "targeting": {
       "selector": "self",

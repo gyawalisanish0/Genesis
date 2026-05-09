@@ -472,6 +472,12 @@
   cursor: not-allowed;
 }
 
+.skillBtnBlocked {
+  opacity: 0.35;
+  cursor: not-allowed;
+  border-color: var(--accent-danger);
+}
+
 .skillCdBadge {
   grid-column: 1 / -1;
   font-size: 0.65rem;

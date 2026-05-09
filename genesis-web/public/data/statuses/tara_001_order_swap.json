@@ -1,0 +1,9 @@
+{
+  "type": "status",
+  "id": "tara_001_order_swap",
+  "name": "Change of Order",
+  "stacking": "refresh",
+  "duration": 15,
+  "tags": ["hp-ap-swap", "debuff"],
+  "effects": []
+}

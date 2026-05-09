@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { roll, applyOutcome, calculateTumblingDelay, resolveCounterRoll } from '../combat/DiceResolver'
-import { DICE_BASE_PROBABILITIES, TUMBLING_DELAY_MIN, TUMBLING_DELAY_MAX } from '../constants'
+import { roll, applyOutcome, resolveCounterRoll } from '../combat/DiceResolver'
+import { DICE_BASE_PROBABILITIES } from '../constants'
 
 describe('roll', () => {
   it('always returns a valid outcome', () => {
@@ -10,9 +10,9 @@ describe('roll', () => {
     }
   })
 
-  it('returns Success when only Success has probability', () => {
-    const onlySuccess = { Boosted: 0, Success: 1, Tumbling: 0, GuardUp: 0, Evasion: 0, Fail: 0 }
-    for (let i = 0; i < 20; i++) expect(roll(onlySuccess)).toBe('Success')
+  it('returns Hit when only Hit has probability', () => {
+    const onlyHit = { Boosted: 0, Hit: 1, Evade: 0, Fail: 0 }
+    for (let i = 0; i < 20; i++) expect(roll(onlyHit)).toBe('Hit')
   })
 })
 
@@ -23,41 +23,22 @@ describe('applyOutcome', () => {
     expect(result.evaded).toBe(false)
   })
 
-  it('Tumbling multiplies output by 0.5 and adds delay', () => {
-    const result = applyOutcome('Tumbling', 100)
-    expect(result.output).toBe(50)
-    expect(result.tumbleDelay).toBeGreaterThanOrEqual(TUMBLING_DELAY_MIN)
-    expect(result.tumbleDelay).toBeLessThanOrEqual(TUMBLING_DELAY_MAX)
+  it('Hit returns raw output unchanged', () => {
+    const result = applyOutcome('Hit', 80)
+    expect(result.output).toBe(80)
+    expect(result.evaded).toBe(false)
   })
 
-  it('GuardUp returns full output plus 10% mitigation', () => {
-    const result = applyOutcome('GuardUp', 200)
-    expect(result.output).toBe(200)
-    expect(result.guardMitigation).toBe(20)
-  })
-
-  it('Evasion sets output to 0 and evaded to true', () => {
-    const result = applyOutcome('Evasion', 100)
+  it('Evade sets output to 0 and evaded to true', () => {
+    const result = applyOutcome('Evade', 100)
     expect(result.output).toBe(0)
     expect(result.evaded).toBe(true)
   })
 
-  it('Success returns raw output unchanged', () => {
-    const result = applyOutcome('Success', 80)
-    expect(result.output).toBe(80)
+  it('Fail sets output to 0 and evaded to false', () => {
+    const result = applyOutcome('Fail', 100)
+    expect(result.output).toBe(0)
     expect(result.evaded).toBe(false)
-    expect(result.tumbleDelay).toBe(0)
-    expect(result.guardMitigation).toBe(0)
-  })
-})
-
-describe('calculateTumblingDelay', () => {
-  it('stays within [TUMBLING_DELAY_MIN, TUMBLING_DELAY_MAX]', () => {
-    for (let i = 0; i < 50; i++) {
-      const d = calculateTumblingDelay()
-      expect(d).toBeGreaterThanOrEqual(TUMBLING_DELAY_MIN)
-      expect(d).toBeLessThanOrEqual(TUMBLING_DELAY_MAX)
-    }
   })
 })
 

@@ -1,0 +1,10 @@
+{
+  "type": "status",
+  "id": "husty_001_movement_block",
+  "name": "Movement Lock",
+  "stacking": "refresh",
+  "duration": 15,
+  "tags": ["debuff", "movement-block"],
+  "blockedTags": ["movement"],
+  "effects": []
+}

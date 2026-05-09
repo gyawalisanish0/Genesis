@@ -13,7 +13,8 @@ docs/characters/
 ├── the-creator.md                 ← cosmic entity, ???, the dream
 ├── kali.md                        ← AI assistant, Kognitive Tech Limited
 ├── in-game/
-│   └── hugo-rekrot.md             ← Material Engineer, sekkar-human hybrid
+│   ├── hugo-rekrot.md             ← Material Engineer, sekkar-human hybrid
+│   └── husty.md                   ← Physicist, Team 6, Fleet 13
 └── civilizations/
     └── sekkars.md                 ← first alien species in Genesis
 ```
@@ -28,6 +29,7 @@ docs/characters/
 | KALI | AI assistant to the Commander | In development |
 | Commander | The player — custom name | Defined in demo-flow.md |
 | Hugo Rekrot | Material Engineer — Mars team | In development |
+| Husty | Physicist — Team 6, Fleet 13 | In development |
 | Faction | Intergalactic antagonists | Withheld by design |
 
 ---

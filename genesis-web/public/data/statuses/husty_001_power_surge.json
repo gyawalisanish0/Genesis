@@ -1,0 +1,16 @@
+{
+  "type": "status",
+  "id": "husty_001_power_surge",
+  "name": "Power Surge",
+  "stacking": "refresh",
+  "duration": 9999,
+  "tags": ["buff"],
+  "effects": [
+    {
+      "when": { "event": "onUnitTurnStart" },
+      "type": "secondaryResource",
+      "delta": [1, 5],
+      "max": 45
+    }
+  ]
+}

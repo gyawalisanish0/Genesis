@@ -4,6 +4,6 @@
   "name": "AP Regen Frozen",
   "stacking": "refresh",
   "duration": 3,
-  "tags": ["debuff", "turn-based"],
+  "tags": ["debuff", "turn-based", "ap-regen-freeze"],
   "effects": []
 }

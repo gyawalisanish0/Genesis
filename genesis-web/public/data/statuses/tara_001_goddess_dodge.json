@@ -1,0 +1,12 @@
+{
+  "type": "status",
+  "id": "tara_001_goddess_dodge",
+  "name": "Order Ward",
+  "stacking": "refresh",
+  "duration": 15,
+  "tags": ["dodge", "buff"],
+  "dodgeConfig": {
+    "allChance": 0.40
+  },
+  "effects": []
+}

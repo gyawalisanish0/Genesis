@@ -11,7 +11,7 @@
       "when": { "event": "onTickInterval", "interval": 10 },
       "target": "self",
       "type": "heal",
-      "amount": 56
+      "amount": { "stat": "maxHp", "percent": 4 }
     }
   ]
 }

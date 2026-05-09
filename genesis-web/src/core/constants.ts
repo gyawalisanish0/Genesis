@@ -13,21 +13,14 @@ export const CLASS_TICK_RANGES: Readonly<Record<string, [number, number]>> = {
 
 // Base outcome probabilities at 100% final hit chance
 export const DICE_BASE_PROBABILITIES = {
-  Boosted:  0.10,
-  Success:  0.40,
-  Tumbling: 0.10,
-  GuardUp:  0.20,
-  Evasion:  0.10,
-  Fail:     0.10,
+  Boosted: 0.10,
+  Hit:     0.40,
+  Evade:   0.20,
+  Fail:    0.30,
 } as const
 
-export const BOOSTED_MULTIPLIER  = 1.5    // damage × 1.5 on Boosted
-export const TUMBLING_MULTIPLIER = 0.5    // damage × 0.5 on Tumbling
-export const GUARD_UP_MITIGATION = 0.10   // 10% of raw output becomes mitigation
+export const BOOSTED_MULTIPLIER = 1.5    // damage × 1.5 on Boosted
 
-// Tumbling outcome delays the attacker by 1–5 ticks
-export const TUMBLING_DELAY_MIN = 1
-export const TUMBLING_DELAY_MAX = 5
 
 // Counter chain — diminishing probability per recursion depth
 export const COUNTER_BASE            = 0.15  // 15% at depth 0
@@ -35,6 +28,7 @@ export const COUNTER_STEP            = 0.02  // drops 2% per depth
 export const COUNTER_MIN             = 0.01  // never below 1%
 export const COUNTER_ANNOUNCE_MS     = 800   // pause before counter dice roll is displayed
 export const AI_COUNTER_AP_RESERVE   = 20    // enemy skips counter if remaining AP after cost < this
+export const SKIP_TU_COST            = 6     // TU cost for Skip/End Turn action
 
 // Tick collision — occupancy cap + QTE parameters
 export const TICK_MAX_OCCUPANCY        = 4      // units per tick before D8 displacement triggers

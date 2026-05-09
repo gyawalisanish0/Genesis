@@ -242,8 +242,8 @@ Enemy acts (TU 8):
   all > 2? yes → tickValue=8
   activeUnitIds={'player-id'}  → phase='player'
 
-Player acts (TU 8, Tumbling +2 delay):
-  registerTick('player-id', 18)
+Player acts (TU 8):
+  registerTick('player-id', 16)
   registeredTicks={player:18, enemy:10}
   all > 8? yes → tickValue=10
   activeUnitIds={'enemy-id'}  → phase='enemy'
@@ -321,19 +321,17 @@ are immediate:
 6. appendLog('You skipped your turn.')
 ```
 
-**Dice outcomes** — six outcomes, always summing to 1.0 after `shiftProbabilities`:
+**Dice outcomes** — four outcomes, always summing to 1.0 after `shiftProbabilities`:
 
-| Outcome | Base % | Tick modifier | Log colour | Notes |
-|---|---|---|---|---|
-| Boosted  | 10% | +0 | `accent-gold`    | Caster gets +50% skill value boost |
-| Success  | 40% | +0 | `text-primary`   | Normal hit |
-| GuardUp  | 20% | +0 | `accent-info`    | Hit + 35% damage reduction for caster's next received attack |
-| Evasion  | 10% | +0 | `accent-evasion` | Target evaded; no damage (`ctx.target = undefined`) |
-| Tumbling | 10% | +`calculateTumblingDelay()` (1–5) | `accent-danger` | Half effectiveness; caster delayed |
-| Fail     | 10% | +0 | `text-muted`     | Caster misses; no damage (`ctx.target = undefined`) |
+| Outcome | Base % | Log colour | Notes |
+|---|---|---|---|
+| Boosted | 10% | `accent-gold`    | 1.5× damage |
+| Hit     | 40% | `text-primary`   | Normal hit |
+| Evade   | 20% | `accent-evasion` | Target evaded; counter-eligible; no damage |
+| Fail    | 30% | `text-muted`     | Caster misses; no counter trigger; no damage |
 
 `DiceResult` carries three fields: `outcome`, `message` (flavour text built by
-`buildOutcomeMessage(outcome, actorName, targetName, tumbleDelay)`), and
+`buildOutcomeMessage(outcome, actorName, targetName)`), and
 `animKey` (React key for animation retrigger). The message is displayed in the
 `DiceResultOverlay` below the outcome name.
 
@@ -535,7 +533,7 @@ src/
 │   └── combat/
 │       ├── TickCalculator.ts      # calculateStartingTick, advanceTick, calculateApGained
 │       ├── HitChanceEvaluator.ts  # calculateFinalChance, shiftProbabilities
-│       └── DiceResolver.ts        # roll, applyOutcome, calculateTumblingDelay, resolveEvasionCounter
+│       └── DiceResolver.ts        # roll, applyOutcome, resolveCounterRoll
 ├── services/
 │   └── DataService.ts             # loadCharacterIndex, loadCharacter, loadCharacterSkillDefs,
 │                                  #   loadCharacterWithSkills, loadMode (+ per-type cache)

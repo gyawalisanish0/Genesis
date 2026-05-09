@@ -24,6 +24,12 @@ const cache = {
   tilesets:          new Map<string, TilesetDef>(),
 }
 
+// In-flight deduplication: store the pending promise so concurrent callers
+// for the same character share one fetch instead of issuing duplicate requests.
+const inflight = {
+  characters: new Map<string, Promise<CharacterDef>>(),
+}
+
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
 // Base URL from Vite. Normalize to always end with '/' so path concatenation
@@ -51,13 +57,19 @@ export async function loadCharacterIndex(): Promise<string[]> {
   return cache.characterIndex
 }
 
-export async function loadCharacter(id: string): Promise<CharacterDef> {
+export function loadCharacter(id: string): Promise<CharacterDef> {
   const cached = cache.characters.get(id)
-  if (cached) return cached
-  const raw = await fetchJson(`data/characters/${id}/main.json`)
-  const def = raw as CharacterDef
-  cache.characters.set(id, def)
-  return def
+  if (cached) return Promise.resolve(cached)
+  const existing = inflight.characters.get(id)
+  if (existing) return existing
+  const promise = fetchJson(`data/characters/${id}/main.json`).then(raw => {
+    const def = raw as CharacterDef
+    cache.characters.set(id, def)
+    inflight.characters.delete(id)
+    return def
+  })
+  inflight.characters.set(id, promise)
+  return promise
 }
 
 /** Returns all SkillDef objects owned by a character. */
@@ -228,4 +240,5 @@ export function clearCache(): void {
   cache.stages.clear()
   cache.maps.clear()
   cache.tilesets.clear()
+  inflight.characters.clear()
 }

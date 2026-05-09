@@ -5,10 +5,11 @@
 // number against an EffectContext. Pure function, no side effects.
 //
 // Resolution rules:
-//   • number           → returned as-is
-//   • { stat, percent } → caster.stats[stat] * percent / 100 by default,
-//                         target.stats[stat] when `of: "target"`
-//   • { sum: [...] }   → each sub-expression resolved and summed
+//   • number              → returned as-is
+//   • { stat, percent }   → unit.stats[stat] * percent / 100 by default,
+//                           target unit when `of: "target"`
+//                           'maxHp' / 'maxAp' resolve from unit.maxHp / unit.maxAp
+//   • { sum: [...] }      → each sub-expression resolved and summed
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { EffectContext, StatKey, ValueExpr } from './types'
@@ -18,18 +19,23 @@ const PERCENT_DIVISOR = 100
 
 export function resolveValueExpr(expr: ValueExpr, ctx: EffectContext): number {
   if (typeof expr === 'number') return expr
-  if ('sum' in expr) return expr.sum.reduce<number>((acc, sub) => acc + resolveValueExpr(sub, ctx), 0)
+  if ('sum'                in expr) return expr.sum.reduce<number>((acc, sub) => acc + resolveValueExpr(sub, ctx), 0)
+  if ('secondary'          in expr) return ctx.caster.secondaryResource * expr.secondary
+  if ('globalApSpentPercent' in expr) return (ctx.globalApSpentPool ?? 0) * expr.globalApSpentPercent / PERCENT_DIVISOR
   return resolveStatExpr(expr.stat, expr.percent, expr.of, ctx)
 }
 
 function resolveStatExpr(
-  stat:    StatKey,
+  stat:    StatKey | 'maxHp' | 'maxAp',
   percent: number,
   of:      'caster' | 'target' | undefined,
   ctx:     EffectContext,
 ): number {
   const source = pickStatSource(of ?? 'caster', ctx)
-  return (source.stats[stat] * percent) / PERCENT_DIVISOR
+  const raw    = stat === 'maxHp' ? source.maxHp
+               : stat === 'maxAp' ? source.maxAp
+               : source.stats[stat]
+  return (raw * percent) / PERCENT_DIVISOR
 }
 
 function pickStatSource(of: 'caster' | 'target', ctx: EffectContext): Unit {

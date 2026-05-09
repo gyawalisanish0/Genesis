@@ -41,8 +41,12 @@ export type Tag =
   | 'special'
   | 'awakened'
   | 'misc'
-  | 'counter'        // standard reactive counter — triggers on Evasion
+  | 'counter'        // standard reactive counter — triggers on Evade
   | 'uniqueCounter'  // character-specific counter with custom effects; same dice + chain rules
+  | 'basic'          // default attack — no AP cost, always available
+  | 'movement'       // repositioning / tick displacement skills
+  | 'tempo'          // tick-synergy skills — effects tied to timeline timing or position
+  | 'hyper'          // skill has a conditional hyper-mode variant with alternate cooldown/effects
 
 // ── ValueExpr — the only mini-syntax ─────────────────────────────────────────
 
@@ -50,11 +54,18 @@ export type Tag =
  * A numeric field that may either be a flat value or a reference to a
  * character stat scaled by a percent. This is the ONLY expression form
  * in the contract — no DSL, no parser, no runtime eval.
+ *
+ * In addition to the six combat stats, 'maxHp' and 'maxAp' are valid
+ * pool references resolved directly from the Unit (not from StatBlockDef).
  */
 export type ValueExpr =
   | number
-  | { stat: StatKey; percent: number; of?: 'caster' | 'target' }
+  | { stat: StatKey | 'maxHp' | 'maxAp'; percent: number; of?: 'caster' | 'target' }
   | { sum: ValueExpr[] }
+  /** Reads caster.secondaryResource and multiplies by `secondary`. */
+  | { secondary: number }
+  /** Reads the global AP spent pool accumulated since the last passive trigger for this unit. */
+  | { globalApSpentPercent: number }
 
 // ── WhenClause — trigger events ──────────────────────────────────────────────
 
@@ -80,6 +91,9 @@ export type WhenClause =
   | { event: 'onApChange' }
   | { event: 'onBattleStart' }
   | { event: 'onBattleEnd' }
+  | { event: 'onApSpent' }
+  /** Fires on a global battle-tick interval — N ticks of battle time since last trigger. */
+  | { event: 'onBattleTickInterval'; interval: number }
 
 export type EventName = WhenClause['event']
 
@@ -102,6 +116,7 @@ export type Condition =
   | { selfHasStatus: string }   // checks ctx.caster's status slots
   | { hasTag: string }
   | { diceOutcome: DiceOutcome }
+  | { apAccumGte: number }
   | { not: Condition }
   | { all: Condition[] }
   | { any: Condition[] }
@@ -162,16 +177,42 @@ export type Effect =
   | (EffectBase & { type: 'damage';            amount: ValueExpr; damageType?: string })
   | (EffectBase & { type: 'heal';              amount: ValueExpr })
   | (EffectBase & { type: 'tickShove';         amount: number })
-  | (EffectBase & { type: 'gainAp';            amount: number })
+  | (EffectBase & { type: 'gainAp';            amount: ValueExpr })
   | (EffectBase & { type: 'spendAp';           amount: number })
-  | (EffectBase & { type: 'modifyStat';        stat: StatKey; delta: number; duration: ModDuration })
-  | (EffectBase & { type: 'applyStatus';       status: string; duration?: number; chance?: number; shieldPercent?: number; penaltyWindowTurns?: number })
+  | (EffectBase & { type: 'modifyStat'; stat: StatKey; delta?: number; deltaPercent?: number; duration: ModDuration })
+  | (EffectBase & {
+      type:                  'applyStatus'
+      status:                string
+      duration?:             number
+      chance?:               number
+      shieldPercent?:        number
+      shieldFlat?:           number
+      /** Shield amount as a ValueExpr — resolved against the effect context at apply time. */
+      shieldValue?:          ValueExpr
+      /** Companion status applied alongside this one (e.g. penalty window alongside a shield). */
+      companionStatus?:      string
+      companionDuration?:    number
+      /** When the shield breaks, apply a tick cooldown to this skill on the shield owner. */
+      onBreakTickCooldown?:  { skillId: string; ticks: number }
+      /** Prevents the skill with this ID from being re-cast while this status is active. */
+      blocksRecastOfSkill?:  string
+      rangedBaseChanceBonus?: number
+    })
   | (EffectBase & { type: 'removeStatus';      status?: string; tag?: string })
   | (EffectBase & { type: 'shiftProbability';  outcome: DiceOutcome; delta: number })
   | (EffectBase & { type: 'rerollDice';        outcome?: DiceOutcome; uses: number; perBattle?: boolean })
   | (EffectBase & { type: 'forceOutcome';      outcome: DiceOutcome })
   | (EffectBase & { type: 'triggerSkill';      skillId: string; ignoreCost?: boolean })
-  | (EffectBase & { type: 'secondaryResource'; delta: number })
+  | (EffectBase & {
+      type:   'secondaryResource'
+      /** Flat amount or [min, max] inclusive random range to add. Ignored when `set` is provided. */
+      delta?: number | [number, number]
+      /** Cap after addition. */
+      max?:   number
+      /** If present, sets secondaryResource to this exact value (overrides delta). */
+      set?:   number
+    })
+  | (EffectBase & { type: 'resetApAccum' })
 
 /** Discriminator union of all primitive `type` values. */
 export type EffectType = Effect['type']
@@ -238,6 +279,23 @@ export interface SkillDef {
 export type StatusStacking = 'refresh' | 'extend' | 'stack' | 'independent'
 
 /**
+ * Dodge configuration declared on a status def. Copied to the status slot
+ * payload at apply time so BattleContext can resolve dodge without ID checks.
+ */
+export interface DodgeConfig {
+  /** Dodge chance applied to all attack types. */
+  allChance?:        number
+  /** Dodge chance applied to melee attacks only. */
+  meleeChance?:      number
+  /** Dodge chance applied to ranged attacks only. */
+  rangedChance?:     number
+  /** Consume one stack per incoming hit attempt regardless of dodge result. */
+  consumeOnAttempt?: boolean
+  /** Consume one stack only when a dodge succeeds. */
+  consumeOnSuccess?: boolean
+}
+
+/**
  * Status definition — the JSON file under public/data/statuses/<id>.json.
  */
 export interface StatusDef {
@@ -250,6 +308,10 @@ export interface StatusDef {
   /** Base duration in ticks; may be overridden by the applying skill. */
   duration:   number
   tags?:      string[]
+  /** Skill tags that are locked while this status is active on the unit. */
+  blockedTags?: string[]
+  /** Dodge behaviour copied to slot payload at apply time. */
+  dodgeConfig?: DodgeConfig
   effects:    Effect[]
 }
 
@@ -348,6 +410,10 @@ export interface EffectContext {
   event:    WhenClause
   /** Present during onDiceRoll / onHit / onAfterHit. */
   dice?:    DiceOutcome
+  /** Current global battle tick — passed when effects that initialise status intervals are applied. */
+  currentTick?: number
+  /** AP accumulated by all units since the last onBattleTickInterval trigger for this caster. */
+  globalApSpentPool?: number
 }
 
 // ── Effect handler signature ─────────────────────────────────────────────────

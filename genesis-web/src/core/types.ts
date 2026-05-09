@@ -1,5 +1,13 @@
 // ── Static definitions — loaded from JSON via DataService ─────────────────────
 
+export type ClassName =
+  | 'Warrior'
+  | 'Caster'
+  | 'Hunter'
+  | 'Guardian'
+  | 'Ranger'
+  | 'Enchanter'
+
 export interface StatBlockDef {
   strength:   number  // Physical damage output
   endurance:  number  // Max HP and physical defence
@@ -23,12 +31,14 @@ export interface CharacterDef {
   type:          'character'
   id:            string
   name:          string
-  className:     string
+  /** Combat role — also the display class name shown in the UI. */
+  className:     ClassName
   rarity:        number
   stats:         StatBlockDef
   maxHp:         number
   maxAp:         number
   apRegenRate:   number
+  startingAp?:   number
   passive:       string | null
   skillPath:     string
   clash?:        CharacterClashDef
@@ -99,15 +109,15 @@ export interface StatusEffect {
   stacks:       number
   /** Custom per-status payload (shield HP, dodge config, etc.). */
   payload:      Record<string, unknown>
-  /** Turns elapsed since last onTickInterval fire. Resets when interval threshold is crossed. */
-  ticksSinceInterval: number
+  /** Absolute battle tick at which the next onTickInterval fires. 0 = no interval effect. */
+  nextIntervalFireTick: number
 }
 
 export interface Unit {
   id:           string   // unique runtime id (crypto.randomUUID())
   defId:        string   // CharacterDef.id this was created from
   name:         string
-  className:    string
+  className:    ClassName
   rarity:       number
   stats:        StatBlockDef
   maxHp:        number
@@ -121,6 +131,10 @@ export interface Unit {
   clashUniqueEnabled:  boolean  // true → activates QTE path when this unit is in a clash
   skills:              SkillInstance[]
   statusSlots:         StatusEffect[]
+  /** Per-character accumulator for mechanics like Power Surge. Starts at 0; bounded by the skill/passive max. */
+  secondaryResource:   number
+  /** Tracks cumulative AP spent this session for passive procs like Precise Calibration. Resets on proc. */
+  apSpentAccum:        number
   isAlly:              boolean
 }
 

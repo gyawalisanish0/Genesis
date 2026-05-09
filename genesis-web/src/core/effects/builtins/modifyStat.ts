@@ -14,9 +14,12 @@ type ModifyStatEffect = Extract<Effect, { type: 'modifyStat' }>
 
 const handle: EffectHandler<ModifyStatEffect> = (effect, ctx) => {
   for (const target of resolveRecipients(ctx)) {
+    const flat = effect.deltaPercent !== undefined
+      ? Math.floor(target.stats[effect.stat] * effect.deltaPercent / 100)
+      : (effect.delta ?? 0)
     const updated: Unit = {
       ...target,
-      stats: { ...target.stats, [effect.stat]: target.stats[effect.stat] + effect.delta },
+      stats: { ...target.stats, [effect.stat]: target.stats[effect.stat] + flat },
     }
     ctx.battle.setUnit(updated)
   }

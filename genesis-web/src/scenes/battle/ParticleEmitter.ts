@@ -8,12 +8,10 @@ import { tokenToHex } from '../BattleScene'
 export const PARTICLE_KEY = 'battle_particle'
 
 const BURST: Record<string, { count: number; colour: string; speed: number }> = {
-  Boosted:  { count: 22, colour: 'var(--accent-gold)',    speed: 160 },
-  Success:  { count: 12, colour: 'var(--accent-danger)',  speed: 110 },
-  GuardUp:  { count: 10, colour: 'var(--accent-info)',    speed:  90 },
-  Tumbling: { count: 12, colour: 'var(--accent-warn)',    speed: 110 },
-  Evasion:  { count:  8, colour: 'var(--accent-evasion)', speed:  80 },
-  Fail:     { count:  5, colour: 'var(--text-muted)',     speed:  50 },
+  Boosted: { count: 22, colour: 'var(--accent-gold)',    speed: 160 },
+  Hit:     { count: 12, colour: 'var(--accent-danger)',  speed: 110 },
+  Evade:   { count:  8, colour: 'var(--accent-evasion)', speed:  80 },
+  Fail:    { count:  5, colour: 'var(--text-muted)',     speed:  50 },
 }
 
 export class ParticleEmitter {

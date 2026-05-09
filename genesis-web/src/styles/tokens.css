@@ -13,7 +13,7 @@
 
   /* ── Accent ──────────────────────────────────────────────────────────── */
   --accent-genesis: #8b5cf6;  /* primary brand, active states, timeline     */
-  --accent-gold:    #f59e0b;  /* boosted outcome, rarity 5 / legendary      */
+  --accent-gold:    #f59e0b;  /* boosted outcome, rarity 5 / Master         */
   --accent-info:    #3b82f6;  /* AP bar, information                        */
   --accent-heal:    #10b981;  /* healing, positive buffs                    */
   --accent-warn:    #f97316;  /* tumbling outcome, guard up                 */
@@ -27,13 +27,13 @@
   --text-on-accent:  #ffffff;  /* text on coloured buttons / filled badges  */
 
   /* ── Rarity colours ──────────────────────────────────────────────────── */
-  --rarity-1: #6b7280;  /* Common    */
-  --rarity-2: #10b981;  /* Uncommon  */
-  --rarity-3: #3b82f6;  /* Rare      */
-  --rarity-4: #8b5cf6;  /* Epic      */
-  --rarity-5: #f59e0b;  /* Legendary */
-  --rarity-6: #f97316;  /* Mythic    */
-  /* Rarity 7 (Omega) is a gradient — apply inline: linear-gradient(135deg, #8b5cf6, #f59e0b) */
+  --rarity-1: #6b7280;  /* Normal  */
+  --rarity-2: #10b981;  /* Advance */
+  --rarity-3: #3b82f6;  /* Super   */
+  --rarity-4: #8b5cf6;  /* Epic    */
+  --rarity-5: #f59e0b;  /* Master  */
+  --rarity-6: #f97316;  /* Legend  */
+  /* Rarity 7 (OMEGA) is a gradient — apply inline: linear-gradient(135deg, #8b5cf6, #f59e0b) */
 
   /* ── Typography ──────────────────────────────────────────────────────── */
   --font-sans: 'Nunito', system-ui, -apple-system, sans-serif;

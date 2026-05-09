@@ -37,7 +37,7 @@
     {
       "entityId": "patrol_guard_a",
       "type": "enemy",
-      "defId": "hunter_001",
+      "defId": "husty_001",
       "x": 3, "y": 3,
       "patrol": [
         { "x": 3, "y": 3 },
@@ -51,7 +51,7 @@
     {
       "entityId": "patrol_guard_b",
       "type": "enemy",
-      "defId": "hunter_001",
+      "defId": "husty_001",
       "x": 1, "y": 3,
       "patrol": [
         { "x": 1, "y": 3 },

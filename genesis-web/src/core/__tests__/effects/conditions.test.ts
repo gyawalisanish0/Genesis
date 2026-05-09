@@ -10,7 +10,7 @@ function ctx(opts: { casterHp?: number; targetHp?: number; targetStatusId?: stri
     hp: opts.targetHp ?? 100,
     isAlly: false,
     statusSlots: opts.targetStatusId
-      ? [{ id: opts.targetStatusId, name: 'x', duration: 1, source: 'test' }]
+      ? [{ id: opts.targetStatusId, name: 'x', duration: 1, durationUnit: 'ticks' as const, source: 'test', stacks: 1, payload: {}, nextIntervalFireTick: 0 }]
       : [],
   })
   return {
@@ -50,10 +50,10 @@ describe('evaluateCondition', () => {
       battle: makeBattleState([c]),
       source: 'skill',
       event:  { event: 'onDiceRoll' },
-      dice:   'Tumbling',
+      dice:   'Evade',
     }
-    expect(evaluateCondition({ diceOutcome: 'Tumbling' }, base)).toBe(true)
-    expect(evaluateCondition({ diceOutcome: 'Boosted'  }, base)).toBe(false)
+    expect(evaluateCondition({ diceOutcome: 'Evade'   }, base)).toBe(true)
+    expect(evaluateCondition({ diceOutcome: 'Boosted' }, base)).toBe(false)
   })
 
   it('boolean composition: not / all / any', () => {

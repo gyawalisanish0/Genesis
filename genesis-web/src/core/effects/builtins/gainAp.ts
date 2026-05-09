@@ -4,14 +4,16 @@
 
 import { gainAp as gainApUnit }  from '../../unit'
 import { registerEffect }        from '../registry'
+import { resolveValueExpr }      from '../resolveValue'
 import type { Effect, EffectContext, EffectHandler } from '../types'
 import type { Unit } from '../../types'
 
 type GainApEffect = Extract<Effect, { type: 'gainAp' }>
 
 const handle: EffectHandler<GainApEffect> = (effect, ctx) => {
+  const amount = Math.floor(resolveValueExpr(effect.amount, ctx))
   for (const target of resolveRecipients(ctx)) {
-    ctx.battle.setUnit(gainApUnit(target, effect.amount))
+    ctx.battle.setUnit(gainApUnit(target, amount))
   }
 }
 

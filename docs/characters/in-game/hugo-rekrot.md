@@ -8,7 +8,8 @@
 | Profession | Material Engineer |
 | Combat Role | Front-line suit fighter |
 | Rarity | 4 |
-| Affiliation | Sekkar Peace Fleet — Commander's deployed team, Mars mission |
+| Affiliation (game) | Commander's deployed team, Mars mission |
+| Affiliation (2099–2109) | Sekkarian Defense Force — Fleet 13, Team 6 |
 | Data ID | `hugo_001` |
 
 First playable character in Genesis.
@@ -28,7 +29,7 @@ delay. The nanites respond to intent.
 ANBOT was drafted at the military contracting firm where Hugo first worked after
 graduation. He walked away from the firm — and from the people who wanted to
 weaponise it — before it could be taken from him. He finished it on his own terms
-inside the Sekkar Peace Fleet.
+inside the Sekkarian Defense Force.
 
 ---
 
@@ -109,7 +110,7 @@ of most of his friction.
 4. Realises what a weapon like that becomes in military hands — decides to walk
 5. His best friend and colleague tries to convince him to stay, citing fame and
    wealth they could achieve together. Hugo refuses.
-6. Leaves the firm. First contact with the Sekkar Peace Fleet is not a
+6. Leaves the firm. First contact with the Sekkarian Defense Force is not a
    recruitment — it is an abduction. They detected the ANBOT draft and treated
    it as a threat.
 7. Eventually earns his place in the fleet. Finishes ANBOT fully there, on his
@@ -152,7 +153,7 @@ Sense available is a genuine crisis for the opponent.
 
 | Field | Value |
 |---|---|
-| AP Cost | 15 |
+| AP Cost | 12 |
 | TU Cost | 8 |
 | Damage | 60% STR (physical, melee) |
 | Max Level | 5 |
@@ -188,7 +189,7 @@ prevents spam — use it when a big window opens, not as a rotation filler.
 | AP Cost | 20 |
 | TU Cost | 6 |
 | Shield | 25% of current HP |
-| Regen | 56 HP every 10 of Hugo's own turns while shield is active |
+| Regen | 4% max HP every 10 ticks while shield is active |
 | Break Penalty | If shield breaks within 9 turns of cast: overflow damage is doubled |
 | Cooldown | 48 ticks — starts on shield break, not on activation |
 | Restriction | Cannot cast while shield is already active |
@@ -216,16 +217,18 @@ Active when Primal Awareness is **not** running.
 |---|---|
 | AP Cost | 10 |
 | TU Cost | 7 |
-| Effect | 30% dodge chance vs all ranged attacks for 15 ticks |
+| Effect | 30% dodge chance vs ranged attacks |
+| Duration | 15 ticks — 2 dodge charges |
 | Cooldown | 20 ticks |
 
-Solid utility option in the early and mid fight. Low cost, ranged coverage,
-regular cooldown. Use freely.
+Grants 2 dodge charges. Each successful ranged dodge consumes one charge.
+When both charges are spent the status expires. Use freely in the early and
+mid fight — the charges are the resource that unlocks Hyper Mode later.
 
 #### Hyper Mode
 Replaces Normal Mode when **both** conditions are met:
 - Primal Awareness is active (HP below 10%)
-- Fewer than 2 dodge points remaining
+- Fewer than 2 dodge charges remain on the Normal Mode status (at least one ranged dodge already absorbed)
 
 Action grid shows **Hyper Sense ★** with updated costs when this unlocks.
 
@@ -234,11 +237,14 @@ Action grid shows **Hyper Sense ★** with updated costs when this unlocks.
 | AP Cost | 20 |
 | TU Cost | 6 |
 | Effect | 90% melee dodge / 50% ranged dodge for the Primal Awareness duration |
-| On Expiry | Counter: 200% Power energy damage |
+| On Expiry | Counter: 200% Power energy damage (energy, ranged) |
 | Cooldown | 8 turns (shared slot — overwrites Normal Mode cooldown) |
 
-The counter on expiry is automatic. The Hyper Mode window ending is itself
-the trigger.
+The counter on expiry is automatic and always hits — it bypasses the dice
+pipeline entirely. The Hyper Mode window ending is itself the trigger.
+
+The intended sequence: cast Normal Mode early → absorb a ranged hit → enter
+Primal Awareness at critical HP → Hyper Mode unlocks on the next Hyper Sense cast.
 
 ---
 
@@ -278,19 +284,14 @@ before the safety net resets.
 | `hugo_001_shelling_point_penalty_window` | Shelling Point | 9-turn penalty window — break during this doubles overflow damage |
 | `hugo_001_primal_awareness_dodge` | Primal Awareness | 5-stack dodge at 70% per hit attempt, consumed per attempt |
 | `hugo_001_ap_regen_freeze` | Primal Awareness | Halts AP regen for 3 turns |
-| `hugo_001_hyper_sense_ranged_dodge` | Hyper Sense (Normal) | 30% ranged dodge for 15 ticks |
-| `hugo_001_hyper_sense_hyper_active` | Hyper Sense (Hyper) | 90% melee / 50% ranged dodge + onExpire 200% Power counter |
+| `hugo_001_hyper_sense_ranged_dodge` | Hyper Sense (Normal) | 30% ranged dodge; 2 stacks — each successful dodge consumes 1; expires at 0 |
+| `hugo_001_hyper_sense_hyper_active` | Hyper Sense (Hyper) | 90% melee / 50% ranged dodge; onExpire fires 200% Power energy counter (always hits) |
 
 ---
 
 ## Engine Implementation Notes
 
-All core mechanics are wired. Remaining known approximation:
-
-| Item | Note |
-|---|---|
-| Shelling Point regen amount | Currently flat 56 HP. Should be 4% of maxHp — needs maxHp as a ValueExpr stat key |
-| onTickInterval timing | Fires per Hugo's own turns, not per battle tick. Accurate when the battle is mostly sequential; may drift in multi-unit fights |
+All core mechanics are fully wired. No known approximations.
 
 ---
 

@@ -1,0 +1,160 @@
+[
+  {
+    "type": "skill",
+    "id": "tara_001_basic_attack",
+    "name": "Orb Strike",
+    "description": "A focused pulse of Yellow Orb energy.",
+    "tuCost": 9,
+    "apCost": 0,
+    "tags": ["basic", "energy", "ranged"],
+    "maxLevel": 1,
+    "targeting": {
+      "selector": "enemy",
+      "range": "ranged"
+    },
+    "resolution": {
+      "baseChance": 1.0
+    },
+    "effects": [
+      {
+        "when": { "event": "onCast" },
+        "type": "damage",
+        "amount": { "stat": "power", "percent": 33 },
+        "damageType": "energy"
+      }
+    ],
+    "levelUpgrades": []
+  },
+  {
+    "type": "skill",
+    "id": "tara_001_intell_of_goddess",
+    "name": "Intell of Goddess",
+    "description": "The Order half extends outward — a structured field that absorbs. Applies a 20% Tara max HP shield to all allies and self. Grants +40% dodge chance to self for 15 ticks.",
+    "tuCost": 5,
+    "apCost": 30,
+    "tickCooldown": 40,
+    "tags": ["utility", "energy"],
+    "maxLevel": 1,
+    "targeting": {
+      "selector": "all-allies",
+      "range": "global"
+    },
+    "resolution": {
+      "baseChance": 1.0
+    },
+    "effects": [
+      {
+        "id": "tara_001_goddess_shield_effect",
+        "when": { "event": "onCast" },
+        "type": "applyStatus",
+        "status": "tara_001_goddess_shield",
+        "shieldValue": { "stat": "maxHp", "percent": 20, "of": "caster" }
+      },
+      {
+        "id": "tara_001_goddess_dodge_effect",
+        "when": { "event": "onCast" },
+        "type": "applyStatus",
+        "target": "self",
+        "status": "tara_001_goddess_dodge"
+      }
+    ],
+    "levelUpgrades": []
+  },
+  {
+    "type": "skill",
+    "id": "tara_001_chaotic_vortex",
+    "name": "Chaotic Vortex",
+    "description": "The Chaos half reaches into the timeline and pulls. Shoves all enemies forward 4 ticks. One randomly chosen enemy takes 66% Power energy damage.",
+    "tuCost": 12,
+    "apCost": 25,
+    "turnCooldown": 8,
+    "tags": ["energy", "ranged"],
+    "maxLevel": 1,
+    "targeting": {
+      "selector": "all-enemies",
+      "range": "global"
+    },
+    "resolution": {
+      "baseChance": 1.0
+    },
+    "effects": [
+      {
+        "id": "tara_001_vortex_shove",
+        "when": { "event": "onCast" },
+        "type": "tickShove",
+        "amount": 4
+      },
+      {
+        "id": "tara_001_vortex_damage",
+        "when": { "event": "onCast" },
+        "target": "random-enemy",
+        "type": "damage",
+        "amount": { "stat": "power", "percent": 66 },
+        "damageType": "energy"
+      }
+    ],
+    "levelUpgrades": []
+  },
+  {
+    "type": "skill",
+    "id": "tara_001_change_of_order",
+    "name": "Change of Order",
+    "description": "For a moment, the rules of the battlefield are not what they were. Applies HP/AP role swap to all enemies for 15 ticks. Incoming damage drains AP; skill casts cost HP.",
+    "tuCost": 12,
+    "apCost": 18,
+    "tickCooldown": 35,
+    "tags": ["utility", "energy"],
+    "maxLevel": 1,
+    "targeting": {
+      "selector": "all-enemies",
+      "range": "global"
+    },
+    "resolution": {
+      "baseChance": 1.0
+    },
+    "effects": [
+      {
+        "id": "tara_001_order_swap_effect",
+        "when": { "event": "onCast" },
+        "type": "applyStatus",
+        "status": "tara_001_order_swap"
+      }
+    ],
+    "levelUpgrades": []
+  },
+  {
+    "type": "skill",
+    "id": "tara_001_phoenix_burst",
+    "name": "Phoenix Burst",
+    "description": "Order finds the target. Chaos takes the rest. Deals 333% Power to a single target. Burns all enemies for 2% Power per tick for 8 ticks.",
+    "tuCost": 15,
+    "apCost": 50,
+    "turnCooldown": 12,
+    "tags": ["energy", "ranged", "special"],
+    "maxLevel": 1,
+    "targeting": {
+      "selector": "enemy",
+      "range": "ranged"
+    },
+    "resolution": {
+      "baseChance": 1.05
+    },
+    "effects": [
+      {
+        "id": "tara_001_phoenix_burst_damage",
+        "when": { "event": "onHit" },
+        "type": "damage",
+        "amount": { "stat": "power", "percent": 333 },
+        "damageType": "energy"
+      },
+      {
+        "id": "tara_001_phoenix_burn_apply",
+        "when": { "event": "onCast" },
+        "target": "all-enemies",
+        "type": "applyStatus",
+        "status": "tara_001_phoenix_burn"
+      }
+    ],
+    "levelUpgrades": []
+  }
+]

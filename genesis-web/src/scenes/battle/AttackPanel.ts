@@ -10,20 +10,16 @@ import { UnitStage }       from './UnitStage'
 import { ParticleEmitter } from './ParticleEmitter'
 
 const HIT_COLOUR: Record<string, number> = {
-  Boosted:  0xf59e0b,
-  Success:  0xef4444,
-  GuardUp:  0x3b82f6,
-  Tumbling: 0xf97316,
-  Evasion:  0x06b6d4,
-  Fail:     0x5c5480,
+  Boosted: 0xf59e0b,
+  Hit:     0xef4444,
+  Evade:   0x06b6d4,
+  Fail:    0x5c5480,
 }
 
 // Shake: [durationMs, intensity] — only applied on damaging outcomes.
 const SHAKE: Record<string, [number, number]> = {
-  Boosted:  [320, 0.024],
-  Success:  [160, 0.010],
-  GuardUp:  [120, 0.007],
-  Tumbling: [160, 0.010],
+  Boosted: [320, 0.024],
+  Hit:     [160, 0.010],
 }
 
 export class AttackPanel {
@@ -48,13 +44,13 @@ export class AttackPanel {
 
     const dx = Math.floor(this.scene.scale.width * 0.33)
 
-    if (outcome === 'Evasion') {
+    if (outcome === 'Evade') {
       // Attacker shoves and misses; target dodges simultaneously.
-      // Evasion burst fires at impact moment — at the now-empty target position.
+      // Evade burst fires at impact moment — at the now-empty target position.
       let completed = 0
       const both = () => { if (++completed >= 2) onDone() }
       this.unitStage.shoveActing(dx, () => {
-        this.particles.burst(this.unitStage.targetX(), this.unitStage.targetY(), 'Evasion')
+        this.particles.burst(this.unitStage.targetX(), this.unitStage.targetY(), 'Evade')
       }, both)
       this.unitStage.evasionDodge(both)
       return

@@ -1,25 +1,18 @@
 // Dice rolling and outcome resolution.
-// Port of app/core/combat/dice_resolver.py
 
 import {
   BOOSTED_MULTIPLIER,
-  TUMBLING_MULTIPLIER,
-  GUARD_UP_MITIGATION,
-  TUMBLING_DELAY_MIN,
-  TUMBLING_DELAY_MAX,
   COUNTER_BASE,
   COUNTER_STEP,
   COUNTER_MIN,
 } from '../constants'
 import type { DiceProbabilities } from './HitChanceEvaluator'
 
-export type DiceOutcome = 'Boosted' | 'Success' | 'Tumbling' | 'GuardUp' | 'Evasion' | 'Fail'
+export type DiceOutcome = 'Boosted' | 'Hit' | 'Evade' | 'Fail'
 
 export interface OutcomeResult {
-  output:          number   // final damage or healing value
-  tumbleDelay:     number   // extra ticks added (Tumbling only)
-  guardMitigation: number   // mitigation applied to target (GuardUp only)
-  evaded:          boolean  // true when the attack was fully evaded
+  output:  number   // final damage or healing value
+  evaded:  boolean  // true when the attack was fully evaded
 }
 
 // Weighted random selection from a probability table.
@@ -30,49 +23,21 @@ export function roll(probs: DiceProbabilities): DiceOutcome {
     cumulative += prob
     if (rand < cumulative) return outcome
   }
-  // Floating-point edge case — fall through to Success
-  return 'Success'
+  return 'Hit'
 }
 
 // Apply a dice outcome to a raw output value and produce the full result.
 export function applyOutcome(outcome: DiceOutcome, rawOutput: number): OutcomeResult {
   switch (outcome) {
     case 'Boosted':
-      return {
-        output:          Math.round(rawOutput * BOOSTED_MULTIPLIER),
-        tumbleDelay:     0,
-        guardMitigation: 0,
-        evaded:          false,
-      }
-    case 'Tumbling':
-      return {
-        output:          Math.round(rawOutput * TUMBLING_MULTIPLIER),
-        tumbleDelay:     calculateTumblingDelay(),
-        guardMitigation: 0,
-        evaded:          false,
-      }
-    case 'GuardUp':
-      return {
-        output:          rawOutput,
-        tumbleDelay:     0,
-        guardMitigation: Math.round(rawOutput * GUARD_UP_MITIGATION),
-        evaded:          false,
-      }
-    case 'Evasion':
-      return { output: 0, tumbleDelay: 0, guardMitigation: 0, evaded: true }
+      return { output: Math.round(rawOutput * BOOSTED_MULTIPLIER), evaded: false }
+    case 'Evade':
+      return { output: 0, evaded: true }
     case 'Fail':
-      return { output: 0, tumbleDelay: 0, guardMitigation: 0, evaded: false }
-    default: // 'Success'
-      return { output: rawOutput, tumbleDelay: 0, guardMitigation: 0, evaded: false }
+      return { output: 0, evaded: false }
+    default: // 'Hit'
+      return { output: rawOutput, evaded: false }
   }
-}
-
-// Random tumbling delay within [TUMBLING_DELAY_MIN, TUMBLING_DELAY_MAX].
-export function calculateTumblingDelay(): number {
-  return (
-    TUMBLING_DELAY_MIN +
-    Math.floor(Math.random() * (TUMBLING_DELAY_MAX - TUMBLING_DELAY_MIN + 1))
-  )
 }
 
 // Counter chain — chance diminishes with each recursion depth.
