@@ -7,7 +7,7 @@
 | Species | Human (Nep-Japanese) |
 | Profession | — |
 | Combat Role | Battlefield Controller |
-| Rarity | 7 (Legend) |
+| Rarity | 6 (Legend) |
 | Born | 2081 AD |
 | Affiliation (game) | — |
 | Data ID | `tara_001` |
@@ -262,14 +262,46 @@ spending heavily to fight back are directly fuelling her next Phoenix Burst.
 
 ---
 
+## Base Stats
+
+| Stat | Value |
+|---|---|
+| Class | Caster |
+| Rarity | 6 (Legend) |
+| strength | 15 |
+| endurance | 62 |
+| power | 88 |
+| resistance | 68 |
+| speed | 25 |
+| precision | 58 |
+| maxHp | 460 |
+| maxAp | 100 |
+| apRegenRate | 0.5 |
+| startingAp | 0 |
+
+Shield value per target: 20% × 460 = **92 HP**. Phoenix Burst main hit: 333% × 88 = **293 damage**.
+
+---
+
 ## Engine Implementation Notes
 
-Change of Order (HP/AP role swap) requires engine support for routing damage
-to AP and routing skill costs to HP on affected units. This is a new mechanic
-not present in Hugo or Husty's kits.
+Change of Order (HP/AP role swap) is implemented via the `hp-ap-swap` tag on
+`tara_001_order_swap`. `makeShieldedBattleState` intercepts HP reductions on
+swapped units and redirects damage to AP instead. AP cost deduction on swapped
+units is redirected to HP.
 
-Twilight Order passive fires on a tick interval rather than an event — requires
-a global AP-spend tracker that accumulates between triggers.
+Twilight Order passive uses `onBattleTickInterval` (interval 25) — fires via
+`fireBattleTickIntervalPassives` after each unit action. The `globalApAccumRef`
+accumulates all AP spent by all units; `globalApSpentPercent: 10` reads
+`(globalApAccum - baseAtLastTrigger) * 0.10`.
+
+Intell of Goddess shield uses `shieldValue: { stat: 'maxHp', percent: 20, of: 'caster' }` —
+resolved at apply time via `resolveValueExpr` so all targets receive a shield
+sized to Tara's own max HP.
+
+Phoenix Burn scales with Tara's Power via `of: 'caster'`. The `onTickInterval`
+firing context sets `caster` to the original applier (`slot.source` lookup) so
+the stat reference resolves correctly even when the burning unit is the target.
 
 ---
 

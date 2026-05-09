@@ -1,0 +1,18 @@
+{
+  "type": "status",
+  "id": "tara_001_phoenix_burn",
+  "name": "Phoenix Burn",
+  "stacking": "refresh",
+  "duration": 8,
+  "tags": ["burn", "debuff"],
+  "effects": [
+    {
+      "id": "tara_001_phoenix_burn_tick",
+      "when": { "event": "onTickInterval", "interval": 1 },
+      "target": "self",
+      "type": "damage",
+      "amount": { "stat": "power", "percent": 2, "of": "caster" },
+      "damageType": "energy"
+    }
+  ]
+}

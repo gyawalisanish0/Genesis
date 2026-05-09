@@ -1,0 +1,9 @@
+{
+  "type": "status",
+  "id": "tara_001_goddess_shield",
+  "name": "Goddess Shield",
+  "stacking": "refresh",
+  "duration": 999,
+  "tags": ["shield", "buff"],
+  "effects": []
+}

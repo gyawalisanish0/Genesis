@@ -236,8 +236,8 @@ function resolveIncomingDodge(
 
 /**
  * Builds a BattleState that intercepts HP reductions and routes them through
- * any active shield on the target unit. Returns the state plus a set that is
- * populated with the IDs of units whose shield broke during effect application.
+ * any active shield or HP/AP swap on the target unit. Returns the state plus a
+ * map populated with break metadata for any unit whose shield broke.
  */
 function makeShieldedBattleState(
   snap:          Map<string, Unit>,
@@ -249,6 +249,13 @@ function makeShieldedBattleState(
     setUnit:     (unit) => {
       const prev = snap.get(unit.id)
       if (!prev || unit.hp >= prev.hp) { snap.set(unit.id, unit); return }
+
+      // HP/AP swap: damage hits AP pool instead of HP.
+      if (prev.statusSlots.some(s => s.payload?.hpApSwapped === true)) {
+        const damage = prev.hp - unit.hp
+        snap.set(unit.id, { ...prev, ap: Math.max(0, prev.ap - damage) })
+        return
+      }
 
       const shieldSlot = prev.statusSlots.find(
         s => typeof s.payload?.shieldHp === 'number' && (s.payload.shieldHp as number) > 0,
@@ -337,6 +344,43 @@ function fireOnApSpent(
   }
   for (const effect of passive.effects) {
     if (effect.when.event === 'onApSpent') applyEffect(effect, ctx)
+  }
+}
+
+/**
+ * Fire onBattleTickInterval passive effects for any unit whose interval has elapsed.
+ * Called after each unit action; globalTick is the cumulative TU spent so far.
+ */
+function fireBattleTickIntervalPassives(
+  globalTick:    number,
+  snap:          Map<string, Unit>,
+  passiveDefs:   Map<string, PassiveDef | null>,
+  lastFireMap:   Map<string, number>,
+  lastApBaseMap: Map<string, number>,
+  globalApAccum: number,
+): void {
+  for (const [unitId, passive] of passiveDefs) {
+    if (!passive) continue
+    for (const effect of passive.effects) {
+      if (effect.when.event !== 'onBattleTickInterval') continue
+      const interval = effect.when.interval
+      const lastFire = lastFireMap.get(unitId) ?? 0
+      if (globalTick - lastFire < interval) continue
+      const unit = snap.get(unitId)
+      if (!unit || !isAlive(unit)) continue
+      const apBase = lastApBaseMap.get(unitId) ?? 0
+      const ctx: EffectContext = {
+        caster:            unit,
+        battle:            snapshotToBattleState(snap),
+        source:            'passive',
+        event:             { event: 'onBattleTickInterval', interval },
+        currentTick:       globalTick,
+        globalApSpentPool: globalApAccum - apBase,
+      }
+      applyEffect(effect, ctx)
+      lastFireMap.set(unitId, globalTick)
+      lastApBaseMap.set(unitId, globalApAccum)
+    }
   }
 }
 
@@ -466,6 +510,14 @@ export function BattleProvider({ children }: Props) {
 
   // Maps statusId → StatusDef — populated at load, used by status expiry processing.
   const statusDefsRef  = useRef<Map<string, StatusDef>>(new Map())
+
+  // Global battle-time tracker: cumulative TU spent by all units since battle start.
+  const globalBattleTickRef = useRef<number>(0)
+  // Total AP spent by all units since battle start — feeds globalApSpentPercent ValueExpr.
+  const globalApAccumRef    = useRef<number>(0)
+  // Per-unit baseline for AP accumulation at each onBattleTickInterval trigger.
+  const lastBattleIntervalFireRef  = useRef<Map<string, number>>(new Map())
+  const lastBattleIntervalApAccumRef = useRef<Map<string, number>>(new Map())
 
   // Tracks "{unitId}:{tickValue}" keys where onUnitTurnStart was already fired this turn.
   const turnStartFiredRef = useRef(new Set<string>())
@@ -1113,8 +1165,10 @@ export function BattleProvider({ children }: Props) {
         if (effect.when.event !== 'onTickInterval') continue
         const interval = (effect.when as { event: 'onTickInterval'; interval: number }).interval
         if (slot.nextIntervalFireTick === 0 || tickValue < slot.nextIntervalFireTick) continue
+        // Use the original applier as caster so 'of: caster' stat refs resolve to the applier.
+        const applier = snap.get(slot.source)
         const ctx: EffectContext = {
-          caster: casterFinal,
+          caster: applier ?? casterFinal,
           target: casterFinal,
           battle: snapshotToBattleState(snap),
           source: 'status',
@@ -1253,12 +1307,16 @@ export function BattleProvider({ children }: Props) {
     const allTargets = resolveSkillTargets(actor, skill.targeting.selector, snap, selectedTarget)
     if (!allTargets.length) return
 
-    // Deduct AP cost and track accumulated spend for passive procs.
+    // Deduct skill cost — from HP when HP/AP swap is active, otherwise from AP.
     if (skill.apCost > 0) {
       const actorSnap = snap.get(actor.id) ?? actor
-      const withAp    = addApSpent({ ...actorSnap, ap: Math.max(0, actorSnap.ap - skill.apCost) }, skill.apCost)
-      snap.set(actor.id, withAp)
-      fireOnApSpent(withAp, skill.apCost, passiveDefsRef.current.get(actor.id) ?? null, snap, tickValue)
+      const hpApSwapped = actorSnap.statusSlots.some(s => s.payload?.hpApSwapped === true)
+      const withCost = hpApSwapped
+        ? addApSpent({ ...actorSnap, hp: Math.max(0, actorSnap.hp - skill.apCost) }, skill.apCost)
+        : addApSpent({ ...actorSnap, ap: Math.max(0, actorSnap.ap - skill.apCost) }, skill.apCost)
+      snap.set(actor.id, withCost)
+      globalApAccumRef.current += skill.apCost
+      fireOnApSpent(withCost, skill.apCost, passiveDefsRef.current.get(actor.id) ?? null, snap, tickValue)
     }
 
     const primaryTarget = allTargets[0]
@@ -1339,6 +1397,14 @@ export function BattleProvider({ children }: Props) {
       }))
       setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
       registerTick(actor.id, nextTick)
+      globalBattleTickRef.current += skill.tuCost
+      fireBattleTickIntervalPassives(
+        globalBattleTickRef.current, snap,
+        passiveDefsRef.current,
+        lastBattleIntervalFireRef.current,
+        lastBattleIntervalApAccumRef.current,
+        globalApAccumRef.current,
+      )
 
       const snapEnemies = enemiesRef.current.map((e) => snap.get(e.id) ?? e)
       const deadEnemies = snapEnemies.filter((e) => !isAlive(e))
@@ -1496,6 +1562,15 @@ export function BattleProvider({ children }: Props) {
           const fromTick = aiUnit.tickPosition
           pushHistory(makeHistoryEntry(aiUnit.id, aiUnit.name, fromTick, aiUnit.isAlly))
           registerTick(aiUnit.id, advanceTick(fromTick, SKIP_TU_COST))
+          globalBattleTickRef.current += SKIP_TU_COST
+          const aiSkipSnap = makeSnapshot(currentPlayers, currentEnemies)
+          fireBattleTickIntervalPassives(
+            globalBattleTickRef.current, aiSkipSnap,
+            passiveDefsRef.current,
+            lastBattleIntervalFireRef.current,
+            lastBattleIntervalApAccumRef.current,
+            globalApAccumRef.current,
+          )
           appendLog({ text: `${aiUnit.name} is gathering strength…`, colour: 'var(--text-muted)' })
           arenaRef.current?.clearTurn()
           continue
@@ -1511,12 +1586,16 @@ export function BattleProvider({ children }: Props) {
         const allTargets = resolveSkillTargets(aiUnit, skill.targeting.selector, snap)
         if (!allTargets.length) { arenaRef.current?.clearTurn(); continue }
 
-        // Deduct AP cost and track accumulated spend for passive procs.
+        // Deduct skill cost — from HP when HP/AP swap is active, otherwise from AP.
         if (skill.apCost > 0) {
-          const aiSnap = snap.get(aiUnit.id) ?? aiUnit
-          const withAp = addApSpent({ ...aiSnap, ap: Math.max(0, aiSnap.ap - skill.apCost) }, skill.apCost)
-          snap.set(aiUnit.id, withAp)
-          fireOnApSpent(withAp, skill.apCost, passiveDefsRef.current.get(aiUnit.id) ?? null, snap, tickValue)
+          const aiSnap     = snap.get(aiUnit.id) ?? aiUnit
+          const hpApSwapped = aiSnap.statusSlots.some(s => s.payload?.hpApSwapped === true)
+          const withCost   = hpApSwapped
+            ? addApSpent({ ...aiSnap, hp: Math.max(0, aiSnap.hp - skill.apCost) }, skill.apCost)
+            : addApSpent({ ...aiSnap, ap: Math.max(0, aiSnap.ap - skill.apCost) }, skill.apCost)
+          snap.set(aiUnit.id, withCost)
+          globalApAccumRef.current += skill.apCost
+          fireOnApSpent(withCost, skill.apCost, passiveDefsRef.current.get(aiUnit.id) ?? null, snap, tickValue)
         }
 
         const primaryTarget = allTargets[0]
@@ -1563,6 +1642,14 @@ export function BattleProvider({ children }: Props) {
           const fromTick = aiUnit.tickPosition
           pushHistory(makeHistoryEntry(aiUnit.id, aiUnit.name, fromTick, aiUnit.isAlly))
           registerTick(aiUnit.id, advanceTick(fromTick, skill.tuCost))
+          globalBattleTickRef.current += skill.tuCost
+          fireBattleTickIntervalPassives(
+            globalBattleTickRef.current, snap,
+            passiveDefsRef.current,
+            lastBattleIntervalFireRef.current,
+            lastBattleIntervalApAccumRef.current,
+            globalApAccumRef.current,
+          )
 
           const arena = arenaRef.current
           arena?.hideTurnDisplay()
@@ -1643,6 +1730,15 @@ export function BattleProvider({ children }: Props) {
         : u
     ))
     registerTick(actor.id, fromTick + SKIP_TU_COST)
+    globalBattleTickRef.current += SKIP_TU_COST
+    const skipSnap = makeSnapshot(playerUnitsRef.current, enemiesRef.current)
+    fireBattleTickIntervalPassives(
+      globalBattleTickRef.current, skipSnap,
+      passiveDefsRef.current,
+      lastBattleIntervalFireRef.current,
+      lastBattleIntervalApAccumRef.current,
+      globalApAccumRef.current,
+    )
     appendLog({ text: 'You skipped your turn.' })
     arenaRef.current?.clearTurn()
   }, [phase, narrativePaused, inspectingSkill, pushHistory, registerTick, appendLog])

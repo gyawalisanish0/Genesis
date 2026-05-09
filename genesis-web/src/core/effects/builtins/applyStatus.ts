@@ -2,9 +2,10 @@
 // Looks up the StatusDef from the status registry (pre-populated at battle load).
 // Silently no-ops when the status def is not registered.
 
-import { registerEffect }  from '../registry'
-import { getStatusDef }    from '../statusRegistry'
-import { applyEffect }     from '../applyEffect'
+import { registerEffect }    from '../registry'
+import { getStatusDef }      from '../statusRegistry'
+import { applyEffect }       from '../applyEffect'
+import { resolveValueExpr }  from '../resolveValue'
 import type { Effect, EffectContext, EffectHandler, StatusDef } from '../types'
 import type { StatusEffect, Unit }                              from '../../types'
 
@@ -22,8 +23,10 @@ const handle: EffectHandler<ApplyStatusEffect> = (effect, ctx) => {
   for (const target of resolveRecipients(ctx)) {
     const payload: Record<string, unknown> = {}
 
-    // Shield initialisation — flat value or % of recipient's current HP.
-    if (effect.shieldFlat !== undefined) {
+    // Shield initialisation — ValueExpr (e.g. % of caster maxHp), flat, or % of target HP.
+    if (effect.shieldValue !== undefined) {
+      payload.shieldHp = Math.floor(resolveValueExpr(effect.shieldValue, { ...ctx, target }))
+    } else if (effect.shieldFlat !== undefined) {
       payload.shieldHp = effect.shieldFlat
     } else if (effect.shieldPercent !== undefined) {
       payload.shieldHp = Math.floor(target.hp * effect.shieldPercent / 100)

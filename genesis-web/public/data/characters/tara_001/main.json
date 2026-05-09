@@ -1,0 +1,21 @@
+{
+  "type": "character",
+  "id": "tara_001",
+  "name": "Tara Kuronage",
+  "className": "Caster",
+  "rarity": 6,
+  "stats": {
+    "strength": 15,
+    "endurance": 62,
+    "power": 88,
+    "resistance": 68,
+    "speed": 25,
+    "precision": 58
+  },
+  "maxHp": 460,
+  "maxAp": 100,
+  "apRegenRate": 0.5,
+  "startingAp": 0,
+  "passive": "tara_001_twilight_order",
+  "skillPath": "tara_path"
+}

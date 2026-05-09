@@ -1,0 +1,15 @@
+{
+  "type": "passive",
+  "id": "tara_001_twilight_order",
+  "name": "Twilight Order",
+  "description": "Every 25 ticks of battle time, Tara gains AP equal to 10% of all AP spent by all units since the last trigger. High-tempo fights fuel her economy; conservative fights starve it.",
+  "effects": [
+    {
+      "id": "tara_001_twilight_order_gain",
+      "when": { "event": "onBattleTickInterval", "interval": 25 },
+      "type": "gainAp",
+      "target": "self",
+      "amount": { "globalApSpentPercent": 10 }
+    }
+  ]
+}

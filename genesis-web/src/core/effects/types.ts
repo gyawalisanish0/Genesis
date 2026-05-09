@@ -177,7 +177,7 @@ export type Effect =
   | (EffectBase & { type: 'damage';            amount: ValueExpr; damageType?: string })
   | (EffectBase & { type: 'heal';              amount: ValueExpr })
   | (EffectBase & { type: 'tickShove';         amount: number })
-  | (EffectBase & { type: 'gainAp';            amount: number })
+  | (EffectBase & { type: 'gainAp';            amount: ValueExpr })
   | (EffectBase & { type: 'spendAp';           amount: number })
   | (EffectBase & { type: 'modifyStat'; stat: StatKey; delta?: number; deltaPercent?: number; duration: ModDuration })
   | (EffectBase & {
@@ -187,6 +187,8 @@ export type Effect =
       chance?:               number
       shieldPercent?:        number
       shieldFlat?:           number
+      /** Shield amount as a ValueExpr — resolved against the effect context at apply time. */
+      shieldValue?:          ValueExpr
       /** Companion status applied alongside this one (e.g. penalty window alongside a shield). */
       companionStatus?:      string
       companionDuration?:    number

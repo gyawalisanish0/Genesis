@@ -135,7 +135,7 @@ export const effectSchema = z.discriminatedUnion('type', [
   z.object({ ...effectCommon, type: z.literal('damage'),            amount: valueExprSchema, damageType: z.string().optional() }).strict(),
   z.object({ ...effectCommon, type: z.literal('heal'),              amount: valueExprSchema }).strict(),
   z.object({ ...effectCommon, type: z.literal('tickShove'),         amount: z.number() }).strict(),
-  z.object({ ...effectCommon, type: z.literal('gainAp'),            amount: z.number() }).strict(),
+  z.object({ ...effectCommon, type: z.literal('gainAp'),            amount: valueExprSchema }).strict(),
   z.object({ ...effectCommon, type: z.literal('spendAp'),           amount: z.number() }).strict(),
   z.object({
     ...effectCommon,
@@ -153,6 +153,7 @@ export const effectSchema = z.discriminatedUnion('type', [
     chance:               z.number().optional(),
     shieldPercent:        z.number().optional(),
     shieldFlat:           z.number().optional(),
+    shieldValue:          valueExprSchema.optional(),
     companionStatus:      z.string().optional(),
     companionDuration:    z.number().optional(),
     onBreakTickCooldown:  onBreakTickCooldownSchema.optional(),
