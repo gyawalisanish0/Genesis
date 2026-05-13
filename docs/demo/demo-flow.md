@@ -199,9 +199,9 @@ Escalation: bigger maps, more patrols, new enemy types per stage.
 | Stage 2 name and narrative beats | TBD |
 | Stage 3 name and narrative beats | TBD |
 | Kiragen controller — mechanic when neutralised | TBD |
-| Netrolume grunt stats and skill kit | TBD |
-| Netrolume elite stats and skill kit | TBD |
-| Kiragen combatant stats and skill kit | TBD |
+| Netrolume grunt stats and skill kit | ✅ Done — STR 55 END 30 SPD 45 HP 280; Hertz Beats + Basic Attack / Clawd / Quick Charge |
+| Netrolume elite stats and skill kit | ✅ Done — STR 70 END 50 SPD 40 HP 380; Hertz Beats + same 3 skills + Great Growl |
+| Kiragen combatant stats and skill kit | ✅ Passive done — Tactical Scan (Context Bar 4–8% per opponent action, 3 thresholds: dodge/deflect/crit); stats and skills TBD |
 | Kiragen controller stats and skill kit | TBD |
 | Does the Creator appear again mid-campaign or only at the end? | TBD |
 | How does the demo end — victory state, cliffhanger, or loop back to Creator? | TBD |
