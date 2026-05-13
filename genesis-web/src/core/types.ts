@@ -286,6 +286,63 @@ export interface DungeonState {
   lastSeenPositions: Record<string, { x: number; y: number }>
 }
 
+// ── Animation manifest ────────────────────────────────────────────────────────
+
+export interface AuraDef {
+  /** CSS hex or token, e.g. 'var(--accent-danger)'. Tints the white radial gradient. */
+  colour:    string
+  /** Phaser blend mode. ADD is the standard glow look. */
+  blendMode: 'ADD' | 'SCREEN' | 'MULTIPLY' | 'NORMAL'
+  /** Glow radius in canvas pixels. */
+  radius:    number
+  /** Peak opacity 0–1. */
+  alpha:     number
+  /** Optional breathing pulse. Omit for a steady glow. */
+  pulse?:    { period: number; minAlpha: number }
+  /** ms to reach peak alpha on show (default 200). */
+  fadeIn?:   number
+  /** ms to reach 0 alpha on hide (default 400). */
+  fadeOut?:  number
+}
+
+export interface AnimationStateDef {
+  frames:    number   // frame count — files 0.png … (frames-1).png in the state folder
+  frameRate: number   // playback speed in frames per second
+  repeat:    number   // -1 = loop forever, 0 = play once and hold last frame
+  aura?:     AuraDef | null  // optional glow tied to this state; null explicitly disables
+}
+
+export interface AnimationProjectileDef {
+  frames:    number
+  frameRate: number
+  speed:     number   // pixels per second across the canvas
+  scale:     number   // display scale multiplier
+}
+
+export interface AnimationManifest {
+  type:    'animations'
+  defId:   string
+  display: {
+    width:   number   // display width in canvas pixels
+    height:  number   // display height in canvas pixels
+    anchorX: number   // 0–1; 0.5 = horizontal centre
+    anchorY: number   // 0–1; 1.0 = bottom edge (character stands on floor line)
+  }
+  /** Below this HP fraction the damaged idle variant activates. */
+  idleSwapBelowHpPercent: number
+  /** How far the container shoves toward the target on a melee attack (canvas px). */
+  meleeDashDx: number
+  /** Maps skill tags to base animation state names. */
+  tagMap: Partial<Record<string, string>>
+  animations: {
+    [stateName: string]: AnimationStateDef
+  } & {
+    skills?: Record<string, AnimationStateDef>
+  }
+  /** Null = use runtime-generated orb fallback. */
+  projectile: AnimationProjectileDef | null
+}
+
 // ── App settings ───────────────────────────────────────────────────────────────
 
 export interface AppSettings {

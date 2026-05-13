@@ -1,0 +1,72 @@
+{
+  "type": "animations",
+  "defId": "hugo_001",
+  "display": {
+    "width": 160,
+    "height": 180,
+    "anchorX": 0.5,
+    "anchorY": 1.0
+  },
+  "idleSwapBelowHpPercent": 0.4,
+  "meleeDashDx": 80,
+  "tagMap": {
+    "melee": "melee_attack"
+  },
+  "animations": {
+    "idle": {
+      "frames": 6, "frameRate": 8, "repeat": -1
+    },
+    "idle_damaged": {
+      "frames": 4, "frameRate": 6, "repeat": -1,
+      "aura": {
+        "colour": "var(--accent-danger)",
+        "blendMode": "ADD",
+        "radius": 88,
+        "alpha": 0.45,
+        "pulse": { "period": 1600, "minAlpha": 0.18 },
+        "fadeIn": 300,
+        "fadeOut": 500
+      }
+    },
+    "melee_attack":         { "frames": 8,  "frameRate": 12, "repeat": 0 },
+    "melee_attack_damaged": { "frames": 8,  "frameRate": 12, "repeat": 0 },
+    "hurt":                 { "frames": 4,  "frameRate": 10, "repeat": 0 },
+    "hurt_damaged":         { "frames": 4,  "frameRate": 10, "repeat": 0 },
+    "dodge":                { "frames": 4,  "frameRate": 12, "repeat": 0 },
+    "dodge_damaged":        { "frames": 4,  "frameRate": 12, "repeat": 0 },
+    "skills": {
+      "hugo_001_basic_attack":            { "frames": 6,  "frameRate": 12, "repeat": 0 },
+      "hugo_001_nanites_slash":           { "frames": 8,  "frameRate": 12, "repeat": 0 },
+      "hugo_001_nanites_slash_damaged":   { "frames": 8,  "frameRate": 12, "repeat": 0 },
+      "hugo_001_hammer_bash":             { "frames": 10, "frameRate": 10, "repeat": 0 },
+      "hugo_001_hammer_bash_damaged":     { "frames": 10, "frameRate": 10, "repeat": 0 },
+      "hugo_001_shelling_point":          { "frames": 5,  "frameRate": 8,  "repeat": 0 },
+      "hugo_001_shelling_point_damaged":  { "frames": 5,  "frameRate": 8,  "repeat": 0 },
+      "hugo_001_hyper_sense": {
+        "frames": 6, "frameRate": 8, "repeat": 0,
+        "aura": {
+          "colour": "var(--accent-gold)",
+          "blendMode": "ADD",
+          "radius": 120,
+          "alpha": 0.75,
+          "pulse": { "period": 900, "minAlpha": 0.4 },
+          "fadeIn": 120,
+          "fadeOut": 800
+        }
+      },
+      "hugo_001_hyper_sense_damaged": {
+        "frames": 6, "frameRate": 8, "repeat": 0,
+        "aura": {
+          "colour": "var(--accent-gold)",
+          "blendMode": "ADD",
+          "radius": 120,
+          "alpha": 0.75,
+          "pulse": { "period": 900, "minAlpha": 0.4 },
+          "fadeIn": 120,
+          "fadeOut": 800
+        }
+      }
+    }
+  },
+  "projectile": null
+}

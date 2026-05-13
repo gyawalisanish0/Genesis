@@ -9,6 +9,7 @@
 
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 import Phaser from 'phaser'
+import type { AnimationManifest, AnimationProjectileDef } from '../core/types'
 import { BattleScene } from '../scenes/BattleScene'
 import styles from './BattleArena.module.css'
 
@@ -39,12 +40,27 @@ export interface TurnDisplayData {
 
 export interface BattleArenaHandle {
   // Stage 2
-  setTurnState(actingDefId: string, targetDefId: string): void
+  setTurnState(
+    actingDefId:    string,
+    targetDefId:    string,
+    actingManifest?: AnimationManifest | null,
+    targetManifest?: AnimationManifest | null,
+    isDamaged?:      { acting: boolean; target: boolean },
+  ): void
   clearTurn(): void
   // Stage 3 — phase-gated: React awaits onDone before advancing
   playDice(outcome: string, onDone: () => void): void
   skipActiveDice(): void
-  playAttack(casterId: string, targetId: string, outcome: string, damage: number, onDone: () => void): void
+  playAttack(
+    actingDefId: string,
+    targetDefId: string,
+    outcome:     string,
+    damage:      number,
+    isMelee:     boolean,
+    dashDx:      number,
+    projectile:  AnimationProjectileDef | null,
+    onDone:      () => void,
+  ): void
   playFeedback(text: string, colour: string): void
   // Stage 4 — death collapse (phase-gated: clearTurn should be called inside onDone)
   playDeath(defId: string, onDone: () => void): void
@@ -59,7 +75,7 @@ export const BattleArena = forwardRef<BattleArenaHandle>(
     const gameRef           = useRef<Phaser.Game | null>(null)
     const sceneRef          = useRef<BattleScene | null>(null)
     // Buffers a setTurnState call that arrived before Phaser was ready.
-    const pendingTurnState  = useRef<[string, string] | null>(null)
+    const pendingTurnState  = useRef<Parameters<BattleArenaHandle['setTurnState']> | null>(null)
 
     useEffect(() => {
       const container = containerRef.current
@@ -105,7 +121,8 @@ export const BattleArena = forwardRef<BattleArenaHandle>(
         game.events.once('ready', () => {
           sceneRef.current = game.scene.scenes[0] as BattleScene
           if (pendingTurnState.current) {
-            sceneRef.current.setTurnState(...pendingTurnState.current)
+            const [ad, td, am, tm, dmg] = pendingTurnState.current
+            sceneRef.current.setTurnState(ad, td, am, tm, dmg)
             pendingTurnState.current = null
           }
         })
@@ -121,11 +138,11 @@ export const BattleArena = forwardRef<BattleArenaHandle>(
     }, [])
 
     useImperativeHandle(ref, () => ({
-      setTurnState(actingDefId, targetDefId) {
+      setTurnState(actingDefId, targetDefId, actingManifest, targetManifest, isDamaged) {
         if (sceneRef.current) {
-          sceneRef.current.setTurnState(actingDefId, targetDefId)
+          sceneRef.current.setTurnState(actingDefId, targetDefId, actingManifest, targetManifest, isDamaged)
         } else {
-          pendingTurnState.current = [actingDefId, targetDefId]
+          pendingTurnState.current = [actingDefId, targetDefId, actingManifest, targetManifest, isDamaged]
         }
       },
       clearTurn() {
@@ -141,9 +158,9 @@ export const BattleArena = forwardRef<BattleArenaHandle>(
       skipActiveDice() {
         sceneRef.current?.skipActiveDice()
       },
-      playAttack(casterId, targetId, outcome, damage, onDone) {
+      playAttack(actingDefId, targetDefId, outcome, damage, isMelee, dashDx, projectile, onDone) {
         if (sceneRef.current) {
-          sceneRef.current.playAttack(casterId, targetId, outcome, damage, onDone)
+          sceneRef.current.playAttack(actingDefId, targetDefId, outcome, damage, isMelee, dashDx, projectile, onDone)
         } else {
           onDone()
         }

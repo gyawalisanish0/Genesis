@@ -289,6 +289,59 @@ before the safety net resets.
 
 ---
 
+## Animation Manifest
+
+`public/data/characters/hugo_001/animations.json` defines all battle arena animations.
+
+### Display
+
+```json
+"display": { "width": 160, "height": 180, "anchorX": 0.5, "anchorY": 1.0 }
+```
+
+- `meleeDashDx`: 80 px — how far the container shoves toward the target on melee attacks
+- `idleSwapBelowHpPercent`: 0.4 — switches to `idle_damaged` state when HP < 40%
+- `tagMap`: `{ "melee": "melee_attack" }` — maps the `melee` skill tag to `melee_attack` animation
+
+### Animation states
+
+| State | Frames | FPS | Repeat | Aura |
+|---|---|---|---|---|
+| `idle` | 6 | 8 | -1 (loop) | — |
+| `idle_damaged` | 4 | 6 | -1 (loop) | Red pulse (danger, ADD, r=88, α=0.45, period=1600ms) |
+| `melee_attack` | 8 | 12 | 0 (once) | — |
+| `melee_attack_damaged` | 8 | 12 | 0 (once) | — |
+| `hurt` | 4 | 10 | 0 (once) | — |
+| `hurt_damaged` | 4 | 10 | 0 (once) | — |
+| `dodge` | 4 | 12 | 0 (once) | — |
+| `dodge_damaged` | 4 | 12 | 0 (once) | — |
+
+### Skill animation states
+
+| Skill | Frames | FPS | Aura |
+|---|---|---|---|
+| `hugo_001_basic_attack` | 6 | 12 | — |
+| `hugo_001_nanites_slash` | 8 | 12 | — |
+| `hugo_001_nanites_slash_damaged` | 8 | 12 | — |
+| `hugo_001_hammer_bash` | 10 | 10 | — |
+| `hugo_001_hammer_bash_damaged` | 10 | 10 | — |
+| `hugo_001_shelling_point` | 5 | 8 | — |
+| `hugo_001_shelling_point_damaged` | 5 | 8 | — |
+| `hugo_001_hyper_sense` | 6 | 8 | Gold rapid-pulse (gold, ADD, r=120, α=0.75, period=900ms) |
+| `hugo_001_hyper_sense_damaged` | 6 | 8 | Gold rapid-pulse (same as above) |
+
+### Aura design rationale
+
+**`idle_damaged` aura** — red pulsing glow signals the critical HP threshold.
+The slow pulse (1600 ms) reads as danger/distress. Matches the narrative beat
+where Primal Awareness fires and Hugo goes into survival mode.
+
+**`hyper_sense` aura** — gold rapid-pulse signals an active defensive posture.
+The fast pulse (900 ms) reads as heightened alertness/energy. Matches the
+biological hyper-sensitivity of Sekkar receptors under the Hyper Sense skill.
+
+`projectile: null` — Hugo has no ranged attack; melee only.
+
 ## Engine Implementation Notes
 
 All core mechanics are fully wired. No known approximations.

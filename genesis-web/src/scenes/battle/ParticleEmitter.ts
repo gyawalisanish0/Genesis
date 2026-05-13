@@ -3,7 +3,7 @@
 // gravityY pulls particles downward after the initial radial burst.
 
 import Phaser from 'phaser'
-import { tokenToHex } from '../BattleScene'
+import { tokenToInt } from './tokens'
 
 export const PARTICLE_KEY = 'battle_particle'
 
@@ -25,7 +25,7 @@ export class ParticleEmitter {
     const cfg = BURST[outcome]
     if (!cfg) return
 
-    const colour = parseInt(tokenToHex(cfg.colour).replace('#', ''), 16)
+    const colour = tokenToInt(cfg.colour)
 
     const emitter = this.scene.add.particles(x, y, PARTICLE_KEY, {
       speed:    { min: cfg.speed * 0.3, max: cfg.speed },
