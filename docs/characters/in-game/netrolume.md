@@ -31,7 +31,17 @@ Character definitions for both Netrolume variants used in the demo campaign.
 
 ### Stats
 
-TBD — high STR, low END, moderate-high SPD consistent with glass cannon identity.
+| Stat | Value |
+|---|---|
+| STR | 55 |
+| END | 30 |
+| PWR | 5 |
+| RES | 25 |
+| SPD | 45 |
+| PRC | 40 |
+| HP | 280 |
+| AP | 80 |
+| AP Regen | 0.5 / tick |
 
 ### Skills
 
@@ -107,7 +117,17 @@ Great Growl.
 
 ### Stats
 
-TBD — higher STR and END than grunt; same class, harder to kill.
+| Stat | Value |
+|---|---|
+| STR | 70 |
+| END | 50 |
+| PWR | 5 |
+| RES | 40 |
+| SPD | 40 |
+| PRC | 48 |
+| HP | 380 |
+| AP | 90 |
+| AP Regen | 0.55 / tick |
 
 ### Skills
 
