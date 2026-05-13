@@ -11,6 +11,7 @@
 
 import Phaser from 'phaser'
 import type { AnimationManifest, AnimationProjectileDef } from '../core/types'
+import { tokenToHex }       from './battle/tokens'
 import { UnitStage }        from './battle/UnitStage'
 import { DicePanel }        from './battle/DicePanel'
 import { AttackPanel }      from './battle/AttackPanel'
@@ -24,24 +25,9 @@ import { ResolutionAdaptor }    from './battle/ResolutionAdaptor'
 
 const TOP_INSET = TURN_PANEL_RESERVE
 
-// ── Design token colour map ───────────────────────────────────────────────────
-
-const TOKEN: Record<string, string> = {
-  'var(--accent-genesis)': '#8b5cf6',
-  'var(--accent-gold)':    '#f59e0b',
-  'var(--accent-info)':    '#3b82f6',
-  'var(--accent-heal)':    '#10b981',
-  'var(--accent-warn)':    '#f97316',
-  'var(--accent-danger)':  '#ef4444',
-  'var(--accent-evasion)': '#06b6d4',
-  'var(--text-primary)':   '#f1f0ff',
-  'var(--text-secondary)': '#9b8ec4',
-  'var(--text-muted)':     '#5c5480',
-}
-
-export function tokenToHex(colour: string): string {
-  return TOKEN[colour] ?? colour
-}
+// tokenToHex is re-exported so existing importers (UnitStage, ParticleEmitter) can
+// migrate to ./battle/tokens at their own pace without a breaking change.
+export { tokenToHex }
 
 // ── BattleScene ───────────────────────────────────────────────────────────────
 

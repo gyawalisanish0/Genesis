@@ -288,10 +288,28 @@ export interface DungeonState {
 
 // ── Animation manifest ────────────────────────────────────────────────────────
 
+export interface AuraDef {
+  /** CSS hex or token, e.g. 'var(--accent-danger)'. Tints the white radial gradient. */
+  colour:    string
+  /** Phaser blend mode. ADD is the standard glow look. */
+  blendMode: 'ADD' | 'SCREEN' | 'MULTIPLY' | 'NORMAL'
+  /** Glow radius in canvas pixels. */
+  radius:    number
+  /** Peak opacity 0–1. */
+  alpha:     number
+  /** Optional breathing pulse. Omit for a steady glow. */
+  pulse?:    { period: number; minAlpha: number }
+  /** ms to reach peak alpha on show (default 200). */
+  fadeIn?:   number
+  /** ms to reach 0 alpha on hide (default 400). */
+  fadeOut?:  number
+}
+
 export interface AnimationStateDef {
   frames:    number   // frame count — files 0.png … (frames-1).png in the state folder
   frameRate: number   // playback speed in frames per second
   repeat:    number   // -1 = loop forever, 0 = play once and hold last frame
+  aura?:     AuraDef  // optional glow tied to this state
 }
 
 export interface AnimationProjectileDef {

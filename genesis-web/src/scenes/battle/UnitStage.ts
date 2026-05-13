@@ -1,22 +1,19 @@
 // UnitStage — manages the two unit figures shown during a turn.
 // Acting unit slides in from the left, target from the right.
 //
-// Figure art: if the idle/0 texture for a defId is already loaded (preloaded
-// via AnimationPlayer.preloadState in BattleScene.preload), a Phaser.Image is
-// used with the manifest's display dimensions. Otherwise a placeholder rectangle
-// is shown. No dynamic loading — art is always preloaded or absent.
+// Each figure slot owns one AuraPanel (scene-root, synced via update event).
+// The aura definition lives on AnimationStateDef.aura — no separate config.
+// Lifetime: looping states (repeat -1) keep the aura alive until the state
+// changes; play-once states (repeat 0) let the caller drive hide().
 //
-// Idle animation: after both figures finish sliding in, a subtle scale-pulse
-// keeps the arena alive while the player chooses. Cancels the moment any action
-// tween begins.
-//
-// shoveActing accepts an onImpact callback fired at the moment the attacker
-// reaches the target position, plus the existing onDone fired after the return.
+// getActingContainer / getTargetContainer expose the live container refs for
+// any external scene object that needs to sync its position to a unit.
 
 import Phaser from 'phaser'
-import { tokenToHex } from '../BattleScene'
+import { tokenToHex }   from './tokens'
 import type { AnimationManifest } from '../../core/types'
 import { AnimationPlayer, frameKey } from './AnimationPlayer'
+import { AuraPanel } from './AuraPanel'
 
 const UNIT_W        = 128
 const UNIT_H        = 92
@@ -34,6 +31,7 @@ interface FigureRef {
   animPlayer: AnimationPlayer | null
   isDamaged:  boolean
   manifest:   AnimationManifest | null
+  defId:      string
 }
 
 export class UnitStage {
@@ -46,10 +44,14 @@ export class UnitStage {
   private visible:     boolean = false
   private idleTweens:  Phaser.Tweens.Tween[] = []
   private impactTimer: Phaser.Time.TimerEvent | null = null
+  private actingAura:  AuraPanel
+  private targetAura:  AuraPanel
 
   constructor(scene: Phaser.Scene, topInset = 0) {
-    this.scene    = scene
-    this.topInset = topInset
+    this.scene      = scene
+    this.topInset   = topInset
+    this.actingAura = new AuraPanel(scene)
+    this.targetAura = new AuraPanel(scene)
   }
 
   get isVisible(): boolean { return this.visible }
@@ -58,6 +60,9 @@ export class UnitStage {
   actingY(): number { return this.acting?.container.y ?? 0 }
   targetX(): number { return this.target?.container.x ?? 0 }
   targetY(): number { return this.target?.container.y ?? 0 }
+
+  getActingContainer(): Phaser.GameObjects.Container | null { return this.acting?.container ?? null }
+  getTargetContainer(): Phaser.GameObjects.Container | null { return this.target?.container ?? null }
 
   actingIsDamaged(): boolean { return this.acting?.isDamaged ?? false }
   targetIsDamaged(): boolean { return this.target?.isDamaged ?? false }
@@ -94,29 +99,32 @@ export class UnitStage {
     this.scene.tweens.add({ targets: this.target.container, x: tx, duration: SLIDE_MS, ease: 'Back.easeOut', onComplete: afterSlide })
   }
 
-  /** Swap the idle animation to/from the damaged variant when HP crosses the threshold. */
+  /** Swap the idle animation (and aura) to/from the damaged variant. */
   setDamaged(defId: string, isDamaged: boolean): void {
-    const fig = defId === this.actingDefId ? this.acting
-              : defId === this.targetDefId ? this.target
-              : null
-    if (!fig || fig.isDamaged === isDamaged) return
+    const fig  = defId === this.actingDefId ? this.acting
+               : defId === this.targetDefId ? this.target
+               : null
+    if (!fig || fig.isDamaged === isDamaged || !fig.sprite || !fig.manifest) return
     fig.isDamaged = isDamaged
-    if (!fig.sprite || !fig.manifest) return
 
-    fig.animPlayer?.stop()
     const stateKey = isDamaged ? 'idle_damaged' : 'idle'
     const entry    = fig.manifest.animations[stateKey]
-    if (!entry) return
-    if (!this.scene.textures.exists(frameKey(defId, stateKey, 0))) return
+    if (!entry || !this.scene.textures.exists(frameKey(fig.defId, stateKey, 0))) return
 
+    fig.animPlayer?.stop()
     const player = new AnimationPlayer(this.scene, fig.sprite)
-    player.play(defId, stateKey, entry)
+    player.play(fig.defId, stateKey, entry)
     fig.animPlayer = player
+
+    this.auraFor(fig).stop()
+    if (entry.aura) this.auraFor(fig).show(entry.aura, fig.container)
   }
 
   hide(onDone?: () => void): void {
     if (!this.visible) { onDone?.(); return }
     this.stopIdle()
+    this.actingAura.hide()
+    this.targetAura.hide()
 
     const { width } = this.scene.scale
     const oldActing = this.acting
@@ -196,6 +204,7 @@ export class UnitStage {
               : null
     if (!fig) { onDone(); return }
     this.stopIdle()
+    this.auraFor(fig).hide()
 
     const c = fig.container
     this.scene.tweens.add({
@@ -211,6 +220,10 @@ export class UnitStage {
   }
 
   // ── Private helpers ────────────────────────────────────────────────────────
+
+  private auraFor(fig: FigureRef): AuraPanel {
+    return fig === this.acting ? this.actingAura : this.targetAura
+  }
 
   private startIdle(): void {
     if (!this.acting || !this.target) return
@@ -241,6 +254,8 @@ export class UnitStage {
 
   private destroyAll(): void {
     this.stopIdle()
+    this.actingAura.stop()
+    this.targetAura.stop()
     this.acting?.animPlayer?.stop()
     this.acting?.container.destroy()
     this.acting = null
@@ -259,7 +274,9 @@ export class UnitStage {
   ): FigureRef {
     const stroke   = role === 'acting' ? ACTING_STROKE : TARGET_STROKE
     const roleText = role === 'acting' ? '▲ ACTING'    : '◎ TARGET'
-    const roleTint = role === 'acting' ? tokenToHex('var(--accent-genesis)') : tokenToHex('var(--accent-danger)')
+    const roleTint = role === 'acting'
+      ? tokenToHex('var(--accent-genesis)')
+      : tokenToHex('var(--accent-danger)')
 
     const container = this.scene.add.container(0, cy)
     const bg        = this.scene.add.rectangle(0, 0, UNIT_W, UNIT_H, UNIT_BG).setStrokeStyle(2, stroke)
@@ -283,14 +300,13 @@ export class UnitStage {
       }).setOrigin(0.5))
     }
 
-    // Try to mount the sprite if idle frames are loaded.
     let sprite:     Phaser.GameObjects.Image | null = null
     let animPlayer: AnimationPlayer | null = null
 
     if (manifest) {
-      const stateKey  = damaged && manifest.animations['idle_damaged'] ? 'idle_damaged' : 'idle'
-      const entry     = manifest.animations[stateKey]
-      const firstKey  = frameKey(defId, stateKey, 0)
+      const stateKey = damaged && manifest.animations['idle_damaged'] ? 'idle_damaged' : 'idle'
+      const entry    = manifest.animations[stateKey]
+      const firstKey = frameKey(defId, stateKey, 0)
 
       if (entry && this.scene.textures.exists(firstKey)) {
         bg.setVisible(false)
@@ -301,6 +317,12 @@ export class UnitStage {
 
         animPlayer = new AnimationPlayer(this.scene, sprite)
         animPlayer.play(defId, stateKey, entry)
+
+        // Show aura for the initial state if defined.
+        if (entry.aura) {
+          const aura = role === 'acting' ? this.actingAura : this.targetAura
+          aura.show(entry.aura, container)
+        }
       }
     }
 
@@ -310,6 +332,6 @@ export class UnitStage {
       }).setOrigin(0.5))
     }
 
-    return { container, bg, sprite, animPlayer, isDamaged: damaged, manifest }
+    return { container, bg, sprite, animPlayer, isDamaged: damaged, manifest, defId }
   }
 }
