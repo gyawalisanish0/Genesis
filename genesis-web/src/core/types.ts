@@ -309,7 +309,7 @@ export interface AnimationStateDef {
   frames:    number   // frame count — files 0.png … (frames-1).png in the state folder
   frameRate: number   // playback speed in frames per second
   repeat:    number   // -1 = loop forever, 0 = play once and hold last frame
-  aura?:     AuraDef  // optional glow tied to this state
+  aura?:     AuraDef | null  // optional glow tied to this state; null explicitly disables
 }
 
 export interface AnimationProjectileDef {
