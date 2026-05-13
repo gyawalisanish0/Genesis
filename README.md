@@ -214,6 +214,7 @@ animations, particles, screen shake, death collapses. React owns all interaction
 | 4 | `ParticleEmitter` one-shot bursts per outcome · camera shake on hit · evasion dodge tween · death collapse (tilt + fade + destroy) |
 | 5 | `TurnDisplayPanel` overlaid at top of canvas — actor/target rows with Phaser `Graphics` HP/AP bars and status chips; rarity-coloured nameplates |
 | 6 | Battle log promoted to React `BattleLogOverlay` slide-up panel; `BATTLE LOG` button below arena |
+| 7 | `AnimationManifest` system — per-character `animations.json`; `AnimationPlayer` sprite loops; `AnimationResolver` fallback chain; `ProjectilePanel` for ranged attacks; `AuraPanel` radial glow; `isDamaged` idle swap; `tokens.ts` extracted to break circular dependency |
 
 ### Phase-gated animation chain
 
@@ -238,31 +239,53 @@ is never blocked by the visual layer.
 ### Design tokens in Phaser
 
 CSS custom properties are not readable by Phaser's canvas context.
-`tokenToHex()` in `BattleScene.ts` maps every design token to its hex value:
+`tokenToHex()` and `tokenToInt()` in `src/scenes/battle/tokens.ts` map every
+design token to its hex string / integer value:
 
 ```ts
+import { tokenToHex, tokenToInt } from './battle/tokens'
+
 tokenToHex('var(--accent-danger)')   // → '#ef4444'
-tokenToHex('var(--accent-gold)')     // → '#f59e0b'
+tokenToInt('var(--accent-gold)')     // → 0xf59e0b  (Phaser tint / setTint format)
 tokenToHex('var(--accent-genesis)')  // → '#8b5cf6'
 ```
 
-Particle colours, HP bar fills, rarity nameplate tints, and camera shake
+Particle colours, HP bar fills, rarity nameplate tints, aura hues, and camera shake
 intensities all pull from the same token map — one source of truth across
-React and the canvas.
+React and the canvas. `BattleScene.ts` re-exports `tokenToHex` for backward compat.
 
 ### Art upgrade path
 
-Unit figures are placeholder rectangles today. Real art slots in with zero
-architecture change:
+Art is fully manifest-driven. Three pieces are needed per character:
+
+**1. Animation manifest** — `public/data/characters/{defId}/animations.json`
+
+Declares every animation state (idle, idle_damaged, melee_attack, hurt, dodge,
+per-skill states), frame counts, frame rates, repeat behaviour, and optional
+per-state aura definitions. `DataService.loadAnimationManifest(defId)` fetches
+and caches it; returns `null` silently when absent (falls back to placeholder
+rectangle — no code change required).
+
+**2. Frame PNGs** — one folder per state
 
 ```
-public/images/characters/{defId}/idle.png   ← static illustration
-public/images/characters/{defId}/hurt.png   ← (optional) hurt frame
+public/images/characters/{defId}/
+  idle/               0.png 1.png … (N-1).png
+  idle_damaged/       0.png …
+  melee_attack/       0.png …
+  skills/
+    {skillId}/        0.png …
 ```
 
-`BattleScene.preload()` already loads `idle.png` keyed by `defId`. Swap the
-background rect in `UnitStage.buildFigure()` for `scene.add.image(0, 0, defId)`
-— all tweens, evasion slides, and death animations apply unchanged.
+`AnimationPlayer` drives a `Phaser.Time.TimerEvent` loop that swaps
+`sprite.setTexture()` each frame — no Phaser animation manager needed.
+
+**3. Projectile frames** (optional)
+
+`public/images/characters/{defId}/projectile/{i}.png` — only needed when
+`manifest.projectile` is non-null. Absent → runtime purple orb fallback.
+
+No architecture changes required at any step.
 
 ---
 
@@ -520,6 +543,7 @@ All content is JSON. Nothing is hardcoded in TypeScript.
 | `characters/{id}/skills.json` | `SkillDef[]` — full skill definitions with effects |
 | `characters/{id}/passive.json` | `PassiveDef` — passive trigger + effects |
 | `characters/{id}/dialogue.json` | `CharacterDialogueDef` — universal battle reactions |
+| `characters/{id}/animations.json` | `AnimationManifest` — display dims, frame counts, aura defs, projectile config |
 | `statuses/{id}.json` | `StatusDef` — stacking, duration, tags, tick effects, dodge config |
 | `campaign/{stageId}/stage.json` | `StageDef` — team, AI settings, player control mode |
 | `campaign/{stageId}/map.json` | `MapDef` — tilemap, entities, wave phases, fog of war |

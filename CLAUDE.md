@@ -161,13 +161,15 @@ Genesis/
 │   │   │   ├── characters/       # index.json + one subfolder per character
 │   │   │   │   ├── index.json    # ["warrior_001", "hunter_001"]
 │   │   │   │   ├── warrior_001/  # Iron Warden (Warrior, Rarity 3)
-│   │   │   │   │   ├── main.json     # CharacterDef
-│   │   │   │   │   ├── skills.json   # SkillDef[] — Slash (physical, melee)
-│   │   │   │   │   └── dialogue.json # CharacterDialogueDef — universal reactions
+│   │   │   │   │   ├── main.json        # CharacterDef
+│   │   │   │   │   ├── skills.json      # SkillDef[] — Slash (physical, melee)
+│   │   │   │   │   ├── dialogue.json    # CharacterDialogueDef — universal reactions
+│   │   │   │   │   └── animations.json  # AnimationManifest (optional)
 │   │   │   │   └── hunter_001/   # Swift Veil (Hunter, Rarity 2)
 │   │   │   │       ├── main.json
-│   │   │   │       ├── skills.json   # Arcane Bolt (energy, ranged)
-│   │   │   │       └── dialogue.json # CharacterDialogueDef — universal reactions
+│   │   │   │       ├── skills.json      # Arcane Bolt (energy, ranged)
+│   │   │   │       ├── dialogue.json    # CharacterDialogueDef — universal reactions
+│   │   │   │       └── animations.json  # AnimationManifest (optional)
 │   │   │   ├── levels/           # Level-specific narrative (one subfolder per level)
 │   │   │   │   └── story_001/
 │   │   │   │       └── narrative.json # LevelNarrativeDef — story beats, cutscenes
@@ -180,7 +182,7 @@ Genesis/
 │   │           └── mars/         # 1024×1024 individual PNGs: mars_floor.png, …
 │   └── src/
 │       ├── core/                 # Pure TS game logic — zero UI imports
-│       │   ├── types.ts          # StatBlockDef, CharacterDef, SkillDef, Unit, ModeDef, AppSettings, BattleResult, QualityTier, TilesetDef
+│       │   ├── types.ts          # StatBlockDef, CharacterDef, SkillDef, Unit, ModeDef, AppSettings, BattleResult, QualityTier, TilesetDef, AuraDef, AnimationStateDef, AnimationProjectileDef, AnimationManifest
 │       │   ├── constants.ts      # All numeric constants: tick ranges, dice params, timing thresholds, BETWEEN_TURN_PAUSE_MS, NARRATIVE_* timings, QUALITY_* thresholds, DUNGEON_ENCOUNTER_BANNER_MS, HINT_TOASTER_DURATION_MS, HINT_STORAGE_PREFIX
 │       │   ├── screen-types.ts   # ScreenId, ScreenConfig, SafeAreaMode, ScreenLifecycleHooks
 │       │   ├── unit.ts           # Immutable Unit factory + mutation helpers (createUnit, takeDamage, healUnit, incrementActionCount, …)
@@ -217,7 +219,7 @@ Genesis/
 │       │   ├── backButtonRegistry.ts  # Module-level singleton: register/unregister/invoke one handler at a time
 │       │   └── useBackButton.ts       # Hook: registers handler, pushes URL-sentinel for web popstate interception
 │       ├── services/             # Side-effectful singletons; Capacitor allowed
-│       │   ├── DataService.ts    # JSON loader: loadCharacter, loadCharacterSkillDefs, loadMode, loadCharacterWithSkills, loadCharacterDialogue, loadLevelNarrative, loadTilesetDef (all cached)
+│       │   ├── DataService.ts    # JSON loader: loadCharacter, loadCharacterSkillDefs, loadMode, loadCharacterWithSkills, loadCharacterDialogue, loadLevelNarrative, loadTilesetDef, loadAnimationManifest (all cached; loadAnimationManifest returns null silently when absent)
 │       │   ├── DisplayService.ts # Full-screen + StatusBar: Capacitor StatusBar.hide() on native; Fullscreen API on web
 │       │   ├── NarrativeService.ts # Global narrative bus: emit(), play(), subscribe(), subscribeDirect(), registerEntries(), unregisterEntries(), getAllEntries()
 │       │   ├── ResolutionService.ts # Quality tier: rAF benchmark → High/Medium/Low; localStorage persistence; stepUp(); subscribe()
@@ -239,7 +241,7 @@ Genesis/
 │       │   ├── PreBattleStepTeam.tsx     # Step 1 — character roster pick (1–2 units)
 │       │   ├── PreBattleStepItems.tsx    # Step 2 — equipment slots (stub)
 │       │   ├── BattleScreen.tsx          # Battle layout: timeline strip, arena, BATTLE LOG button, portrait col, action grid, overlays; tap-to-skip dice hotzone; player-turn action grid pulse
-│       │   ├── BattleContext.tsx         # Screen-local context: arenaRef, phase, units, log, timeline, DiceResult, inspectingSkill, skipDice, endBattle navigation, tick displacement at start, phase-gated arena animations, sequential AI timing
+│       │   ├── BattleContext.tsx         # Screen-local context: arenaRef, phase, units, log, timeline, DiceResult, inspectingSkill, skipDice, endBattle navigation, tick displacement at start, phase-gated arena animations, sequential AI timing; loads AnimationManifests per defId and passes them through setTurnState/playAttack
 │       │   ├── BattleLogOverlay.tsx      # Slide-up battle log history panel; opened by BATTLE LOG button; closed by ✕, backdrop tap, or back button; auto-scrolls to latest entry
 │       │   ├── BattleLogOverlay.module.css
 │       │   ├── DiceResultOverlay.module.css
@@ -253,12 +255,17 @@ Genesis/
 │       │   ├── RosterScreen.tsx          # Character grid with class + rarity + name filters
 │       │   └── SettingsScreen.tsx        # Audio / display / notification / account settings
 │       ├── scenes/               # Phaser 3 scenes — no React imports
-│       │   ├── BattleScene.ts    # Stages 2–5 orchestrator: unit stage, dice/attack/feedback, particles/shake/death, turn display; between-turn pause (BETWEEN_TURN_PAUSE_MS)
+│       │   ├── BattleScene.ts    # Stages 2–7 orchestrator: unit stage, dice/attack/feedback, particles/shake/death, turn display; between-turn pause (BETWEEN_TURN_PAUSE_MS); re-exports tokenToHex
 │       │   └── battle/           # BattleScene helper modules (one concern each)
+│       │       ├── tokens.ts         # tokenToHex + tokenToInt — CSS token → Phaser hex/int; extracted to break circular dep chain
 │       │       ├── TurnDisplayPanel.ts # Turn info overlay: actor (enemy-only), skill, target with HP/AP bars; slides in from top of canvas; exports TURN_PANEL_RESERVE = 200
-│       │       ├── UnitStage.ts      # Acting + target figure containers; slide, flash, dodge, collapse; topInset keeps content below TurnDisplayPanel zone
+│       │       ├── UnitStage.ts      # Acting + target figure containers; slide, flash, dodge, collapse; owns actingAura + targetAura AuraPanels; exposes getActingContainer/getTargetContainer
+│       │       ├── AnimationPlayer.ts # Per-figure sprite frame loop: frameKey/framePath helpers, play/stop/isPlaying; drives Phaser.Time.TimerEvent
+│       │       ├── AnimationResolver.ts # Attack animation fallback chain: skill-damaged → skill → tag-mapped-damaged → tag-mapped → null
+│       │       ├── AuraPanel.ts      # Scene-root radial glow: white Canvas2D gradient texture, tint=hue, scale=radius, update-listener position sync; show/hide/stop lifecycle
 │       │       ├── DicePanel.ts      # Die face spin → outcome landing animation; topInset keeps dice in content zone; skip() cancels timers and fires onDone immediately
-│       │       ├── AttackPanel.ts    # Shove tween, target flash, particle burst, camera shake
+│       │       ├── AttackPanel.ts    # Shove tween (melee) or ProjectilePanel (ranged), target flash, particle burst, camera shake
+│       │       ├── ProjectilePanel.ts # Scene-root image tweened from caster to target; onImpact fires on arrival; battle_orb fallback texture
 │       │       ├── FeedbackPanel.ts  # Rising damage/outcome text tween; topInset keeps text in content zone
 │       │       ├── ParticleEmitter.ts # One-shot burst effects per outcome; runtime-generated texture
 │       │       └── ResolutionAdaptor.ts # FPS monitor: 1-s interval; promotes quality tier after QUALITY_STEP_UP_CHECKS consecutive ≥58fps checks
@@ -485,6 +492,7 @@ public/data/characters/index.json              # character discovery list
 public/data/characters/{id}/main.json          # CharacterDef (stats, class, rarity…)
 public/data/characters/{id}/skills.json        # SkillDef[] for that character
 public/data/characters/{id}/dialogue.json      # CharacterDialogueDef — universal battle reactions (optional)
+public/data/characters/{id}/animations.json    # AnimationManifest — display dims, animation states, aura defs, projectile (optional; null return = placeholder fallback)
 public/data/campaign/index.json                # stage discovery list ["stage_001", ...]
 public/data/campaign/{stageId}/stage.json      # StageDef (playerUnits, moveRange, enemyAi, playerControl)
 public/data/campaign/{stageId}/map.json        # MapDef (tilemap, entities, wavePhase, fogOfWar, tilesetKey?)

@@ -51,6 +51,13 @@ See `docs/mechanics/party-leader.md` for the full leader/ally model.
 | 1 | `data/characters/{id}/main.json` | `CharacterDef` |
 | 2 | `data/characters/{id}/skills.json` | `SkillDef[]` |
 
+After all units are built, `BattleProvider.load()` fetches animation manifests
+in parallel for every distinct `defId` via `DataService.loadAnimationManifest(defId)`.
+Results are stored in `manifestsRef` (a `Map<string, AnimationManifest | null>`)
+and passed through `setTurnState` and `playAttack` so the arena can drive sprite
+animations and aura glows. A `null` result means no manifest exists for that
+character — the unit placeholder rectangle renders silently with no art.
+
 Skills are **character-exclusive**: `SkillDef` objects live inside the character's
 own subfolder and are not shared across characters (see content contract decision #6).
 
@@ -537,8 +544,22 @@ src/
 ├── services/
 │   └── DataService.ts             # loadCharacterIndex, loadCharacter, loadCharacterSkillDefs,
 │                                  #   loadCharacterWithSkills, loadMode (+ per-type cache)
+├── scenes/
+│   ├── BattleScene.ts              # Orchestrator; re-exports tokenToHex
+│   └── battle/
+│       ├── tokens.ts               # tokenToHex + tokenToInt (CSS token → Phaser values)
+│       ├── UnitStage.ts            # Unit figures + AnimationPlayer + AuraPanel lifecycle
+│       ├── AnimationPlayer.ts      # Per-figure sprite frame loop
+│       ├── AnimationResolver.ts    # Attack animation fallback chain
+│       ├── AuraPanel.ts            # Scene-root radial glow with update-listener position sync
+│       ├── ProjectilePanel.ts      # Ranged projectile tween
+│       ├── AttackPanel.ts          # Melee/ranged attack dispatch + impact fx
+│       ├── DicePanel.ts            # Die spin animation
+│       ├── FeedbackPanel.ts        # Rising damage text
+│       ├── ParticleEmitter.ts      # Burst effects
+│       └── TurnDisplayPanel.ts     # Turn info overlay
 └── screens/
-    ├── BattleContext.tsx           # BattleContextValue + BattleProvider
+    ├── BattleContext.tsx           # BattleContextValue + BattleProvider; loads AnimationManifests; wires manifests through arena handle
     └── BattleScreen.tsx            # UI consumers — BattleTimeline, ActionGrid, etc.
 ```
 
