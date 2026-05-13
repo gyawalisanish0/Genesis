@@ -39,7 +39,7 @@ and dungeon exploration — all data-driven from JSON.
 
 | Area | What's in |
 |---|---|
-| **Combat engine** | Tick stream · dice resolver (6 outcomes) · effects engine (15 primitives) · counter chain · AP/HP economy · cooldown system |
+| **Combat engine** | Tick stream · dice resolver (4 outcomes) · effects engine (15 primitives) · counter chain · AP/HP economy · cooldown system |
 | **Phaser arena** | 7 stages complete: unit figures · dice spin · attack animation · particles + shake · death collapse · TurnDisplayPanel · AnimationManifest system (sprite frames, aura glows, projectiles) |
 | **Characters** | 3 playable characters with full skill kits and passives |
 | **Status effects** | 14 status definitions across 3 characters — dodge stacks, AP freezes, HP/AP swap, shields, burns, buffs |
