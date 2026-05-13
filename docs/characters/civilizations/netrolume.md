@@ -42,17 +42,21 @@ is not the Netrolume's own — it is Kiragen's, transmitted through them.
 
 ## Combat Variants (Demo)
 
-Two Netrolume types appear in the Mars demo:
+Two Netrolume types appear in the Mars demo. See
+`docs/characters/in-game/netrolume.md` for full stat and skill kit design.
 
-### Netrolume Grunt
+### Netrolume Grunt (`netrolume_grunt_001`)
 The standard pack soldier. Most common enemy across all three stages.
-Fast or fragile versus moderate and steady — to be decided during stat design.
-Fights in coordination with other grunts on the map.
+**Passive — Hertz Beats:** relays 1 frequency point at battle start;
+each point reduces all action TU costs by 3. Always 3 TU faster than
+their base costs from tick 1.
 
-### Netrolume Elite
-Stronger variant — same species, heavier conditioning or longer signal exposure.
-More dangerous individually. Introduced in Stage 2, prominent in Stage 3.
-What specifically distinguishes them mechanically is TBD during stat design.
+### Netrolume Elite (`netrolume_elite_001`)
+Stronger variant — heavier signal conditioning. Introduced Stage 2,
+prominent in Stage 3.
+**Passive — Hertz Beats:** relays 2 frequency points at battle start;
+6 TU reduction. Noticeably faster than the grunt from the first tick.
+Kiragen has them locked in tighter.
 
 ---
 
