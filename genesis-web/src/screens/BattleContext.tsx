@@ -7,7 +7,7 @@ import {
   useMemo, useEffect, useRef, type ReactNode,
 } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { Unit } from '../core/types'
+import type { Unit, AnimationManifest, AnimationProjectileDef } from '../core/types'
 import type { SkillInstance, BattleState as EngineBattleState, EffectContext, TargetSelector, DodgeConfig } from '../core/effects/types'
 import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, CLASH_ANNOUNCE_MS, ENEMY_AI_DELAY_MS, COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE, BATTLE_FEEDBACK_HOLD_MS, SKIP_TU_COST } from '../core/constants'
 import { resolveTickDisplacement } from '../core/combat/TickDisplacer'
@@ -20,16 +20,23 @@ import { findCounterSkill, canCounter, isSingleTarget } from '../core/combat/Cou
 import { isOnCooldown, applyCooldown, applyTickCooldown, applyTurnCooldown } from '../core/combat/CooldownResolver'
 import { applyEffect } from '../core/effects/applyEffect'
 import { createSkillInstance, getCachedSkill } from '../core/engines/skill/SkillInstance'
-import { loadCharacterWithSkills, loadStatusDef } from '../services/DataService'
+import { loadCharacterWithSkills, loadStatusDef, loadAnimationManifest } from '../services/DataService'
 import { registerStatusDef, clearStatusRegistry }  from '../core/effects/statusRegistry'
 import type { PassiveDef, StatusDef, Effect }       from '../core/effects/types'
 import { NarrativeService } from '../services/NarrativeService'
 import { NarrativeUnits }   from '../components/NarrativeLayer'
 import type { BattleArenaHandle, TurnDisplayData } from '../components/BattleArena'
+import { resolveAttackAnimation }                  from '../scenes/battle/AnimationResolver'
 import { makeHistoryEntry } from '../core/battleHistory'
 import type { HistoryEntry } from '../core/battleHistory'
 import { useGameStore } from '../core/GameContext'
 import { SCREEN_REGISTRY, SCREEN_IDS } from '../navigation/screenRegistry'
+
+// ── Module-level helpers ──────────────────────────────────────────────────────
+
+function unitIsDamaged(unit: Unit, manifest: AnimationManifest | null): boolean {
+  return manifest ? unit.hp / unit.maxHp < manifest.idleSwapBelowHpPercent : false
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -571,7 +578,8 @@ export function BattleProvider({ children }: Props) {
   const [isPaused, setPaused]               = useState(false)
   const [narrativePaused, setNarrativePaused] = useState(false)
   const [inspectingSkill, setInspectingSkill] = useState<SkillInstance | null>(null)
-  const arenaRef = useRef<BattleArenaHandle>(null)
+  const arenaRef      = useRef<BattleArenaHandle>(null)
+  const manifestsRef  = useRef<Map<string, AnimationManifest | null>>(new Map())
   const [pendingCounterDecision, setPendingCounterDecision] = useState<CounterDecision | null>(null)
   const [pendingClash, setPendingClash]               = useState<ClashState | null>(null)
   const [pendingTeamCollision, setPendingTeamCollision] = useState<TeamCollisionState | null>(null)
@@ -624,6 +632,13 @@ export function BattleProvider({ children }: Props) {
           Promise.all(selectedTeamIds.map((id) => loadCharacterWithSkills(id))),
           Promise.all(enemyIds.map((id) => loadCharacterWithSkills(id))),
         ])
+
+        // Load animation manifests for all characters in parallel.
+        const allDefIds        = [...new Set([...selectedTeamIds, ...enemyIds])]
+        const manifestResults  = await Promise.all(allDefIds.map((id) => loadAnimationManifest(id)))
+        const manifestMap      = new Map<string, AnimationManifest | null>()
+        allDefIds.forEach((id, i) => manifestMap.set(id, manifestResults[i]))
+        manifestsRef.current = manifestMap
 
         const loadedPlayers = playerDataArr.map((d) =>
           setTickPosition(
@@ -1430,8 +1445,14 @@ export function BattleProvider({ children }: Props) {
     const feedbackText = buildFeedbackText(outcome, allTargets.length > 1 ? totalDamage : primaryDamage)
     const arena = arenaRef.current
     if (arena) {
+      const actorManifest  = manifestsRef.current.get(actor.defId) ?? null
+      const actorDamaged   = unitIsDamaged(actor, actorManifest)
+      const resolved       = actorManifest ? resolveAttackAnimation(actorManifest, skill.id, skill.tags, actorDamaged) : null
+      const isMelee        = resolved?.isMelee ?? false
+      const dashDx         = resolved?.dashDx  ?? 0
+      const projectile: AnimationProjectileDef | null = actorManifest?.projectile ?? null
       arena.playDice(outcome, () => {
-        arena.playAttack(actor.defId, primaryTarget.defId, outcome, primaryDamage, () => {
+        arena.playAttack(actor.defId, primaryTarget.defId, outcome, primaryDamage, isMelee, dashDx, projectile, () => {
           arena.playFeedback(feedbackText, outcomeColour(outcome))
           if (playerApplyTimerRef.current) clearTimeout(playerApplyTimerRef.current)
           playerApplyTimerRef.current = setTimeout(applyState, BATTLE_FEEDBACK_HOLD_MS)
@@ -1490,7 +1511,17 @@ export function BattleProvider({ children }: Props) {
       const previewTargets = resolveSkillTargets(firstAIUnit, previewSkill.targeting.selector, telegraphSnap)
       const previewTarget  = previewTargets[0] ?? null
 
-      if (previewTarget) arenaRef.current?.setTurnState(firstAIUnit.defId, previewTarget.defId)
+      if (previewTarget) {
+        const actingMf  = manifestsRef.current.get(firstAIUnit.defId) ?? null
+        const targetMf  = manifestsRef.current.get(previewTarget.defId) ?? null
+        arenaRef.current?.setTurnState(
+          firstAIUnit.defId, previewTarget.defId, actingMf, targetMf,
+          {
+            acting: unitIsDamaged(firstAIUnit, actingMf),
+            target: unitIsDamaged(previewTarget, targetMf),
+          },
+        )
+      }
 
       showTurnDisplay(
         {
@@ -1691,8 +1722,14 @@ export function BattleProvider({ children }: Props) {
         const feedbackText = buildFeedbackText(outcome, allTargets.length > 1 ? totalDamage : primaryDamage)
         const arena = arenaRef.current
         if (arena) {
+          const aiManifest   = manifestsRef.current.get(aiUnit.defId) ?? null
+          const aiDamaged    = unitIsDamaged(aiUnit, aiManifest)
+          const aiResolved   = aiManifest ? resolveAttackAnimation(aiManifest, skill.id, skill.tags, aiDamaged) : null
+          const aiIsMelee    = aiResolved?.isMelee ?? false
+          const aiDashDx     = aiResolved?.dashDx  ?? 0
+          const aiProjectile: AnimationProjectileDef | null = aiManifest?.projectile ?? null
           arena.playDice(outcome, () => {
-            arena.playAttack(aiUnit.defId, primaryTarget.defId, outcome, primaryDamage, () => {
+            arena.playAttack(aiUnit.defId, primaryTarget.defId, outcome, primaryDamage, aiIsMelee, aiDashDx, aiProjectile, () => {
               arena.playFeedback(feedbackText, outcomeColour(outcome))
               applyTimerRef.current = setTimeout(applyAIState, BATTLE_FEEDBACK_HOLD_MS)
             })
@@ -1773,7 +1810,15 @@ export function BattleProvider({ children }: Props) {
       setSelectedTarget(autoTarget)
       const activePlayer = activePlayerUnitRef.current
       if (autoTarget && activePlayer) {
-        arenaRef.current?.setTurnState(activePlayer.defId, autoTarget.defId)
+        const actingMf = manifestsRef.current.get(activePlayer.defId) ?? null
+        const targetMf = manifestsRef.current.get(autoTarget.defId) ?? null
+        arenaRef.current?.setTurnState(
+          activePlayer.defId, autoTarget.defId, actingMf, targetMf,
+          {
+            acting: unitIsDamaged(activePlayer, actingMf),
+            target: unitIsDamaged(autoTarget, targetMf),
+          },
+        )
       }
     }
   }, [])
@@ -1784,7 +1829,15 @@ export function BattleProvider({ children }: Props) {
     setShowTargetPicker(false)
     const activePlayer = activePlayerUnitRef.current
     if (activePlayer) {
-      arenaRef.current?.setTurnState(activePlayer.defId, unit.defId)
+      const actingMf = manifestsRef.current.get(activePlayer.defId) ?? null
+      const targetMf = manifestsRef.current.get(unit.defId) ?? null
+      arenaRef.current?.setTurnState(
+        activePlayer.defId, unit.defId, actingMf, targetMf,
+        {
+          acting: unitIsDamaged(activePlayer, actingMf),
+          target: unitIsDamaged(unit, targetMf),
+        },
+      )
     }
   }, [])
 

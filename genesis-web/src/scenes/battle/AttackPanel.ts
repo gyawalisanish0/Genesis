@@ -1,13 +1,17 @@
-// AttackPanel — animates acting unit toward target, applies hit effects.
-// Stage 4: camera shake on impact; particle burst on hit; evasion dodge for target.
+// AttackPanel — animates the attack sequence for both melee and ranged skills.
 //
-// Impact effects (flash, particles, shake) now fire at the moment the attacker
-// reaches the target via shoveActing's onImpact callback — not after the return.
-// Fail outcome emits a small dust puff so misses feel distinct from hits.
+// Melee: acting unit shoves toward the target (manifest-driven dashDx).
+// Ranged: a projectile travels from the acting unit to the target via ProjectilePanel.
+//
+// Impact effects (flash, particles, shake) fire at the moment of impact in
+// both paths — via shoveActing's onImpact for melee, or ProjectilePanel's
+// onImpact for ranged. Fail emits a small dust puff on both paths.
 
 import Phaser from 'phaser'
-import { UnitStage }       from './UnitStage'
-import { ParticleEmitter } from './ParticleEmitter'
+import type { AnimationProjectileDef } from '../../core/types'
+import { UnitStage }        from './UnitStage'
+import { ParticleEmitter }  from './ParticleEmitter'
+import { ProjectilePanel }  from './ProjectilePanel'
 
 const HIT_COLOUR: Record<string, number> = {
   Boosted: 0xf59e0b,
@@ -22,31 +26,53 @@ const SHAKE: Record<string, [number, number]> = {
   Hit:     [160, 0.010],
 }
 
-export class AttackPanel {
-  private scene:     Phaser.Scene
-  private unitStage: UnitStage
-  private particles: ParticleEmitter
+const DEFAULT_MELEE_DX_FRACTION = 0.33   // fallback when dashDx is 0
 
-  constructor(scene: Phaser.Scene, unitStage: UnitStage, particles: ParticleEmitter) {
-    this.scene     = scene
-    this.unitStage = unitStage
-    this.particles = particles
+export class AttackPanel {
+  private scene:           Phaser.Scene
+  private unitStage:       UnitStage
+  private particles:       ParticleEmitter
+  private projectilePanel: ProjectilePanel
+
+  constructor(
+    scene:           Phaser.Scene,
+    unitStage:       UnitStage,
+    particles:       ParticleEmitter,
+    projectilePanel: ProjectilePanel,
+  ) {
+    this.scene           = scene
+    this.unitStage       = unitStage
+    this.particles       = particles
+    this.projectilePanel = projectilePanel
   }
 
   play(
-    _casterId: string,
-    _targetId: string,
-    outcome:   string,
-    _damage:   number,
-    onDone:    () => void,
+    actingDefId: string,
+    _targetDefId: string,
+    outcome:     string,
+    _damage:     number,
+    isMelee:     boolean,
+    dashDx:      number,
+    projectile:  AnimationProjectileDef | null,
+    onDone:      () => void,
   ): void {
     if (!this.unitStage.isVisible) { onDone(); return }
 
-    const dx = Math.floor(this.scene.scale.width * 0.33)
+    if (isMelee) {
+      this.playMelee(outcome, dashDx, onDone)
+    } else {
+      this.playRanged(actingDefId, outcome, projectile, onDone)
+    }
+  }
+
+  // ── Private helpers ────────────────────────────────────────────────────────
+
+  private playMelee(outcome: string, dashDx: number, onDone: () => void): void {
+    const dx = dashDx > 0
+      ? dashDx
+      : Math.floor(this.scene.scale.width * DEFAULT_MELEE_DX_FRACTION)
 
     if (outcome === 'Evade') {
-      // Attacker shoves and misses; target dodges simultaneously.
-      // Evade burst fires at impact moment — at the now-empty target position.
       let completed = 0
       const both = () => { if (++completed >= 2) onDone() }
       this.unitStage.shoveActing(dx, () => {
@@ -57,16 +83,51 @@ export class AttackPanel {
     }
 
     this.unitStage.shoveActing(dx, () => {
-      // onImpact: fires at the moment the attacker reaches the target position.
-      if (outcome !== 'Fail') {
-        this.unitStage.flashTarget(HIT_COLOUR[outcome] ?? 0xef4444)
-        this.particles.burst(this.unitStage.targetX(), this.unitStage.targetY(), outcome)
-        const shake = SHAKE[outcome]
-        if (shake) this.scene.cameras.main.shake(shake[0], shake[1])
-      } else {
-        // Fail: small dust puff where the swing landed on empty air.
-        this.particles.burst(this.unitStage.targetX(), this.unitStage.targetY(), 'Fail')
-      }
+      this.applyImpactFx(outcome)
     }, onDone)
+  }
+
+  private playRanged(
+    actingDefId: string,
+    outcome:     string,
+    projectile:  AnimationProjectileDef | null,
+    onDone:      () => void,
+  ): void {
+    if (outcome === 'Evade') {
+      // Projectile launches but target dodges simultaneously; burst fires on miss.
+      let completed = 0
+      const both = () => { if (++completed >= 2) onDone() }
+
+      this.projectilePanel.fire(
+        actingDefId, projectile,
+        this.unitStage.actingX(), this.unitStage.actingY(),
+        this.unitStage.targetX(), this.unitStage.targetY(),
+        () => {
+          this.particles.burst(this.unitStage.targetX(), this.unitStage.targetY(), 'Evade')
+        },
+        both,
+      )
+      this.unitStage.evasionDodge(both)
+      return
+    }
+
+    this.projectilePanel.fire(
+      actingDefId, projectile,
+      this.unitStage.actingX(), this.unitStage.actingY(),
+      this.unitStage.targetX(), this.unitStage.targetY(),
+      () => { this.applyImpactFx(outcome) },
+      onDone,
+    )
+  }
+
+  private applyImpactFx(outcome: string): void {
+    if (outcome !== 'Fail') {
+      this.unitStage.flashTarget(HIT_COLOUR[outcome] ?? 0xef4444)
+      this.particles.burst(this.unitStage.targetX(), this.unitStage.targetY(), outcome)
+      const shake = SHAKE[outcome]
+      if (shake) this.scene.cameras.main.shake(shake[0], shake[1])
+    } else {
+      this.particles.burst(this.unitStage.targetX(), this.unitStage.targetY(), 'Fail')
+    }
   }
 }

@@ -3,25 +3,26 @@
 // Layer rules: no React imports; Capacitor platform check guards native paths.
 // All callers receive typed data; Zod validation is deferred to Wave C.
 
-import type { CharacterDef, ModeDef, StageDef, MapDef, TilesetDef } from '../core/types'
+import type { CharacterDef, ModeDef, StageDef, MapDef, TilesetDef, AnimationManifest } from '../core/types'
 import type { SkillDef, PassiveDef, StatusDef } from '../core/effects/types'
 import type { CharacterDialogueDef, LevelNarrativeDef } from '../core/narrative'
 
 // ── In-memory cache ───────────────────────────────────────────────────────────
 
 const cache = {
-  characterIndex:    null as string[] | null,
-  campaignIndex:     null as string[] | null,
-  characters:        new Map<string, CharacterDef>(),
-  characterSkills:   new Map<string, SkillDef[]>(),  // keyed by characterId
-  passives:          new Map<string, PassiveDef>(),   // keyed by passiveId
-  statuses:          new Map<string, StatusDef>(),    // keyed by statusId
-  modes:             new Map<string, ModeDef>(),
-  characterDialogue: new Map<string, CharacterDialogueDef>(),
-  levelNarrative:    new Map<string, LevelNarrativeDef>(),
-  stages:            new Map<string, StageDef>(),
-  maps:              new Map<string, MapDef>(),
-  tilesets:          new Map<string, TilesetDef>(),
+  characterIndex:      null as string[] | null,
+  campaignIndex:       null as string[] | null,
+  characters:          new Map<string, CharacterDef>(),
+  characterSkills:     new Map<string, SkillDef[]>(),
+  passives:            new Map<string, PassiveDef>(),
+  statuses:            new Map<string, StatusDef>(),
+  modes:               new Map<string, ModeDef>(),
+  characterDialogue:   new Map<string, CharacterDialogueDef>(),
+  levelNarrative:      new Map<string, LevelNarrativeDef>(),
+  stages:              new Map<string, StageDef>(),
+  maps:                new Map<string, MapDef>(),
+  tilesets:            new Map<string, TilesetDef>(),
+  animationManifests:  new Map<string, AnimationManifest>(),
 }
 
 // In-flight deduplication: store the pending promise so concurrent callers
@@ -226,6 +227,23 @@ export async function loadTilesetDef(key: string): Promise<TilesetDef | null> {
   }
 }
 
+/**
+ * Load a character's animation manifest.
+ * Returns null silently when absent — characters without a manifest use engine fallbacks.
+ */
+export async function loadAnimationManifest(defId: string): Promise<AnimationManifest | null> {
+  const cached = cache.animationManifests.get(defId)
+  if (cached) return cached
+  try {
+    const raw = await fetchJson(`data/characters/${defId}/animations.json`)
+    const def = raw as AnimationManifest
+    cache.animationManifests.set(defId, def)
+    return def
+  } catch {
+    return null
+  }
+}
+
 /** Test utility — clears all cached data between test cases. */
 export function clearCache(): void {
   cache.characterIndex = null
@@ -240,5 +258,6 @@ export function clearCache(): void {
   cache.stages.clear()
   cache.maps.clear()
   cache.tilesets.clear()
+  cache.animationManifests.clear()
   inflight.characters.clear()
 }
