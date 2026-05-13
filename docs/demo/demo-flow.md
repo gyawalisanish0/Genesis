@@ -130,7 +130,7 @@ Their names, classes, and personalities: TBD by designer.
 
 ## Act 5 — Mars Campaign
 
-**2–3 dungeon stages on Mars.**
+**3 dungeon stages on Mars.**
 
 The player controls the deployed team. The Commander's perspective
 appears in narrative moments — orders, updates, reactions — but the
@@ -141,17 +141,71 @@ Frequency and context: TBD.
 
 ---
 
-## Open Design Questions
+## Deployed Team
 
-These are confirmed as TBD — to be filled in before implementation:
+Fixed across all three stages:
+
+| Character | Role | Control |
+|---|---|---|
+| Hugo Rekrot (`hugo_001`) | Leader — front-line suit fighter | Player-controlled |
+| Husty (`husty_001`) | AI ally — control-and-burst caster | AI-controlled |
+| Tara Kuronage (`tara_001`) | AI ally — tempo caster | AI-controlled |
+
+`playerControl: 'single'` — only Hugo receives the player HUD.
+Husty and Tara fight on their own ticks as AI allies.
+
+---
+
+## Enemy Roster
+
+Four enemy types across the three stages. All are characters in the engine —
+same `CharacterDef` structure as player characters. `type: 'enemy'` is
+assigned by the map entity, not the character definition.
+
+| ID | Name | Type | Stages |
+|---|---|---|---|
+| `netrolume_grunt_001` | Netrolume Grunt | Netrolume (pack soldier) | 1, 2, 3 |
+| `netrolume_elite_001` | Netrolume Elite | Netrolume (heavy variant) | 2, 3 |
+| `kiragen_combatant_001` | Kiragen Combatant | Kiragen (tech-integrated soldier) | 3 |
+| `kiragen_controller_001` | Kiragen Controller | Kiragen (signal operator) | 3 |
+
+See `docs/characters/civilizations/netrolume.md` and
+`docs/characters/civilizations/kiragen.md` for species profiles.
+
+Stats and skill kits for each: TBD during character design phase.
+
+---
+
+## Stage Arc (Confirmed)
+
+| Stage | Name | Grid | Patrols | New enemies |
+|---|---|---|---|---|
+| `stage_001` | The Outpost | 8×8 | 2 | Netrolume grunt |
+| `stage_002` | TBD | 10×10 | 4 | + Netrolume elite |
+| `stage_003` | TBD | 12×12 | 6 | + Kiragen combatant + controller |
+
+Objective across all stages: reach the exit.
+Escalation: bigger maps, more patrols, new enemy types per stage.
+
+---
+
+## Open Design Questions
 
 | Question | Status |
 |---|---|
-| Nature of the threat on Mars | TBD |
-| AI assistant name + personality | TBD |
-| Deployed team — names, classes, count | TBD |
+| Nature of the threat on Mars | ✅ Kiragen, deploying Netrolume |
+| Deployed team | ✅ Hugo (leader) + Husty + Tara |
+| Stage count | ✅ 3 stages |
+| Stage 2 name and narrative beats | TBD |
+| Stage 3 name and narrative beats | TBD |
+| Kiragen controller — mechanic when neutralised | TBD |
+| Netrolume grunt stats and skill kit | TBD |
+| Netrolume elite stats and skill kit | TBD |
+| Kiragen combatant stats and skill kit | TBD |
+| Kiragen controller stats and skill kit | TBD |
 | Does the Creator appear again mid-campaign or only at the end? | TBD |
 | How does the demo end — victory state, cliffhanger, or loop back to Creator? | TBD |
+| KALI personality | TBD |
 
 ---
 
@@ -159,8 +213,12 @@ These are confirmed as TBD — to be filled in before implementation:
 
 - **The Creator**: cosmic, chaotic, curious — thinks in universes, speaks in fragments
 - **The Commander**: authoritative, strategic, briefly disoriented by the dream
-- **The AI assistant**: TBD
-- **The deployed team**: TBD
+- **KALI**: precise, professional, clinical — no speculation, only reporting
+- **Hugo**: last-stand fighter, defensive by default, precise language as shield
+- **Husty**: physicist, IQ 300+, has already reviewed everything before you ask
+- **Tara**: slowest to build, most dangerous when running — senses things others don't
+- **Netrolume**: not hostile by nature — the signal is hostile
+- **Kiragen**: measured, deliberate, system-like — they don't brawl
 - **Mars**: hostile, silent, red — something wrong that shouldn't be wrong
 
 ---

@@ -40,7 +40,23 @@ is not the Netrolume's own — it is Kiragen's, transmitted through them.
 
 ---
 
-## In Combat
+## Combat Variants (Demo)
+
+Two Netrolume types appear in the Mars demo:
+
+### Netrolume Grunt
+The standard pack soldier. Most common enemy across all three stages.
+Fast or fragile versus moderate and steady — to be decided during stat design.
+Fights in coordination with other grunts on the map.
+
+### Netrolume Elite
+Stronger variant — same species, heavier conditioning or longer signal exposure.
+More dangerous individually. Introduced in Stage 2, prominent in Stage 3.
+What specifically distinguishes them mechanically is TBD during stat design.
+
+---
+
+## In Combat (General)
 
 - Pack intelligence carries into combat — they coordinate on patrol routes
   and do not act as isolated individuals

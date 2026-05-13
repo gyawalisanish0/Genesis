@@ -8,6 +8,47 @@ this is not their first engagement with the worlds they have touched.
 
 ---
 
+## Appearance
+
+Kiragen are physically indistinguishable from humans in form — same silhouette,
+same scale, bipedal. The only visible difference is skin tone: greyish-green.
+
+This is not accidental. See the human origin note below.
+
+---
+
+## Tech Integration
+
+Kiragen soldiers are not equipped with technology — they are merged with it.
+Integrated systems, not carried weapons. The distinction between the soldier
+and the weapon does not exist. You cannot disarm a Kiragen combatant because
+there is nothing to take away.
+
+The extent and nature of this integration is not fully understood from what
+has been encountered. It is clearly advanced far beyond anything the
+Sekkarian Defense Force or the Commander's fleet fields.
+
+---
+
+## Combat Types (Demo)
+
+Two Kiragen types appear in the Mars demo:
+
+### Kiragen Combatant
+Direct combat role. Tech-integrated offensive systems. Precise and deliberate —
+fights like a system, not an animal. Likely ranged or energy-based given
+Kiragen's nature. Does not brawl.
+
+### Kiragen Controller
+Command and signal role. Maintains the radio frequency that locks Netrolume
+aggression onto targets. A priority target — what happens to commanded
+Netrolume when the controller is neutralised is a mechanic to be defined
+during combat design.
+
+Controllers fight, but differently to combatants. They are not defenceless.
+
+---
+
 ## Known Facts
 
 - **Technology:** Among the most advanced known. Extent and full capability TBD.
