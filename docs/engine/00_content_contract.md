@@ -528,7 +528,7 @@ contract version, update this document first, then update `core/` to match.
 
 ## Contract version
 
-**v0.3.0** — 6-outcome dice system live.
+**v0.3.0** — 4-outcome dice system live.
 
 `core/effects/` and `core/engines/skill/` are implemented. Six primitives are
 registered (`damage`, `heal`, `gainAp`, `spendAp`, `tickShove`, `modifyStat`).

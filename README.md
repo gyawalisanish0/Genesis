@@ -4,11 +4,11 @@
 > infinite tick stream, open effect hooks, characters that react, and a story
 > told through dialogue woven into combat.
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![Phaser](https://img.shields.io/badge/Phaser-3-8B0000?logo=phaser&logoColor=white)](https://phaser.io/)
-[![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
-[![Capacitor](https://img.shields.io/badge/Capacitor-6-119EFF?logo=capacitor&logoColor=white)](https://capacitorjs.com/)
+[![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Capacitor](https://img.shields.io/badge/Capacitor-8-119EFF?logo=capacitor&logoColor=white)](https://capacitorjs.com/)
 [![Vitest](https://img.shields.io/badge/Tested_with-Vitest-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
 
 **Target platforms:** Android and iOS (primary) · Desktop browser (secondary)  
@@ -39,8 +39,8 @@ and dungeon exploration — all data-driven from JSON.
 
 | Area | What's in |
 |---|---|
-| **Combat engine** | Tick stream · dice resolver (6 outcomes) · effects engine (15 primitives) · counter chain · AP/HP economy · cooldown system |
-| **Phaser arena** | 6 stages complete: unit figures · dice spin · attack animation · particles + shake · death collapse · TurnDisplayPanel |
+| **Combat engine** | Tick stream · dice resolver (4 outcomes) · effects engine (15 primitives) · counter chain · AP/HP economy · cooldown system |
+| **Phaser arena** | 7 stages complete: unit figures · dice spin · attack animation · particles + shake · death collapse · TurnDisplayPanel · AnimationManifest system (sprite frames, aura glows, projectiles) |
 | **Characters** | 3 playable characters with full skill kits and passives |
 | **Status effects** | 14 status definitions across 3 characters — dodge stacks, AP freezes, HP/AP swap, shields, burns, buffs |
 | **Narrative layer** | Event bus + JSON dialogue · character reactions · story cutscenes · screen flash · portrait fly-in |
@@ -53,14 +53,14 @@ and dungeon exploration — all data-driven from JSON.
 
 | Layer | Tool | Purpose |
 |---|---|---|
-| Language | TypeScript 5.x | Type-safe logic across the entire stack |
-| UI Framework | React 18 + React Router v6 | Component tree + client-side routing (HashRouter) |
-| State | Zustand 4 | Cross-screen persistent state (team, battle result, settings) |
-| Build Tool | Vite 5 | Fast HMR in dev; tree-shaken ESM bundle in prod |
+| Language | TypeScript 6.x | Type-safe logic across the entire stack |
+| UI Framework | React 19 + React Router v7 | Component tree + client-side routing (HashRouter) |
+| State | Zustand 5 | Cross-screen persistent state (team, battle result, settings) |
+| Build Tool | Vite 8 | Fast HMR in dev; tree-shaken ESM bundle in prod |
 | Styling | CSS Modules + custom properties | Zero runtime overhead; scoped styles + design tokens |
-| Schema Validation | Zod 3 | Strict JSON validation at DataService load time |
+| Schema Validation | Zod 4 | Strict JSON validation at DataService load time |
 | Game Canvas | Phaser 3 | Battle arena: unit figures, dice, particles, shake, death |
-| Native Bridge | Capacitor 6 | Android / iOS packaging + status-bar API |
+| Native Bridge | Capacitor 8 | Android / iOS packaging + status-bar API |
 | Testing | Vitest + React Testing Library | Unit tests for core logic + component rendering |
 | Game Content | JSON in `public/data/` | All characters, skills, statuses, maps, narrative — zero hardcoding |
 

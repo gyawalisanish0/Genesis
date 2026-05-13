@@ -128,14 +128,14 @@ same pattern:
 
 | Layer | Tool |
 |---|---|
-| Language | TypeScript 5.x |
-| UI Framework | React 18 + React Router v6 |
+| Language | TypeScript 6.x |
+| UI Framework | React 19 + React Router v7 |
 | Game Canvas | Phaser 3 (battle rendering only) |
-| Build Tool | Vite 5 |
-| State | Zustand 4 |
-| Schema Validation | Zod 3 |
+| Build Tool | Vite 8 |
+| State | Zustand 5 |
+| Schema Validation | Zod 4 |
 | Styling | CSS Modules + CSS custom properties |
-| Native Bridge | Capacitor 6 (Android / iOS packaging) |
+| Native Bridge | Capacitor 8 (Android / iOS packaging) |
 | Native Plugins | @capacitor/app, @capacitor/status-bar |
 | Testing | Vitest + React Testing Library |
 | Data | JSON files — all game content definitions |
