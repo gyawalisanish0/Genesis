@@ -199,8 +199,8 @@ Escalation: bigger maps, more patrols, new enemy types per stage.
 | Stage 2 name and narrative beats | TBD |
 | Stage 3 name and narrative beats | TBD |
 | Kiragen controller — mechanic when neutralised | TBD |
-| Netrolume grunt stats and skill kit | TBD |
-| Netrolume elite stats and skill kit | TBD |
+| Netrolume grunt stats and skill kit | ✅ Skills done — passive Hertz Beats (1pt, −10% TU), Basic Attack / Clawd / Quick Charge; stats TBD |
+| Netrolume elite stats and skill kit | ✅ Skills done — passive Hertz Beats (2pt, −20% TU), same 3 skills +20% cost + Great Growl; stats TBD |
 | Kiragen combatant stats and skill kit | TBD |
 | Kiragen controller stats and skill kit | TBD |
 | Does the Creator appear again mid-campaign or only at the end? | TBD |
