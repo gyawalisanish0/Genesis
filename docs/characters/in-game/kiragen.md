@@ -59,7 +59,17 @@ back to the attacker. The Kiragen simply absorbs less.
 
 ### Stats
 
-TBD
+| Stat | Value |
+|---|---|
+| STR | 15 |
+| END | 30 |
+| PWR | 65 |
+| RES | 50 |
+| SPD | 35 |
+| PRC | 55 |
+| HP | 180 |
+| AP | 85 |
+| AP Regen | 0.60 / tick |
 
 ### Skills
 
