@@ -136,7 +136,7 @@ in CooldownResolver).
 | Species | Kiragen |
 | Role | Signal operator — maintains Netrolume frequency lock |
 | Combat identity | TBD |
-| Class | TBD |
+| Class | Enchanter |
 | Rarity | 3 |
 | Data ID | `kiragen_controller_001` |
 
@@ -214,6 +214,37 @@ falls off cleanly when the 5 ticks expire.
 The high AP cost (40) means the controller cannot cycle Data Pulse
 freely. Each cast is a deliberate decision — the Virus spread and Intell
 window must count.
+
+#### Critical Spawn
+| Field | Value |
+|---|---|
+| AP Cost | 34 |
+| TU Cost | 20 |
+| Base Chance | — (no accuracy roll) |
+| Tags | `summon`, `buff`, `uniqueCounter` |
+
+This skill has two independent spawn states and a distinct counter
+behaviour — active cast and counter trigger each track their own
+first-use flag.
+
+**Active cast — first use:** Spawns a **Netrolume Grunt** into the
+battle. The grunt enters with full stats and its own tick position.
+
+**Active cast — subsequent uses:** Grants all Netrolume currently on
+the field **10% critical chance for 7 ticks**. Critical damage is
+**180% of the attacking Netrolume's STR**.
+
+**Counter — first trigger:** Spawns a **Netrolume Elite** that
+immediately executes a normal attack against the attacker before taking
+its own position on the tick stream.
+
+**Counter — subsequent triggers:** Applies a **−20% base accuracy
+reduction** to the attacker for 6 ticks (all their skills are affected).
+
+**Spawn independence:** The active and counter spawn flags are tracked
+separately. The grunt and elite can both enter the field in the same
+battle — the controller may field up to 2 additional Netrolume through
+this skill alone, on top of any already present in the encounter.
 
 ---
 
