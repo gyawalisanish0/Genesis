@@ -296,6 +296,8 @@ export interface SkillDef {
   tickCooldown?:  number   // ticks that must elapse after use before skill is available
   turnCooldown?:  number   // unit's own actions that must occur after use
   minTurns?:      number   // unit must have taken >= minTurns actions before skill is available
+  /** Turn-based cooldown used instead of tickCooldown/turnCooldown when cast in hyper mode. */
+  hyperCooldown?: number
   tags:           Tag[]
   maxLevel:       number
   targeting:      Targeting
@@ -358,6 +360,20 @@ export interface StatusDef {
   critConfig?: {
     chance:             number   // 0–1 roll threshold (e.g. 0.10 = 10% crit)
     attackerStrPercent: number   // bonus damage as % of caster STR (e.g. 180)
+  }
+  /**
+   * Marks this status as the required "trigger" condition for hyper mode.
+   * Copied to slot payload at apply time. A unit is in hyper mode only when
+   * it simultaneously carries this flag AND a status with hyperModeConfig.
+   */
+  hyperModeTrigger?: boolean
+  /**
+   * Marks this status as the hyper mode "gate" — hyper mode activates when
+   * this status's stacks are below activeBelowStacks.
+   * Copied to slot payload at apply time.
+   */
+  hyperModeConfig?: {
+    activeBelowStacks: number
   }
   effects:    Effect[]
 }

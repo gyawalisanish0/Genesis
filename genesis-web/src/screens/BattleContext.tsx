@@ -309,11 +309,21 @@ function makeShieldedBattleState(
   }
 }
 
-/** Returns true when Hyper Sense Hyper Mode conditions are met for a unit. */
-function isHyperSenseMode(unit: Unit): boolean {
-  const hasPrimalAwareness = unit.statusSlots.some(s => s.id === 'hugo_001_primal_awareness_dodge')
-  const rangedDodgeSlot    = unit.statusSlots.find(s => s.id === 'hugo_001_hyper_sense_ranged_dodge')
-  return hasPrimalAwareness && rangedDodgeSlot !== undefined && rangedDodgeSlot.stacks < 2
+/**
+ * Returns true when a unit is in hyper mode — detected purely from slot payloads,
+ * no hardcoded status IDs. Conditions (both must hold):
+ *   1. At least one slot carries payload.hyperModeTrigger === true
+ *   2. At least one slot carries payload.hyperModeConfig and its stacks are
+ *      below hyperModeConfig.activeBelowStacks
+ * Both fields are copied from StatusDef into the slot payload by applyStatus.
+ */
+function isHyperModeActive(unit: Unit): boolean {
+  const hasTrigger = unit.statusSlots.some(s => s.payload?.hyperModeTrigger === true)
+  if (!hasTrigger) return false
+  return unit.statusSlots.some(s => {
+    const cfg = s.payload?.hyperModeConfig as { activeBelowStacks: number } | undefined
+    return cfg !== undefined && s.stacks < cfg.activeBelowStacks
+  })
 }
 
 /** Fire onExpire effects for a StatusDef using the owning unit as caster. */
@@ -1583,10 +1593,11 @@ export function BattleProvider({ children }: Props) {
     const totalDamage = primaryDamage + extraDamage
 
     // Apply cooldown immediately at cast time so the badge updates right away.
-    // Hyper Sense in Hyper Mode uses 8-turn CD instead of the normal 20-tick CD.
-    const isHyperCast = skill.tags.includes('hyper') && isHyperSenseMode(actor)
+    // hyper-tagged skills use hyperCooldown (turn-based) when cast in hyper mode.
+    const isHyperCast = skill.tags.includes('hyper') && skill.hyperCooldown !== undefined
+      && isHyperModeActive(snap.get(actor.id) ?? actor)
     const withCooldown = isHyperCast
-      ? applyTurnCooldown(actor, skillInst, 8)
+      ? applyTurnCooldown(actor, skillInst, skill.hyperCooldown!)
       : applyCooldown(actor, skillInst, skill)
     setUnitSkillsMap((prev) => {
       const next   = new Map(prev)
@@ -2074,7 +2085,7 @@ export function BattleProvider({ children }: Props) {
   }, [unitSkillsMap])
 
   const hyperSenseModeActive = useMemo(
-    () => leader !== null && isHyperSenseMode(leader),
+    () => leader !== null && isHyperModeActive(leader),
     [leader],
   )
 

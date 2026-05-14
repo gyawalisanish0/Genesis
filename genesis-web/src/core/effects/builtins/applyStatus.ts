@@ -67,6 +67,10 @@ const handle: EffectHandler<ApplyStatusEffect> = (effect, ctx) => {
     // Crit config — read by BattleContext in runAttack to roll and apply bonus crit damage.
     if (def.critConfig) payload.critConfig = def.critConfig
 
+    // Hyper mode marker — read by BattleContext to detect hyper mode without ID checks.
+    if (def.hyperModeTrigger) payload.hyperModeTrigger = true
+    if (def.hyperModeConfig)  payload.hyperModeConfig  = def.hyperModeConfig
+
     // Stun flag — BattleContext prevents all skill execution when true.
     if (def.tags?.includes('stun')) payload.stunned = true
 
