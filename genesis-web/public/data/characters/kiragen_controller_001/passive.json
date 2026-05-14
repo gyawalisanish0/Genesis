@@ -1,0 +1,54 @@
+{
+  "type": "passive",
+  "id": "kiragen_controller_001_vast_influence",
+  "name": "Vast Influence",
+  "description": "Broadcasts frequency points to all Netrolume allies (additive with their own Hertz Beats). Starts at 1 at battle start, reaches 2 at tick 15, +1 per counter trigger (hard cap: 5 total).",
+  "effects": [
+    {
+      "when": { "event": "onBattleStart" },
+      "type": "secondaryResource",
+      "set": 1,
+      "max": 5
+    },
+    {
+      "when": { "event": "onBattleStart" },
+      "type": "broadcastResource",
+      "target": "all-allies",
+      "statusId": "kiragen_vast_influence_overlay"
+    },
+    {
+      "when": { "event": "onBattleTickInterval", "interval": 15 },
+      "condition": { "not": { "selfHasStatus": "kiragen_controller_tick15_triggered" } },
+      "type": "secondaryResource",
+      "delta": 1,
+      "max": 5
+    },
+    {
+      "when": { "event": "onBattleTickInterval", "interval": 15 },
+      "condition": { "not": { "selfHasStatus": "kiragen_controller_tick15_triggered" } },
+      "type": "broadcastResource",
+      "target": "all-allies",
+      "statusId": "kiragen_vast_influence_overlay"
+    },
+    {
+      "when": { "event": "onBattleTickInterval", "interval": 15 },
+      "condition": { "not": { "selfHasStatus": "kiragen_controller_tick15_triggered" } },
+      "type": "applyStatus",
+      "target": "self",
+      "status": "kiragen_controller_tick15_triggered"
+    },
+    {
+      "when": { "event": "onCounterTrigger" },
+      "condition": { "selfSecondaryBelow": 5 },
+      "type": "secondaryResource",
+      "delta": 1,
+      "max": 5
+    },
+    {
+      "when": { "event": "onCounterTrigger" },
+      "type": "broadcastResource",
+      "target": "all-allies",
+      "statusId": "kiragen_vast_influence_overlay"
+    }
+  ]
+}

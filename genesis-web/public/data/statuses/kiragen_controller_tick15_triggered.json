@@ -1,0 +1,9 @@
+{
+  "type": "status",
+  "id": "kiragen_controller_tick15_triggered",
+  "name": "Vast Influence Tick15",
+  "stacking": "refresh",
+  "duration": 9999,
+  "tags": [],
+  "effects": []
+}

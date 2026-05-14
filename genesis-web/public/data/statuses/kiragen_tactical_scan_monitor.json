@@ -1,0 +1,16 @@
+{
+  "type": "status",
+  "id": "kiragen_tactical_scan_monitor",
+  "name": "Tactical Scan",
+  "stacking": "refresh",
+  "duration": 9999,
+  "tags": [],
+  "effects": [
+    {
+      "when": { "event": "onOpponentAction" },
+      "type": "secondaryResource",
+      "delta": [4, 8],
+      "max": 100
+    }
+  ]
+}

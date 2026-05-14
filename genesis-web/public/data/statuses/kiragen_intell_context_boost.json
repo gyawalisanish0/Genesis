@@ -1,0 +1,21 @@
+{
+  "type": "status",
+  "id": "kiragen_intell_context_boost",
+  "name": "Intell",
+  "stacking": "refresh",
+  "duration": 5,
+  "tags": [],
+  "effects": [
+    {
+      "when": { "event": "onApply" },
+      "type": "secondaryResource",
+      "delta": 4,
+      "max": 100
+    },
+    {
+      "when": { "event": "onExpire" },
+      "type": "secondaryResource",
+      "delta": -4
+    }
+  ]
+}

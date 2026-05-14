@@ -123,6 +123,7 @@
     "tuCost": 7,
     "apCost": 10,
     "tickCooldown": 20,
+    "hyperCooldown": 8,
     "tags": ["utility", "unique", "hyper"],
     "maxLevel": 1,
     "targeting": {

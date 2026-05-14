@@ -15,6 +15,9 @@ import { register as registerModifyStat }  from './modifyStat'
 import { register as registerApplyStatus }        from './applyStatus'
 import { register as registerSecondaryResource }  from './secondaryResource'
 import { register as registerResetApAccum }       from './resetApAccum'
+import { register as registerSyncResources }      from './syncResources'
+import { register as registerBroadcastResource }  from './broadcastResource'
+import { register as registerSpawnUnit }          from './spawnUnit'
 
 export function registerBuiltins(): void {
   registerDamage()
@@ -26,4 +29,7 @@ export function registerBuiltins(): void {
   registerApplyStatus()
   registerSecondaryResource()
   registerResetApAccum()
+  registerSyncResources()
+  registerBroadcastResource()
+  registerSpawnUnit()
 }

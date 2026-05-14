@@ -1,0 +1,92 @@
+[
+  {
+    "type": "skill",
+    "id": "netrolume_elite_001_basic_attack",
+    "name": "Basic Attack",
+    "tuCost": 12,
+    "apCost": 10,
+    "tags": ["physical", "melee", "basic"],
+    "maxLevel": 1,
+    "targeting": { "selector": "enemy", "range": "melee" },
+    "resolution": { "baseChance": 0.95 },
+    "effects": [
+      {
+        "when": { "event": "onHit" },
+        "type": "damage",
+        "amount": { "stat": "strength", "percent": 20 },
+        "damageType": "physical"
+      }
+    ],
+    "levelUpgrades": []
+  },
+  {
+    "type": "skill",
+    "id": "netrolume_elite_001_clawd",
+    "name": "Clawd",
+    "description": "Feral lunge. Heavier conditioning, same savagery.",
+    "tuCost": 23,
+    "apCost": 14,
+    "tags": ["physical", "melee"],
+    "maxLevel": 1,
+    "targeting": { "selector": "enemy", "range": "melee" },
+    "resolution": { "baseChance": 0.82 },
+    "effects": [
+      {
+        "when": { "event": "onHit" },
+        "type": "damage",
+        "amount": { "stat": "strength", "percent": 60 },
+        "damageType": "physical"
+      }
+    ],
+    "levelUpgrades": []
+  },
+  {
+    "type": "skill",
+    "id": "netrolume_elite_001_quick_charge",
+    "name": "Quick Charge",
+    "description": "Fast burst. Higher cost than grunt — the tighter signal lock demands more.",
+    "tuCost": 19,
+    "apCost": 22,
+    "tags": ["physical", "melee"],
+    "maxLevel": 1,
+    "targeting": { "selector": "enemy", "range": "melee" },
+    "resolution": { "baseChance": 0.90 },
+    "effects": [
+      {
+        "when": { "event": "onHit" },
+        "type": "damage",
+        "amount": { "sum": [10, { "stat": "strength", "percent": 45 }] },
+        "damageType": "physical"
+      }
+    ],
+    "levelUpgrades": []
+  },
+  {
+    "type": "skill",
+    "id": "netrolume_elite_001_great_growl",
+    "name": "Great Growl",
+    "description": "Amplifies the Kiragen signal for 8 battle ticks. Adds +2 frequency points on top of Hertz Beats, compressing all action TU costs dramatically. 4-turn cooldown.",
+    "tuCost": 12,
+    "apCost": 11,
+    "turnCooldown": 4,
+    "tags": ["buff", "self"],
+    "maxLevel": 1,
+    "targeting": { "selector": "self", "range": "global" },
+    "resolution": { "baseChance": 1.0 },
+    "effects": [
+      {
+        "when": { "event": "onCast" },
+        "type": "secondaryResource",
+        "delta": 2
+      },
+      {
+        "when": { "event": "onCast" },
+        "type": "applyStatus",
+        "target": "self",
+        "status": "netrolume_great_growl_active",
+        "duration": 8
+      }
+    ],
+    "levelUpgrades": []
+  }
+]

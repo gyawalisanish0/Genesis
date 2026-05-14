@@ -10,5 +10,6 @@
     "allChance": 0.70,
     "consumeOnAttempt": true
   },
+  "hyperModeTrigger": true,
   "effects": []
 }

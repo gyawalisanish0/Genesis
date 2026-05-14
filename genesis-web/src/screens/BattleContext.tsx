@@ -12,12 +12,14 @@ import type { SkillInstance, BattleState as EngineBattleState, EffectContext, Ta
 import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, CLASH_ANNOUNCE_MS, ENEMY_AI_DELAY_MS, COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE, BATTLE_FEEDBACK_HOLD_MS, SKIP_TU_COST } from '../core/constants'
 import { resolveTickDisplacement } from '../core/combat/TickDisplacer'
 import { resolveClashWinner, factionAvgSpeed } from '../core/combat/ClashResolver'
-import { createUnit, isAlive, setTickPosition, incrementActionCount, tickStatusDurations, consumeStatusStack, updateStatusIntervalTick, isSkillTagBlocked, addApSpent } from '../core/unit'
+import { createUnit, isAlive, setTickPosition, incrementActionCount, tickStatusDurations, consumeStatusStack, updateStatusIntervalTick, isSkillTagBlocked, addApSpent, takeDamage } from '../core/unit'
 import { calculateStartingTick, advanceTick, calculateApGained } from '../core/combat/TickCalculator'
 import { calculateFinalChance, shiftProbabilities } from '../core/combat/HitChanceEvaluator'
 import { roll, resolveCounterRoll, type DiceOutcome } from '../core/combat/DiceResolver'
 import { findCounterSkill, canCounter, isSingleTarget } from '../core/combat/CounterResolver'
-import { isOnCooldown, applyCooldown, applyTickCooldown, applyTurnCooldown } from '../core/combat/CooldownResolver'
+import { isOnCooldown, applyCooldown, applyTickCooldown, applyTurnCooldown, isBeforeMinTurns } from '../core/combat/CooldownResolver'
+import { registerSpawnHandler, clearSpawnHandler } from '../core/combat/SpawnBus'
+import type { SpawnRequest } from '../core/combat/SpawnBus'
 import { applyEffect } from '../core/effects/applyEffect'
 import { createSkillInstance, getCachedSkill } from '../core/engines/skill/SkillInstance'
 import { loadCharacterWithSkills, loadStatusDef, loadAnimationManifest } from '../services/DataService'
@@ -307,11 +309,21 @@ function makeShieldedBattleState(
   }
 }
 
-/** Returns true when Hyper Sense Hyper Mode conditions are met for a unit. */
-function isHyperSenseMode(unit: Unit): boolean {
-  const hasPrimalAwareness = unit.statusSlots.some(s => s.id === 'hugo_001_primal_awareness_dodge')
-  const rangedDodgeSlot    = unit.statusSlots.find(s => s.id === 'hugo_001_hyper_sense_ranged_dodge')
-  return hasPrimalAwareness && rangedDodgeSlot !== undefined && rangedDodgeSlot.stacks < 2
+/**
+ * Returns true when a unit is in hyper mode — detected purely from slot payloads,
+ * no hardcoded status IDs. Conditions (both must hold):
+ *   1. At least one slot carries payload.hyperModeTrigger === true
+ *   2. At least one slot carries payload.hyperModeConfig and its stacks are
+ *      below hyperModeConfig.activeBelowStacks
+ * Both fields are copied from StatusDef into the slot payload by applyStatus.
+ */
+function isHyperModeActive(unit: Unit): boolean {
+  const hasTrigger = unit.statusSlots.some(s => s.payload?.hyperModeTrigger === true)
+  if (!hasTrigger) return false
+  return unit.statusSlots.some(s => {
+    const cfg = s.payload?.hyperModeConfig as { activeBelowStacks: number } | undefined
+    return cfg !== undefined && s.stacks < cfg.activeBelowStacks
+  })
 }
 
 /** Fire onExpire effects for a StatusDef using the owning unit as caster. */
@@ -331,6 +343,128 @@ function fireStatusExpiry(
   for (const effect of expireEffects) {
     applyEffect(effect, ctx)
   }
+}
+
+/**
+ * Computes the effective TU cost of a skill for a unit by applying all
+ * active tuCostConfig status payloads. Accounts for both own secondaryResource
+ * and any resourceOverlay values from broadcast statuses.
+ * Minimum effective TU is always 1.
+ */
+function getEffectiveTuCost(baseTu: number, unit: Unit): number {
+  const ownFrequency = unit.secondaryResource
+  const overlayFrequency = unit.statusSlots.reduce(
+    (sum, s) => sum + (((s.payload?.resourceOverlay) as number | undefined) ?? 0),
+    0,
+  )
+  const totalFrequency = ownFrequency + overlayFrequency
+
+  let effective = baseTu
+  for (const slot of unit.statusSlots) {
+    const config = slot.payload?.tuCostConfig as {
+      delta?: number
+      percentOfBase?: number
+      percentPerSecondary?: number
+    } | undefined
+    if (!config) continue
+    if (config.percentPerSecondary !== undefined) {
+      effective = Math.round(effective * (1 - totalFrequency * config.percentPerSecondary / 100))
+    } else if (config.percentOfBase !== undefined) {
+      effective = Math.round(baseTu * (1 - config.percentOfBase / 100))
+    } else if (config.delta !== undefined) {
+      effective = effective + config.delta
+    }
+  }
+  return Math.max(1, effective)
+}
+
+/**
+ * Fires onOpponentAction passive effects for all units opposing the actor.
+ * Called after each action so passive observers (e.g. Tactical Scan) can respond.
+ */
+function fireOpponentActionEffects(
+  actor:       Unit,
+  snap:        Map<string, Unit>,
+  passiveDefs: Map<string, PassiveDef | null>,
+  tick:        number,
+): void {
+  const observers = [...snap.values()].filter(u => u.isAlly !== actor.isAlly && u.hp > 0)
+  for (const obs of observers) {
+    const passive = passiveDefs.get(obs.id)
+    if (!passive) continue
+    const unit = snap.get(obs.id) ?? obs
+    const ctx: EffectContext = {
+      caster:      unit,
+      battle:      snapshotToBattleState(snap),
+      source:      'passive',
+      event:       { event: 'onOpponentAction' },
+      currentTick: tick,
+    }
+    for (const effect of passive.effects) {
+      if (effect.when.event === 'onOpponentAction') applyEffect(effect, ctx)
+    }
+  }
+}
+
+/**
+ * Fires onCounterTrigger passive effects for the unit whose counter just fired.
+ * Enables mechanics that escalate on successful counters (e.g. Vast Influence).
+ */
+function fireCounterTriggerEffects(
+  counterUnit: Unit,
+  snap:        Map<string, Unit>,
+  passiveDefs: Map<string, PassiveDef | null>,
+  tick:        number,
+): void {
+  const passive = passiveDefs.get(counterUnit.id)
+  if (!passive) return
+  const unit = snap.get(counterUnit.id) ?? counterUnit
+  const ctx: EffectContext = {
+    caster:      unit,
+    battle:      snapshotToBattleState(snap),
+    source:      'passive',
+    event:       { event: 'onCounterTrigger' },
+    currentTick: tick,
+  }
+  for (const effect of passive.effects) {
+    if (effect.when.event === 'onCounterTrigger') applyEffect(effect, ctx)
+  }
+}
+
+/**
+ * Fires onCounterCast skill effects when a skill is used as a reactive counter.
+ * Called in confirmCounter and the AI counter path inside scheduleCounterChain.
+ * `attacker` is the original attacking unit (the one that was countered against).
+ */
+function fireCounterCastEffects(
+  counterUnit:  Unit,
+  attacker:     Unit,
+  counterSkill: SkillInstance,
+  snap:         Map<string, Unit>,
+  tick:         number,
+): void {
+  const caster = snap.get(counterUnit.id) ?? counterUnit
+  const target = snap.get(attacker.id)   ?? attacker
+  const ctx: EffectContext = {
+    caster,
+    target,
+    battle:      snapshotToBattleState(snap),
+    source:      'skill',
+    event:       { event: 'onCounterCast' },
+    currentTick: tick,
+  }
+  for (const effect of counterSkill.cachedEffects) {
+    if (effect.when.event === 'onCounterCast') applyEffect(effect, ctx)
+  }
+}
+
+/** Returns the first active critConfig from any of the unit's status slot payloads. */
+function readCritConfig(unit: Unit): { chance: number; attackerStrPercent: number } | undefined {
+  for (const slot of unit.statusSlots) {
+    const cfg = slot.payload?.critConfig as { chance: number; attackerStrPercent: number } | undefined
+    if (cfg) return cfg
+  }
+  return undefined
 }
 
 /** Fire onApSpent passive effects after a unit spends AP on a skill. */
@@ -772,8 +906,73 @@ export function BattleProvider({ children }: Props) {
         }
       }
     }
+    registerSpawnHandler(async (req: SpawnRequest) => {
+      try {
+        const data    = await loadCharacterWithSkills(req.defId)
+        const rawUnit = createUnit(data.characterDef, req.isAlly)
+        const newUnit = setTickPosition(rawUnit, req.currentTick + 1)
+
+        const skills = data.skillDefs.map(createSkillInstance)
+        setUnitSkillsMap(prev => new Map([...prev, [newUnit.id, skills]]))
+
+        const manifest = await loadAnimationManifest(req.defId)
+        manifestsRef.current.set(req.defId, manifest)
+
+        if (data.passiveDef) {
+          passiveDefsRef.current = new Map([...passiveDefsRef.current, [newUnit.id, data.passiveDef]])
+        }
+
+        // Register status defs for any statuses the spawned unit references.
+        const allEffects = [
+          ...data.skillDefs.flatMap(s => s.effects),
+          ...(data.passiveDef ? data.passiveDef.effects : []),
+        ]
+        const newStatusIds = [...new Set(collectStatusIds(allEffects))]
+        const loadedStatuses = await Promise.all(newStatusIds.map(id => loadStatusDef(id)))
+        newStatusIds.forEach((id, i) => {
+          const def = loadedStatuses[i]
+          if (def) { registerStatusDef(def); statusDefsRef.current.set(id, def) }
+        })
+
+        // Fire onBattleStart passive effects for the newly spawned unit.
+        let finalUnit = newUnit
+        if (data.passiveDef) {
+          const spawnSnap = new Map<string, Unit>([[newUnit.id, newUnit]])
+          for (const effect of data.passiveDef.effects) {
+            if (effect.when.event !== 'onBattleStart') continue
+            const ctx: EffectContext = {
+              caster:      spawnSnap.get(newUnit.id) ?? newUnit,
+              target:      spawnSnap.get(newUnit.id) ?? newUnit,
+              battle:      snapshotToBattleState(spawnSnap),
+              source:      'passive',
+              event:       { event: 'onBattleStart' },
+              currentTick: req.currentTick,
+            }
+            applyEffect(effect, ctx)
+          }
+          finalUnit = spawnSnap.get(newUnit.id) ?? newUnit
+        }
+
+        registerTick(finalUnit.id, finalUnit.tickPosition)
+        NarrativeUnits.register([finalUnit])
+
+        if (req.isAlly) {
+          setPlayerUnits(prev => [...prev, finalUnit])
+        } else {
+          setEnemies(prev => [...prev, finalUnit])
+        }
+
+        appendLog({ text: `${data.characterDef.name} has entered the battle!`, colour: 'var(--accent-genesis)' })
+      } catch (err) {
+        console.error('[SpawnBus] failed to spawn unit:', err)
+      }
+    })
+
     load()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      clearSpawnHandler()
+    }
   }, [])
 
   // ── Turn display helpers ───────────────────────────────────────────────────
@@ -1126,11 +1325,28 @@ export function BattleProvider({ children }: Props) {
       }
     }
 
+    // Crit bonus damage — fires when attacker has an active critConfig status and
+    // the attack landed. Applies 180% (or configured %) of attacker STR as bonus
+    // damage on top of normal skill effects. Routes through shield like any damage.
+    if (!noDamage) {
+      const casterCurrent = snap.get(caster.id) ?? caster
+      const critCfg = readCritConfig(casterCurrent)
+      if (critCfg && Math.random() < critCfg.chance) {
+        const critAmount = Math.round(casterCurrent.stats.strength * critCfg.attackerStrPercent / 100)
+        const targetCurrent = snap.get(target.id) ?? target
+        battle.setUnit(takeDamage(targetCurrent, critAmount))
+        appendLog({ text: `★ CRITICAL! +${critAmount} bonus damage`, colour: 'var(--accent-gold)' })
+      }
+    }
+
     const logMsg =
       diceOutcome === 'Evade' ? `${target.name} evaded ${skill.name}!` :
       diceOutcome === 'Fail'  ? `${caster.name} missed with ${skill.name}!` :
       `${caster.name} → ${skill.name} on ${target.name} [${diceOutcome}]`
     appendLog({ text: logMsg, colour: outcomeColour(diceOutcome) })
+
+    // Notify opposing passives that an action occurred.
+    fireOpponentActionEffects(caster, snap, passiveDefsRef.current, tickValue)
 
     // Reactive counter: check if the evading unit can counter-attack.
     if (diceOutcome === 'Evade' && isSingleTarget(skill)) {
@@ -1222,6 +1438,8 @@ export function BattleProvider({ children }: Props) {
     // Brief pause so the overlay visually dismisses before the dice animation starts.
     setTimeout(() => {
       runAttackRef.current?.(defender, originalCaster, counterSkill, snap, depth + 1)
+      fireCounterCastEffects(defender, originalCaster, counterSkill, snap, tickValue)
+      fireCounterTriggerEffects(defender, snap, passiveDefsRef.current, tickValue)
       setTimeout(() => {
         setPlayerUnits((prev) => prev.map((u) => snap.get(u.id) ?? u))
         setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
@@ -1291,6 +1509,8 @@ export function BattleProvider({ children }: Props) {
           // Counter reactions bypass cooldown: no applyCooldown called.
           setTimeout(() => {
             runAttackRef.current?.(defender, originalCaster, counterSkill, snap, depth + 1)
+            fireCounterCastEffects(defender, originalCaster, counterSkill, snap, tickValue)
+            fireCounterTriggerEffects(defender, snap, passiveDefsRef.current, tickValue)
             setTimeout(() => {
               setPlayerUnits((prev) => prev.map((u) => snap.get(u.id) ?? u))
               setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
@@ -1313,8 +1533,14 @@ export function BattleProvider({ children }: Props) {
 
     const skill = getCachedSkill(skillInst)
 
+    // Block skills that haven't met the minimum turns requirement.
+    if (isBeforeMinTurns(actor, skill.minTurns)) return
+
     // Block skills that are guarded by an active status's blocksRecastOfSkill payload.
     if (actor.statusSlots.some(s => s.payload?.blocksRecastOfSkill === skill.id)) return
+
+    // Block stunned units from executing any skill.
+    if (actor.statusSlots.some(s => s.payload?.stunned === true)) return
 
     // Block skills whose tags are locked by an active status on the caster.
     if (isSkillTagBlocked(actor, skill.tags)) return
@@ -1367,10 +1593,11 @@ export function BattleProvider({ children }: Props) {
     const totalDamage = primaryDamage + extraDamage
 
     // Apply cooldown immediately at cast time so the badge updates right away.
-    // Hyper Sense in Hyper Mode uses 8-turn CD instead of the normal 20-tick CD.
-    const isHyperCast = skill.tags.includes('hyper') && isHyperSenseMode(actor)
+    // hyper-tagged skills use hyperCooldown (turn-based) when cast in hyper mode.
+    const isHyperCast = skill.tags.includes('hyper') && skill.hyperCooldown !== undefined
+      && isHyperModeActive(snap.get(actor.id) ?? actor)
     const withCooldown = isHyperCast
-      ? applyTurnCooldown(actor, skillInst, 8)
+      ? applyTurnCooldown(actor, skillInst, skill.hyperCooldown!)
       : applyCooldown(actor, skillInst, skill)
     setUnitSkillsMap((prev) => {
       const next   = new Map(prev)
@@ -1379,8 +1606,9 @@ export function BattleProvider({ children }: Props) {
       return next
     })
 
-    const fromTick = actor.tickPosition
-    const nextTick = advanceTick(fromTick, skill.tuCost)
+    const fromTick     = actor.tickPosition
+    const effectiveTu  = getEffectiveTuCost(skill.tuCost, snap.get(actor.id) ?? actor)
+    const nextTick     = advanceTick(fromTick, effectiveTu)
 
     pushHistory(makeHistoryEntry(actor.id, actor.name, fromTick, actor.isAlly))
 
@@ -1412,7 +1640,7 @@ export function BattleProvider({ children }: Props) {
       }))
       setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
       registerTick(actor.id, nextTick)
-      globalBattleTickRef.current += skill.tuCost
+      globalBattleTickRef.current += effectiveTu
       fireBattleTickIntervalPassives(
         globalBattleTickRef.current, snap,
         passiveDefsRef.current,
@@ -1497,7 +1725,13 @@ export function BattleProvider({ children }: Props) {
       const currentPlayers = playerUnitsRef.current
       const currentEnemies = enemiesRef.current
       const previewSkills  = (unitSkillsMapRef.current.get(firstAIUnit.id) ?? [])
-        .filter((s) => !isOnCooldown(firstAIUnit, s) && !isSkillTagBlocked(firstAIUnit, getCachedSkill(s).tags))
+        .filter((s) => {
+          if (isOnCooldown(firstAIUnit, s)) return false
+          const def = getCachedSkill(s)
+          if (isBeforeMinTurns(firstAIUnit, def.minTurns)) return false
+          if (isSkillTagBlocked(firstAIUnit, def.tags)) return false
+          return true
+        })
       if (!previewSkills.length) return
 
       // Foe count for this unit: allies count enemies as foes, enemies count player units.
@@ -1585,7 +1819,9 @@ export function BattleProvider({ children }: Props) {
         const availableSkills = allUnitSkills.filter((s) => {
           if (isOnCooldown(aiUnit, s)) return false
           const def = getCachedSkill(s)
+          if (isBeforeMinTurns(aiUnit, def.minTurns)) return false
           if (aiUnit.statusSlots.some(st => st.payload?.blocksRecastOfSkill === def.id)) return false
+          if (aiUnit.statusSlots.some(st => st.payload?.stunned === true)) return false
           if (isSkillTagBlocked(aiUnit, def.tags)) return false
           return true
         })
@@ -1667,13 +1903,14 @@ export function BattleProvider({ children }: Props) {
         })
 
         // Step 4: apply state after animations complete.
+        const aiEffectiveTu = getEffectiveTuCost(skill.tuCost, snap.get(aiUnit.id) ?? aiUnit)
         const applyAIState = () => {
           setPlayerUnits((prev) => prev.map((u) => snap.get(u.id) ?? u))
           setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
           const fromTick = aiUnit.tickPosition
           pushHistory(makeHistoryEntry(aiUnit.id, aiUnit.name, fromTick, aiUnit.isAlly))
-          registerTick(aiUnit.id, advanceTick(fromTick, skill.tuCost))
-          globalBattleTickRef.current += skill.tuCost
+          registerTick(aiUnit.id, advanceTick(fromTick, aiEffectiveTu))
+          globalBattleTickRef.current += aiEffectiveTu
           fireBattleTickIntervalPassives(
             globalBattleTickRef.current, snap,
             passiveDefsRef.current,
@@ -1848,7 +2085,7 @@ export function BattleProvider({ children }: Props) {
   }, [unitSkillsMap])
 
   const hyperSenseModeActive = useMemo(
-    () => leader !== null && isHyperSenseMode(leader),
+    () => leader !== null && isHyperModeActive(leader),
     [leader],
   )
 

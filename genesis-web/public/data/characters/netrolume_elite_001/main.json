@@ -1,0 +1,20 @@
+{
+  "type": "character",
+  "id": "netrolume_elite_001",
+  "name": "Netrolume Elite",
+  "className": "Warrior",
+  "rarity": 2,
+  "stats": {
+    "strength": 70,
+    "endurance": 50,
+    "power": 5,
+    "resistance": 40,
+    "speed": 40,
+    "precision": 48
+  },
+  "maxHp": 380,
+  "maxAp": 90,
+  "apRegenRate": 0.55,
+  "passive": "netrolume_elite_001_hertz_beats",
+  "skillPath": "netrolume_elite_path"
+}

@@ -1,0 +1,20 @@
+{
+  "type": "passive",
+  "id": "netrolume_elite_001_hertz_beats",
+  "name": "Hertz Beats",
+  "description": "Relays 2 frequency points at battle start. Each point reduces all skill TU costs by 10% of their base value. Frequency tracked in secondaryResource. Engine: netrolume_hertz_beats_active status applies TU cost reduction scaled by secondaryResource count.",
+  "effects": [
+    {
+      "when": { "event": "onBattleStart" },
+      "type": "secondaryResource",
+      "set": 2,
+      "max": 5
+    },
+    {
+      "when": { "event": "onBattleStart" },
+      "type": "applyStatus",
+      "target": "self",
+      "status": "netrolume_hertz_beats_active"
+    }
+  ]
+}

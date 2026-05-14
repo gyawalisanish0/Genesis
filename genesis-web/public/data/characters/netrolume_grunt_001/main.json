@@ -1,0 +1,20 @@
+{
+  "type": "character",
+  "id": "netrolume_grunt_001",
+  "name": "Netrolume Grunt",
+  "className": "Warrior",
+  "rarity": 1,
+  "stats": {
+    "strength": 55,
+    "endurance": 30,
+    "power": 5,
+    "resistance": 25,
+    "speed": 45,
+    "precision": 40
+  },
+  "maxHp": 280,
+  "maxAp": 80,
+  "apRegenRate": 0.5,
+  "passive": "netrolume_grunt_001_hertz_beats",
+  "skillPath": "netrolume_grunt_path"
+}

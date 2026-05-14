@@ -150,6 +150,13 @@ this without reading the rest of the doc, the contract is working.
 | `duration` | `integer ≥ 1` | yes | Base duration in ticks (may be overridden by the applying skill) |
 | `tags` | `string[]` | no | Tags for `hasTag` conditions |
 | `effects` | `Effect[]` | yes | Flat effect list — same shape as skill effects |
+| `payload` | `object` | no | Arbitrary key-value bag; engine reads reserved keys (see below) |
+
+#### Reserved `payload` keys for Status
+
+| Key | Type | Effect |
+|---|---|---|
+| `forcedSkipTuCost` | `number` | Overrides `SKIP_TU_COST` (default 10) for the affected unit while this status is active. Use for mechanics like stun where the target may only skip but at a different TU cost than the global default. |
 
 ### Passive
 
