@@ -70,8 +70,8 @@ export class BattleScene extends Phaser.Scene {
     const projectilePanel   = new ProjectilePanel(this)
     this.unitStage          = new UnitStage(this, TOP_INSET)
     this.dicePanel          = new DicePanel(this, TOP_INSET)
-    this.sequenceRunner     = new SequenceRunner(this, this.unitStage, particles, projectilePanel)
     this.feedbackPanel      = new FeedbackPanel(this, TOP_INSET, this.unitStage)
+    this.sequenceRunner     = new SequenceRunner(this, this.unitStage, particles, projectilePanel, this.feedbackPanel)
     this.turnDisplayPanel   = new TurnDisplayPanel(this)
     void new ResolutionAdaptor(this)
 
@@ -124,20 +124,23 @@ export class BattleScene extends Phaser.Scene {
   }
 
   playAttack(
-    actingDefId: string,
-    targetDefId: string,
-    outcome:     string,
-    damage:      number,
-    isMelee:     boolean,
-    dashDx:      number,
-    projectile:  AnimationProjectileDef | null,
-    onDone:      () => void,
+    actingDefId:    string,
+    targetDefId:    string,
+    outcome:        string,
+    damage:         number,
+    isMelee:        boolean,
+    dashDx:         number,
+    projectile:     AnimationProjectileDef | null,
+    feedbackText:   string,
+    feedbackColour: string,
+    onDone:         () => void,
   ): void {
     const diceOutcome = outcome as DiceOutcome
     const ctx: SequenceContext = {
       actingDefId, targetDefId,
       outcome:    diceOutcome,
       damage, isMelee, dashDx, projectile,
+      feedbackText, feedbackColour,
     }
     const phases = buildDefaultSequence(isMelee, diceOutcome)
     this.sequenceRunner.run(phases, ctx, onDone)
@@ -146,10 +149,6 @@ export class BattleScene extends Phaser.Scene {
   /** Skip the active attack sequence — cancels pending waits and fires onDone. */
   skipActiveAttack(): void {
     this.sequenceRunner.skip()
-  }
-
-  playFeedback(text: string, colour: string): void {
-    this.feedbackPanel.show(text, colour)
   }
 
   // ── Stage 4: death collapse ───────────────────────────────────────────────

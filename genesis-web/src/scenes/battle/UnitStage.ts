@@ -156,6 +156,21 @@ export class UnitStage {
     }
   }
 
+  /**
+   * Pure colour tint flash on any figure — no hurt animation.
+   * Used by the standalone `flash` sequence phase.
+   */
+  pureFlash(figure: 'acting' | 'target', colour = 0xffffff): void {
+    const fig = figure === 'acting' ? this.acting : this.target
+    if (!fig) return
+    const rect = this.scene.add.rectangle(0, 0, UNIT_W, UNIT_H, colour, 1)
+    fig.container.add(rect)
+    this.scene.tweens.add({
+      targets: rect, alpha: 0, duration: 140, ease: 'Sine.easeOut',
+      onComplete: () => rect.destroy(),
+    })
+  }
+
   /** Flash the target figure and play the hurt reaction animation concurrently. */
   flashTarget(hitColour: number): void {
     if (!this.target) return

@@ -10,6 +10,7 @@ import type { AnimPhase, SequenceContext } from './SequenceTypes'
 import type { UnitStage }      from './UnitStage'
 import type { ParticleEmitter } from './ParticleEmitter'
 import type { ProjectilePanel } from './ProjectilePanel'
+import type { FeedbackPanel }   from './FeedbackPanel'
 
 const HIT_COLOUR: Record<string, number> = {
   Boosted: 0xf59e0b,
@@ -23,6 +24,12 @@ const SHAKE: Record<string, [number, number]> = {
   Hit:     [160, 0.010],
 }
 
+// CSS token colour for damage number text per outcome.
+const DAMAGE_COLOUR: Record<string, string> = {
+  Boosted: 'var(--accent-gold)',
+  Hit:     'var(--accent-danger)',
+}
+
 const DEFAULT_MELEE_DX_FRACTION = 0.33
 
 export class SequenceRunner {
@@ -30,21 +37,24 @@ export class SequenceRunner {
   private unitStage:      UnitStage
   private particles:      ParticleEmitter
   private projectile:     ProjectilePanel
+  private feedbackPanel:  FeedbackPanel
 
   private skipped     = false
   private topOnDone:  (() => void) | null = null
   private pendingTimers: Phaser.Time.TimerEvent[] = []
 
   constructor(
-    scene:      Phaser.Scene,
-    unitStage:  UnitStage,
-    particles:  ParticleEmitter,
-    projectile: ProjectilePanel,
+    scene:         Phaser.Scene,
+    unitStage:     UnitStage,
+    particles:     ParticleEmitter,
+    projectile:    ProjectilePanel,
+    feedbackPanel: FeedbackPanel,
   ) {
-    this.scene      = scene
-    this.unitStage  = unitStage
-    this.particles  = particles
-    this.projectile = projectile
+    this.scene         = scene
+    this.unitStage     = unitStage
+    this.particles     = particles
+    this.projectile    = projectile
+    this.feedbackPanel = feedbackPanel
   }
 
   run(phases: AnimPhase[], ctx: SequenceContext, onDone: () => void): void {
@@ -136,6 +146,49 @@ export class SequenceRunner {
         break
       }
 
+      // ── Granular feedback phases (fire-and-forget) ──────────────────────
+
+      case 'flash': {
+        this.unitStage.pureFlash(phase.figure, phase.colour)
+        onDone()
+        break
+      }
+
+      case 'particles': {
+        const x = phase.figure === 'acting' ? this.unitStage.actingX() : this.unitStage.targetX()
+        const y = phase.figure === 'acting' ? this.unitStage.actingY() : this.unitStage.targetY()
+        this.particles.burst(x, y, ctx.outcome)
+        onDone()
+        break
+      }
+
+      case 'damageNumber': {
+        if (ctx.damage > 0) {
+          const prefix = ctx.outcome === 'Boosted' ? '★ ' : ''
+          const text   = `${prefix}−${ctx.damage}`
+          const colour = DAMAGE_COLOUR[ctx.outcome] ?? 'var(--text-primary)'
+          this.feedbackPanel.showDamageNumber(text, colour)
+        }
+        onDone()
+        break
+      }
+
+      case 'statusText': {
+        this.feedbackPanel.show(phase.text, phase.colour)
+        onDone()
+        break
+      }
+
+      case 'feedback': {
+        if (ctx.feedbackText) {
+          this.feedbackPanel.show(ctx.feedbackText, ctx.feedbackColour)
+        }
+        onDone()
+        break
+      }
+
+      // ── Other ─────────────────────────────────────────────────────────────
+
       case 'playAnim': {
         this.unitStage.playFigureAnim(phase.figure, phase.stateKey, onDone)
         break
@@ -148,7 +201,6 @@ export class SequenceRunner {
       }
 
       case 'aura': {
-        // Aura control is delegated to UnitStage which owns the AuraPanels.
         // Fire-and-forget — advances immediately.
         this.unitStage.setAura(phase.figure, phase.show)
         onDone()

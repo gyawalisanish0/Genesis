@@ -6,13 +6,17 @@ import type { AnimationProjectileDef } from '../../core/types'
 
 /** Runtime context threaded through every phase during execution. */
 export interface SequenceContext {
-  actingDefId: string
-  targetDefId: string
-  outcome:     DiceOutcome
-  damage:      number
-  isMelee:     boolean
-  dashDx:      number
-  projectile:  AnimationProjectileDef | null
+  actingDefId:    string
+  targetDefId:    string
+  outcome:        DiceOutcome
+  damage:         number
+  isMelee:        boolean
+  dashDx:         number
+  projectile:     AnimationProjectileDef | null
+  /** Outcome label shown by the `feedback` phase, e.g. "BOOSTED!", "EVADED!". */
+  feedbackText:   string
+  /** CSS colour token for the feedback label, e.g. 'var(--accent-gold)'. */
+  feedbackColour: string
 }
 
 /**
@@ -49,6 +53,27 @@ export type AnimPhase =
    * ctx.outcome. Synchronous: advances immediately after triggering FX.
    */
   | { type: 'impact' }
+
+  /**
+   * Pure colour tint flash on a figure (fire-and-forget, no hurt animation).
+   * Colour defaults to white when omitted.
+   */
+  | { type: 'flash';        figure: 'acting' | 'target'; colour?: number }
+
+  /** Particle burst at a figure position (fire-and-forget). Preset driven by ctx.outcome. */
+  | { type: 'particles';    figure: 'acting' | 'target' }
+
+  /**
+   * Floating damage number built from ctx.damage (fire-and-forget).
+   * Skipped automatically when ctx.damage is 0.
+   */
+  | { type: 'damageNumber' }
+
+  /** Floating arbitrary status label (fire-and-forget). */
+  | { type: 'statusText';   text: string; colour: string }
+
+  /** Floating outcome label from ctx.feedbackText / feedbackColour (fire-and-forget). */
+  | { type: 'feedback' }
 
   /** Camera shake. Advances immediately after triggering (fire-and-forget). */
   | { type: 'cameraShake';  duration: number; intensity: number }

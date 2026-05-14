@@ -36,7 +36,7 @@ import { SCREEN_REGISTRY, SCREEN_IDS } from '../navigation/screenRegistry'
 import { makeSnapshot, snapshotToBattleState, collectStatusIds } from './battle/BattleSnapshot'
 import { resolveIncomingDodge, makeShieldedBattleState, isHyperModeActive, getEffectiveTuCost, readCritConfig } from './battle/BattleDamage'
 import { fireHpThresholdPassives, fireStatusExpiry, fireOpponentActionEffects, fireCounterTriggerEffects, fireCounterCastEffects, fireOnApSpent, fireBattleTickIntervalPassives, fireTurnStartEffects } from './battle/BattlePassive'
-import { resolveSkillTargets, pickAiSkill, unitIsDamaged, outcomeColour, buildOutcomeMessage, buildFeedbackText } from './battle/BattleResolution'
+import { resolveSkillTargets, pickAiSkill, unitIsDamaged, outcomeColour, buildOutcomeMessage, buildOutcomeLabel } from './battle/BattleResolution'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -1174,9 +1174,8 @@ export function BattleProvider({ children }: Props) {
       }
     }
 
-    // Phase-gated: dice animation → attack animation → feedback → apply state.
+    // Phase-gated: dice animation → attack animation (includes feedback) → apply state.
     // Falls back to plain timer when the Phaser canvas is not mounted.
-    const feedbackText = buildFeedbackText(outcome, allTargets.length > 1 ? totalDamage : primaryDamage)
     const arena = arenaRef.current
     if (arena) {
       const actorManifest  = manifestsRef.current.get(actor.defId) ?? null
@@ -1186,8 +1185,7 @@ export function BattleProvider({ children }: Props) {
       const dashDx         = resolved?.dashDx  ?? 0
       const projectile: AnimationProjectileDef | null = actorManifest?.projectile ?? null
       arena.playDice(outcome, () => {
-        arena.playAttack(actor.defId, primaryTarget.defId, outcome, primaryDamage, isMelee, dashDx, projectile, () => {
-          arena.playFeedback(feedbackText, outcomeColour(outcome))
+        arena.playAttack(actor.defId, primaryTarget.defId, outcome, primaryDamage, isMelee, dashDx, projectile, buildOutcomeLabel(outcome), outcomeColour(outcome), () => {
           if (playerApplyTimerRef.current) clearTimeout(playerApplyTimerRef.current)
           playerApplyTimerRef.current = setTimeout(applyState, BATTLE_FEEDBACK_HOLD_MS)
         })
@@ -1462,7 +1460,6 @@ export function BattleProvider({ children }: Props) {
           arena?.clearTurn()
         }
 
-        const feedbackText = buildFeedbackText(outcome, allTargets.length > 1 ? totalDamage : primaryDamage)
         const arena = arenaRef.current
         if (arena) {
           const aiManifest   = manifestsRef.current.get(aiUnit.defId) ?? null
@@ -1472,8 +1469,7 @@ export function BattleProvider({ children }: Props) {
           const aiDashDx     = aiResolved?.dashDx  ?? 0
           const aiProjectile: AnimationProjectileDef | null = aiManifest?.projectile ?? null
           arena.playDice(outcome, () => {
-            arena.playAttack(aiUnit.defId, primaryTarget.defId, outcome, primaryDamage, aiIsMelee, aiDashDx, aiProjectile, () => {
-              arena.playFeedback(feedbackText, outcomeColour(outcome))
+            arena.playAttack(aiUnit.defId, primaryTarget.defId, outcome, primaryDamage, aiIsMelee, aiDashDx, aiProjectile, buildOutcomeLabel(outcome), outcomeColour(outcome), () => {
               applyTimerRef.current = setTimeout(applyAIState, BATTLE_FEEDBACK_HOLD_MS)
             })
           })
