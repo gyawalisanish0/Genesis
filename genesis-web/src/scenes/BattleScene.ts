@@ -105,6 +105,11 @@ export class BattleScene extends Phaser.Scene {
     this.unitStage.hide()
   }
 
+  /** True while a play-once animation (dash, death, hurt, dodge) is running on any figure. */
+  isAnimating(): boolean {
+    return this.unitStage.isAnimating()
+  }
+
   // ── Stage 3: dice → attack → feedback (phase-gated via onDone) ───────────
 
   playDice(outcome: string, onDone: () => void): void {

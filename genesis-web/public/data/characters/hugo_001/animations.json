@@ -13,11 +13,8 @@
     "melee": "melee_attack"
   },
   "animations": {
-    "idle": {
-      "frames": 6, "frameRate": 8, "repeat": -1
-    },
-    "idle_damaged": {
-      "frames": 4, "frameRate": 6, "repeat": -1,
+    "idle":                 { "frames": 2, "frameRate": 4,  "repeat": -1 },
+    "idle_damaged":         { "frames": 2, "frameRate": 4,  "repeat": -1,
       "aura": {
         "colour": "var(--accent-danger)",
         "blendMode": "ADD",
@@ -28,22 +25,27 @@
         "fadeOut": 500
       }
     },
-    "melee_attack":         { "frames": 8,  "frameRate": 12, "repeat": 0 },
-    "melee_attack_damaged": { "frames": 8,  "frameRate": 12, "repeat": 0 },
-    "hurt":                 { "frames": 4,  "frameRate": 10, "repeat": 0 },
-    "hurt_damaged":         { "frames": 4,  "frameRate": 10, "repeat": 0 },
-    "dodge":                { "frames": 4,  "frameRate": 12, "repeat": 0 },
-    "dodge_damaged":        { "frames": 4,  "frameRate": 12, "repeat": 0 },
+    "dash":                 { "frames": 1, "frameRate": 12, "repeat": 0 },
+    "dash_damaged":         { "frames": 1, "frameRate": 12, "repeat": 0 },
+    "melee_attack":         { "frames": 2, "frameRate": 12, "repeat": 0 },
+    "melee_attack_damaged": { "frames": 2, "frameRate": 12, "repeat": 0 },
+    "hurt":                 { "frames": 2, "frameRate": 10, "repeat": 0 },
+    "hurt_damaged":         { "frames": 2, "frameRate": 10, "repeat": 0 },
+    "dodge":                { "frames": 2, "frameRate": 12, "repeat": 0 },
+    "dodge_damaged":        { "frames": 2, "frameRate": 12, "repeat": 0 },
+    "death":                { "frames": 2, "frameRate": 8,  "repeat": 0 },
+    "death_damaged":        { "frames": 2, "frameRate": 8,  "repeat": 0 },
     "skills": {
-      "hugo_001_basic_attack":            { "frames": 6,  "frameRate": 12, "repeat": 0 },
-      "hugo_001_nanites_slash":           { "frames": 8,  "frameRate": 12, "repeat": 0 },
-      "hugo_001_nanites_slash_damaged":   { "frames": 8,  "frameRate": 12, "repeat": 0 },
-      "hugo_001_hammer_bash":             { "frames": 10, "frameRate": 10, "repeat": 0 },
-      "hugo_001_hammer_bash_damaged":     { "frames": 10, "frameRate": 10, "repeat": 0 },
-      "hugo_001_shelling_point":          { "frames": 5,  "frameRate": 8,  "repeat": 0 },
-      "hugo_001_shelling_point_damaged":  { "frames": 5,  "frameRate": 8,  "repeat": 0 },
+      "hugo_001_basic_attack":            { "frames": 2, "frameRate": 12, "repeat": 0 },
+      "hugo_001_basic_attack_damaged":    { "frames": 2, "frameRate": 12, "repeat": 0 },
+      "hugo_001_nanites_slash":           { "frames": 4, "frameRate": 12, "repeat": 0 },
+      "hugo_001_nanites_slash_damaged":   { "frames": 4, "frameRate": 12, "repeat": 0 },
+      "hugo_001_hammer_bash":             { "frames": 4, "frameRate": 10, "repeat": 0 },
+      "hugo_001_hammer_bash_damaged":     { "frames": 4, "frameRate": 10, "repeat": 0 },
+      "hugo_001_shelling_point":          { "frames": 3, "frameRate": 8,  "repeat": 0 },
+      "hugo_001_shelling_point_damaged":  { "frames": 3, "frameRate": 8,  "repeat": 0 },
       "hugo_001_hyper_sense": {
-        "frames": 6, "frameRate": 8, "repeat": 0,
+        "frames": 3, "frameRate": 8, "repeat": 0,
         "aura": {
           "colour": "var(--accent-gold)",
           "blendMode": "ADD",
@@ -55,7 +57,7 @@
         }
       },
       "hugo_001_hyper_sense_damaged": {
-        "frames": 6, "frameRate": 8, "repeat": 0,
+        "frames": 3, "frameRate": 8, "repeat": 0,
         "aura": {
           "colour": "var(--accent-gold)",
           "blendMode": "ADD",

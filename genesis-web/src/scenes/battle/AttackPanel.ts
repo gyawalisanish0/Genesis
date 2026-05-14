@@ -56,7 +56,7 @@ export class AttackPanel {
     projectile:  AnimationProjectileDef | null,
     onDone:      () => void,
   ): void {
-    if (!this.unitStage.isVisible) { onDone(); return }
+    if (!this.unitStage.isVisible || this.unitStage.isAnimating()) { onDone(); return }
 
     if (isMelee) {
       this.playMelee(outcome, dashDx, onDone)
