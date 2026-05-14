@@ -323,10 +323,11 @@ export interface AnimationManifest {
   type:    'animations'
   defId:   string
   display: {
-    width:   number   // display width in canvas pixels
-    height:  number   // display height in canvas pixels
-    anchorX: number   // 0–1; 0.5 = horizontal centre
-    anchorY: number   // 0–1; 1.0 = bottom edge (character stands on floor line)
+    sourceWidth:  number   // source PNG width in pixels — for art reference only, not used by renderer
+    sourceHeight: number   // source PNG height in pixels — for art reference only, not used by renderer
+    scale:        number   // uniform scale applied to the source PNG for canvas rendering
+    anchorX:      number   // 0–1; 0.5 = horizontal centre
+    anchorY:      number   // 0–1; 1.0 = bottom edge (character stands on floor line)
   }
   /** Below this HP fraction the damaged idle variant activates. */
   idleSwapBelowHpPercent: number

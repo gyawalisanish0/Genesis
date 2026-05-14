@@ -405,7 +405,7 @@ export class UnitStage {
       if (resolved && firstKey && this.scene.textures.exists(firstKey)) {
         bg.setVisible(false)
         sprite = this.scene.add.image(0, 0, firstKey)
-        sprite.setDisplaySize(manifest.display.width, manifest.display.height)
+        sprite.setScale(manifest.display.scale)
         sprite.setOrigin(manifest.display.anchorX, manifest.display.anchorY)
         container.add(sprite)
 

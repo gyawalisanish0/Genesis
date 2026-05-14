@@ -2,10 +2,11 @@
   "type": "animations",
   "defId": "hugo_001",
   "display": {
-    "width": 160,
-    "height": 180,
-    "anchorX": 0.5,
-    "anchorY": 1.0
+    "sourceWidth":  512,
+    "sourceHeight": 512,
+    "scale":        0.32,
+    "anchorX":      0.5,
+    "anchorY":      1.0
   },
   "idleSwapBelowHpPercent": 0.4,
   "meleeDashDx": 80,
