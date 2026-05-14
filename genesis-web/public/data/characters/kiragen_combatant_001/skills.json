@@ -1,0 +1,53 @@
+[
+  {
+    "type": "skill",
+    "id": "kiragen_combatant_001_plasma_beam",
+    "name": "Plasma Beam",
+    "description": "Focused energy discharge. 10% chance to stun the target for 2 turns — stunned units may only skip.",
+    "tuCost": 15,
+    "apCost": 18,
+    "tags": ["energy", "ranged"],
+    "maxLevel": 1,
+    "targeting": { "selector": "enemy", "range": "ranged" },
+    "resolution": { "baseChance": 0.89 },
+    "effects": [
+      {
+        "when": { "event": "onHit" },
+        "type": "damage",
+        "amount": { "stat": "power", "percent": 70 },
+        "damageType": "energy"
+      },
+      {
+        "when": { "event": "onHit" },
+        "type": "applyStatus",
+        "target": "enemy",
+        "status": "kiragen_plasma_stun",
+        "duration": 2,
+        "chance": 0.10
+      }
+    ],
+    "levelUpgrades": []
+  },
+  {
+    "type": "skill",
+    "id": "kiragen_combatant_001_rescan",
+    "name": "Rescan",
+    "description": "Syncs the combatant's AP% and Context Bar%: whichever is lower is raised to match the higher. Available after 5 own actions (minTurns: 5). Engine needs: minTurns skill field in CooldownResolver; rescan sync effect type.",
+    "tuCost": 20,
+    "apCost": 12,
+    "turnCooldown": 8,
+    "tags": ["buff", "self"],
+    "maxLevel": 1,
+    "targeting": { "selector": "self", "range": "global" },
+    "resolution": { "baseChance": 1.0 },
+    "effects": [
+      {
+        "when": { "event": "onCast" },
+        "type": "applyStatus",
+        "target": "self",
+        "status": "kiragen_rescan_sync"
+      }
+    ],
+    "levelUpgrades": []
+  }
+]

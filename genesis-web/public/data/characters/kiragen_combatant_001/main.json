@@ -1,0 +1,20 @@
+{
+  "type": "character",
+  "id": "kiragen_combatant_001",
+  "name": "Kiragen Combatant",
+  "className": "Ranger",
+  "rarity": 3,
+  "stats": {
+    "strength": 15,
+    "endurance": 30,
+    "power": 65,
+    "resistance": 50,
+    "speed": 35,
+    "precision": 55
+  },
+  "maxHp": 180,
+  "maxAp": 85,
+  "apRegenRate": 0.6,
+  "passive": "kiragen_combatant_001_tactical_scan",
+  "skillPath": "kiragen_combatant_path"
+}

@@ -1,0 +1,20 @@
+{
+  "type": "character",
+  "id": "kiragen_controller_001",
+  "name": "Kiragen Controller",
+  "className": "Enchanter",
+  "rarity": 3,
+  "stats": {
+    "strength": 10,
+    "endurance": 40,
+    "power": 45,
+    "resistance": 60,
+    "speed": 30,
+    "precision": 40
+  },
+  "maxHp": 240,
+  "maxAp": 100,
+  "apRegenRate": 0.65,
+  "passive": "kiragen_controller_001_vast_influence",
+  "skillPath": "kiragen_controller_path"
+}

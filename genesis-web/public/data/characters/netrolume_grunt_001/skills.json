@@ -1,0 +1,64 @@
+[
+  {
+    "type": "skill",
+    "id": "netrolume_grunt_001_basic_attack",
+    "name": "Basic Attack",
+    "tuCost": 10,
+    "apCost": 8,
+    "tags": ["physical", "melee", "basic"],
+    "maxLevel": 1,
+    "targeting": { "selector": "enemy", "range": "melee" },
+    "resolution": { "baseChance": 0.95 },
+    "effects": [
+      {
+        "when": { "event": "onHit" },
+        "type": "damage",
+        "amount": { "stat": "strength", "percent": 20 },
+        "damageType": "physical"
+      }
+    ],
+    "levelUpgrades": []
+  },
+  {
+    "type": "skill",
+    "id": "netrolume_grunt_001_clawd",
+    "name": "Clawd",
+    "description": "Feral lunge. Heavy and telegraphed — readable but devastating on contact.",
+    "tuCost": 19,
+    "apCost": 12,
+    "tags": ["physical", "melee"],
+    "maxLevel": 1,
+    "targeting": { "selector": "enemy", "range": "melee" },
+    "resolution": { "baseChance": 0.82 },
+    "effects": [
+      {
+        "when": { "event": "onHit" },
+        "type": "damage",
+        "amount": { "stat": "strength", "percent": 60 },
+        "damageType": "physical"
+      }
+    ],
+    "levelUpgrades": []
+  },
+  {
+    "type": "skill",
+    "id": "netrolume_grunt_001_quick_charge",
+    "name": "Quick Charge",
+    "description": "Fast burst that trades sustainability for speed. Harder to read than Clawd.",
+    "tuCost": 16,
+    "apCost": 18,
+    "tags": ["physical", "melee"],
+    "maxLevel": 1,
+    "targeting": { "selector": "enemy", "range": "melee" },
+    "resolution": { "baseChance": 0.90 },
+    "effects": [
+      {
+        "when": { "event": "onHit" },
+        "type": "damage",
+        "amount": { "sum": [10, { "stat": "strength", "percent": 45 }] },
+        "damageType": "physical"
+      }
+    ],
+    "levelUpgrades": []
+  }
+]

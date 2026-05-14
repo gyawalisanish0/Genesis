@@ -1,0 +1,76 @@
+[
+  {
+    "type": "skill",
+    "id": "kiragen_controller_001_data_pulse",
+    "name": "Data Pulse",
+    "description": "AoE energy pulse hitting all enemies for 15% PWR. Each target has independent 10% chance to receive Virus (-6% accuracy on all skills, 8 ticks). Applies Intell to all Kiragen Combatants: temporary +4% Context Bar for 5 ticks.",
+    "tuCost": 15,
+    "apCost": 40,
+    "tags": ["energy", "ranged", "aoe"],
+    "maxLevel": 1,
+    "targeting": { "selector": "all-enemies", "range": "ranged" },
+    "resolution": { "baseChance": 1.0 },
+    "effects": [
+      {
+        "when": { "event": "onCast" },
+        "type": "damage",
+        "target": "all-enemies",
+        "amount": { "stat": "power", "percent": 15 },
+        "damageType": "energy"
+      },
+      {
+        "when": { "event": "onCast" },
+        "type": "applyStatus",
+        "target": "all-enemies",
+        "status": "kiragen_virus",
+        "duration": 8,
+        "chance": 0.10
+      },
+      {
+        "when": { "event": "onCast" },
+        "type": "applyStatus",
+        "target": "all-allies",
+        "status": "kiragen_intell_context_boost",
+        "duration": 5
+      }
+    ],
+    "levelUpgrades": []
+  },
+  {
+    "type": "skill",
+    "id": "kiragen_controller_001_critical_spawn",
+    "name": "Critical Spawn",
+    "description": "Active — first cast: spawns a Netrolume Grunt. Subsequent casts: grants all Netrolume 10% crit chance for 7 ticks (180% attacker STR on crit). Counter — first trigger: spawns a Netrolume Elite that immediately attacks the attacker. Subsequent counter triggers: applies -20% accuracy to attacker for 6 ticks. Active and counter spawn flags tracked independently. Engine needs: spawnUnit effect type; onCounterTrigger event; minTurns field for availability gating.",
+    "tuCost": 20,
+    "apCost": 34,
+    "tags": ["summon", "buff", "uniqueCounter"],
+    "maxLevel": 1,
+    "targeting": { "selector": "self", "range": "global" },
+    "resolution": { "baseChance": 1.0 },
+    "effects": [
+      {
+        "when": { "event": "onCast" },
+        "condition": { "not": { "selfHasStatus": "kiragen_controller_grunt_spawned" } },
+        "type": "applyStatus",
+        "target": "self",
+        "status": "kiragen_critical_spawn_grunt"
+      },
+      {
+        "when": { "event": "onCast" },
+        "condition": { "not": { "selfHasStatus": "kiragen_controller_grunt_spawned" } },
+        "type": "applyStatus",
+        "target": "self",
+        "status": "kiragen_controller_grunt_spawned"
+      },
+      {
+        "when": { "event": "onCast" },
+        "condition": { "selfHasStatus": "kiragen_controller_grunt_spawned" },
+        "type": "applyStatus",
+        "target": "all-allies",
+        "status": "kiragen_netrolume_crit_buff",
+        "duration": 7
+      }
+    ],
+    "levelUpgrades": []
+  }
+]
