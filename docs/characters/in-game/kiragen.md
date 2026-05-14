@@ -14,7 +14,7 @@ Kiragen appear exclusively in Stage 3.
 | Species | Kiragen |
 | Role | Tech-integrated direct combat soldier |
 | Combat identity | Adaptive threat — becomes exponentially more dangerous the longer the fight runs |
-| Class | TBD |
+| Class | Ranger |
 | Rarity | 3 |
 | Data ID | `kiragen_combatant_001` |
 
