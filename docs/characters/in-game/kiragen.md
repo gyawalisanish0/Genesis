@@ -24,8 +24,11 @@ Kiragen appear exclusively in Stage 3.
 > watches, the less it misses.*
 
 The Kiragen combatant maintains a **Context Bar** that fills as the
-opposing team acts. It never empties mid-fight — each threshold reached
-is permanent for that battle.
+opposing team acts. The bar is a live value — thresholds are active
+while the bar is at or above them and deactivate if it drops back below.
+Temporary effects (such as the controller's **Intell**) can add to the
+bar for a duration then fall off; the base accumulation from opponent
+actions is permanent.
 
 **Fill rate:** 4–8% per opponent action (random per action). All
 player-side units contribute — Hugo, Husty, and Tara each fill the
@@ -187,7 +190,30 @@ TBD
 
 ### Skills
 
-TBD
+#### Data Pulse
+| Field | Value |
+|---|---|
+| AP Cost | 40 |
+| TU Cost | 15 |
+| Damage | 15% PWR (energy, ranged) per target |
+| Target | All opposition units (AoE) |
+| Base Chance | — (hits all; individual debuff chances below) |
+| Tags | `energy`, `ranged`, `aoe` |
+
+Applies two independent effects on cast:
+
+**Virus** — each target hit has a 10% independent chance to receive a
+debuff reducing the accuracy of all their skills by 6% for 8 ticks.
+Multiple targets can each proc independently.
+
+**Intell** — temporarily adds 4% to the Context Bar of all Kiragen
+Combatants on the field for 5 ticks. The addition is a live overlay —
+it can push the bar over a threshold for the window's duration, but
+falls off cleanly when the 5 ticks expire.
+
+The high AP cost (40) means the controller cannot cycle Data Pulse
+freely. Each cast is a deliberate decision — the Virus spread and Intell
+window must count.
 
 ---
 
