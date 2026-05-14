@@ -17,7 +17,9 @@ import { calculateStartingTick, advanceTick, calculateApGained } from '../core/c
 import { calculateFinalChance, shiftProbabilities } from '../core/combat/HitChanceEvaluator'
 import { roll, resolveCounterRoll, type DiceOutcome } from '../core/combat/DiceResolver'
 import { findCounterSkill, canCounter, isSingleTarget } from '../core/combat/CounterResolver'
-import { isOnCooldown, applyCooldown, applyTickCooldown, applyTurnCooldown } from '../core/combat/CooldownResolver'
+import { isOnCooldown, applyCooldown, applyTickCooldown, applyTurnCooldown, isBeforeMinTurns } from '../core/combat/CooldownResolver'
+import { registerSpawnHandler, clearSpawnHandler } from '../core/combat/SpawnBus'
+import type { SpawnRequest } from '../core/combat/SpawnBus'
 import { applyEffect } from '../core/effects/applyEffect'
 import { createSkillInstance, getCachedSkill } from '../core/engines/skill/SkillInstance'
 import { loadCharacterWithSkills, loadStatusDef, loadAnimationManifest } from '../services/DataService'
@@ -330,6 +332,92 @@ function fireStatusExpiry(
   }
   for (const effect of expireEffects) {
     applyEffect(effect, ctx)
+  }
+}
+
+/**
+ * Computes the effective TU cost of a skill for a unit by applying all
+ * active tuCostConfig status payloads. Accounts for both own secondaryResource
+ * and any resourceOverlay values from broadcast statuses.
+ * Minimum effective TU is always 1.
+ */
+function getEffectiveTuCost(baseTu: number, unit: Unit): number {
+  const ownFrequency = unit.secondaryResource
+  const overlayFrequency = unit.statusSlots.reduce(
+    (sum, s) => sum + (((s.payload?.resourceOverlay) as number | undefined) ?? 0),
+    0,
+  )
+  const totalFrequency = ownFrequency + overlayFrequency
+
+  let effective = baseTu
+  for (const slot of unit.statusSlots) {
+    const config = slot.payload?.tuCostConfig as {
+      delta?: number
+      percentOfBase?: number
+      percentPerSecondary?: number
+    } | undefined
+    if (!config) continue
+    if (config.percentPerSecondary !== undefined) {
+      effective = Math.round(effective * (1 - totalFrequency * config.percentPerSecondary / 100))
+    } else if (config.percentOfBase !== undefined) {
+      effective = Math.round(baseTu * (1 - config.percentOfBase / 100))
+    } else if (config.delta !== undefined) {
+      effective = effective + config.delta
+    }
+  }
+  return Math.max(1, effective)
+}
+
+/**
+ * Fires onOpponentAction passive effects for all units opposing the actor.
+ * Called after each action so passive observers (e.g. Tactical Scan) can respond.
+ */
+function fireOpponentActionEffects(
+  actor:       Unit,
+  snap:        Map<string, Unit>,
+  passiveDefs: Map<string, PassiveDef | null>,
+  tick:        number,
+): void {
+  const observers = [...snap.values()].filter(u => u.isAlly !== actor.isAlly && u.hp > 0)
+  for (const obs of observers) {
+    const passive = passiveDefs.get(obs.id)
+    if (!passive) continue
+    const unit = snap.get(obs.id) ?? obs
+    const ctx: EffectContext = {
+      caster:      unit,
+      battle:      snapshotToBattleState(snap),
+      source:      'passive',
+      event:       { event: 'onOpponentAction' },
+      currentTick: tick,
+    }
+    for (const effect of passive.effects) {
+      if (effect.when.event === 'onOpponentAction') applyEffect(effect, ctx)
+    }
+  }
+}
+
+/**
+ * Fires onCounterTrigger passive effects for the unit whose counter just fired.
+ * Enables mechanics that escalate on successful counters (e.g. Vast Influence).
+ */
+function fireCounterTriggerEffects(
+  counterUnit: Unit,
+  snap:        Map<string, Unit>,
+  passiveDefs: Map<string, PassiveDef | null>,
+  tick:        number,
+): void {
+  const passive = passiveDefs.get(counterUnit.id)
+  if (!passive) return
+  const unit = snap.get(counterUnit.id) ?? counterUnit
+  const ctx: EffectContext = {
+    caster:      unit,
+    battle:      snapshotToBattleState(snap),
+    source:      'passive',
+    event:       { event: 'onCounterTrigger' },
+    currentTick: tick,
+  }
+  for (const effect of passive.effects) {
+    if (effect.when.event === 'onCounterTrigger') applyEffect(effect, ctx)
   }
 }
 
@@ -772,8 +860,18 @@ export function BattleProvider({ children }: Props) {
         }
       }
     }
+    registerSpawnHandler((req: SpawnRequest) => {
+      // Load character data and add unit to battle — implementation stub.
+      // Full implementation requires async DataService.loadCharacterWithSkills call.
+      // For now: log the spawn request so it's visible during development.
+      console.warn('[SpawnBus] spawn requested:', req)
+    })
+
     load()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      clearSpawnHandler()
+    }
   }, [])
 
   // ── Turn display helpers ───────────────────────────────────────────────────
@@ -1132,6 +1230,9 @@ export function BattleProvider({ children }: Props) {
       `${caster.name} → ${skill.name} on ${target.name} [${diceOutcome}]`
     appendLog({ text: logMsg, colour: outcomeColour(diceOutcome) })
 
+    // Notify opposing passives that an action occurred.
+    fireOpponentActionEffects(caster, snap, passiveDefsRef.current, tickValue)
+
     // Reactive counter: check if the evading unit can counter-attack.
     if (diceOutcome === 'Evade' && isSingleTarget(skill)) {
       const defenderSnap   = snap.get(target.id) ?? target
@@ -1222,6 +1323,7 @@ export function BattleProvider({ children }: Props) {
     // Brief pause so the overlay visually dismisses before the dice animation starts.
     setTimeout(() => {
       runAttackRef.current?.(defender, originalCaster, counterSkill, snap, depth + 1)
+      fireCounterTriggerEffects(defender, snap, passiveDefsRef.current, tickValue)
       setTimeout(() => {
         setPlayerUnits((prev) => prev.map((u) => snap.get(u.id) ?? u))
         setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
@@ -1291,6 +1393,7 @@ export function BattleProvider({ children }: Props) {
           // Counter reactions bypass cooldown: no applyCooldown called.
           setTimeout(() => {
             runAttackRef.current?.(defender, originalCaster, counterSkill, snap, depth + 1)
+            fireCounterTriggerEffects(defender, snap, passiveDefsRef.current, tickValue)
             setTimeout(() => {
               setPlayerUnits((prev) => prev.map((u) => snap.get(u.id) ?? u))
               setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
@@ -1313,8 +1416,14 @@ export function BattleProvider({ children }: Props) {
 
     const skill = getCachedSkill(skillInst)
 
+    // Block skills that haven't met the minimum turns requirement.
+    if (isBeforeMinTurns(actor, skill.minTurns)) return
+
     // Block skills that are guarded by an active status's blocksRecastOfSkill payload.
     if (actor.statusSlots.some(s => s.payload?.blocksRecastOfSkill === skill.id)) return
+
+    // Block stunned units from executing any skill.
+    if (actor.statusSlots.some(s => s.payload?.stunned === true)) return
 
     // Block skills whose tags are locked by an active status on the caster.
     if (isSkillTagBlocked(actor, skill.tags)) return
@@ -1379,8 +1488,9 @@ export function BattleProvider({ children }: Props) {
       return next
     })
 
-    const fromTick = actor.tickPosition
-    const nextTick = advanceTick(fromTick, skill.tuCost)
+    const fromTick     = actor.tickPosition
+    const effectiveTu  = getEffectiveTuCost(skill.tuCost, snap.get(actor.id) ?? actor)
+    const nextTick     = advanceTick(fromTick, effectiveTu)
 
     pushHistory(makeHistoryEntry(actor.id, actor.name, fromTick, actor.isAlly))
 
@@ -1412,7 +1522,7 @@ export function BattleProvider({ children }: Props) {
       }))
       setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
       registerTick(actor.id, nextTick)
-      globalBattleTickRef.current += skill.tuCost
+      globalBattleTickRef.current += effectiveTu
       fireBattleTickIntervalPassives(
         globalBattleTickRef.current, snap,
         passiveDefsRef.current,
@@ -1497,7 +1607,13 @@ export function BattleProvider({ children }: Props) {
       const currentPlayers = playerUnitsRef.current
       const currentEnemies = enemiesRef.current
       const previewSkills  = (unitSkillsMapRef.current.get(firstAIUnit.id) ?? [])
-        .filter((s) => !isOnCooldown(firstAIUnit, s) && !isSkillTagBlocked(firstAIUnit, getCachedSkill(s).tags))
+        .filter((s) => {
+          if (isOnCooldown(firstAIUnit, s)) return false
+          const def = getCachedSkill(s)
+          if (isBeforeMinTurns(firstAIUnit, def.minTurns)) return false
+          if (isSkillTagBlocked(firstAIUnit, def.tags)) return false
+          return true
+        })
       if (!previewSkills.length) return
 
       // Foe count for this unit: allies count enemies as foes, enemies count player units.
@@ -1585,7 +1701,9 @@ export function BattleProvider({ children }: Props) {
         const availableSkills = allUnitSkills.filter((s) => {
           if (isOnCooldown(aiUnit, s)) return false
           const def = getCachedSkill(s)
+          if (isBeforeMinTurns(aiUnit, def.minTurns)) return false
           if (aiUnit.statusSlots.some(st => st.payload?.blocksRecastOfSkill === def.id)) return false
+          if (aiUnit.statusSlots.some(st => st.payload?.stunned === true)) return false
           if (isSkillTagBlocked(aiUnit, def.tags)) return false
           return true
         })
@@ -1667,13 +1785,14 @@ export function BattleProvider({ children }: Props) {
         })
 
         // Step 4: apply state after animations complete.
+        const aiEffectiveTu = getEffectiveTuCost(skill.tuCost, snap.get(aiUnit.id) ?? aiUnit)
         const applyAIState = () => {
           setPlayerUnits((prev) => prev.map((u) => snap.get(u.id) ?? u))
           setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
           const fromTick = aiUnit.tickPosition
           pushHistory(makeHistoryEntry(aiUnit.id, aiUnit.name, fromTick, aiUnit.isAlly))
-          registerTick(aiUnit.id, advanceTick(fromTick, skill.tuCost))
-          globalBattleTickRef.current += skill.tuCost
+          registerTick(aiUnit.id, advanceTick(fromTick, aiEffectiveTu))
+          globalBattleTickRef.current += aiEffectiveTu
           fireBattleTickIntervalPassives(
             globalBattleTickRef.current, snap,
             passiveDefsRef.current,

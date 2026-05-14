@@ -61,6 +61,15 @@ const handle: EffectHandler<ApplyStatusEffect> = (effect, ctx) => {
       payload.blocksRecastOfSkill = effect.blocksRecastOfSkill
     }
 
+    // TU cost modifier config — read by BattleContext to compute effective TU costs.
+    if (def.tuCostConfig) payload.tuCostConfig = def.tuCostConfig
+
+    // Stun flag — BattleContext prevents all skill execution when true.
+    if (def.tags?.includes('stun')) payload.stunned = true
+
+    // Passthrough payload from the applying effect — merged last so it can override defaults.
+    if (effect.payload) Object.assign(payload, effect.payload)
+
     const incoming: StatusEffect = {
       id:           def.id,
       name:         def.name,
