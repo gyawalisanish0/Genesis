@@ -94,6 +94,10 @@ export type WhenClause =
   | { event: 'onApSpent' }
   /** Fires on a global battle-tick interval — N ticks of battle time since last trigger. */
   | { event: 'onBattleTickInterval'; interval: number }
+  /** Fires on opposing faction unit's action; caster = the observer. */
+  | { event: 'onOpponentAction' }
+  /** Fires when this unit successfully triggers a counter. */
+  | { event: 'onCounterTrigger' }
 
 export type EventName = WhenClause['event']
 
@@ -117,6 +121,8 @@ export type Condition =
   | { hasTag: string }
   | { diceOutcome: DiceOutcome }
   | { apAccumGte: number }
+  | { selfSecondaryAbove: number }   // caster.secondaryResource > value
+  | { selfSecondaryBelow: number }   // caster.secondaryResource < value
   | { not: Condition }
   | { all: Condition[] }
   | { any: Condition[] }
@@ -197,6 +203,8 @@ export type Effect =
       /** Prevents the skill with this ID from being re-cast while this status is active. */
       blocksRecastOfSkill?:  string
       rangedBaseChanceBonus?: number
+      /** Merged into slot payload at apply time — allows per-cast payload overrides. */
+      payload?: Record<string, unknown>
     })
   | (EffectBase & { type: 'removeStatus';      status?: string; tag?: string })
   | (EffectBase & { type: 'shiftProbability';  outcome: DiceOutcome; delta: number })
@@ -213,6 +221,24 @@ export type Effect =
       set?:   number
     })
   | (EffectBase & { type: 'resetApAccum' })
+  | (EffectBase & {
+      type: 'syncResources'
+      // Syncs caster AP% (ap/maxAp*100) and secondaryResource (0–100).
+      // The lower value is raised to match the higher. Self-only.
+    })
+  | (EffectBase & {
+      type: 'broadcastResource'
+      // Applies statusId to all resolved targets with payload.resourceOverlay = caster.secondaryResource.
+      // Uses refresh stacking — re-applying updates the overlay value.
+      statusId: string
+    })
+  | (EffectBase & {
+      type: 'spawnUnit'
+      // Requests spawning a unit with this defId on the caster's faction.
+      defId:         string
+      // Optional: 'attacker' means the spawned unit immediately attacks the target that attacked caster.
+      attackTarget?: string
+    })
 
 /** Discriminator union of all primitive `type` values. */
 export type EffectType = Effect['type']
@@ -267,6 +293,7 @@ export interface SkillDef {
   apCost:         number
   tickCooldown?:  number   // ticks that must elapse after use before skill is available
   turnCooldown?:  number   // unit's own actions that must occur after use
+  minTurns?:      number   // unit must have taken >= minTurns actions before skill is available
   tags:           Tag[]
   maxLevel:       number
   targeting:      Targeting
@@ -312,6 +339,15 @@ export interface StatusDef {
   blockedTags?: string[]
   /** Dodge behaviour copied to slot payload at apply time. */
   dodgeConfig?: DodgeConfig
+  /**
+   * TU cost modifier config — copied into status slot payload at apply time.
+   * BattleContext reads it to compute effective TU costs.
+   */
+  tuCostConfig?: {
+    delta?:               number   // flat TU adjustment (negative = reduce)
+    percentOfBase?:       number   // e.g. 20 → reduces by 20% of base TU
+    percentPerSecondary?: number   // e.g. 10 → reduces by 10% of base TU per secondaryResource point
+  }
   effects:    Effect[]
 }
 

@@ -1,0 +1,9 @@
+{
+  "type": "status",
+  "id": "kiragen_vast_influence_overlay",
+  "name": "Vast Influence",
+  "stacking": "refresh",
+  "duration": 9999,
+  "tags": [],
+  "effects": []
+}

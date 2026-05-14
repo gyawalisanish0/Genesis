@@ -1,0 +1,15 @@
+{
+  "type": "status",
+  "id": "netrolume_great_growl_active",
+  "name": "Great Growl",
+  "stacking": "refresh",
+  "duration": 8,
+  "tags": [],
+  "effects": [
+    {
+      "when": { "event": "onExpire" },
+      "type": "secondaryResource",
+      "delta": -2
+    }
+  ]
+}

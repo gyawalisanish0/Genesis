@@ -1,0 +1,14 @@
+{
+  "type": "status",
+  "id": "kiragen_rescan_sync",
+  "name": "Rescan",
+  "stacking": "independent",
+  "duration": 1,
+  "tags": [],
+  "effects": [
+    {
+      "when": { "event": "onApply" },
+      "type": "syncResources"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "type": "status",
+  "id": "netrolume_hertz_beats_active",
+  "name": "Hertz Beats",
+  "stacking": "refresh",
+  "duration": 9999,
+  "tags": [],
+  "tuCostConfig": {
+    "percentPerSecondary": 10
+  },
+  "effects": []
+}

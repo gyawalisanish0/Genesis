@@ -1,0 +1,9 @@
+{
+  "type": "status",
+  "id": "kiragen_controller_grunt_spawned",
+  "name": "Grunt Spawned",
+  "stacking": "refresh",
+  "duration": 9999,
+  "tags": [],
+  "effects": []
+}

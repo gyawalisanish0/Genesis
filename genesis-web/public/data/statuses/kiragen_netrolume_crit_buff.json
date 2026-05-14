@@ -1,0 +1,9 @@
+{
+  "type": "status",
+  "id": "kiragen_netrolume_crit_buff",
+  "name": "Critical Scan",
+  "stacking": "refresh",
+  "duration": 7,
+  "tags": [],
+  "effects": []
+}

@@ -60,3 +60,12 @@ export function applyTickCooldown(inst: SkillInstance, readyAtTick: number): Ski
 export function applyTurnCooldown(unit: Unit, inst: SkillInstance, turns: number): SkillInstance {
   return { ...inst, cooldownReadyAtTick: 0, cooldownReadyAtAction: unit.actionCount + turns }
 }
+
+/**
+ * Returns true if the unit has not yet taken the minimum required actions
+ * to unlock this skill (minTurns gate). A minTurns of 0 or undefined is always ready.
+ */
+export function isBeforeMinTurns(unit: Unit, minTurns: number | undefined): boolean {
+  if (!minTurns || minTurns <= 0) return false
+  return unit.actionCount < minTurns
+}
