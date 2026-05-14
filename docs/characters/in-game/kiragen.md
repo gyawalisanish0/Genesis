@@ -83,7 +83,7 @@ is determined by the applying status's `forcedSkipTuCost` payload key
 | AP Cost | 12 |
 | TU Cost | 20 |
 | Base Chance | — (self-cast, no accuracy roll) |
-| Available | After the combatant's own 3rd action (`minTurns: 3`) |
+| Available | After the combatant's own 5th action (`minTurns: 5`) |
 | Cooldown | 8 turns (`turnCooldown: 8`) |
 | Tags | `buff`, `self` |
 
@@ -108,8 +108,8 @@ Once available it becomes a dual threat:
   to fighting capacity in one cast, forcing the player to re-evaluate
   AP-drain strategies.
 
-`minTurns` is a new skill field — locks a skill until the owner has taken
-at least N actions in the current battle. Engine support required (not yet
+`minTurns: 5` — locks Rescan until the combatant has taken at least 5
+actions in the current battle. Engine support required (new field, not yet
 in CooldownResolver).
 
 ---
