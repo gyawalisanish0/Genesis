@@ -246,6 +246,35 @@ export class UnitStage {
     })
   }
 
+  /**
+   * Play a named animation state on a figure. stateKey uses path-style
+   * notation: top-level states ('hurt', 'idle') or skill states
+   * ('skills/hugo_001_hammer_bash'). Advances onDone when frames complete.
+   * No-ops gracefully if the figure, manifest, or texture is absent.
+   */
+  playFigureAnim(figure: 'acting' | 'target', stateKey: string, onDone: () => void): void {
+    const fig = figure === 'acting' ? this.acting : this.target
+    if (!fig || !fig.manifest) { onDone(); return }
+    const entry = stateKey.startsWith('skills/')
+      ? fig.manifest.animations.skills?.[stateKey.slice(7)]
+      : fig.manifest.animations[stateKey]
+    if (!entry || fig.locked) { onDone(); return }
+    this.playOneShot(fig, stateKey, entry, onDone)
+  }
+
+  /** Show or hide the aura for a figure. Used by the `aura` sequence phase. */
+  setAura(figure: 'acting' | 'target', show: boolean): void {
+    const fig  = figure === 'acting' ? this.acting : this.target
+    const aura = figure === 'acting' ? this.actingAura : this.targetAura
+    if (!fig) return
+    if (show) {
+      const resolved = fig.manifest ? resolveIdleAnimation(fig.manifest, fig.isDamaged) : null
+      if (resolved?.entry.aura) aura.show(resolved.entry.aura, fig.container)
+    } else {
+      aura.hide()
+    }
+  }
+
   /** Play the death animation then fade out, then destroy. */
   collapseByDefId(defId: string, onDone: () => void): void {
     const fig = defId === this.actingDefId ? this.acting
