@@ -137,9 +137,49 @@ in CooldownResolver).
 | Rarity | 3 |
 | Data ID | `kiragen_controller_001` |
 
-### Passive
+### Passive — Vast Influence
 
-TBD
+> *The signal doesn't stop at one. Every frequency point the controller
+> holds, the whole pack holds.*
+
+The Kiragen controller broadcasts a shared frequency level to all
+Netrolume allies on the field. The broadcast is additive with each
+unit's own Hertz Beats points — no ceiling on total frequency.
+
+**Progression:**
+
+| Trigger | Frequency Points |
+|---|---|
+| Battle start | 1 |
+| Tick 15 | 2 |
+| Each counter the controller triggers | +1 (cap: 5 total) |
+
+**Broadcast effect:** All Netrolume allies on the field inherit the
+controller's current frequency count on top of their own Hertz Beats.
+Each point reduces all action TU costs by 10% of that skill's base TU.
+
+**Example at 4 broadcast points:**
+
+| Unit | Own Hertz Beats | Total Points | TU Reduction |
+|---|---|---|---|
+| Netrolume Grunt | 1 | 5 | −50% |
+| Netrolume Elite | 2 | 6 | −60% |
+| Netrolume Elite + Great Growl | 4 | 8 | −80% |
+
+At maximum broadcast (5 points) these values increase by one step each.
+An Elite mid-Great Growl with a max-broadcast controller reaches 9 total
+frequency points — −90% TU on all actions.
+
+**Strategic pressure:**
+
+The tick ramp is slow and passive — 2 points by tick 15 is threatening
+but manageable. The counter ramp is fast and player-triggered: every
+attack on the controller that it counters pushes the broadcast higher.
+Three counters from tick 15 onward hits the cap.
+
+The player must kill the controller quickly, but attacking it is exactly
+what accelerates the frequency. The correct response is burst — enough
+damage to kill it before it can counter repeatedly.
 
 ### Stats
 
