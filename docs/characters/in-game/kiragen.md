@@ -186,7 +186,17 @@ damage to kill it before it can counter repeatedly.
 
 ### Stats
 
-TBD
+| Stat | Value |
+|---|---|
+| STR | 10 |
+| END | 40 |
+| PWR | 45 |
+| RES | 60 |
+| SPD | 30 |
+| PRC | 40 |
+| HP | 240 |
+| AP | 100 |
+| AP Regen | 0.65 / tick |
 
 ### Skills
 
