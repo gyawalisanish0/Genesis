@@ -12,7 +12,7 @@ import type { SkillInstance, BattleState as EngineBattleState, EffectContext, Ta
 import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, CLASH_ANNOUNCE_MS, ENEMY_AI_DELAY_MS, COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE, BATTLE_FEEDBACK_HOLD_MS, SKIP_TU_COST } from '../core/constants'
 import { resolveTickDisplacement } from '../core/combat/TickDisplacer'
 import { resolveClashWinner, factionAvgSpeed } from '../core/combat/ClashResolver'
-import { createUnit, isAlive, setTickPosition, incrementActionCount, tickStatusDurations, consumeStatusStack, updateStatusIntervalTick, isSkillTagBlocked, addApSpent } from '../core/unit'
+import { createUnit, isAlive, setTickPosition, incrementActionCount, tickStatusDurations, consumeStatusStack, updateStatusIntervalTick, isSkillTagBlocked, addApSpent, takeDamage } from '../core/unit'
 import { calculateStartingTick, advanceTick, calculateApGained } from '../core/combat/TickCalculator'
 import { calculateFinalChance, shiftProbabilities } from '../core/combat/HitChanceEvaluator'
 import { roll, resolveCounterRoll, type DiceOutcome } from '../core/combat/DiceResolver'
@@ -419,6 +419,42 @@ function fireCounterTriggerEffects(
   for (const effect of passive.effects) {
     if (effect.when.event === 'onCounterTrigger') applyEffect(effect, ctx)
   }
+}
+
+/**
+ * Fires onCounterCast skill effects when a skill is used as a reactive counter.
+ * Called in confirmCounter and the AI counter path inside scheduleCounterChain.
+ * `attacker` is the original attacking unit (the one that was countered against).
+ */
+function fireCounterCastEffects(
+  counterUnit:  Unit,
+  attacker:     Unit,
+  counterSkill: SkillInstance,
+  snap:         Map<string, Unit>,
+  tick:         number,
+): void {
+  const caster = snap.get(counterUnit.id) ?? counterUnit
+  const target = snap.get(attacker.id)   ?? attacker
+  const ctx: EffectContext = {
+    caster,
+    target,
+    battle:      snapshotToBattleState(snap),
+    source:      'skill',
+    event:       { event: 'onCounterCast' },
+    currentTick: tick,
+  }
+  for (const effect of counterSkill.cachedEffects) {
+    if (effect.when.event === 'onCounterCast') applyEffect(effect, ctx)
+  }
+}
+
+/** Returns the first active critConfig from any of the unit's status slot payloads. */
+function readCritConfig(unit: Unit): { chance: number; attackerStrPercent: number } | undefined {
+  for (const slot of unit.statusSlots) {
+    const cfg = slot.payload?.critConfig as { chance: number; attackerStrPercent: number } | undefined
+    if (cfg) return cfg
+  }
+  return undefined
 }
 
 /** Fire onApSpent passive effects after a unit spends AP on a skill. */
@@ -860,11 +896,66 @@ export function BattleProvider({ children }: Props) {
         }
       }
     }
-    registerSpawnHandler((req: SpawnRequest) => {
-      // Load character data and add unit to battle — implementation stub.
-      // Full implementation requires async DataService.loadCharacterWithSkills call.
-      // For now: log the spawn request so it's visible during development.
-      console.warn('[SpawnBus] spawn requested:', req)
+    registerSpawnHandler(async (req: SpawnRequest) => {
+      try {
+        const data    = await loadCharacterWithSkills(req.defId)
+        const rawUnit = createUnit(data.characterDef, req.isAlly)
+        const newUnit = setTickPosition(rawUnit, req.currentTick + 1)
+
+        const skills = data.skillDefs.map(createSkillInstance)
+        setUnitSkillsMap(prev => new Map([...prev, [newUnit.id, skills]]))
+
+        const manifest = await loadAnimationManifest(req.defId)
+        manifestsRef.current.set(req.defId, manifest)
+
+        if (data.passiveDef) {
+          passiveDefsRef.current = new Map([...passiveDefsRef.current, [newUnit.id, data.passiveDef]])
+        }
+
+        // Register status defs for any statuses the spawned unit references.
+        const allEffects = [
+          ...data.skillDefs.flatMap(s => s.effects),
+          ...(data.passiveDef ? data.passiveDef.effects : []),
+        ]
+        const newStatusIds = [...new Set(collectStatusIds(allEffects))]
+        const loadedStatuses = await Promise.all(newStatusIds.map(id => loadStatusDef(id)))
+        newStatusIds.forEach((id, i) => {
+          const def = loadedStatuses[i]
+          if (def) { registerStatusDef(def); statusDefsRef.current.set(id, def) }
+        })
+
+        // Fire onBattleStart passive effects for the newly spawned unit.
+        let finalUnit = newUnit
+        if (data.passiveDef) {
+          const spawnSnap = new Map<string, Unit>([[newUnit.id, newUnit]])
+          for (const effect of data.passiveDef.effects) {
+            if (effect.when.event !== 'onBattleStart') continue
+            const ctx: EffectContext = {
+              caster:      spawnSnap.get(newUnit.id) ?? newUnit,
+              target:      spawnSnap.get(newUnit.id) ?? newUnit,
+              battle:      snapshotToBattleState(spawnSnap),
+              source:      'passive',
+              event:       { event: 'onBattleStart' },
+              currentTick: req.currentTick,
+            }
+            applyEffect(effect, ctx)
+          }
+          finalUnit = spawnSnap.get(newUnit.id) ?? newUnit
+        }
+
+        registerTick(finalUnit.id, finalUnit.tickPosition)
+        NarrativeUnits.register([finalUnit])
+
+        if (req.isAlly) {
+          setPlayerUnits(prev => [...prev, finalUnit])
+        } else {
+          setEnemies(prev => [...prev, finalUnit])
+        }
+
+        appendLog({ text: `${data.characterDef.name} has entered the battle!`, colour: 'var(--accent-genesis)' })
+      } catch (err) {
+        console.error('[SpawnBus] failed to spawn unit:', err)
+      }
     })
 
     load()
@@ -1224,6 +1315,20 @@ export function BattleProvider({ children }: Props) {
       }
     }
 
+    // Crit bonus damage — fires when attacker has an active critConfig status and
+    // the attack landed. Applies 180% (or configured %) of attacker STR as bonus
+    // damage on top of normal skill effects. Routes through shield like any damage.
+    if (!noDamage) {
+      const casterCurrent = snap.get(caster.id) ?? caster
+      const critCfg = readCritConfig(casterCurrent)
+      if (critCfg && Math.random() < critCfg.chance) {
+        const critAmount = Math.round(casterCurrent.stats.strength * critCfg.attackerStrPercent / 100)
+        const targetCurrent = snap.get(target.id) ?? target
+        battle.setUnit(takeDamage(targetCurrent, critAmount))
+        appendLog({ text: `★ CRITICAL! +${critAmount} bonus damage`, colour: 'var(--accent-gold)' })
+      }
+    }
+
     const logMsg =
       diceOutcome === 'Evade' ? `${target.name} evaded ${skill.name}!` :
       diceOutcome === 'Fail'  ? `${caster.name} missed with ${skill.name}!` :
@@ -1323,6 +1428,7 @@ export function BattleProvider({ children }: Props) {
     // Brief pause so the overlay visually dismisses before the dice animation starts.
     setTimeout(() => {
       runAttackRef.current?.(defender, originalCaster, counterSkill, snap, depth + 1)
+      fireCounterCastEffects(defender, originalCaster, counterSkill, snap, tickValue)
       fireCounterTriggerEffects(defender, snap, passiveDefsRef.current, tickValue)
       setTimeout(() => {
         setPlayerUnits((prev) => prev.map((u) => snap.get(u.id) ?? u))
@@ -1393,6 +1499,7 @@ export function BattleProvider({ children }: Props) {
           // Counter reactions bypass cooldown: no applyCooldown called.
           setTimeout(() => {
             runAttackRef.current?.(defender, originalCaster, counterSkill, snap, depth + 1)
+            fireCounterCastEffects(defender, originalCaster, counterSkill, snap, tickValue)
             fireCounterTriggerEffects(defender, snap, passiveDefsRef.current, tickValue)
             setTimeout(() => {
               setPlayerUnits((prev) => prev.map((u) => snap.get(u.id) ?? u))

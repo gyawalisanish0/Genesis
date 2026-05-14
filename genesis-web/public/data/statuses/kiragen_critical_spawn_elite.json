@@ -1,0 +1,16 @@
+{
+  "type": "status",
+  "id": "kiragen_critical_spawn_elite",
+  "name": "Critical Spawn: Elite",
+  "stacking": "independent",
+  "duration": 1,
+  "tags": [],
+  "effects": [
+    {
+      "when": { "event": "onApply" },
+      "type": "spawnUnit",
+      "defId": "netrolume_elite_001",
+      "attackTarget": "attacker"
+    }
+  ]
+}

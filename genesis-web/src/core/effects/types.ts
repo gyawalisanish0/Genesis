@@ -98,6 +98,8 @@ export type WhenClause =
   | { event: 'onOpponentAction' }
   /** Fires when this unit successfully triggers a counter. */
   | { event: 'onCounterTrigger' }
+  /** Fires when a skill is used as a reactive counter (as opposed to a normal active cast). */
+  | { event: 'onCounterCast' }
 
 export type EventName = WhenClause['event']
 
@@ -347,6 +349,15 @@ export interface StatusDef {
     delta?:               number   // flat TU adjustment (negative = reduce)
     percentOfBase?:       number   // e.g. 20 → reduces by 20% of base TU
     percentPerSecondary?: number   // e.g. 10 → reduces by 10% of base TU per secondaryResource point
+  }
+  /**
+   * Crit config — copied into status slot payload at apply time.
+   * BattleContext reads it in runAttack: rolls chance; on success applies
+   * attackerStrPercent of caster STR as bonus damage to the target.
+   */
+  critConfig?: {
+    chance:             number   // 0–1 roll threshold (e.g. 0.10 = 10% crit)
+    attackerStrPercent: number   // bonus damage as % of caster STR (e.g. 180)
   }
   effects:    Effect[]
 }

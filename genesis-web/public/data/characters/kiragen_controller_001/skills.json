@@ -40,7 +40,7 @@
     "type": "skill",
     "id": "kiragen_controller_001_critical_spawn",
     "name": "Critical Spawn",
-    "description": "Active — first cast: spawns a Netrolume Grunt. Subsequent casts: grants all Netrolume 10% crit chance for 7 ticks (180% attacker STR on crit). Counter — first trigger: spawns a Netrolume Elite that immediately attacks the attacker. Subsequent counter triggers: applies -20% accuracy to attacker for 6 ticks. Active and counter spawn flags tracked independently. Engine needs: spawnUnit effect type; onCounterTrigger event; minTurns field for availability gating.",
+    "description": "Active — first cast: spawns a Netrolume Grunt into battle. Subsequent casts: grants all Netrolume 10% crit chance for 7 ticks (crit damage = 180% attacker STR). Counter — first trigger: spawns a Netrolume Elite that attacks the attacker. Subsequent triggers: applies -20% accuracy to the attacker for 6 ticks. Active and counter spawn flags are independent.",
     "tuCost": 20,
     "apCost": 34,
     "tags": ["summon", "buff", "uniqueCounter"],
@@ -69,6 +69,28 @@
         "target": "all-allies",
         "status": "kiragen_netrolume_crit_buff",
         "duration": 7
+      },
+      {
+        "when": { "event": "onCounterCast" },
+        "condition": { "not": { "selfHasStatus": "kiragen_controller_elite_spawned" } },
+        "type": "applyStatus",
+        "target": "self",
+        "status": "kiragen_critical_spawn_elite"
+      },
+      {
+        "when": { "event": "onCounterCast" },
+        "condition": { "not": { "selfHasStatus": "kiragen_controller_elite_spawned" } },
+        "type": "applyStatus",
+        "target": "self",
+        "status": "kiragen_controller_elite_spawned"
+      },
+      {
+        "when": { "event": "onCounterCast" },
+        "condition": { "selfHasStatus": "kiragen_controller_elite_spawned" },
+        "type": "applyStatus",
+        "target": "enemy",
+        "status": "kiragen_accuracy_debuff",
+        "duration": 6
       }
     ],
     "levelUpgrades": []

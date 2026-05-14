@@ -5,5 +5,9 @@
   "stacking": "refresh",
   "duration": 7,
   "tags": [],
+  "critConfig": {
+    "chance": 0.10,
+    "attackerStrPercent": 180
+  },
   "effects": []
 }

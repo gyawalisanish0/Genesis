@@ -64,6 +64,9 @@ const handle: EffectHandler<ApplyStatusEffect> = (effect, ctx) => {
     // TU cost modifier config — read by BattleContext to compute effective TU costs.
     if (def.tuCostConfig) payload.tuCostConfig = def.tuCostConfig
 
+    // Crit config — read by BattleContext in runAttack to roll and apply bonus crit damage.
+    if (def.critConfig) payload.critConfig = def.critConfig
+
     // Stun flag — BattleContext prevents all skill execution when true.
     if (def.tags?.includes('stun')) payload.stunned = true
 
