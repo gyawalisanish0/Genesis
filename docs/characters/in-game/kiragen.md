@@ -63,7 +63,54 @@ TBD
 
 ### Skills
 
-TBD
+#### Plasma Beam
+| Field | Value |
+|---|---|
+| AP Cost | 18 |
+| TU Cost | 15 |
+| Damage | 70% PWR (energy, ranged) |
+| Base Chance | 0.89 |
+| On-hit effect | 10% chance to stun target for 2 turns |
+| Tags | `energy`, `ranged` |
+
+Stun restricts the target to Skip only. The stunned unit's skip TU cost
+is determined by the applying status's `forcedSkipTuCost` payload key
+(overrides the global `SKIP_TU_COST` default of 10).
+
+#### Rescan
+| Field | Value |
+|---|---|
+| AP Cost | 12 |
+| TU Cost | 20 |
+| Base Chance | — (self-cast, no accuracy roll) |
+| Available | After the combatant's own 3rd action (`minTurns: 3`) |
+| Cooldown | 8 turns (`turnCooldown: 8`) |
+| Tags | `buff`, `self` |
+
+On cast, compare the combatant's current AP% and Context Bar%:
+
+- If AP% > Context Bar% → Context Bar is raised to AP%
+- If Context Bar% > AP% → AP is raised to match Context Bar%
+
+Whichever resource is lagging gets pulled up to the higher one. Both
+values are expressed as a percentage of their respective maximums
+(AP/maxAP, Context Bar/100).
+
+**Strategic pressure it creates:**
+
+The cooldown and 3-turn gate mean Rescan cannot appear before mid-fight.
+Once available it becomes a dual threat:
+
+- A combatant sitting at high AP can spike its own Context Bar past a
+  threshold the player thought was still safe — no additional player
+  actions required.
+- A combatant with a depleted AP bar but a high Context Bar refills
+  to fighting capacity in one cast, forcing the player to re-evaluate
+  AP-drain strategies.
+
+`minTurns` is a new skill field — locks a skill until the owner has taken
+at least N actions in the current battle. Engine support required (not yet
+in CooldownResolver).
 
 ---
 
