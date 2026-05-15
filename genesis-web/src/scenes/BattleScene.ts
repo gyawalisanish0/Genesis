@@ -14,10 +14,13 @@ import type { AnimationManifest, AnimationProjectileDef } from '../core/types'
 import { tokenToHex }       from './battle/tokens'
 import { UnitStage }        from './battle/UnitStage'
 import { DicePanel }        from './battle/DicePanel'
-import { AttackPanel }      from './battle/AttackPanel'
+import { SequenceRunner }   from './battle/SequenceRunner'
+import { buildDefaultSequence } from './battle/DefaultSequences'
+import type { SequenceContext } from './battle/SequenceTypes'
 import { FeedbackPanel }    from './battle/FeedbackPanel'
 import { ParticleEmitter, PARTICLE_KEY } from './battle/ParticleEmitter'
 import { ProjectilePanel }  from './battle/ProjectilePanel'
+import type { DiceOutcome } from '../core/combat/DiceResolver'
 import { TurnDisplayPanel, TURN_PANEL_RESERVE } from './battle/TurnDisplayPanel'
 import type { TurnPanelData } from './battle/TurnDisplayPanel'
 import { BETWEEN_TURN_PAUSE_MS } from '../core/constants'
@@ -38,7 +41,7 @@ export class BattleScene extends Phaser.Scene {
   private vignette!:         Phaser.GameObjects.Graphics
   private unitStage!:        UnitStage
   private dicePanel!:        DicePanel
-  private attackPanel!:      AttackPanel
+  private sequenceRunner!:   SequenceRunner
   private feedbackPanel!:    FeedbackPanel
   private turnDisplayPanel!: TurnDisplayPanel
 
@@ -67,8 +70,8 @@ export class BattleScene extends Phaser.Scene {
     const projectilePanel   = new ProjectilePanel(this)
     this.unitStage          = new UnitStage(this, TOP_INSET)
     this.dicePanel          = new DicePanel(this, TOP_INSET)
-    this.attackPanel        = new AttackPanel(this, this.unitStage, particles, projectilePanel)
     this.feedbackPanel      = new FeedbackPanel(this, TOP_INSET, this.unitStage)
+    this.sequenceRunner     = new SequenceRunner(this, this.unitStage, particles, projectilePanel, this.feedbackPanel)
     this.turnDisplayPanel   = new TurnDisplayPanel(this)
     void new ResolutionAdaptor(this)
 
@@ -105,6 +108,11 @@ export class BattleScene extends Phaser.Scene {
     this.unitStage.hide()
   }
 
+  /** True while a play-once animation (dash, death, hurt, dodge) is running on any figure. */
+  isAnimating(): boolean {
+    return this.unitStage.isAnimating()
+  }
+
   // ── Stage 3: dice → attack → feedback (phase-gated via onDone) ───────────
 
   playDice(outcome: string, onDone: () => void): void {
@@ -116,23 +124,31 @@ export class BattleScene extends Phaser.Scene {
   }
 
   playAttack(
-    actingDefId: string,
-    targetDefId: string,
-    outcome:     string,
-    damage:      number,
-    isMelee:     boolean,
-    dashDx:      number,
-    projectile:  AnimationProjectileDef | null,
-    onDone:      () => void,
+    actingDefId:    string,
+    targetDefId:    string,
+    outcome:        string,
+    damage:         number,
+    isMelee:        boolean,
+    dashDx:         number,
+    projectile:     AnimationProjectileDef | null,
+    feedbackText:   string,
+    feedbackColour: string,
+    onDone:         () => void,
   ): void {
-    this.attackPanel.play(
-      actingDefId, targetDefId, outcome, damage,
-      isMelee, dashDx, projectile, onDone,
-    )
+    const diceOutcome = outcome as DiceOutcome
+    const ctx: SequenceContext = {
+      actingDefId, targetDefId,
+      outcome:    diceOutcome,
+      damage, isMelee, dashDx, projectile,
+      feedbackText, feedbackColour,
+    }
+    const phases = buildDefaultSequence(isMelee, diceOutcome)
+    this.sequenceRunner.run(phases, ctx, onDone)
   }
 
-  playFeedback(text: string, colour: string): void {
-    this.feedbackPanel.show(text, colour)
+  /** Skip the active attack sequence — cancels pending waits and fires onDone. */
+  skipActiveAttack(): void {
+    this.sequenceRunner.skip()
   }
 
   // ── Stage 4: death collapse ───────────────────────────────────────────────

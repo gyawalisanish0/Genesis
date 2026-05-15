@@ -81,3 +81,29 @@ export function resolveReactionAnimation(
   if (entry) return { stateKey: reaction, entry, isMelee: false, dashDx: 0 }
   return null
 }
+
+export function resolveDashAnimation(
+  manifest:  AnimationManifest,
+  isDamaged: boolean,
+): ResolvedAnimation | null {
+  if (isDamaged) {
+    const entry = manifest.animations['dash_damaged']
+    if (entry) return { stateKey: 'dash_damaged', entry, isMelee: false, dashDx: 0 }
+  }
+  const entry = manifest.animations['dash']
+  if (entry) return { stateKey: 'dash', entry, isMelee: false, dashDx: 0 }
+  return null
+}
+
+export function resolveDeathAnimation(
+  manifest:  AnimationManifest,
+  isDamaged: boolean,
+): ResolvedAnimation | null {
+  if (isDamaged) {
+    const entry = manifest.animations['death_damaged']
+    if (entry) return { stateKey: 'death_damaged', entry, isMelee: false, dashDx: 0 }
+  }
+  const entry = manifest.animations['death']
+  if (entry) return { stateKey: 'death', entry, isMelee: false, dashDx: 0 }
+  return null
+}

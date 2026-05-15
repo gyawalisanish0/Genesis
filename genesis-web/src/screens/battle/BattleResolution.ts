@@ -87,3 +87,13 @@ export function buildFeedbackText(outcome: DiceOutcome, damage: number): string 
   if (damage <= 0)         return outcome.toUpperCase()
   return `${outcome === 'Boosted' ? '★ ' : ''}−${damage} HP`
 }
+
+/** Short outcome label shown by the canvas `feedback` sequence phase. */
+export function buildOutcomeLabel(outcome: DiceOutcome): string {
+  switch (outcome) {
+    case 'Boosted': return 'BOOSTED!'
+    case 'Hit':     return 'HIT!'
+    case 'Evade':   return 'EVADED!'
+    case 'Fail':    return 'MISS!'
+  }
+}

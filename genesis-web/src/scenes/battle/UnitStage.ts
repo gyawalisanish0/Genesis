@@ -3,23 +3,29 @@
 //
 // Each figure slot owns one AuraPanel (scene-root, synced via update event).
 // The aura definition lives on AnimationStateDef.aura — no separate config.
-// Lifetime: looping states (repeat -1) keep the aura alive until the state
-// changes; play-once states (repeat 0) let the caller drive hide().
 //
-// getActingContainer / getTargetContainer expose the live container refs for
-// any external scene object that needs to sync its position to a unit.
+// Animation lock: fig.locked is true while a play-once animation runs on that
+// figure. shoveActing() respects the acting lock (drops if already animating).
+// flashTarget() and evasionDodge() respect the target lock (skip reaction if locked).
 
 import Phaser from 'phaser'
 import { tokenToHex }   from './tokens'
-import type { AnimationManifest } from '../../core/types'
+import type { AnimationManifest, AnimationStateDef } from '../../core/types'
 import { AnimationPlayer, frameKey } from './AnimationPlayer'
 import { AuraPanel } from './AuraPanel'
+import {
+  resolveIdleAnimation,
+  resolveReactionAnimation,
+  resolveDashAnimation,
+  resolveDeathAnimation,
+} from './AnimationResolver'
 
 const UNIT_W        = 128
 const UNIT_H        = 92
 const SLIDE_MS      = 300
 const SHOVE_MS      = 190
 const SHOVE_HOLD_MS = 60
+const FADE_MS       = 420
 const ACTING_STROKE = 0x8b5cf6
 const TARGET_STROKE = 0xef4444
 const UNIT_BG       = 0x12121e
@@ -32,6 +38,7 @@ interface FigureRef {
   isDamaged:  boolean
   manifest:   AnimationManifest | null
   defId:      string
+  locked:     boolean   // true while a play-once animation is running
 }
 
 export class UnitStage {
@@ -55,6 +62,11 @@ export class UnitStage {
   }
 
   get isVisible(): boolean { return this.visible }
+
+  /** True while any figure has a play-once animation in progress. */
+  isAnimating(): boolean {
+    return (this.acting?.locked ?? false) || (this.target?.locked ?? false)
+  }
 
   actingX(): number { return this.acting?.container.x ?? 0 }
   actingY(): number { return this.acting?.container.y ?? 0 }
@@ -101,23 +113,12 @@ export class UnitStage {
 
   /** Swap the idle animation (and aura) to/from the damaged variant. */
   setDamaged(defId: string, isDamaged: boolean): void {
-    const fig  = defId === this.actingDefId ? this.acting
-               : defId === this.targetDefId ? this.target
-               : null
-    if (!fig || fig.isDamaged === isDamaged || !fig.sprite || !fig.manifest) return
+    const fig = defId === this.actingDefId ? this.acting
+              : defId === this.targetDefId ? this.target
+              : null
+    if (!fig || fig.isDamaged === isDamaged) return
     fig.isDamaged = isDamaged
-
-    const stateKey = isDamaged ? 'idle_damaged' : 'idle'
-    const entry    = fig.manifest.animations[stateKey]
-    if (!entry || !this.scene.textures.exists(frameKey(fig.defId, stateKey, 0))) return
-
-    fig.animPlayer?.stop()
-    const player = new AnimationPlayer(this.scene, fig.sprite)
-    player.play(fig.defId, stateKey, entry)
-    fig.animPlayer = player
-
-    this.auraFor(fig).stop()
-    if (entry.aura) this.auraFor(fig).show(entry.aura, fig.container)
+    this.restartIdle(fig)
   }
 
   hide(onDone?: () => void): void {
@@ -155,6 +156,22 @@ export class UnitStage {
     }
   }
 
+  /**
+   * Pure colour tint flash on any figure — no hurt animation.
+   * Used by the standalone `flash` sequence phase.
+   */
+  pureFlash(figure: 'acting' | 'target', colour = 0xffffff): void {
+    const fig = figure === 'acting' ? this.acting : this.target
+    if (!fig) return
+    const rect = this.scene.add.rectangle(0, 0, UNIT_W, UNIT_H, colour, 1)
+    fig.container.add(rect)
+    this.scene.tweens.add({
+      targets: rect, alpha: 0, duration: 140, ease: 'Sine.easeOut',
+      onComplete: () => rect.destroy(),
+    })
+  }
+
+  /** Flash the target figure and play the hurt reaction animation concurrently. */
   flashTarget(hitColour: number): void {
     if (!this.target) return
     const flash = this.scene.add.rectangle(0, 0, UNIT_W, UNIT_H, hitColour, 1)
@@ -163,13 +180,40 @@ export class UnitStage {
       targets: flash, alpha: 0, duration: 140, ease: 'Sine.easeOut',
       onComplete: () => flash.destroy(),
     })
+
+    if (!this.target.locked) {
+      const resolved = this.target.manifest
+        ? resolveReactionAnimation(this.target.manifest, 'hurt', this.target.isDamaged)
+        : null
+      if (resolved) {
+        this.playOneShot(this.target, resolved.stateKey, resolved.entry, () => {
+          if (this.target) this.restartIdle(this.target)
+        })
+      }
+    }
   }
 
+  /** Dodge tween + dodge reaction animation on the target figure. */
   shoveActing(dx: number, onImpact: (() => void) | null, onDone: () => void): void {
     if (!this.acting) { onImpact?.(); onDone(); return }
+    if (this.acting.locked) { onImpact?.(); onDone(); return }
+
     const c = this.acting.container
     this.stopIdle()
 
+    // Show the dash pose for the duration of the shove tween.
+    const dashResolved = this.acting.manifest
+      ? resolveDashAnimation(this.acting.manifest, this.acting.isDamaged)
+      : null
+    if (dashResolved && this.acting.sprite) {
+      const key = frameKey(this.acting.defId, dashResolved.stateKey, 0)
+      if (this.scene.textures.exists(key)) {
+        this.acting.animPlayer?.stop()
+        this.acting.sprite.setTexture(key)
+      }
+    }
+
+    this.acting.locked = true
     this.impactTimer?.destroy()
     if (onImpact) {
       this.impactTimer = this.scene.time.delayedCall(SHOVE_MS, () => {
@@ -181,16 +225,35 @@ export class UnitStage {
     this.scene.tweens.add({
       targets: c, x: c.x + dx, duration: SHOVE_MS,
       ease: 'Sine.easeIn', yoyo: true, hold: SHOVE_HOLD_MS,
-      onComplete: () => onDone(),
+      onComplete: () => {
+        if (this.acting) {
+          this.acting.locked = false
+          this.restartIdle(this.acting)
+        }
+        onDone()
+      },
     })
   }
 
+  /** Container dodge tween + dodge reaction animation on the target figure. */
   evasionDodge(onDone: () => void): void {
     if (!this.target) { onDone(); return }
     const c         = this.target.container
     this.stopIdle()
     const direction = c.x >= this.scene.scale.width / 2 ? 1 : -1
     const dodgeDx   = direction * Math.floor(this.scene.scale.width * 0.09)
+
+    if (!this.target.locked) {
+      const resolved = this.target.manifest
+        ? resolveReactionAnimation(this.target.manifest, 'dodge', this.target.isDamaged)
+        : null
+      if (resolved) {
+        this.playOneShot(this.target, resolved.stateKey, resolved.entry, () => {
+          if (this.target) this.restartIdle(this.target)
+        })
+      }
+    }
+
     this.scene.tweens.add({
       targets: c, x: c.x + dodgeDx,
       duration: 170, ease: 'Sine.easeOut', yoyo: true, hold: 40,
@@ -198,6 +261,36 @@ export class UnitStage {
     })
   }
 
+  /**
+   * Play a named animation state on a figure. stateKey uses path-style
+   * notation: top-level states ('hurt', 'idle') or skill states
+   * ('skills/hugo_001_hammer_bash'). Advances onDone when frames complete.
+   * No-ops gracefully if the figure, manifest, or texture is absent.
+   */
+  playFigureAnim(figure: 'acting' | 'target', stateKey: string, onDone: () => void): void {
+    const fig = figure === 'acting' ? this.acting : this.target
+    if (!fig || !fig.manifest) { onDone(); return }
+    const entry = stateKey.startsWith('skills/')
+      ? fig.manifest.animations.skills?.[stateKey.slice(7)]
+      : fig.manifest.animations[stateKey]
+    if (!entry || fig.locked) { onDone(); return }
+    this.playOneShot(fig, stateKey, entry, onDone)
+  }
+
+  /** Show or hide the aura for a figure. Used by the `aura` sequence phase. */
+  setAura(figure: 'acting' | 'target', show: boolean): void {
+    const fig  = figure === 'acting' ? this.acting : this.target
+    const aura = figure === 'acting' ? this.actingAura : this.targetAura
+    if (!fig) return
+    if (show) {
+      const resolved = fig.manifest ? resolveIdleAnimation(fig.manifest, fig.isDamaged) : null
+      if (resolved?.entry.aura) aura.show(resolved.entry.aura, fig.container)
+    } else {
+      aura.hide()
+    }
+  }
+
+  /** Play the death animation then fade out, then destroy. */
   collapseByDefId(defId: string, onDone: () => void): void {
     const fig = defId === this.actingDefId ? this.acting
               : defId === this.targetDefId ? this.target
@@ -207,15 +300,11 @@ export class UnitStage {
     this.auraFor(fig).hide()
 
     const c = fig.container
-    this.scene.tweens.add({
-      targets: c, angle: 85, alpha: 0, y: c.y + 44,
-      duration: 580, ease: 'Sine.easeIn',
-      onComplete: () => {
-        c.destroy()
-        if (fig === this.acting) this.acting = null
-        else                      this.target = null
-        onDone()
-      },
+    this.playDeathAndFade(fig, () => {
+      c.destroy()
+      if (fig === this.acting) this.acting = null
+      else                      this.target = null
+      onDone()
     })
   }
 
@@ -223,6 +312,56 @@ export class UnitStage {
 
   private auraFor(fig: FigureRef): AuraPanel {
     return fig === this.acting ? this.actingAura : this.targetAura
+  }
+
+  /** Restart the idle animation loop on a figure using AnimationResolver fallback chain. */
+  private restartIdle(fig: FigureRef): void {
+    if (!fig.sprite || !fig.manifest) return
+    const resolved = resolveIdleAnimation(fig.manifest, fig.isDamaged)
+    if (!resolved || !this.scene.textures.exists(frameKey(fig.defId, resolved.stateKey, 0))) return
+    fig.animPlayer?.stop()
+    const player = new AnimationPlayer(this.scene, fig.sprite)
+    player.play(fig.defId, resolved.stateKey, resolved.entry)
+    fig.animPlayer = player
+    this.auraFor(fig).stop()
+    if (resolved.entry.aura) this.auraFor(fig).show(resolved.entry.aura, fig.container)
+  }
+
+  /** Play a play-once animation, set the lock, clear it and call onDone when complete. */
+  private playOneShot(
+    fig:      FigureRef,
+    stateKey: string,
+    entry:    AnimationStateDef,
+    onDone?:  () => void,
+  ): void {
+    if (!fig.sprite || !this.scene.textures.exists(frameKey(fig.defId, stateKey, 0))) {
+      onDone?.(); return
+    }
+    fig.locked = true
+    fig.animPlayer?.stop()
+    const player = new AnimationPlayer(this.scene, fig.sprite)
+    player.play(fig.defId, stateKey, entry, () => {
+      fig.locked = false
+      onDone?.()
+    })
+    fig.animPlayer = player
+  }
+
+  /** Play death animation (if manifest defines one) then fade the container to 0 alpha. */
+  private playDeathAndFade(fig: FigureRef, onDone: () => void): void {
+    const resolved = fig.manifest ? resolveDeathAnimation(fig.manifest, fig.isDamaged) : null
+    const doFade = () => {
+      this.scene.tweens.add({
+        targets: fig.container, alpha: 0, y: fig.container.y + 24,
+        duration: FADE_MS, ease: 'Sine.easeIn',
+        onComplete: onDone,
+      })
+    }
+    if (resolved && fig.sprite && this.scene.textures.exists(frameKey(fig.defId, resolved.stateKey, 0))) {
+      this.playOneShot(fig, resolved.stateKey, resolved.entry, doFade)
+    } else {
+      doFade()
+    }
   }
 
   private startIdle(): void {
@@ -304,24 +443,22 @@ export class UnitStage {
     let animPlayer: AnimationPlayer | null = null
 
     if (manifest) {
-      const stateKey = damaged && manifest.animations['idle_damaged'] ? 'idle_damaged' : 'idle'
-      const entry    = manifest.animations[stateKey]
-      const firstKey = frameKey(defId, stateKey, 0)
+      const resolved = resolveIdleAnimation(manifest, damaged)
+      const firstKey = resolved ? frameKey(defId, resolved.stateKey, 0) : null
 
-      if (entry && this.scene.textures.exists(firstKey)) {
+      if (resolved && firstKey && this.scene.textures.exists(firstKey)) {
         bg.setVisible(false)
         sprite = this.scene.add.image(0, 0, firstKey)
-        sprite.setDisplaySize(manifest.display.width, manifest.display.height)
+        sprite.setScale(manifest.display.scale)
         sprite.setOrigin(manifest.display.anchorX, manifest.display.anchorY)
         container.add(sprite)
 
         animPlayer = new AnimationPlayer(this.scene, sprite)
-        animPlayer.play(defId, stateKey, entry)
+        animPlayer.play(defId, resolved.stateKey, resolved.entry)
 
-        // Show aura for the initial state if defined.
-        if (entry.aura) {
+        if (resolved.entry.aura) {
           const aura = role === 'acting' ? this.actingAura : this.targetAura
-          aura.show(entry.aura, container)
+          aura.show(resolved.entry.aura, container)
         }
       }
     }
@@ -332,6 +469,6 @@ export class UnitStage {
       }).setOrigin(0.5))
     }
 
-    return { container, bg, sprite, animPlayer, isDamaged: damaged, manifest, defId }
+    return { container, bg, sprite, animPlayer, isDamaged: damaged, manifest, defId, locked: false }
   }
 }

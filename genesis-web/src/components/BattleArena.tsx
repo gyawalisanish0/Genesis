@@ -52,16 +52,17 @@ export interface BattleArenaHandle {
   playDice(outcome: string, onDone: () => void): void
   skipActiveDice(): void
   playAttack(
-    actingDefId: string,
-    targetDefId: string,
-    outcome:     string,
-    damage:      number,
-    isMelee:     boolean,
-    dashDx:      number,
-    projectile:  AnimationProjectileDef | null,
-    onDone:      () => void,
+    actingDefId:    string,
+    targetDefId:    string,
+    outcome:        string,
+    damage:         number,
+    isMelee:        boolean,
+    dashDx:         number,
+    projectile:     AnimationProjectileDef | null,
+    feedbackText:   string,
+    feedbackColour: string,
+    onDone:         () => void,
   ): void
-  playFeedback(text: string, colour: string): void
   // Stage 4 — death collapse (phase-gated: clearTurn should be called inside onDone)
   playDeath(defId: string, onDone: () => void): void
   // Stage 5 — turn display overlay (fire-and-forget; BattleContext drives timing)
@@ -158,15 +159,12 @@ export const BattleArena = forwardRef<BattleArenaHandle>(
       skipActiveDice() {
         sceneRef.current?.skipActiveDice()
       },
-      playAttack(actingDefId, targetDefId, outcome, damage, isMelee, dashDx, projectile, onDone) {
+      playAttack(actingDefId, targetDefId, outcome, damage, isMelee, dashDx, projectile, feedbackText, feedbackColour, onDone) {
         if (sceneRef.current) {
-          sceneRef.current.playAttack(actingDefId, targetDefId, outcome, damage, isMelee, dashDx, projectile, onDone)
+          sceneRef.current.playAttack(actingDefId, targetDefId, outcome, damage, isMelee, dashDx, projectile, feedbackText, feedbackColour, onDone)
         } else {
           onDone()
         }
-      },
-      playFeedback(text, colour) {
-        sceneRef.current?.playFeedback(text, colour)
       },
       playDeath(defId, onDone) {
         if (sceneRef.current) {
