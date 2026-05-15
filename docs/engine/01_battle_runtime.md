@@ -545,7 +545,7 @@ src/
 │       └── DiceResolver.ts        # roll, applyOutcome, resolveCounterRoll
 ├── services/
 │   └── DataService.ts             # loadCharacterIndex, loadCharacter, loadCharacterSkillDefs,
-│                                  #   loadCharacterWithSkills, loadMode (+ per-type cache)
+│                                  #   loadCharacterWithSkills, loadMode, loadAnimSequenceManifest(defId) (+ per-type cache)
 ├── scenes/
 │   ├── BattleScene.ts              # Orchestrator; re-exports tokenToHex
 │   └── battle/
@@ -555,7 +555,9 @@ src/
 │       ├── AnimationResolver.ts    # Attack animation fallback chain
 │       ├── AuraPanel.ts            # Scene-root radial glow with update-listener position sync
 │       ├── ProjectilePanel.ts      # Ranged projectile tween
-│       ├── AttackPanel.ts          # Melee/ranged attack dispatch + impact fx
+│       ├── SequenceRunner.ts       # executes AnimPhase[] with parallel, branch, skip support; owns fireImpact
+│       ├── DefaultSequences.ts     # builds default phase array for melee/ranged attacks
+│       ├── SequenceTypes.ts        # re-exports AnimPhase from core/types; defines SequenceContext
 │       ├── DicePanel.ts            # Die spin animation
 │       ├── FeedbackPanel.ts        # Rising damage text
 │       ├── ParticleEmitter.ts      # Burst effects
