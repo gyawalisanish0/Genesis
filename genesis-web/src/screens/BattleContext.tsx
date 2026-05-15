@@ -221,7 +221,7 @@ export function BattleProvider({ children }: Props) {
   const arenaRef      = useRef<BattleArenaHandle>(null)
   const manifestsRef           = useRef<Map<string, AnimationManifest | null>>(new Map())
   const animSequencesRef       = useRef<Map<string, AnimSequenceManifest | null>>(new Map())
-  const pendingExpiryAnimsRef  = useRef<Array<{ ownerDefId: string; sequenceId: string }>>([])
+  const pendingExpiryAnimsRef  = useRef<Array<{ ownerDefId: string; sequenceId: string; damage: number }>>([])
   const [pendingCounterDecision, setPendingCounterDecision] = useState<CounterDecision | null>(null)
   const [pendingClash, setPendingClash]               = useState<ClashState | null>(null)
   const [pendingTeamCollision, setPendingTeamCollision] = useState<TeamCollisionState | null>(null)
@@ -763,16 +763,16 @@ export function BattleProvider({ children }: Props) {
     if (!ownerUnit) return
     const def = statusDefsRef.current.get(statusId)
     if (!def) return
-    fireStatusExpiry(snap.get(ownerUnit.id) ?? ownerUnit, def, snap)
-    if (def.expireSequenceId) pendingExpiryAnimsRef.current.push({ ownerDefId, sequenceId: def.expireSequenceId })
+    const damage = fireStatusExpiry(snap.get(ownerUnit.id) ?? ownerUnit, def, snap)
+    if (def.expireSequenceId) pendingExpiryAnimsRef.current.push({ ownerDefId, sequenceId: def.expireSequenceId, damage })
     // Cascade: remove any status whose expiresWithStatus points to this one.
     const linkedUnit = snap.get(ownerUnit.id) ?? ownerUnit
     for (const slot of linkedUnit.statusSlots) {
       const linkedDef = statusDefsRef.current.get(slot.id)
       if (linkedDef?.expiresWithStatus === statusId) {
         snap.set(ownerUnit.id, { ...snap.get(ownerUnit.id) ?? ownerUnit, statusSlots: (snap.get(ownerUnit.id) ?? ownerUnit).statusSlots.filter(s => s.id !== slot.id) })
-        fireStatusExpiry(snap.get(ownerUnit.id) ?? ownerUnit, linkedDef, snap)
-        if (linkedDef.expireSequenceId) pendingExpiryAnimsRef.current.push({ ownerDefId, sequenceId: linkedDef.expireSequenceId })
+        const linkedDamage = fireStatusExpiry(snap.get(ownerUnit.id) ?? ownerUnit, linkedDef, snap)
+        if (linkedDef.expireSequenceId) pendingExpiryAnimsRef.current.push({ ownerDefId, sequenceId: linkedDef.expireSequenceId, damage: linkedDamage })
       }
     }
   }, [])
@@ -1210,13 +1210,13 @@ export function BattleProvider({ children }: Props) {
     const playPendingExpiryAnims = (arena: BattleArenaHandle) => {
       const pending = pendingExpiryAnimsRef.current.splice(0)
       if (!pending.length) return
-      const firstLivingEnemy = enemiesRef.current.find(isAlive)
+      const firstLivingEnemy = [...snap.values()].find(u => !u.isAlly && u.hp > 0)
       if (!firstLivingEnemy) return
-      for (const { ownerDefId, sequenceId } of pending) {
+      for (const { ownerDefId, sequenceId, damage } of pending) {
         const seq = animSequencesRef.current.get(ownerDefId)?.[sequenceId]
         if (!seq) continue
         arena.setTurnState(ownerDefId, firstLivingEnemy.defId)
-        arena.playAttack(ownerDefId, firstLivingEnemy.defId, 'Hit', 0, false, 0, null, '', '', () => arena.clearTurn(), seq)
+        arena.playAttack(ownerDefId, firstLivingEnemy.defId, 'Hit', damage, false, 0, null, '', '', () => arena.clearTurn(), seq)
       }
     }
 
