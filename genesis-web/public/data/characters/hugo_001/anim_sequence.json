@@ -43,7 +43,7 @@
     { "type": "impact" },
     { "type": "parallel", "phases": [
       { "type": "damageNumber" },
-      { "type": "statusText", "text": "HYPER BURST!", "colour": "var(--accent-gold)" }
+      { "type": "statusText", "text": "HYPER BURST!", "colour": "var(--accent-silver)" }
     ]},
     { "type": "aura", "figure": "acting", "show": false }
   ]

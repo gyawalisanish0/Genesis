@@ -336,9 +336,9 @@ before the safety net resets.
 | `hugo_001_hammer_bash_damaged` | — | 10 | — | Dash → hammer form → smash | ⬜ Pending |
 | `hugo_001_shelling_point` | — | 8 | — | Idle pose + shield-forming VFX | ⬜ Pending — no distinct body animation; nanite shimmer + shield glow carries it |
 | `hugo_001_shelling_point_damaged` | — | 8 | — | Idle pose + shield-forming VFX | ⬜ Pending |
-| `hugo_001_hyper_sense` | — | 8 | Gold rapid-pulse (gold, ADD, r=120, α=0.75, period=900ms) | Idle pose + gold aura | ⬜ Pending — aura carries the cast; no distinct body animation |
-| `hugo_001_hyper_sense_damaged` | — | 8 | Gold rapid-pulse (same) | Idle pose + gold aura | ⬜ Pending |
-| `hugo_001_hyper_sense_hyper` | — | 10 | Intense gold aura | Energy release | ⬜ Pending — fires on status expiry; ranged energy burst animation |
+| `hugo_001_hyper_sense` | — | 8 | Silver neon rapid-pulse (silver, ADD, r=120, α=0.75, period=900ms) | Idle pose + silver aura | ⬜ Pending — aura carries the cast; no distinct body animation |
+| `hugo_001_hyper_sense_damaged` | — | 8 | Silver neon rapid-pulse (same) | Idle pose + silver aura | ⬜ Pending |
+| `hugo_001_hyper_sense_hyper` | — | 10 | Silver neon burst aura | Energy release | ⬜ Pending — fires on status expiry; ranged energy burst animation |
 
 ### Attack animation design notes
 
@@ -358,9 +358,9 @@ before the safety net resets.
 The slow pulse (1600 ms) reads as danger/distress. Matches the narrative beat
 where Primal Awareness fires and Hugo goes into survival mode.
 
-**`hyper_sense` aura** — gold rapid-pulse signals an active defensive posture.
-The fast pulse (900 ms) reads as heightened alertness/energy. Matches the
-biological hyper-sensitivity of Sekkar receptors under the Hyper Sense skill.
+**`hyper_sense` aura** — silver neon rapid-pulse signals an active defensive posture.
+The fast pulse (900 ms) reads as heightened alertness/energy. The silver neon
+colour evokes chrome ANBOT nanites at peak sensitivity rather than elemental energy.
 
 `projectile: null` — Hugo has no ranged attack; melee only.
 
