@@ -58,6 +58,8 @@ and passed through `setTurnState` and `playAttack` so the arena can drive sprite
 animations and aura glows. A `null` result means no manifest exists for that
 character — the unit placeholder rectangle renders silently with no art.
 
+Simultaneously, `DataService.loadAnimSequenceManifest(defId)` fetches `anim_sequence.json` for each character. Results are stored in `animSequencesRef` (`Map<string, AnimSequenceManifest | null>`). At attack time, `animSequencesRef.get(actor.defId)?.[skill.id]` resolves the custom `AnimPhase[]` for that skill; when absent, `buildDefaultSequence` is used as the fallback.
+
 Skills are **character-exclusive**: `SkillDef` objects live inside the character's
 own subfolder and are not shared across characters (see content contract decision #6).
 

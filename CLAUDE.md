@@ -182,7 +182,7 @@ Genesis/
 │   │           └── mars/         # 1024×1024 individual PNGs: mars_floor.png, …
 │   └── src/
 │       ├── core/                 # Pure TS game logic — zero UI imports
-│       │   ├── types.ts          # StatBlockDef, CharacterDef, SkillDef, Unit, ModeDef, AppSettings, BattleResult, QualityTier, TilesetDef, AuraDef, AnimationStateDef, AnimationProjectileDef, AnimationManifest
+│       │   ├── types.ts          # StatBlockDef, CharacterDef, SkillDef, Unit, ModeDef, AppSettings, BattleResult, QualityTier, TilesetDef, AuraDef, AnimationStateDef, AnimationProjectileDef, AnimationManifest, AnimPhase, AnimSequenceManifest
 │       │   ├── constants.ts      # All numeric constants: tick ranges, dice params, timing thresholds, BETWEEN_TURN_PAUSE_MS, NARRATIVE_* timings, QUALITY_* thresholds, DUNGEON_ENCOUNTER_BANNER_MS, HINT_TOASTER_DURATION_MS, HINT_STORAGE_PREFIX
 │       │   ├── screen-types.ts   # ScreenId, ScreenConfig, SafeAreaMode, ScreenLifecycleHooks
 │       │   ├── unit.ts           # Immutable Unit factory + mutation helpers (createUnit, takeDamage, healUnit, incrementActionCount, …)
@@ -219,7 +219,7 @@ Genesis/
 │       │   ├── backButtonRegistry.ts  # Module-level singleton: register/unregister/invoke one handler at a time
 │       │   └── useBackButton.ts       # Hook: registers handler, pushes URL-sentinel for web popstate interception
 │       ├── services/             # Side-effectful singletons; Capacitor allowed
-│       │   ├── DataService.ts    # JSON loader: loadCharacter, loadCharacterSkillDefs, loadMode, loadCharacterWithSkills, loadCharacterDialogue, loadLevelNarrative, loadTilesetDef, loadAnimationManifest (all cached; loadAnimationManifest returns null silently when absent)
+│       │   ├── DataService.ts    # JSON loader: loadCharacter, loadCharacterSkillDefs, loadMode, loadCharacterWithSkills, loadCharacterDialogue, loadLevelNarrative, loadTilesetDef, loadAnimationManifest, loadAnimSequenceManifest (all cached; loadAnimationManifest and loadAnimSequenceManifest return null silently when absent)
 │       │   ├── DisplayService.ts # Full-screen + StatusBar: Capacitor StatusBar.hide() on native; Fullscreen API on web
 │       │   ├── NarrativeService.ts # Global narrative bus: emit(), play(), subscribe(), subscribeDirect(), registerEntries(), unregisterEntries(), getAllEntries()
 │       │   ├── ResolutionService.ts # Quality tier: rAF benchmark → High/Medium/Low; localStorage persistence; stepUp(); subscribe()

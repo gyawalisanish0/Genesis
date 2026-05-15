@@ -21,9 +21,9 @@ React (BattleScreen)
                     │     ├── AnimationPlayer   (per-figure sprite animation loop)
                     │     └── AuraPanel ×2      (acting aura + target aura, scene-root)
                     ├── DicePanel         (Stage 3 — dice spin)
-                    ├── AttackPanel       (Stage 3 — attack animation)
+                    ├── SequenceRunner    (Stage 3 — declarative attack sequence executor)
                     │     └── ProjectilePanel   (ranged attack projectile tween)
-                    ├── FeedbackPanel     (Stage 3 — damage numbers)
+                    ├── FeedbackPanel     (Stage 3 — damage numbers + outcome label)
                     └── ParticleEmitter   (Stage 4 — hit burst effects)
 ```
 
@@ -137,12 +137,14 @@ arenaRef.current.clearTurn()                              // slides current unit
 arenaRef.current.playDice(outcome, onDone)
 arenaRef.current.playAttack(
   casterId, targetId, outcome, damage,
-  isMelee,      // boolean — melee=shove, ranged=projectile
-  dashDx,       // canvas pixels the acting unit shoves toward target
-  projectile,   // AnimationProjectileDef | null — drives projectile visuals
-  onDone
+  isMelee,         // boolean — melee=shove, ranged=projectile
+  dashDx,          // canvas pixels the acting unit shoves toward target
+  projectile,      // AnimationProjectileDef | null — drives projectile visuals
+  feedbackText,    // outcome label string, e.g. "BOOSTED!", "EVADED!"
+  feedbackColour,  // CSS token, e.g. 'var(--accent-gold)'
+  onDone,
+  customSequence?, // AnimPhase[] | undefined — overrides DefaultSequences when provided
 )
-arenaRef.current.playFeedback(text, colour)              // fire-and-forget
 
 // Stage 4 — death collapse (phase-gated)
 arenaRef.current.playDeath(defId, onDone)
@@ -232,8 +234,8 @@ runAttack(caster, target, skill, snap)  →  { tumbleDelay, outcome, damage }
   ├── React: showDiceResult(outcome, msg)          ← overlay (4 s auto-dismiss)
   │
   └── arena.playDice(outcome, () => {              ← Phaser dice spin (~2.8 s)
-        arena.playAttack(…, () => {                ← shove + flash (~0.5 s)
-          arena.playFeedback(text, colour)         ← rising text (fire-and-forget)
+        arena.playAttack(…, feedbackText, feedbackColour, () => {   ← sequence runs:
+          // inside sequence: shove/projectile → impact FX → parallel(damageNumber, feedback)
           setTimeout(applyState, BATTLE_FEEDBACK_HOLD_MS)
         })
       })
