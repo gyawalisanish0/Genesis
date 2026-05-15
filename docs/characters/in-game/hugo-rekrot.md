@@ -265,7 +265,7 @@ hits → counter fires on expiry.
 | Dodge Chance | 70% per hit attempt |
 | Dodge Consumption | One stack consumed per incoming hit attempt (successful dodge or not) |
 | AP Regen | Frozen for 3 of Hugo's own turns |
-| Reactivation Gate | Cannot trigger again while the dodge status is active — re-triggers on the next HP drop below 10% once all stacks are consumed |
+| Reactivation Gate | First activation is guaranteed (no AP check). After first use, cannot trigger again until AP returns to 80%+ and dodge status is fully consumed |
 
 **Biological basis**: Hugo's Sekkar skin receptors detect incoming attack
 pressure shifts. ANBOT reads the signal and reroutes before the hit lands.
@@ -289,6 +289,7 @@ before the safety net resets.
 | `hugo_001_shelling_point_penalty_window` | Shelling Point | 9-turn penalty window — break during this doubles overflow damage |
 | `hugo_001_primal_awareness_dodge` | Primal Awareness | 5-stack dodge at 70% per hit attempt, consumed per attempt; Hyper Mode unlocks at ≤ 2 stacks |
 | `hugo_001_ap_regen_freeze` | Primal Awareness | Halts AP regen for 3 turns |
+| `hugo_001_primal_awareness_spent` | Primal Awareness (first activation) | Permanent battle-scoped marker — presence switches the passive to the reactivation path (AP ≥ 80% required) |
 | `hugo_001_hyper_sense_ranged_dodge` | Hyper Sense (Normal, outside Primal) | 30% ranged dodge; 2 stacks — each successful ranged dodge consumes 1; expires at 0 |
 | `hugo_001_hyper_sense_hyper_active` | Hyper Sense (Hyper) | 90% melee / 50% ranged dodge; expires with Primal Awareness; onExpire fires 200% Power energy counter to all enemies (always hits) |
 

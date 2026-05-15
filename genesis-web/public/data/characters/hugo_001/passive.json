@@ -2,20 +2,62 @@
   "type": "passive",
   "id": "hugo_001_primal_awareness",
   "name": "Primal Awareness",
-  "description": "When HP drops below 10%, ANBOT emergency-reroutes all nanite power into evasion. Grants 5 dodge points at 70% each (consumed per hit attempt). AP regen halts for 3 turns. Cannot reactivate while the dodge status is active.",
+  "description": "When HP drops below 10%, ANBOT emergency-reroutes all nanite power into evasion. First activation is guaranteed. Cannot reactivate until AP returns to 80%+ and dodge status is fully consumed.",
   "effects": [
     {
-      "id": "hugo_001_primal_awareness_dodge",
+      "id": "hugo_001_primal_awareness_dodge_first",
       "when": { "event": "onHpThreshold", "below": 0.10 },
-      "condition": { "not": { "selfHasStatus": "hugo_001_primal_awareness_dodge" } },
+      "condition": { "all": [
+        { "not": { "selfHasStatus": "hugo_001_primal_awareness_dodge" } },
+        { "not": { "selfHasStatus": "hugo_001_primal_awareness_spent" } }
+      ]},
       "type": "applyStatus",
       "target": "self",
       "status": "hugo_001_primal_awareness_dodge"
     },
     {
-      "id": "hugo_001_primal_awareness_ap_freeze",
+      "id": "hugo_001_primal_awareness_ap_freeze_first",
       "when": { "event": "onHpThreshold", "below": 0.10 },
-      "condition": { "not": { "selfHasStatus": "hugo_001_primal_awareness_dodge" } },
+      "condition": { "all": [
+        { "not": { "selfHasStatus": "hugo_001_primal_awareness_dodge" } },
+        { "not": { "selfHasStatus": "hugo_001_primal_awareness_spent" } }
+      ]},
+      "type": "applyStatus",
+      "target": "self",
+      "status": "hugo_001_ap_regen_freeze",
+      "duration": 3
+    },
+    {
+      "id": "hugo_001_primal_awareness_mark_spent",
+      "when": { "event": "onHpThreshold", "below": 0.10 },
+      "condition": { "all": [
+        { "not": { "selfHasStatus": "hugo_001_primal_awareness_dodge" } },
+        { "not": { "selfHasStatus": "hugo_001_primal_awareness_spent" } }
+      ]},
+      "type": "applyStatus",
+      "target": "self",
+      "status": "hugo_001_primal_awareness_spent"
+    },
+    {
+      "id": "hugo_001_primal_awareness_dodge_reactivation",
+      "when": { "event": "onHpThreshold", "below": 0.10 },
+      "condition": { "all": [
+        { "selfApAbove": 0.80 },
+        { "not": { "selfHasStatus": "hugo_001_primal_awareness_dodge" } },
+        { "selfHasStatus": "hugo_001_primal_awareness_spent" }
+      ]},
+      "type": "applyStatus",
+      "target": "self",
+      "status": "hugo_001_primal_awareness_dodge"
+    },
+    {
+      "id": "hugo_001_primal_awareness_ap_freeze_reactivation",
+      "when": { "event": "onHpThreshold", "below": 0.10 },
+      "condition": { "all": [
+        { "selfApAbove": 0.80 },
+        { "not": { "selfHasStatus": "hugo_001_primal_awareness_dodge" } },
+        { "selfHasStatus": "hugo_001_primal_awareness_spent" }
+      ]},
       "type": "applyStatus",
       "target": "self",
       "status": "hugo_001_ap_regen_freeze",
