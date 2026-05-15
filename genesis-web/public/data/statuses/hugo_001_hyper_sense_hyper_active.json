@@ -3,7 +3,6 @@
   "id": "hugo_001_hyper_sense_hyper_active",
   "name": "Hyper Mode",
   "stacking": "refresh",
-  "duration": 30,
   "tags": ["dodge", "hyper", "melee-dodge", "turn-based", "energy", "ranged"],
   "dodgeConfig": {
     "meleeChance": 0.90,

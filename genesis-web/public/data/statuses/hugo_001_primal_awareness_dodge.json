@@ -4,7 +4,6 @@
   "name": "Primal Awareness",
   "stacking": "refresh",
   "maxStacks": 5,
-  "duration": 40,
   "tags": ["dodge", "primal", "turn-based"],
   "dodgeConfig": {
     "allChance": 0.70,
