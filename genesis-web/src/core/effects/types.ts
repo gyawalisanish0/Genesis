@@ -125,6 +125,7 @@ export type Condition =
   | { apAccumGte: number }
   | { selfSecondaryAbove: number }   // caster.secondaryResource > value
   | { selfSecondaryBelow: number }   // caster.secondaryResource < value
+  | { selfStatusStacksBelow: { id: string; stacks: number } }  // caster has status AND its stacks < value
   | { not: Condition }
   | { all: Condition[] }
   | { any: Condition[] }
@@ -205,6 +206,8 @@ export type Effect =
       /** Prevents the skill with this ID from being re-cast while this status is active. */
       blocksRecastOfSkill?:  string
       rangedBaseChanceBonus?: number
+      /** Override the initial stack count applied. Defaults to def.maxStacks ?? 1. */
+      stacks?: number
       /** Merged into slot payload at apply time — allows per-cast payload overrides. */
       payload?: Record<string, unknown>
     })

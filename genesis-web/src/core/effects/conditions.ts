@@ -27,8 +27,12 @@ export function evaluateCondition(cond: Condition, ctx: EffectContext): boolean 
   if ('selfHasStatus' in cond) return unitHasStatus(ctx.caster, cond.selfHasStatus)
   if ('hasTag'        in cond) return targetHasTag(ctx.target, cond.hasTag)
   if ('diceOutcome'   in cond) return ctx.dice === cond.diceOutcome
-  if ('selfSecondaryAbove' in cond) return ctx.caster.secondaryResource > cond.selfSecondaryAbove
-  if ('selfSecondaryBelow' in cond) return ctx.caster.secondaryResource < cond.selfSecondaryBelow
+  if ('selfSecondaryAbove'    in cond) return ctx.caster.secondaryResource > cond.selfSecondaryAbove
+  if ('selfSecondaryBelow'    in cond) return ctx.caster.secondaryResource < cond.selfSecondaryBelow
+  if ('selfStatusStacksBelow' in cond) {
+    const slot = ctx.caster.statusSlots.find(s => s.id === cond.selfStatusStacksBelow.id)
+    return slot !== undefined && slot.stacks < cond.selfStatusStacksBelow.stacks
+  }
   if ('not'           in cond) return !evaluateCondition(cond.not, ctx)
   if ('all'           in cond) return cond.all.every(c => evaluateCondition(c, ctx))
   if ('any'           in cond) return cond.any.some( c => evaluateCondition(c, ctx))

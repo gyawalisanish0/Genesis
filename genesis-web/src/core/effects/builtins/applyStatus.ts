@@ -83,7 +83,7 @@ const handle: EffectHandler<ApplyStatusEffect> = (effect, ctx) => {
       duration,
       durationUnit,
       source:       ctx.caster.id,
-      stacks:       def.maxStacks ?? 1,
+      stacks:       effect.stacks ?? def.maxStacks ?? 1,
       payload,
       // nextIntervalFireTick = 0 when no interval effect exists (never fires).
       nextIntervalFireTick: firstInterval > 0 ? (ctx.currentTick ?? 0) + firstInterval : 0,

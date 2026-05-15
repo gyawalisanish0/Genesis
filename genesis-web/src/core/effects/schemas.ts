@@ -85,6 +85,7 @@ const conditionLeaf = z.union([
   z.object({ hasTag:        z.string() }).strict(),
   z.object({ diceOutcome:   diceOutcomeSchema }).strict(),
   z.object({ apAccumGte:    z.number() }).strict(),
+  z.object({ selfStatusStacksBelow: z.object({ id: z.string(), stacks: z.number() }) }).strict(),
 ])
 
 export const conditionSchema: z.ZodType<unknown> = z.lazy(() =>
@@ -159,6 +160,7 @@ export const effectSchema = z.discriminatedUnion('type', [
     onBreakTickCooldown:  onBreakTickCooldownSchema.optional(),
     blocksRecastOfSkill:  z.string().optional(),
     rangedBaseChanceBonus: z.number().optional(),
+    stacks:               z.number().int().positive().optional(),
   }).strict(),
   z.object({ ...effectCommon, type: z.literal('removeStatus'),      status: z.string().optional(), tag: z.string().optional() }).strict(),
   z.object({ ...effectCommon, type: z.literal('shiftProbability'),  outcome: diceOutcomeSchema, delta: z.number() }).strict(),
