@@ -338,6 +338,8 @@ export interface StatusDef {
   maxStacks?: number
   /** Base duration in ticks; may be overridden by the applying skill. Omit for stack-consumed statuses — they expire only when stacks reach 0. */
   duration?:  number
+  /** When the named status is removed, this status is also removed and fires its onExpire effects. */
+  expiresWithStatus?: string
   /** Key into the owner's anim_sequence.json to play when this status expires (stack or duration). Fire-and-forget. */
   expireSequenceId?: string
   tags?:      string[]

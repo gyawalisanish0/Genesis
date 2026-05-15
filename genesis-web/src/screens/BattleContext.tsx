@@ -757,6 +757,26 @@ export function BattleProvider({ children }: Props) {
   const runAttackRef            = useRef<((caster: Unit, target: Unit, skillInst: SkillInstance, snap: Map<string, Unit>, chainDepth?: number) => { outcome: DiceOutcome; damage: number }) | null>(null)
   const scheduleCounterChainRef = useRef<((defender: Unit, originalCaster: Unit, counterSkill: SkillInstance, snap: Map<string, Unit>, depth: number) => void) | null>(null)
 
+  // Fires expiry effects for a status and cascades to any status linked via expiresWithStatus.
+  const fireExpiryChain = useCallback((ownerDefId: string, statusId: string, snap: Map<string, Unit>) => {
+    const ownerUnit = [...snap.values()].find(u => u.defId === ownerDefId)
+    if (!ownerUnit) return
+    const def = statusDefsRef.current.get(statusId)
+    if (!def) return
+    fireStatusExpiry(snap.get(ownerUnit.id) ?? ownerUnit, def, snap)
+    if (def.expireSequenceId) pendingExpiryAnimsRef.current.push({ ownerDefId, sequenceId: def.expireSequenceId })
+    // Cascade: remove any status whose expiresWithStatus points to this one.
+    const linkedUnit = snap.get(ownerUnit.id) ?? ownerUnit
+    for (const slot of linkedUnit.statusSlots) {
+      const linkedDef = statusDefsRef.current.get(slot.id)
+      if (linkedDef?.expiresWithStatus === statusId) {
+        snap.set(ownerUnit.id, { ...snap.get(ownerUnit.id) ?? ownerUnit, statusSlots: (snap.get(ownerUnit.id) ?? ownerUnit).statusSlots.filter(s => s.id !== slot.id) })
+        fireStatusExpiry(snap.get(ownerUnit.id) ?? ownerUnit, linkedDef, snap)
+        if (linkedDef.expireSequenceId) pendingExpiryAnimsRef.current.push({ ownerDefId, sequenceId: linkedDef.expireSequenceId })
+      }
+    }
+  }, [])
+
   /** Execute one attack: caster hits target using the given SkillInstance. */
   const runAttack = useCallback((
     caster: Unit,
@@ -770,11 +790,7 @@ export function BattleProvider({ children }: Props) {
     // Dodge status check: resolve before dice so status-based evasion overrides the roll.
     const { dodged, expiredStatusIds } = resolveIncomingDodge(target, skill.targeting.range, snap)
     for (const statusId of expiredStatusIds) {
-      const def = statusDefsRef.current.get(statusId)
-      if (def) {
-        fireStatusExpiry(snap.get(target.id) ?? target, def, snap)
-        if (def.expireSequenceId) pendingExpiryAnimsRef.current.push({ ownerDefId: target.defId, sequenceId: def.expireSequenceId })
-      }
+      fireExpiryChain(target.defId, statusId, snap)
     }
 
     const baseChance = skill.resolution?.baseChance ?? 1.0
@@ -934,10 +950,7 @@ export function BattleProvider({ children }: Props) {
 
     snap.set(caster.id, casterFinal)
     for (const expiredSlot of expired) {
-      const def = statusDefsRef.current.get(expiredSlot.id)
-      if (!def) continue
-      fireStatusExpiry(casterFinal, def, snap)
-      if (def.expireSequenceId) pendingExpiryAnimsRef.current.push({ ownerDefId: caster.defId, sequenceId: def.expireSequenceId })
+      fireExpiryChain(caster.defId, expiredSlot.id, snap)
     }
 
     const damage = Math.max(0, targetHpBefore - (snap.get(target.id)?.hp ?? targetHpBefore))
