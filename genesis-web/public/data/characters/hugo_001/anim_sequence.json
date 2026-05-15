@@ -6,35 +6,41 @@
       { "type": "feedback" }
     ]}
   ],
+
   "hugo_001_nanites_slash": [
-    { "type": "aura", "figure": "acting", "show": true },
-    { "type": "wait", "ms": 120 },
+    { "type": "flash", "figure": "acting", "colour": "var(--accent-silver)" },
+    { "type": "wait", "ms": 160 },
     { "type": "shove" },
-    { "type": "aura", "figure": "acting", "show": false },
     { "type": "parallel", "phases": [
       { "type": "damageNumber" },
       { "type": "feedback" }
     ]}
   ],
+
   "hugo_001_hammer_bash": [
     { "type": "shove" },
+    { "type": "cameraShake", "duration": 220, "intensity": 0.005 },
     { "type": "parallel", "phases": [
       { "type": "damageNumber" },
       { "type": "feedback" }
     ]}
   ],
+
   "hugo_001_shelling_point": [
-    { "type": "aura", "figure": "acting", "show": true },
-    { "type": "wait", "ms": 400 },
-    { "type": "aura", "figure": "acting", "show": false },
-    { "type": "feedback" }
+    { "type": "flash", "figure": "acting", "colour": "var(--accent-info)" },
+    { "type": "particles", "figure": "acting" },
+    { "type": "wait", "ms": 280 },
+    { "type": "statusText", "text": "SHIELD", "colour": "var(--accent-info)" }
   ],
+
   "hugo_001_hyper_sense": [
+    { "type": "flash", "figure": "acting", "colour": "var(--accent-silver)" },
     { "type": "aura", "figure": "acting", "show": true },
-    { "type": "wait", "ms": 300 },
+    { "type": "wait", "ms": 350 },
     { "type": "aura", "figure": "acting", "show": false },
     { "type": "feedback" }
   ],
+
   "hugo_001_hyper_sense_expiry": [
     { "type": "aura", "figure": "acting", "show": true },
     { "type": "wait", "ms": 150 },
