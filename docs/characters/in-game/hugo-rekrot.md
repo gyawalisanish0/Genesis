@@ -265,7 +265,7 @@ hits → counter fires on expiry.
 | Dodge Chance | 70% per hit attempt |
 | Dodge Consumption | One stack consumed per incoming hit attempt (successful dodge or not) |
 | AP Regen | Frozen for 3 of Hugo's own turns |
-| Reactivation Gate | Cannot trigger again until AP returns to 80%+ and dodge status is gone |
+| Reactivation Gate | Cannot trigger again while the dodge status is active — re-triggers on the next HP drop below 10% once all stacks are consumed |
 
 **Biological basis**: Hugo's Sekkar skin receptors detect incoming attack
 pressure shifts. ANBOT reads the signal and reroutes before the hit lands.

@@ -29,10 +29,12 @@ export const diceOutcomeSchema = z.enum(['Boosted', 'Hit', 'Evade', 'Fail'])
 
 // ── ValueExpr (recursive) ────────────────────────────────────────────────────
 
+const valueStatKeySchema = z.union([statKeySchema, z.enum(['maxHp', 'maxAp'])])
+
 const valueExprBase = z.union([
   z.number(),
   z.object({
-    stat:    statKeySchema,
+    stat:    valueStatKeySchema,
     percent: z.number(),
     of:      z.enum(['caster', 'target']).optional(),
   }).strict(),

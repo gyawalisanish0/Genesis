@@ -2,15 +2,12 @@
   "type": "passive",
   "id": "hugo_001_primal_awareness",
   "name": "Primal Awareness",
-  "description": "When HP drops below 10%, ANBOT emergency-reroutes all nanite power into evasion. Grants 5 dodge points at 70% each (consumed per hit attempt). AP regen halts for 3 turns. Cannot reactivate until AP returns to 80%+.",
+  "description": "When HP drops below 10%, ANBOT emergency-reroutes all nanite power into evasion. Grants 5 dodge points at 70% each (consumed per hit attempt). AP regen halts for 3 turns. Cannot reactivate while the dodge status is active.",
   "effects": [
     {
       "id": "hugo_001_primal_awareness_dodge",
       "when": { "event": "onHpThreshold", "below": 0.10 },
-      "condition": { "all": [
-        { "selfApAbove": 0.80 },
-        { "not": { "selfHasStatus": "hugo_001_primal_awareness_dodge" } }
-      ]},
+      "condition": { "not": { "selfHasStatus": "hugo_001_primal_awareness_dodge" } },
       "type": "applyStatus",
       "target": "self",
       "status": "hugo_001_primal_awareness_dodge"
@@ -18,10 +15,7 @@
     {
       "id": "hugo_001_primal_awareness_ap_freeze",
       "when": { "event": "onHpThreshold", "below": 0.10 },
-      "condition": { "all": [
-        { "selfApAbove": 0.80 },
-        { "not": { "selfHasStatus": "hugo_001_primal_awareness_dodge" } }
-      ]},
+      "condition": { "not": { "selfHasStatus": "hugo_001_primal_awareness_dodge" } },
       "type": "applyStatus",
       "target": "self",
       "status": "hugo_001_ap_regen_freeze",
