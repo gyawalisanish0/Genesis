@@ -10,7 +10,7 @@
 // The battle log now lives in a React overlay (BattleLogOverlay) — not here.
 
 import Phaser from 'phaser'
-import type { AnimationManifest, AnimationProjectileDef } from '../core/types'
+import type { AnimationManifest, AnimationProjectileDef, AnimPhase } from '../core/types'
 import { tokenToHex }       from './battle/tokens'
 import { UnitStage }        from './battle/UnitStage'
 import { DicePanel }        from './battle/DicePanel'
@@ -124,16 +124,17 @@ export class BattleScene extends Phaser.Scene {
   }
 
   playAttack(
-    actingDefId:    string,
-    targetDefId:    string,
-    outcome:        string,
-    damage:         number,
-    isMelee:        boolean,
-    dashDx:         number,
-    projectile:     AnimationProjectileDef | null,
-    feedbackText:   string,
-    feedbackColour: string,
-    onDone:         () => void,
+    actingDefId:     string,
+    targetDefId:     string,
+    outcome:         string,
+    damage:          number,
+    isMelee:         boolean,
+    dashDx:          number,
+    projectile:      AnimationProjectileDef | null,
+    feedbackText:    string,
+    feedbackColour:  string,
+    onDone:          () => void,
+    customSequence?: AnimPhase[],
   ): void {
     const diceOutcome = outcome as DiceOutcome
     const ctx: SequenceContext = {
@@ -142,7 +143,7 @@ export class BattleScene extends Phaser.Scene {
       damage, isMelee, dashDx, projectile,
       feedbackText, feedbackColour,
     }
-    const phases = buildDefaultSequence(isMelee, diceOutcome)
+    const phases = customSequence ?? buildDefaultSequence(isMelee, diceOutcome)
     this.sequenceRunner.run(phases, ctx, onDone)
   }
 

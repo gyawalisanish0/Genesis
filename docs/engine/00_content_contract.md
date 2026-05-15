@@ -503,6 +503,7 @@ public/data/
 │   │   ├── main.json            # CharacterDef — stats, class, rarity, passive ref
 │   │   ├── skills.json          # SkillDef[] — full definitions, character-owned (decision #6)
 │   │   ├── animations.json      # AnimationManifest — display dims, animation states, aura defs, projectile config (optional; DataService returns null when absent)
+│   │   ├── anim_sequence.json   # AnimSequenceManifest — maps skill.id → AnimPhase[]; overrides default attack sequence per skill (optional; DataService returns null when absent)
 │   │   └── growth/              # progression/XP curves (TBD — placeholder only)
 ├── statuses/
 ├── passives/

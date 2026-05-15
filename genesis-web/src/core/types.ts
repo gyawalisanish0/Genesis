@@ -356,3 +356,39 @@ export interface AppSettings {
   battleReminders:    boolean
   newContentAlerts:   boolean
 }
+
+// ── Animation sequence phases ─────────────────────────────────────────────────
+//
+// Pure JSON-serializable types so sequences can live in anim_sequence.json.
+// No Phaser imports — execution lives in scenes/battle/SequenceRunner.ts.
+
+import type { DiceOutcome } from './combat/DiceResolver'
+
+/**
+ * Discriminated union of all animation phases.
+ * Sequential phases run one after another; use `parallel` for simultaneous execution
+ * and `branch` for outcome-conditional sub-sequences.
+ */
+export type AnimPhase =
+  | { type: 'wait';         ms: number }
+  | { type: 'playAnim';     figure: 'acting' | 'target'; stateKey: string }
+  | { type: 'shove' }
+  | { type: 'evasionDodge' }
+  | { type: 'projectile' }
+  | { type: 'impact' }
+  | { type: 'flash';        figure: 'acting' | 'target'; colour?: number }
+  | { type: 'particles';    figure: 'acting' | 'target' }
+  | { type: 'damageNumber' }
+  | { type: 'statusText';   text: string; colour: string }
+  | { type: 'feedback' }
+  | { type: 'cameraShake';  duration: number; intensity: number }
+  | { type: 'aura';         figure: 'acting' | 'target'; show: boolean }
+  | { type: 'parallel';     phases: AnimPhase[] }
+  | { type: 'branch';       cases: Partial<Record<DiceOutcome | 'default', AnimPhase[]>> }
+
+/**
+ * Per-character animation sequence manifest.
+ * Keyed by skill ID (matches SkillDef.id); value overrides the default sequence
+ * for that skill. Loaded from `characters/{defId}/anim_sequence.json`.
+ */
+export type AnimSequenceManifest = Record<string, AnimPhase[]>

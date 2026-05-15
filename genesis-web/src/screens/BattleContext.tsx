@@ -7,7 +7,7 @@ import {
   useMemo, useEffect, useRef, type ReactNode,
 } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { Unit, AnimationManifest, AnimationProjectileDef } from '../core/types'
+import type { Unit, AnimationManifest, AnimationProjectileDef, AnimSequenceManifest } from '../core/types'
 import type { SkillInstance, EffectContext } from '../core/effects/types'
 import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, CLASH_ANNOUNCE_MS, ENEMY_AI_DELAY_MS, COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE, BATTLE_FEEDBACK_HOLD_MS, SKIP_TU_COST } from '../core/constants'
 import { resolveTickDisplacement } from '../core/combat/TickDisplacer'
@@ -22,7 +22,7 @@ import { registerSpawnHandler, clearSpawnHandler } from '../core/combat/SpawnBus
 import type { SpawnRequest } from '../core/combat/SpawnBus'
 import { applyEffect } from '../core/effects/applyEffect'
 import { createSkillInstance, getCachedSkill } from '../core/engines/skill/SkillInstance'
-import { loadCharacterWithSkills, loadStatusDef, loadAnimationManifest } from '../services/DataService'
+import { loadCharacterWithSkills, loadStatusDef, loadAnimationManifest, loadAnimSequenceManifest } from '../services/DataService'
 import { registerStatusDef, clearStatusRegistry }  from '../core/effects/statusRegistry'
 import type { PassiveDef, StatusDef, Effect }       from '../core/effects/types'
 import { NarrativeService } from '../services/NarrativeService'
@@ -219,7 +219,8 @@ export function BattleProvider({ children }: Props) {
   const [narrativePaused, setNarrativePaused] = useState(false)
   const [inspectingSkill, setInspectingSkill] = useState<SkillInstance | null>(null)
   const arenaRef      = useRef<BattleArenaHandle>(null)
-  const manifestsRef  = useRef<Map<string, AnimationManifest | null>>(new Map())
+  const manifestsRef      = useRef<Map<string, AnimationManifest | null>>(new Map())
+  const animSequencesRef  = useRef<Map<string, AnimSequenceManifest | null>>(new Map())
   const [pendingCounterDecision, setPendingCounterDecision] = useState<CounterDecision | null>(null)
   const [pendingClash, setPendingClash]               = useState<ClashState | null>(null)
   const [pendingTeamCollision, setPendingTeamCollision] = useState<TeamCollisionState | null>(null)
@@ -273,12 +274,17 @@ export function BattleProvider({ children }: Props) {
           Promise.all(enemyIds.map((id) => loadCharacterWithSkills(id))),
         ])
 
-        // Load animation manifests for all characters in parallel.
+        // Load animation manifests and sequence overrides for all characters in parallel.
         const allDefIds        = [...new Set([...selectedTeamIds, ...enemyIds])]
-        const manifestResults  = await Promise.all(allDefIds.map((id) => loadAnimationManifest(id)))
-        const manifestMap      = new Map<string, AnimationManifest | null>()
-        allDefIds.forEach((id, i) => manifestMap.set(id, manifestResults[i]))
-        manifestsRef.current = manifestMap
+        const [manifestResults, seqResults] = await Promise.all([
+          Promise.all(allDefIds.map((id) => loadAnimationManifest(id))),
+          Promise.all(allDefIds.map((id) => loadAnimSequenceManifest(id))),
+        ])
+        const manifestMap = new Map<string, AnimationManifest | null>()
+        const seqMap      = new Map<string, AnimSequenceManifest | null>()
+        allDefIds.forEach((id, i) => { manifestMap.set(id, manifestResults[i]); seqMap.set(id, seqResults[i]) })
+        manifestsRef.current     = manifestMap
+        animSequencesRef.current = seqMap
 
         const loadedPlayers = playerDataArr.map((d) =>
           setTickPosition(
@@ -1178,17 +1184,18 @@ export function BattleProvider({ children }: Props) {
     // Falls back to plain timer when the Phaser canvas is not mounted.
     const arena = arenaRef.current
     if (arena) {
-      const actorManifest  = manifestsRef.current.get(actor.defId) ?? null
-      const actorDamaged   = unitIsDamaged(actor, actorManifest)
-      const resolved       = actorManifest ? resolveAttackAnimation(actorManifest, skill.id, skill.tags, actorDamaged) : null
-      const isMelee        = resolved?.isMelee ?? false
-      const dashDx         = resolved?.dashDx  ?? 0
+      const actorManifest    = manifestsRef.current.get(actor.defId) ?? null
+      const actorDamaged     = unitIsDamaged(actor, actorManifest)
+      const resolved         = actorManifest ? resolveAttackAnimation(actorManifest, skill.id, skill.tags, actorDamaged) : null
+      const isMelee          = resolved?.isMelee ?? false
+      const dashDx           = resolved?.dashDx  ?? 0
       const projectile: AnimationProjectileDef | null = actorManifest?.projectile ?? null
+      const customSequence   = animSequencesRef.current.get(actor.defId)?.[skill.id]
       arena.playDice(outcome, () => {
         arena.playAttack(actor.defId, primaryTarget.defId, outcome, primaryDamage, isMelee, dashDx, projectile, buildOutcomeLabel(outcome), outcomeColour(outcome), () => {
           if (playerApplyTimerRef.current) clearTimeout(playerApplyTimerRef.current)
           playerApplyTimerRef.current = setTimeout(applyState, BATTLE_FEEDBACK_HOLD_MS)
-        })
+        }, customSequence)
       })
     } else {
       if (playerApplyTimerRef.current) clearTimeout(playerApplyTimerRef.current)
@@ -1468,10 +1475,11 @@ export function BattleProvider({ children }: Props) {
           const aiIsMelee    = aiResolved?.isMelee ?? false
           const aiDashDx     = aiResolved?.dashDx  ?? 0
           const aiProjectile: AnimationProjectileDef | null = aiManifest?.projectile ?? null
+          const aiSequence   = animSequencesRef.current.get(aiUnit.defId)?.[skill.id]
           arena.playDice(outcome, () => {
             arena.playAttack(aiUnit.defId, primaryTarget.defId, outcome, primaryDamage, aiIsMelee, aiDashDx, aiProjectile, buildOutcomeLabel(outcome), outcomeColour(outcome), () => {
               applyTimerRef.current = setTimeout(applyAIState, BATTLE_FEEDBACK_HOLD_MS)
-            })
+            }, aiSequence)
           })
         } else {
           applyTimerRef.current = setTimeout(applyAIState, DICE_RESULT_DISMISS_MS)

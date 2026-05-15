@@ -58,6 +58,8 @@ and passed through `setTurnState` and `playAttack` so the arena can drive sprite
 animations and aura glows. A `null` result means no manifest exists for that
 character — the unit placeholder rectangle renders silently with no art.
 
+Simultaneously, `DataService.loadAnimSequenceManifest(defId)` fetches `anim_sequence.json` for each character. Results are stored in `animSequencesRef` (`Map<string, AnimSequenceManifest | null>`). At attack time, `animSequencesRef.get(actor.defId)?.[skill.id]` resolves the custom `AnimPhase[]` for that skill; when absent, `buildDefaultSequence` is used as the fallback.
+
 Skills are **character-exclusive**: `SkillDef` objects live inside the character's
 own subfolder and are not shared across characters (see content contract decision #6).
 
@@ -543,7 +545,7 @@ src/
 │       └── DiceResolver.ts        # roll, applyOutcome, resolveCounterRoll
 ├── services/
 │   └── DataService.ts             # loadCharacterIndex, loadCharacter, loadCharacterSkillDefs,
-│                                  #   loadCharacterWithSkills, loadMode (+ per-type cache)
+│                                  #   loadCharacterWithSkills, loadMode, loadAnimSequenceManifest(defId) (+ per-type cache)
 ├── scenes/
 │   ├── BattleScene.ts              # Orchestrator; re-exports tokenToHex
 │   └── battle/
@@ -553,7 +555,9 @@ src/
 │       ├── AnimationResolver.ts    # Attack animation fallback chain
 │       ├── AuraPanel.ts            # Scene-root radial glow with update-listener position sync
 │       ├── ProjectilePanel.ts      # Ranged projectile tween
-│       ├── AttackPanel.ts          # Melee/ranged attack dispatch + impact fx
+│       ├── SequenceRunner.ts       # executes AnimPhase[] with parallel, branch, skip support; owns fireImpact
+│       ├── DefaultSequences.ts     # builds default phase array for melee/ranged attacks
+│       ├── SequenceTypes.ts        # re-exports AnimPhase from core/types; defines SequenceContext
 │       ├── DicePanel.ts            # Die spin animation
 │       ├── FeedbackPanel.ts        # Rising damage text
 │       ├── ParticleEmitter.ts      # Burst effects

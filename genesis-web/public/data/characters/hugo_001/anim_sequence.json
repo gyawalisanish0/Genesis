@@ -1,0 +1,38 @@
+{
+  "hugo_001_basic_attack": [
+    { "type": "shove" },
+    { "type": "parallel", "phases": [
+      { "type": "damageNumber" },
+      { "type": "feedback" }
+    ]}
+  ],
+  "hugo_001_nanites_slash": [
+    { "type": "aura", "figure": "acting", "show": true },
+    { "type": "wait", "ms": 120 },
+    { "type": "shove" },
+    { "type": "aura", "figure": "acting", "show": false },
+    { "type": "parallel", "phases": [
+      { "type": "damageNumber" },
+      { "type": "feedback" }
+    ]}
+  ],
+  "hugo_001_hammer_bash": [
+    { "type": "shove" },
+    { "type": "parallel", "phases": [
+      { "type": "damageNumber" },
+      { "type": "feedback" }
+    ]}
+  ],
+  "hugo_001_shelling_point": [
+    { "type": "aura", "figure": "acting", "show": true },
+    { "type": "wait", "ms": 400 },
+    { "type": "aura", "figure": "acting", "show": false },
+    { "type": "feedback" }
+  ],
+  "hugo_001_hyper_sense": [
+    { "type": "aura", "figure": "acting", "show": true },
+    { "type": "wait", "ms": 300 },
+    { "type": "aura", "figure": "acting", "show": false },
+    { "type": "feedback" }
+  ]
+}

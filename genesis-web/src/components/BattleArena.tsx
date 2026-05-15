@@ -9,7 +9,7 @@
 
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 import Phaser from 'phaser'
-import type { AnimationManifest, AnimationProjectileDef } from '../core/types'
+import type { AnimationManifest, AnimationProjectileDef, AnimPhase } from '../core/types'
 import { BattleScene } from '../scenes/BattleScene'
 import styles from './BattleArena.module.css'
 
@@ -52,16 +52,17 @@ export interface BattleArenaHandle {
   playDice(outcome: string, onDone: () => void): void
   skipActiveDice(): void
   playAttack(
-    actingDefId:    string,
-    targetDefId:    string,
-    outcome:        string,
-    damage:         number,
-    isMelee:        boolean,
-    dashDx:         number,
-    projectile:     AnimationProjectileDef | null,
-    feedbackText:   string,
-    feedbackColour: string,
-    onDone:         () => void,
+    actingDefId:     string,
+    targetDefId:     string,
+    outcome:         string,
+    damage:          number,
+    isMelee:         boolean,
+    dashDx:          number,
+    projectile:      AnimationProjectileDef | null,
+    feedbackText:    string,
+    feedbackColour:  string,
+    onDone:          () => void,
+    customSequence?: AnimPhase[],
   ): void
   // Stage 4 — death collapse (phase-gated: clearTurn should be called inside onDone)
   playDeath(defId: string, onDone: () => void): void
@@ -159,9 +160,9 @@ export const BattleArena = forwardRef<BattleArenaHandle>(
       skipActiveDice() {
         sceneRef.current?.skipActiveDice()
       },
-      playAttack(actingDefId, targetDefId, outcome, damage, isMelee, dashDx, projectile, feedbackText, feedbackColour, onDone) {
+      playAttack(actingDefId, targetDefId, outcome, damage, isMelee, dashDx, projectile, feedbackText, feedbackColour, onDone, customSequence) {
         if (sceneRef.current) {
-          sceneRef.current.playAttack(actingDefId, targetDefId, outcome, damage, isMelee, dashDx, projectile, feedbackText, feedbackColour, onDone)
+          sceneRef.current.playAttack(actingDefId, targetDefId, outcome, damage, isMelee, dashDx, projectile, feedbackText, feedbackColour, onDone, customSequence)
         } else {
           onDone()
         }

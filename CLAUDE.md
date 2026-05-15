@@ -182,7 +182,7 @@ Genesis/
 │   │           └── mars/         # 1024×1024 individual PNGs: mars_floor.png, …
 │   └── src/
 │       ├── core/                 # Pure TS game logic — zero UI imports
-│       │   ├── types.ts          # StatBlockDef, CharacterDef, SkillDef, Unit, ModeDef, AppSettings, BattleResult, QualityTier, TilesetDef, AuraDef, AnimationStateDef, AnimationProjectileDef, AnimationManifest
+│       │   ├── types.ts          # StatBlockDef, CharacterDef, SkillDef, Unit, ModeDef, AppSettings, BattleResult, QualityTier, TilesetDef, AuraDef, AnimationStateDef, AnimationProjectileDef, AnimationManifest, AnimPhase, AnimSequenceManifest
 │       │   ├── constants.ts      # All numeric constants: tick ranges, dice params, timing thresholds, BETWEEN_TURN_PAUSE_MS, NARRATIVE_* timings, QUALITY_* thresholds, DUNGEON_ENCOUNTER_BANNER_MS, HINT_TOASTER_DURATION_MS, HINT_STORAGE_PREFIX
 │       │   ├── screen-types.ts   # ScreenId, ScreenConfig, SafeAreaMode, ScreenLifecycleHooks
 │       │   ├── unit.ts           # Immutable Unit factory + mutation helpers (createUnit, takeDamage, healUnit, incrementActionCount, …)
@@ -219,7 +219,7 @@ Genesis/
 │       │   ├── backButtonRegistry.ts  # Module-level singleton: register/unregister/invoke one handler at a time
 │       │   └── useBackButton.ts       # Hook: registers handler, pushes URL-sentinel for web popstate interception
 │       ├── services/             # Side-effectful singletons; Capacitor allowed
-│       │   ├── DataService.ts    # JSON loader: loadCharacter, loadCharacterSkillDefs, loadMode, loadCharacterWithSkills, loadCharacterDialogue, loadLevelNarrative, loadTilesetDef, loadAnimationManifest (all cached; loadAnimationManifest returns null silently when absent)
+│       │   ├── DataService.ts    # JSON loader: loadCharacter, loadCharacterSkillDefs, loadMode, loadCharacterWithSkills, loadCharacterDialogue, loadLevelNarrative, loadTilesetDef, loadAnimationManifest, loadAnimSequenceManifest (all cached; loadAnimationManifest and loadAnimSequenceManifest return null silently when absent)
 │       │   ├── DisplayService.ts # Full-screen + StatusBar: Capacitor StatusBar.hide() on native; Fullscreen API on web
 │       │   ├── NarrativeService.ts # Global narrative bus: emit(), play(), subscribe(), subscribeDirect(), registerEntries(), unregisterEntries(), getAllEntries()
 │       │   ├── ResolutionService.ts # Quality tier: rAF benchmark → High/Medium/Low; localStorage persistence; stepUp(); subscribe()
@@ -262,11 +262,13 @@ Genesis/
 │       │       ├── UnitStage.ts      # Acting + target figure containers; slide, flash, dodge, collapse; owns actingAura + targetAura AuraPanels; exposes getActingContainer/getTargetContainer
 │       │       ├── AnimationPlayer.ts # Per-figure sprite frame loop: frameKey/framePath helpers, play/stop/isPlaying; drives Phaser.Time.TimerEvent
 │       │       ├── AnimationResolver.ts # Attack animation fallback chain: skill-damaged → skill → tag-mapped-damaged → tag-mapped → null
+│       │       ├── SequenceTypes.ts      # Re-exports AnimPhase from core/types; defines SequenceContext (runtime data threaded through phase execution)
+│       │       ├── SequenceRunner.ts     # Executes AnimPhase[] sequences: sequential, parallel, branch, skip; handles all phase types including impact FX and feedback
+│       │       ├── DefaultSequences.ts   # Builds default AnimPhase[] for melee (shove) and ranged (projectile) attacks; adds parallel(damageNumber, feedback) after contact
 │       │       ├── AuraPanel.ts      # Scene-root radial glow: white Canvas2D gradient texture, tint=hue, scale=radius, update-listener position sync; show/hide/stop lifecycle
 │       │       ├── DicePanel.ts      # Die face spin → outcome landing animation; topInset keeps dice in content zone; skip() cancels timers and fires onDone immediately
-│       │       ├── AttackPanel.ts    # Shove tween (melee) or ProjectilePanel (ranged), target flash, particle burst, camera shake
-│       │       ├── ProjectilePanel.ts # Scene-root image tweened from caster to target; onImpact fires on arrival; battle_orb fallback texture
-│       │       ├── FeedbackPanel.ts  # Rising damage/outcome text tween; topInset keeps text in content zone
+│       │       ├── ProjectilePanel.ts # Scene-root image tweened from caster to target; onImpact fires on arrival; battle_orb fallback texture; used by SequenceRunner
+│       │       ├── FeedbackPanel.ts  # Two rising-text layers: show() for outcome label (spawns above figure centre), showDamageNumber() for damage value (spawns below); fired in parallel by the sequence
 │       │       ├── ParticleEmitter.ts # One-shot burst effects per outcome; runtime-generated texture
 │       │       └── ResolutionAdaptor.ts # FPS monitor: 1-s interval; promotes quality tier after QUALITY_STEP_UP_CHECKS consecutive ≥58fps checks
 │       ├── components/           # Reusable React widgets
@@ -290,7 +292,7 @@ Genesis/
 │       └── main.tsx              # Vite entry: registerBuiltins() → React root
 ```
 
-> **`scenes/`** hosts Phaser 3 scenes. `BattleScene.ts` (Stage 1) is live — canvas mounts in `BattleArena.tsx` inside `BattleScreen`.
+> **`scenes/`** hosts Phaser 3 scenes. `BattleScene.ts` (Stage 1) is live — canvas mounts in `BattleArena.tsx` inside `BattleScreen`. Attack playback is driven by `SequenceRunner`, which executes `AnimPhase[]` sequences sourced from `anim_sequence.json` overrides or `DefaultSequences` fallbacks.
 > Art assets slot in at `public/images/characters/{defId}/idle.png` — zero architecture change required (see `docs/mechanics/phaser-arena.md`).
 
 ---
@@ -493,6 +495,7 @@ public/data/characters/{id}/main.json          # CharacterDef (stats, class, rar
 public/data/characters/{id}/skills.json        # SkillDef[] for that character
 public/data/characters/{id}/dialogue.json      # CharacterDialogueDef — universal battle reactions (optional)
 public/data/characters/{id}/animations.json    # AnimationManifest — display dims, animation states, aura defs, projectile (optional; null return = placeholder fallback)
+public/data/characters/{id}/anim_sequence.json  # AnimSequenceManifest — skill.id → AnimPhase[] overrides (optional; null when absent)
 public/data/campaign/index.json                # stage discovery list ["stage_001", ...]
 public/data/campaign/{stageId}/stage.json      # StageDef (playerUnits, moveRange, enemyAi, playerControl)
 public/data/campaign/{stageId}/map.json        # MapDef (tilemap, entities, wavePhase, fogOfWar, tilesetKey?)
