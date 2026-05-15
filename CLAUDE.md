@@ -262,11 +262,13 @@ Genesis/
 │       │       ├── UnitStage.ts      # Acting + target figure containers; slide, flash, dodge, collapse; owns actingAura + targetAura AuraPanels; exposes getActingContainer/getTargetContainer
 │       │       ├── AnimationPlayer.ts # Per-figure sprite frame loop: frameKey/framePath helpers, play/stop/isPlaying; drives Phaser.Time.TimerEvent
 │       │       ├── AnimationResolver.ts # Attack animation fallback chain: skill-damaged → skill → tag-mapped-damaged → tag-mapped → null
+│       │       ├── SequenceTypes.ts      # Re-exports AnimPhase from core/types; defines SequenceContext (runtime data threaded through phase execution)
+│       │       ├── SequenceRunner.ts     # Executes AnimPhase[] sequences: sequential, parallel, branch, skip; handles all phase types including impact FX and feedback
+│       │       ├── DefaultSequences.ts   # Builds default AnimPhase[] for melee (shove) and ranged (projectile) attacks; adds parallel(damageNumber, feedback) after contact
 │       │       ├── AuraPanel.ts      # Scene-root radial glow: white Canvas2D gradient texture, tint=hue, scale=radius, update-listener position sync; show/hide/stop lifecycle
 │       │       ├── DicePanel.ts      # Die face spin → outcome landing animation; topInset keeps dice in content zone; skip() cancels timers and fires onDone immediately
-│       │       ├── AttackPanel.ts    # Shove tween (melee) or ProjectilePanel (ranged), target flash, particle burst, camera shake
-│       │       ├── ProjectilePanel.ts # Scene-root image tweened from caster to target; onImpact fires on arrival; battle_orb fallback texture
-│       │       ├── FeedbackPanel.ts  # Rising damage/outcome text tween; topInset keeps text in content zone
+│       │       ├── ProjectilePanel.ts # Scene-root image tweened from caster to target; onImpact fires on arrival; battle_orb fallback texture; used by SequenceRunner
+│       │       ├── FeedbackPanel.ts  # Two rising-text layers: show() for outcome label (spawns above figure centre), showDamageNumber() for damage value (spawns below); fired in parallel by the sequence
 │       │       ├── ParticleEmitter.ts # One-shot burst effects per outcome; runtime-generated texture
 │       │       └── ResolutionAdaptor.ts # FPS monitor: 1-s interval; promotes quality tier after QUALITY_STEP_UP_CHECKS consecutive ≥58fps checks
 │       ├── components/           # Reusable React widgets
@@ -290,7 +292,7 @@ Genesis/
 │       └── main.tsx              # Vite entry: registerBuiltins() → React root
 ```
 
-> **`scenes/`** hosts Phaser 3 scenes. `BattleScene.ts` (Stage 1) is live — canvas mounts in `BattleArena.tsx` inside `BattleScreen`.
+> **`scenes/`** hosts Phaser 3 scenes. `BattleScene.ts` (Stage 1) is live — canvas mounts in `BattleArena.tsx` inside `BattleScreen`. Attack playback is driven by `SequenceRunner`, which executes `AnimPhase[]` sequences sourced from `anim_sequence.json` overrides or `DefaultSequences` fallbacks.
 > Art assets slot in at `public/images/characters/{defId}/idle.png` — zero architecture change required (see `docs/mechanics/phaser-arena.md`).
 
 ---
@@ -493,6 +495,7 @@ public/data/characters/{id}/main.json          # CharacterDef (stats, class, rar
 public/data/characters/{id}/skills.json        # SkillDef[] for that character
 public/data/characters/{id}/dialogue.json      # CharacterDialogueDef — universal battle reactions (optional)
 public/data/characters/{id}/animations.json    # AnimationManifest — display dims, animation states, aura defs, projectile (optional; null return = placeholder fallback)
+public/data/characters/{id}/anim_sequence.json  # AnimSequenceManifest — skill.id → AnimPhase[] overrides (optional; null when absent)
 public/data/campaign/index.json                # stage discovery list ["stage_001", ...]
 public/data/campaign/{stageId}/stage.json      # StageDef (playerUnits, moveRange, enemyAi, playerControl)
 public/data/campaign/{stageId}/map.json        # MapDef (tilemap, entities, wavePhase, fogOfWar, tilesetKey?)

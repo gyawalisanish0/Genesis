@@ -263,13 +263,15 @@ Without arena: `setTimeout(applyState, DICE_RESULT_DISMISS_MS)` as before.
 |---|---|
 | `tokens.ts` | `tokenToHex(colour)` + `tokenToInt(colour)` — maps CSS design tokens to hex/integer for Phaser; extracted to break circular dependency |
 | `TurnDisplayPanel.ts` | Skill name + TU/AP cost + actor (enemy-only) + target rows with HP/AP bars; slides in/out from top of canvas |
-| `UnitStage.ts` | Creates, slides, and destroys the two unit figure containers; drives animation, aura, evasion dodge, and death collapse tweens |
+| `UnitStage.ts` | Creates, slides, and destroys the two unit figure containers; drives animation, aura, evasion dodge, and death collapse tweens; exposes `pureFlash()` (tint-only flash, no hurt anim), `playFigureAnim()` (plays a named state on a figure), `setAura()` (show/hide aura via sequence phase), `isAnimating()` (animation lock gate); holds dash pose during shove tween; plays death animation + fade on collapse |
 | `AnimationPlayer.ts` | Per-figure sprite animation loop — swaps individual PNG frame textures on a Phaser timer; provides `play()`, `stop()`, `isPlaying()` |
 | `AnimationResolver.ts` | Resolves which animation state to play given a skill ID, tags, and isDamaged flag; fallback chain: skill-damaged → skill → tag-mapped-damaged → tag-mapped → null |
 | `DicePanel.ts` | Renders the spinning die face; calls `onDone` after the hold |
-| `AttackPanel.ts` | Drives the shove tween (melee) or projectile (ranged), target flash, particle burst, and camera shake |
+| `SequenceRunner.ts` | Executes declarative `AnimPhase[]` sequences with support for `parallel`, `branch`, and `skip`; owns impact FX dispatch (flash, particles, shake); injects `FeedbackPanel` for `damageNumber` and `feedback` phases |
+| `DefaultSequences.ts` | Builds the default `AnimPhase[]` for melee and ranged attacks; outcomes route to `shove`/`projectile` + `parallel(damageNumber, feedback)` |
+| `SequenceTypes.ts` | Re-exports `AnimPhase` from `core/types.ts`; defines `SequenceContext` (runtime data threaded through phase execution) |
 | `ProjectilePanel.ts` | Tweens a scene-root image from caster position to target; fires `onImpact` on arrival; falls back to runtime-generated `battle_orb` purple circle texture |
-| `FeedbackPanel.ts` | Creates the rising damage/outcome text tween |
+| `FeedbackPanel.ts` | Two-layer outcome display: `show()` for outcome label (spawns above figure centre, 20 px), `showDamageNumber()` for damage value (spawns below figure centre, 26 px); both fired in parallel by the sequence |
 | `ParticleEmitter.ts` | One-shot burst effects: colour and count vary per outcome; uses runtime-generated particle texture |
 | `AuraPanel.ts` | Scene-root radial glow that tracks a Phaser container via `update` listener; hue driven by `setTint()`, intensity by `setAlpha()`, character by `setBlendMode()` |
 
@@ -289,20 +291,29 @@ Unit figures display character-specific sprite animations driven by per-characte
 {
   "type": "animations",
   "defId": "hugo_001",
-  "display": { "width": 160, "height": 180, "anchorX": 0.5, "anchorY": 1.0 },
+  "display": { "sourceWidth": 512, "sourceHeight": 512, "scale": 0.32, "anchorX": 0.5, "anchorY": 1.0 },
   "idleSwapBelowHpPercent": 0.4,
   "meleeDashDx": 80,
   "tagMap": { "melee": "melee_attack" },
   "animations": {
-    "idle":         { "frames": 6, "frameRate": 8, "repeat": -1 },
-    "idle_damaged": { "frames": 4, "frameRate": 6, "repeat": -1, "aura": { … } },
+    "idle":           { "frames": 2, "frameRate": 8,  "repeat": -1 },
+    "idle_damaged":   { "frames": 2, "frameRate": 6,  "repeat": -1, "aura": { … } },
+    "hurt":           { "frames": 2, "frameRate": 12, "repeat": 0 },
+    "dodge":          { "frames": 2, "frameRate": 12, "repeat": 0 },
+    "dash":           { "frames": 1, "frameRate": 12, "repeat": 0 },
+    "dash_damaged":   { "frames": 1, "frameRate": 12, "repeat": 0 },
+    "death":          { "frames": 2, "frameRate": 8,  "repeat": 0 },
+    "death_damaged":  { "frames": 2, "frameRate": 8,  "repeat": 0 },
     "skills": {
-      "hugo_001_nanites_slash":  { "frames": 8, "frameRate": 12, "repeat": 0 }
+      "hugo_001_nanites_slash":  { "frames": 3, "frameRate": 12, "repeat": 0 },
+      "hugo_001_shelling_point": { "frames": 4, "frameRate": 12, "repeat": 0 }
     }
   },
   "projectile": null
 }
 ```
+
+> `sourceWidth`/`sourceHeight` are art reference dimensions only (the pixel size of the source PNGs); `scale` is the uniform scale applied to the sprite at render time.
 
 ### Frame file convention
 
@@ -434,8 +445,9 @@ callback fires `onDone` only after both tweens complete.
 `BattleScene.playDeath(defId, onDone)` delegates to
 `UnitStage.collapseByDefId(defId, onDone)`:
 - Finds the figure (acting or target) whose `defId` matches
-- Hides the figure's aura before the tween starts
-- Tweens `angle → 85°`, `alpha → 0`, `y + 44 px` over 580 ms
+- Hides the figure's aura before the animation starts
+- Plays the death animation (2-frame) via `playDeathAndFade`
+- Then tweens `alpha → 0`, `y + 24 px` over 420 ms (`FADE_MS`)
 - Destroys the container, then calls `onDone`
 - `BattleContext` passes `() => arena.clearTurn()` as `onDone`, so surviving
   figures slide out only after the death animation completes
@@ -457,6 +469,10 @@ Art is fully manifest-driven. Each character needs:
 
 3. **Projectile sprite** (optional) at `public/images/characters/{defId}/projectile/{i}.png`
    if `manifest.projectile` is non-null. Falls back to the runtime-generated purple orb.
+
+4. **`public/data/characters/{defId}/anim_sequence.json`** (optional) — `AnimSequenceManifest`
+   mapping `skill.id → AnimPhase[]`. Overrides the engine default sequence for each listed skill.
+   Missing keys fall back to `buildDefaultSequence`. Absent file = all skills use defaults.
 
 No architecture change is required to add art — `BattleContext` fetches the manifest
 in its `load()` phase and passes it through `setTurnState`. `UnitStage.buildFigure`
