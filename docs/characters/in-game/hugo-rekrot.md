@@ -332,7 +332,7 @@ before the safety net resets.
 | `hugo_001_shelling_point_damaged` | — | 8 | — | Idle pose + shield-forming VFX | ⬜ Pending |
 | `hugo_001_hyper_sense` | — | 8 | Gold rapid-pulse (gold, ADD, r=120, α=0.75, period=900ms) | Idle pose + gold aura | ⬜ Pending — aura carries the cast; no distinct body animation |
 | `hugo_001_hyper_sense_damaged` | — | 8 | Gold rapid-pulse (same) | Idle pose + gold aura | ⬜ Pending |
-| `hugo_001_hyper_sense_hyper` | — | 10 | Intense gold aura | Energy release | ⬜ Pending — expiry counter: distinct animation for the 200% Power energy burst |
+| `hugo_001_hyper_sense_hyper` | — | 10 | Intense gold aura | Energy release | ⬜ Pending — fires on status expiry; ranged energy burst animation |
 
 ### Attack animation design notes
 
