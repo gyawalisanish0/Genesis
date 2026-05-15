@@ -76,12 +76,12 @@ the reference image covers that. Only describe the motion.
 | hugo_001 | `dodge` | base + damaged | ✅ Done |
 | hugo_001 | `dash` | base + damaged | ✅ Done |
 | hugo_001 | `hugo_001_basic_attack` | base + damaged | ✅ Done |
-| hugo_001 | `hugo_001_nanites_slash` | base + damaged | ⬜ Pending |
-| hugo_001 | `hugo_001_hammer_bash` | base + damaged | ⬜ Pending |
-| hugo_001 | `hugo_001_shelling_point` | base + damaged | ⬜ Pending |
-| hugo_001 | `hugo_001_hyper_sense` | base + damaged | ⬜ Pending |
-| hugo_001 | `hugo_001_hyper_sense_hyper` | base + damaged | ⬜ Pending |
-| hugo_001 | `death` | base + damaged | ⬜ Pending |
+| hugo_001 | `hugo_001_nanites_slash` | base + damaged | ✅ Generated |
+| hugo_001 | `hugo_001_hammer_bash` | base + damaged | ✅ Generated |
+| hugo_001 | `hugo_001_shelling_point` | base + damaged | ✅ Generated |
+| hugo_001 | `hugo_001_hyper_sense` | base + damaged | ✅ Generated |
+| hugo_001 | `hugo_001_hyper_sense_hyper` | damaged only | ✅ Generated |
+| hugo_001 | `death` | base + damaged | ✅ Generated |
 
 ---
 
