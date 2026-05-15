@@ -228,7 +228,7 @@ mid fight — the charges are the resource that unlocks Hyper Mode later.
 #### Hyper Mode
 Replaces Normal Mode when **both** conditions are met:
 - Primal Awareness is active (HP below 10%)
-- Fewer than 2 dodge charges remain on the Normal Mode status (at least one ranged dodge already absorbed)
+- Primal Awareness has 2 or fewer dodge stacks remaining (at least 3 of 5 consumed)
 
 Action grid shows **Hyper Sense ★** with updated costs when this unlocks.
 
@@ -284,7 +284,7 @@ before the safety net resets.
 | `hugo_001_shelling_point_penalty_window` | Shelling Point | 9-turn penalty window — break during this doubles overflow damage |
 | `hugo_001_primal_awareness_dodge` | Primal Awareness | 5-stack dodge at 70% per hit attempt, consumed per attempt |
 | `hugo_001_ap_regen_freeze` | Primal Awareness | Halts AP regen for 3 turns |
-| `hugo_001_hyper_sense_ranged_dodge` | Hyper Sense (Normal) | 30% ranged dodge; 2 stacks — each successful dodge consumes 1; expires at 0 |
+| `hugo_001_hyper_sense_ranged_dodge` | Hyper Sense (Normal) | 30% ranged dodge; 2 stacks — each successful ranged dodge consumes 1; expires at 0 |
 | `hugo_001_hyper_sense_hyper_active` | Hyper Sense (Hyper) | 90% melee / 50% ranged dodge; onExpire fires 200% Power energy counter (always hits) |
 
 ---

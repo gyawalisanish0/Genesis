@@ -115,11 +115,9 @@ export function makeShieldedBattleState(
  *   2. A slot carries payload.hyperModeConfig and its stacks are below activeBelowStacks
  */
 export function isHyperModeActive(unit: Unit): boolean {
-  const hasTrigger = unit.statusSlots.some(s => s.payload?.hyperModeTrigger === true)
-  if (!hasTrigger) return false
   return unit.statusSlots.some(s => {
     const cfg = s.payload?.hyperModeConfig as { activeBelowStacks: number } | undefined
-    return cfg !== undefined && s.stacks < cfg.activeBelowStacks
+    return s.payload?.hyperModeTrigger === true && cfg !== undefined && s.stacks < cfg.activeBelowStacks
   })
 }
 
