@@ -3,7 +3,7 @@
 // Layer rules: no React imports; Capacitor platform check guards native paths.
 // All callers receive typed data; Zod validation is deferred to Wave C.
 
-import type { CharacterDef, ModeDef, StageDef, MapDef, TilesetDef, AnimationManifest } from '../core/types'
+import type { CharacterDef, ModeDef, StageDef, MapDef, TilesetDef, AnimationManifest, AnimSequenceManifest } from '../core/types'
 import type { SkillDef, PassiveDef, StatusDef } from '../core/effects/types'
 import type { CharacterDialogueDef, LevelNarrativeDef } from '../core/narrative'
 
@@ -23,6 +23,7 @@ const cache = {
   maps:                new Map<string, MapDef>(),
   tilesets:            new Map<string, TilesetDef>(),
   animationManifests:  new Map<string, AnimationManifest>(),
+  animSequences:       new Map<string, AnimSequenceManifest | null>(),
 }
 
 // In-flight deduplication: store the pending promise so concurrent callers
@@ -244,6 +245,24 @@ export async function loadAnimationManifest(defId: string): Promise<AnimationMan
   }
 }
 
+/**
+ * Load a character's animation sequence overrides.
+ * Returns null silently when absent — skills without a sequence entry use
+ * the engine default (buildDefaultSequence).
+ */
+export async function loadAnimSequenceManifest(defId: string): Promise<AnimSequenceManifest | null> {
+  if (cache.animSequences.has(defId)) return cache.animSequences.get(defId) ?? null
+  try {
+    const raw = await fetchJson(`data/characters/${defId}/anim_sequence.json`)
+    const manifest = raw as AnimSequenceManifest
+    cache.animSequences.set(defId, manifest)
+    return manifest
+  } catch {
+    cache.animSequences.set(defId, null)
+    return null
+  }
+}
+
 /** Test utility — clears all cached data between test cases. */
 export function clearCache(): void {
   cache.characterIndex = null
@@ -259,5 +278,6 @@ export function clearCache(): void {
   cache.maps.clear()
   cache.tilesets.clear()
   cache.animationManifests.clear()
+  cache.animSequences.clear()
   inflight.characters.clear()
 }

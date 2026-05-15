@@ -1,0 +1,39 @@
+{
+  "hugo_001_basic_attack": [
+    { "type": "shove" },
+    { "type": "parallel", "phases": [
+      { "type": "damageNumber" },
+      { "type": "feedback" }
+    ]}
+  ],
+  "nanites_slash": [
+    { "type": "aura", "figure": "acting", "show": true },
+    { "type": "wait", "ms": 120 },
+    { "type": "shove" },
+    { "type": "aura", "figure": "acting", "show": false },
+    { "type": "parallel", "phases": [
+      { "type": "damageNumber" },
+      { "type": "feedback" }
+    ]}
+  ],
+  "hammer_bash": [
+    { "type": "shove" },
+    { "type": "parallel", "phases": [
+      { "type": "damageNumber" },
+      { "type": "feedback" }
+    ]}
+  ],
+  "shelling_point": [
+    { "type": "projectile" },
+    { "type": "parallel", "phases": [
+      { "type": "damageNumber" },
+      { "type": "feedback" }
+    ]}
+  ],
+  "hyper_sense": [
+    { "type": "aura", "figure": "acting", "show": true },
+    { "type": "wait", "ms": 300 },
+    { "type": "aura", "figure": "acting", "show": false },
+    { "type": "feedback" }
+  ]
+}
