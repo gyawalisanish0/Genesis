@@ -14,8 +14,9 @@ export function resolveIncomingDodge(
   target:     Unit,
   skillRange: 'melee' | 'ranged' | 'global',
   snap:       Map<string, Unit>,
-): { dodged: boolean; consumed: boolean } {
-  const targetSnap = snap.get(target.id) ?? target
+): { dodged: boolean; consumed: boolean; expiredStatusIds: string[] } {
+  const targetSnap     = snap.get(target.id) ?? target
+  const expiredStatusIds: string[] = []
 
   for (const slot of targetSnap.statusSlots) {
     if (slot.stacks <= 0) continue
@@ -29,17 +30,21 @@ export function resolveIncomingDodge(
     let   consumed = false
 
     if (cfg.consumeOnAttempt) {
-      snap.set(target.id, consumeStatusStack(snap.get(target.id) ?? targetSnap, slot.id))
+      const result = consumeStatusStack(snap.get(target.id) ?? targetSnap, slot.id)
+      snap.set(target.id, result.unit)
       consumed = true
+      if (result.expired) expiredStatusIds.push(slot.id)
     } else if (cfg.consumeOnSuccess && dodged) {
-      snap.set(target.id, consumeStatusStack(snap.get(target.id) ?? targetSnap, slot.id))
+      const result = consumeStatusStack(snap.get(target.id) ?? targetSnap, slot.id)
+      snap.set(target.id, result.unit)
       consumed = true
+      if (result.expired) expiredStatusIds.push(slot.id)
     }
 
-    if (dodged) return { dodged: true, consumed }
+    if (dodged) return { dodged: true, consumed, expiredStatusIds }
   }
 
-  return { dodged: false, consumed: false }
+  return { dodged: false, consumed: false, expiredStatusIds }
 }
 
 /**

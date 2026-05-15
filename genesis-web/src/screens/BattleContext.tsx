@@ -219,8 +219,9 @@ export function BattleProvider({ children }: Props) {
   const [narrativePaused, setNarrativePaused] = useState(false)
   const [inspectingSkill, setInspectingSkill] = useState<SkillInstance | null>(null)
   const arenaRef      = useRef<BattleArenaHandle>(null)
-  const manifestsRef      = useRef<Map<string, AnimationManifest | null>>(new Map())
-  const animSequencesRef  = useRef<Map<string, AnimSequenceManifest | null>>(new Map())
+  const manifestsRef           = useRef<Map<string, AnimationManifest | null>>(new Map())
+  const animSequencesRef       = useRef<Map<string, AnimSequenceManifest | null>>(new Map())
+  const pendingExpiryAnimsRef  = useRef<Array<{ ownerDefId: string; sequenceId: string }>>([])
   const [pendingCounterDecision, setPendingCounterDecision] = useState<CounterDecision | null>(null)
   const [pendingClash, setPendingClash]               = useState<ClashState | null>(null)
   const [pendingTeamCollision, setPendingTeamCollision] = useState<TeamCollisionState | null>(null)
@@ -767,7 +768,14 @@ export function BattleProvider({ children }: Props) {
     const skill       = getCachedSkill(skillInst)
 
     // Dodge status check: resolve before dice so status-based evasion overrides the roll.
-    const { dodged } = resolveIncomingDodge(target, skill.targeting.range, snap)
+    const { dodged, expiredStatusIds } = resolveIncomingDodge(target, skill.targeting.range, snap)
+    for (const statusId of expiredStatusIds) {
+      const def = statusDefsRef.current.get(statusId)
+      if (def) {
+        fireStatusExpiry(snap.get(target.id) ?? target, def, snap)
+        if (def.expireSequenceId) pendingExpiryAnimsRef.current.push({ ownerDefId: target.defId, sequenceId: def.expireSequenceId })
+      }
+    }
 
     const baseChance = skill.resolution?.baseChance ?? 1.0
     const casterForDice = snap.get(caster.id) ?? caster
@@ -927,7 +935,9 @@ export function BattleProvider({ children }: Props) {
     snap.set(caster.id, casterFinal)
     for (const expiredSlot of expired) {
       const def = statusDefsRef.current.get(expiredSlot.id)
-      if (def) fireStatusExpiry(casterFinal, def, snap)
+      if (!def) continue
+      fireStatusExpiry(casterFinal, def, snap)
+      if (def.expireSequenceId) pendingExpiryAnimsRef.current.push({ ownerDefId: caster.defId, sequenceId: def.expireSequenceId })
     }
 
     const damage = Math.max(0, targetHpBefore - (snap.get(target.id)?.hp ?? targetHpBefore))
@@ -1174,9 +1184,26 @@ export function BattleProvider({ children }: Props) {
       arena?.hideTurnDisplay()
       const firstDead = deadEnemies[0]
       if (firstDead && arena) {
-        arena.playDeath(firstDead.defId, () => arena.clearTurn())
+        arena.playDeath(firstDead.defId, () => {
+          arena.clearTurn()
+          playPendingExpiryAnims(arena)
+        })
       } else {
         arena?.clearTurn()
+        if (arena) playPendingExpiryAnims(arena)
+      }
+    }
+
+    const playPendingExpiryAnims = (arena: BattleArenaHandle) => {
+      const pending = pendingExpiryAnimsRef.current.splice(0)
+      if (!pending.length) return
+      const firstLivingEnemy = enemiesRef.current.find(isAlive)
+      if (!firstLivingEnemy) return
+      for (const { ownerDefId, sequenceId } of pending) {
+        const seq = animSequencesRef.current.get(ownerDefId)?.[sequenceId]
+        if (!seq) continue
+        arena.setTurnState(ownerDefId, firstLivingEnemy.defId)
+        arena.playAttack(ownerDefId, firstLivingEnemy.defId, 'Hit', 0, false, 0, null, '', '', () => arena.clearTurn(), seq)
       }
     }
 

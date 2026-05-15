@@ -15,7 +15,7 @@ const handle: EffectHandler<ApplyStatusEffect> = (effect, ctx) => {
   const def = getStatusDef(effect.status)
   if (!def) return
 
-  const duration     = effect.duration ?? def.duration
+  const duration     = effect.duration ?? def.duration ?? Infinity
   const durationUnit = def.tags?.includes('turn-based') ? 'turns' : 'ticks'
 
   const firstInterval = findIntervalValue(def)

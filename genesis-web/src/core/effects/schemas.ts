@@ -217,16 +217,28 @@ export const skillDefSchema = z.object({
 }).strict()
 
 export const statusDefSchema = z.object({
-  type:        z.literal('status'),
-  id:          z.string(),
-  name:        z.string(),
-  stacking:    z.enum(['refresh', 'extend', 'stack', 'independent']),
-  maxStacks:   z.number().int().positive().optional(),
-  duration:    z.number().int().positive(),
-  tags:        z.array(z.string()).optional(),
-  blockedTags: z.array(z.string()).optional(),
-  dodgeConfig: dodgeConfigSchema.optional(),
-  effects:     z.array(effectSchema),
+  type:              z.literal('status'),
+  id:                z.string(),
+  name:              z.string(),
+  stacking:          z.enum(['refresh', 'extend', 'stack', 'independent']),
+  maxStacks:         z.number().int().positive().optional(),
+  duration:          z.number().int().positive().optional(),
+  expireSequenceId:  z.string().optional(),
+  tags:              z.array(z.string()).optional(),
+  blockedTags:       z.array(z.string()).optional(),
+  dodgeConfig:       dodgeConfigSchema.optional(),
+  tuCostConfig:      z.object({
+    delta:               z.number().optional(),
+    percentOfBase:       z.number().optional(),
+    percentPerSecondary: z.number().optional(),
+  }).optional(),
+  critConfig:        z.object({
+    chance:             z.number(),
+    attackerStrPercent: z.number(),
+  }).optional(),
+  hyperModeTrigger:  z.boolean().optional(),
+  hyperModeConfig:   z.object({ activeBelowStacks: z.number() }).optional(),
+  effects:           z.array(effectSchema),
 }).strict()
 
 export const passiveDefSchema = z.object({

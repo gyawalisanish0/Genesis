@@ -34,5 +34,17 @@
     { "type": "wait", "ms": 300 },
     { "type": "aura", "figure": "acting", "show": false },
     { "type": "feedback" }
+  ],
+  "hugo_001_hyper_sense_expiry": [
+    { "type": "aura", "figure": "acting", "show": true },
+    { "type": "wait", "ms": 150 },
+    { "type": "particles", "figure": "acting" },
+    { "type": "wait", "ms": 100 },
+    { "type": "impact" },
+    { "type": "parallel", "phases": [
+      { "type": "damageNumber" },
+      { "type": "statusText", "text": "HYPER BURST!", "colour": "var(--accent-gold)" }
+    ]},
+    { "type": "aura", "figure": "acting", "show": false }
   ]
 }

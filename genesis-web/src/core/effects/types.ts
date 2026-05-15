@@ -336,8 +336,10 @@ export interface StatusDef {
   stacking:   StatusStacking
   /** Required when stacking === 'stack'. */
   maxStacks?: number
-  /** Base duration in ticks; may be overridden by the applying skill. */
-  duration:   number
+  /** Base duration in ticks; may be overridden by the applying skill. Omit for stack-consumed statuses — they expire only when stacks reach 0. */
+  duration?:  number
+  /** Key into the owner's anim_sequence.json to play when this status expires (stack or duration). Fire-and-forget. */
+  expireSequenceId?: string
   tags?:      string[]
   /** Skill tags that are locked while this status is active on the unit. */
   blockedTags?: string[]
