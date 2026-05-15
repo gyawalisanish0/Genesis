@@ -6,7 +6,7 @@
       { "type": "feedback" }
     ]}
   ],
-  "nanites_slash": [
+  "hugo_001_nanites_slash": [
     { "type": "aura", "figure": "acting", "show": true },
     { "type": "wait", "ms": 120 },
     { "type": "shove" },
@@ -16,21 +16,20 @@
       { "type": "feedback" }
     ]}
   ],
-  "hammer_bash": [
+  "hugo_001_hammer_bash": [
     { "type": "shove" },
     { "type": "parallel", "phases": [
       { "type": "damageNumber" },
       { "type": "feedback" }
     ]}
   ],
-  "shelling_point": [
-    { "type": "projectile" },
-    { "type": "parallel", "phases": [
-      { "type": "damageNumber" },
-      { "type": "feedback" }
-    ]}
+  "hugo_001_shelling_point": [
+    { "type": "aura", "figure": "acting", "show": true },
+    { "type": "wait", "ms": 400 },
+    { "type": "aura", "figure": "acting", "show": false },
+    { "type": "feedback" }
   ],
-  "hyper_sense": [
+  "hugo_001_hyper_sense": [
     { "type": "aura", "figure": "acting", "show": true },
     { "type": "wait", "ms": 300 },
     { "type": "aura", "figure": "acting", "show": false },
