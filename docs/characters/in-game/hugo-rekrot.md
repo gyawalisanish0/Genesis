@@ -305,30 +305,46 @@ before the safety net resets.
 
 ### Animation states
 
-| State | Frames | FPS | Repeat | Aura |
-|---|---|---|---|---|
-| `idle` | 6 | 8 | -1 (loop) | — |
-| `idle_damaged` | 4 | 6 | -1 (loop) | Red pulse (danger, ADD, r=88, α=0.45, period=1600ms) |
-| `melee_attack` | 8 | 12 | 0 (once) | — |
-| `melee_attack_damaged` | 8 | 12 | 0 (once) | — |
-| `hurt` | 4 | 10 | 0 (once) | — |
-| `hurt_damaged` | 4 | 10 | 0 (once) | — |
-| `dodge` | 4 | 12 | 0 (once) | — |
-| `dodge_damaged` | 4 | 12 | 0 (once) | — |
+| State | Frames | FPS | Repeat | Aura | Notes |
+|---|---|---|---|---|---|
+| `idle` | 6 | 8 | -1 (loop) | — | ✅ Done |
+| `idle_damaged` | 4 | 6 | -1 (loop) | Red pulse (danger, ADD, r=88, α=0.45, period=1600ms) | ✅ Done |
+| `hurt` | — | 10 | 0 (once) | — | ✅ Done |
+| `hurt_damaged` | — | 10 | 0 (once) | — | ✅ Done |
+| `dodge` | — | 12 | 0 (once) | — | ✅ Done |
+| `dodge_damaged` | — | 12 | 0 (once) | — | ✅ Done |
+| `dash` | 1 | — | 0 (once) | — | ✅ Done — held as static pose during shove tween |
+| `dash_damaged` | 1 | — | 0 (once) | — | ✅ Done |
+| `death` | — | 8 | 0 (once) | — | ⬜ Pending |
+| `death_damaged` | — | 8 | 0 (once) | — | ⬜ Pending |
 
 ### Skill animation states
 
-| Skill | Frames | FPS | Aura |
-|---|---|---|---|
-| `hugo_001_basic_attack` | 6 | 12 | — |
-| `hugo_001_nanites_slash` | 8 | 12 | — |
-| `hugo_001_nanites_slash_damaged` | 8 | 12 | — |
-| `hugo_001_hammer_bash` | 10 | 10 | — |
-| `hugo_001_hammer_bash_damaged` | 10 | 10 | — |
-| `hugo_001_shelling_point` | 5 | 8 | — |
-| `hugo_001_shelling_point_damaged` | 5 | 8 | — |
-| `hugo_001_hyper_sense` | 6 | 8 | Gold rapid-pulse (gold, ADD, r=120, α=0.75, period=900ms) |
-| `hugo_001_hyper_sense_damaged` | 6 | 8 | Gold rapid-pulse (same as above) |
+| Skill | Frames | FPS | Aura | Sequence | Notes |
+|---|---|---|---|---|---|
+| `hugo_001_basic_attack` | — | 12 | — | Strike | ✅ Done |
+| `hugo_001_basic_attack_damaged` | — | 12 | — | Strike | ✅ Done |
+| `hugo_001_nanites_slash` | — | 12 | — | Blade form → dash → slash | ⬜ Pending |
+| `hugo_001_nanites_slash_damaged` | — | 12 | — | Blade form → dash → slash | ⬜ Pending |
+| `hugo_001_hammer_bash` | — | 10 | — | Dash → hammer form → smash | ⬜ Pending |
+| `hugo_001_hammer_bash_damaged` | — | 10 | — | Dash → hammer form → smash | ⬜ Pending |
+| `hugo_001_shelling_point` | — | 8 | — | Idle pose + shield-forming VFX | ⬜ Pending — no distinct body animation; nanite shimmer + shield glow carries it |
+| `hugo_001_shelling_point_damaged` | — | 8 | — | Idle pose + shield-forming VFX | ⬜ Pending |
+| `hugo_001_hyper_sense` | — | 8 | Gold rapid-pulse (gold, ADD, r=120, α=0.75, period=900ms) | Idle pose + gold aura | ⬜ Pending — aura carries the cast; no distinct body animation |
+| `hugo_001_hyper_sense_damaged` | — | 8 | Gold rapid-pulse (same) | Idle pose + gold aura | ⬜ Pending |
+| `hugo_001_hyper_sense_hyper` | — | 10 | Intense gold aura | Energy release | ⬜ Pending — expiry counter: distinct animation for the 200% Power energy burst |
+
+### Attack animation design notes
+
+**Nanites Slash** — weapon forms *before* movement. ANBOT's nanite mass reshapes the arm into a blade while still in place, then dashes and cuts through the target in one motion. The blade form is the windup; the dash+slash is the release.
+
+**Hammer Bash** — commitment first, weapon second. ANBOT dashes toward the target with no formed weapon, then consolidates nanite mass mid-approach into a crushing hammer limb and drives it down. The weapon forms during the dash, not before it.
+
+**Shelling Point** — no body animation. Cast reads as idle pose while nanite particles shimmer and a shield shell solidifies around the character. VFX-driven entirely.
+
+**Hyper Sense (Normal)** — no body animation. Gold aura pulse communicates the heightened defensive state. Cast reads as idle + aura activation.
+
+**Hyper Sense (Hyper Mode expiry)** — the passive counter fires automatically when the status expires. Needs a distinct energy-release animation: stored energy venting outward as the nanite mass channels a focused 200% Power burst.
 
 ### Aura design rationale
 
