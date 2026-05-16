@@ -11,7 +11,7 @@
       "label":           "PRIMAL",
       "colour":          "var(--accent-info)",
       "durationDisplay": "turns",
-      "icon":            "hugo_001_psv_logo"
+      "icon":            "psv_logo"
     }
   },
   "dodgeConfig": {
