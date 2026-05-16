@@ -41,12 +41,51 @@ The markings are not decorative. They are the Orb making itself visible.
 
 ## Appearance
 
-Human. Nep-Japanese heritage. Carries herself with the stillness of someone
-who has never needed to prove anything to anyone.
+Human. Nep-Japanese heritage. 28 years old at the time of the Mars deployment
+(born 2081, game year 2109). Carries herself with the stillness of someone who
+has never needed to prove anything to anyone.
 
-At full power the yellow veins spread visibly across her skin — Order and Chaos
-made physical. The design on her back is always present but only visible when
-exposed. Visual design still being finalised.
+### Attire — Neo-Japanese, Era 2109
+
+Silhouette drawn from traditional furisode lineage — kimono-inspired layered
+robes, long flowing sleeves, obi-style waist detail — but constructed from
+2109 smart textile. The fabric is deep black, near-opaque at rest, with subtle
+geometric panel breaks at shoulder and cuff that no woven material holds. Seams
+carry bioluminescent threading in yellow-gold, barely visible unless the Orb
+is drawing power. The garment reads ancient in shape and impossible in material.
+
+No armour. No cybernetic augments. No visible weapons. She is a caster
+deployed on a military operation — civilian-operative attire, not combat gear.
+The Kuronage family does not display wealth through decoration; it shows in the
+tailoring and in what is absent.
+
+**Accessories:** A single kanzashi hairpin — thin alloy, small amber-yellow
+crystal at the tip. Nothing else.
+
+**Hair:** Partially up at rest, simple and deliberate. Falls completely loose
+when the Orb reaches full output — the loosening is part of the power reveal,
+not incidental.
+
+### Power State
+
+The attire shows almost no change at full Orb output — the clothing is not the
+tell. What surfaces is on her body:
+
+- **Yellow veins** — glowing, spreading across the backs of her hands, up the
+  neck, tracing the jaw and cheekbones
+- **Golden glowing eyes** — the most visible marker; the Orb energy surfaces
+  there completely
+- The bioluminescent threading in the seams brightens slightly but is secondary
+
+The back markings are always present and the Orb's true origin point — but they
+are hidden under the robes at all times. The power reveal is in the face and
+hands, not the fabric. She looks composed until you see her eyes.
+
+### Reference
+
+Visual aesthetic: Zhuxin (Mobile Legends) — same principle of composed base
+state giving way to a dramatic power reveal. Cultural register shifted from
+Chinese to Nep-Japanese. Power colour shifted from red to yellow-gold.
 
 ---
 

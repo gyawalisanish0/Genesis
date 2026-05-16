@@ -38,14 +38,16 @@ export function fireHpThresholdPassives(
   }
 }
 
-/** Fire onExpire effects for a StatusDef using the owning unit as caster. */
+/** Fire onExpire effects for a StatusDef using the owning unit as caster.
+ *  Returns the total damage dealt to all units (for animation display). */
 export function fireStatusExpiry(
   owner: Unit,
   def:   StatusDef,
   snap:  Map<string, Unit>,
-): void {
+): number {
   const expireEffects = def.effects.filter(e => e.when.event === 'onExpire')
-  if (!expireEffects.length) return
+  if (!expireEffects.length) return 0
+  const hpBefore = new Map([...snap.values()].map(u => [u.id, u.hp] as [string, number]))
   const ctx: EffectContext = {
     caster: snap.get(owner.id) ?? owner,
     battle: snapshotToBattleState(snap),
@@ -53,6 +55,11 @@ export function fireStatusExpiry(
     event:  { event: 'onExpire' },
   }
   for (const effect of expireEffects) applyEffect(effect, ctx)
+  let totalDamage = 0
+  for (const [id, unit] of snap) {
+    totalDamage += Math.max(0, (hpBefore.get(id) ?? unit.hp) - unit.hp)
+  }
+  return totalDamage
 }
 
 /** Fires onOpponentAction passive effects for all units opposing the actor. */

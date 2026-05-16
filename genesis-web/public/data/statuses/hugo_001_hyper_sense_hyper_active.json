@@ -3,6 +3,8 @@
   "id": "hugo_001_hyper_sense_hyper_active",
   "name": "Hyper Mode",
   "stacking": "refresh",
+  "expiresWithStatus": "hugo_001_primal_awareness_dodge",
+  "expireSequenceId": "hugo_001_hyper_sense_expiry",
   "tags": ["dodge", "hyper", "melee-dodge", "turn-based", "energy", "ranged"],
   "dodgeConfig": {
     "meleeChance": 0.90,
@@ -12,7 +14,7 @@
     {
       "id": "hugo_001_hyper_sense_expire_counter",
       "when": { "event": "onExpire" },
-      "target": "random-enemy",
+      "target": "all-enemies",
       "type": "damage",
       "amount": { "stat": "power", "percent": 200 },
       "damageType": "energy"

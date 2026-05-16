@@ -93,6 +93,9 @@ interface BattleContextValue {
   gridCollapsed:    boolean
   isPaused:         boolean
   isLoading:        boolean
+  // Status chip system
+  suppressedChipIds: ReadonlySet<string>
+  getChipDef: (statusId: string) => import('../core/types').StatusChipDef | null
   // Dice result overlay
   diceResult:      DiceResult | null
   // Counter choice prompt — set when player's counter roll succeeds
@@ -219,8 +222,12 @@ export function BattleProvider({ children }: Props) {
   const [narrativePaused, setNarrativePaused] = useState(false)
   const [inspectingSkill, setInspectingSkill] = useState<SkillInstance | null>(null)
   const arenaRef      = useRef<BattleArenaHandle>(null)
-  const manifestsRef      = useRef<Map<string, AnimationManifest | null>>(new Map())
-  const animSequencesRef  = useRef<Map<string, AnimSequenceManifest | null>>(new Map())
+  const manifestsRef           = useRef<Map<string, AnimationManifest | null>>(new Map())
+  const animSequencesRef       = useRef<Map<string, AnimSequenceManifest | null>>(new Map())
+  const pendingExpiryAnimsRef      = useRef<Array<{ ownerDefId: string; sequenceId: string; damage: number }>>([])
+  const pendingActivationAnimsRef  = useRef<Array<{ ownerDefId: string; sequenceId: string; slotId: string }>>([])
+  const preSkillStatusSnapshotRef  = useRef<Map<string, Set<string>>>(new Map())
+  const [suppressedChipIds, setSuppressedChipIds] = useState<ReadonlySet<string>>(new Set())
   const [pendingCounterDecision, setPendingCounterDecision] = useState<CounterDecision | null>(null)
   const [pendingClash, setPendingClash]               = useState<ClashState | null>(null)
   const [pendingTeamCollision, setPendingTeamCollision] = useState<TeamCollisionState | null>(null)
@@ -756,6 +763,55 @@ export function BattleProvider({ children }: Props) {
   const runAttackRef            = useRef<((caster: Unit, target: Unit, skillInst: SkillInstance, snap: Map<string, Unit>, chainDepth?: number) => { outcome: DiceOutcome; damage: number }) | null>(null)
   const scheduleCounterChainRef = useRef<((defender: Unit, originalCaster: Unit, counterSkill: SkillInstance, snap: Map<string, Unit>, depth: number) => void) | null>(null)
 
+  // Fires expiry effects for a status and cascades to any status linked via expiresWithStatus.
+  const getChipDef = useCallback((statusId: string) => {
+    return statusDefsRef.current.get(statusId)?.ui?.chip ?? null
+  }, [])
+
+  const detectNewActivations = useCallback((snap: Map<string, Unit>, prior: Map<string, Set<string>>) => {
+    const toSuppress: string[] = []
+    for (const [unitId, unit] of snap) {
+      const priorIds = prior.get(unitId) ?? new Set<string>()
+      for (const slot of unit.statusSlots) {
+        if (priorIds.has(slot.id)) continue
+        const def = statusDefsRef.current.get(slot.id)
+        if (!def?.activateSequenceId || !def?.ui?.chip) continue
+        toSuppress.push(slot.id)
+        pendingActivationAnimsRef.current.push({
+          ownerDefId: unit.defId,
+          sequenceId: def.activateSequenceId,
+          slotId:     slot.id,
+        })
+      }
+    }
+    if (toSuppress.length) {
+      setSuppressedChipIds(prev => {
+        const next = new Set(prev)
+        toSuppress.forEach(id => next.add(id))
+        return next
+      })
+    }
+  }, [])
+
+  const fireExpiryChain = useCallback((ownerDefId: string, statusId: string, snap: Map<string, Unit>) => {
+    const ownerUnit = [...snap.values()].find(u => u.defId === ownerDefId)
+    if (!ownerUnit) return
+    const def = statusDefsRef.current.get(statusId)
+    if (!def) return
+    const damage = fireStatusExpiry(snap.get(ownerUnit.id) ?? ownerUnit, def, snap)
+    if (def.expireSequenceId) pendingExpiryAnimsRef.current.push({ ownerDefId, sequenceId: def.expireSequenceId, damage })
+    // Cascade: remove any status whose expiresWithStatus points to this one.
+    const linkedUnit = snap.get(ownerUnit.id) ?? ownerUnit
+    for (const slot of linkedUnit.statusSlots) {
+      const linkedDef = statusDefsRef.current.get(slot.id)
+      if (linkedDef?.expiresWithStatus === statusId) {
+        snap.set(ownerUnit.id, { ...snap.get(ownerUnit.id) ?? ownerUnit, statusSlots: (snap.get(ownerUnit.id) ?? ownerUnit).statusSlots.filter(s => s.id !== slot.id) })
+        const linkedDamage = fireStatusExpiry(snap.get(ownerUnit.id) ?? ownerUnit, linkedDef, snap)
+        if (linkedDef.expireSequenceId) pendingExpiryAnimsRef.current.push({ ownerDefId, sequenceId: linkedDef.expireSequenceId, damage: linkedDamage })
+      }
+    }
+  }, [])
+
   /** Execute one attack: caster hits target using the given SkillInstance. */
   const runAttack = useCallback((
     caster: Unit,
@@ -767,7 +823,10 @@ export function BattleProvider({ children }: Props) {
     const skill       = getCachedSkill(skillInst)
 
     // Dodge status check: resolve before dice so status-based evasion overrides the roll.
-    const { dodged } = resolveIncomingDodge(target, skill.targeting.range, snap)
+    const { dodged, expiredStatusIds } = resolveIncomingDodge(target, skill.targeting.range, snap)
+    for (const statusId of expiredStatusIds) {
+      fireExpiryChain(target.defId, statusId, snap)
+    }
 
     const baseChance = skill.resolution?.baseChance ?? 1.0
     const casterForDice = snap.get(caster.id) ?? caster
@@ -926,8 +985,7 @@ export function BattleProvider({ children }: Props) {
 
     snap.set(caster.id, casterFinal)
     for (const expiredSlot of expired) {
-      const def = statusDefsRef.current.get(expiredSlot.id)
-      if (def) fireStatusExpiry(casterFinal, def, snap)
+      fireExpiryChain(caster.defId, expiredSlot.id, snap)
     }
 
     const damage = Math.max(0, targetHpBefore - (snap.get(target.id)?.hp ?? targetHpBefore))
@@ -1057,6 +1115,9 @@ export function BattleProvider({ children }: Props) {
     // Block skills whose tags are locked by an active status on the caster.
     if (isSkillTagBlocked(actor, skill.tags)) return
     const snap       = makeSnapshot(playerUnitsRef.current, enemiesRef.current)
+    preSkillStatusSnapshotRef.current = new Map(
+      [...snap].map(([uid, u]) => [uid, new Set(u.statusSlots.map(s => s.id))])
+    )
     const allTargets = resolveSkillTargets(actor, skill.targeting.selector, snap, selectedTarget)
     if (!allTargets.length) return
 
@@ -1146,6 +1207,7 @@ export function BattleProvider({ children }: Props) {
 
     // Apply state after animations complete: HP bars + timeline marker jump.
     const applyState = () => {
+      detectNewActivations(snap, preSkillStatusSnapshotRef.current)
       setPlayerUnits((prev) => prev.map((u) => {
         const updated = snap.get(u.id) ?? u
         return u.id === actor.id ? incrementActionCount(updated) : updated
@@ -1174,9 +1236,46 @@ export function BattleProvider({ children }: Props) {
       arena?.hideTurnDisplay()
       const firstDead = deadEnemies[0]
       if (firstDead && arena) {
-        arena.playDeath(firstDead.defId, () => arena.clearTurn())
+        arena.playDeath(firstDead.defId, () => {
+          arena.clearTurn()
+          playPendingExpiryAnims(arena)
+          playPendingActivationAnims(arena)
+        })
       } else {
         arena?.clearTurn()
+        if (arena) {
+          playPendingExpiryAnims(arena)
+          playPendingActivationAnims(arena)
+        }
+      }
+    }
+
+    const playPendingActivationAnims = (arena: BattleArenaHandle) => {
+      const pending = pendingActivationAnimsRef.current.splice(0)
+      if (!pending.length) return
+      for (const { ownerDefId, sequenceId, slotId } of pending) {
+        const seq = animSequencesRef.current.get(ownerDefId)?.[sequenceId]
+        const release = () => setSuppressedChipIds(prev => {
+          const next = new Set(prev)
+          next.delete(slotId)
+          return next
+        })
+        if (!seq) { release(); continue }
+        arena.setTurnState(ownerDefId, ownerDefId)
+        arena.playAttack(ownerDefId, ownerDefId, 'Hit', 0, false, 0, null, '', '', release, seq)
+      }
+    }
+
+    const playPendingExpiryAnims = (arena: BattleArenaHandle) => {
+      const pending = pendingExpiryAnimsRef.current.splice(0)
+      if (!pending.length) return
+      const firstLivingEnemy = [...snap.values()].find(u => !u.isAlly && u.hp > 0)
+      if (!firstLivingEnemy) return
+      for (const { ownerDefId, sequenceId, damage } of pending) {
+        const seq = animSequencesRef.current.get(ownerDefId)?.[sequenceId]
+        if (!seq) continue
+        arena.setTurnState(ownerDefId, firstLivingEnemy.defId)
+        arena.playAttack(ownerDefId, firstLivingEnemy.defId, 'Hit', damage, false, 0, null, '', '', () => arena.clearTurn(), seq)
       }
     }
 
@@ -1611,6 +1710,7 @@ export function BattleProvider({ children }: Props) {
       playerUnits, leader, activePlayerUnit, enemies, log, historyEntries,
       selectedSkill, selectedTarget, showTargetPicker,
       gridCollapsed, isPaused, isLoading,
+      suppressedChipIds, getChipDef,
       diceResult, pendingCounterDecision,
       pendingClash, pendingTeamCollision,
       registeredTicks, scrollBounds,

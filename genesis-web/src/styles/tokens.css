@@ -14,6 +14,7 @@
   /* ── Accent ──────────────────────────────────────────────────────────── */
   --accent-genesis: #8b5cf6;  /* primary brand, active states, timeline     */
   --accent-gold:    #f59e0b;  /* boosted outcome, rarity 5 / Master         */
+  --accent-silver:  #c8e6ff;  /* hyper mode aura, neon silver energy        */
   --accent-info:    #3b82f6;  /* AP bar, information                        */
   --accent-heal:    #10b981;  /* healing, positive buffs                    */
   --accent-warn:    #f97316;  /* tumbling outcome, guard up                 */

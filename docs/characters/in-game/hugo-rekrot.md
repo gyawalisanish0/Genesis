@@ -222,13 +222,16 @@ Active when Primal Awareness is **not** running.
 | Cooldown | 20 ticks |
 
 Grants 2 dodge charges. Each successful ranged dodge consumes one charge.
-When both charges are spent the status expires. Use freely in the early and
-mid fight — the charges are the resource that unlocks Hyper Mode later.
+When both charges are spent the status expires.
+
+**When Primal Awareness is active** and Hyper Mode has not yet unlocked (stacks ≥ 3),
+casting Hyper Sense instead adds 2 stacks directly to Primal Awareness. No separate
+status is applied — it refuels the existing dodge window at the cost of 10 AP and 7 TU.
 
 #### Hyper Mode
 Replaces Normal Mode when **both** conditions are met:
 - Primal Awareness is active (HP below 10%)
-- Fewer than 2 dodge charges remain on the Normal Mode status (at least one ranged dodge already absorbed)
+- Primal Awareness has 2 or fewer dodge stacks remaining (at least 3 of 5 consumed)
 
 Action grid shows **Hyper Sense ★** with updated costs when this unlocks.
 
@@ -237,14 +240,16 @@ Action grid shows **Hyper Sense ★** with updated costs when this unlocks.
 | AP Cost | 20 |
 | TU Cost | 6 |
 | Effect | 90% melee dodge / 50% ranged dodge for the Primal Awareness duration |
-| On Expiry | Counter: 200% Power energy damage (energy, ranged) |
+| On Expiry | Counter: 200% Power energy damage (energy, ranged) to all enemies |
 | Cooldown | 8 turns (shared slot — overwrites Normal Mode cooldown) |
 
-The counter on expiry is automatic and always hits — it bypasses the dice
-pipeline entirely. The Hyper Mode window ending is itself the trigger.
+Hyper Mode lasts exactly as long as Primal Awareness — it is tied to the same dodge
+stack pool. When Primal Awareness's final stack is consumed, Hyper Mode expires
+simultaneously and the counter fires automatically. Always hits — bypasses dice entirely.
 
-The intended sequence: cast Normal Mode early → absorb a ranged hit → enter
-Primal Awareness at critical HP → Hyper Mode unlocks on the next Hyper Sense cast.
+The intended sequence: enter Primal Awareness at critical HP → absorb 3 hits (5 → 2
+stacks remaining) → Hyper Mode unlocks → cast Hyper Sense ★ → survive the final 2
+hits → counter fires on expiry.
 
 ---
 
@@ -260,7 +265,7 @@ Primal Awareness at critical HP → Hyper Mode unlocks on the next Hyper Sense c
 | Dodge Chance | 70% per hit attempt |
 | Dodge Consumption | One stack consumed per incoming hit attempt (successful dodge or not) |
 | AP Regen | Frozen for 3 of Hugo's own turns |
-| Reactivation Gate | Cannot trigger again until AP returns to 80%+ and dodge status is gone |
+| Reactivation Gate | First activation is guaranteed (no AP check). After first use, cannot trigger again until AP returns to 80%+ and dodge status is fully consumed |
 
 **Biological basis**: Hugo's Sekkar skin receptors detect incoming attack
 pressure shifts. ANBOT reads the signal and reroutes before the hit lands.
@@ -282,10 +287,11 @@ before the safety net resets.
 |---|---|---|
 | `hugo_001_shelling_point_active` | Shelling Point | Shield HP pool + tick regen (56 HP / 10 turns) |
 | `hugo_001_shelling_point_penalty_window` | Shelling Point | 9-turn penalty window — break during this doubles overflow damage |
-| `hugo_001_primal_awareness_dodge` | Primal Awareness | 5-stack dodge at 70% per hit attempt, consumed per attempt |
+| `hugo_001_primal_awareness_dodge` | Primal Awareness | 5-stack dodge at 70% per hit attempt, consumed per attempt; Hyper Mode unlocks at ≤ 2 stacks |
 | `hugo_001_ap_regen_freeze` | Primal Awareness | Halts AP regen for 3 turns |
-| `hugo_001_hyper_sense_ranged_dodge` | Hyper Sense (Normal) | 30% ranged dodge; 2 stacks — each successful dodge consumes 1; expires at 0 |
-| `hugo_001_hyper_sense_hyper_active` | Hyper Sense (Hyper) | 90% melee / 50% ranged dodge; onExpire fires 200% Power energy counter (always hits) |
+| `hugo_001_primal_awareness_spent` | Primal Awareness (first activation) | Permanent battle-scoped marker — presence switches the passive to the reactivation path (AP ≥ 80% required) |
+| `hugo_001_hyper_sense_ranged_dodge` | Hyper Sense (Normal, outside Primal) | 30% ranged dodge; 2 stacks — each successful ranged dodge consumes 1; expires at 0 |
+| `hugo_001_hyper_sense_hyper_active` | Hyper Sense (Hyper) | 90% melee / 50% ranged dodge; expires with Primal Awareness; onExpire fires 200% Power energy counter to all enemies (always hits) |
 
 ---
 
@@ -330,9 +336,9 @@ before the safety net resets.
 | `hugo_001_hammer_bash_damaged` | — | 10 | — | Dash → hammer form → smash | ⬜ Pending |
 | `hugo_001_shelling_point` | — | 8 | — | Idle pose + shield-forming VFX | ⬜ Pending — no distinct body animation; nanite shimmer + shield glow carries it |
 | `hugo_001_shelling_point_damaged` | — | 8 | — | Idle pose + shield-forming VFX | ⬜ Pending |
-| `hugo_001_hyper_sense` | — | 8 | Gold rapid-pulse (gold, ADD, r=120, α=0.75, period=900ms) | Idle pose + gold aura | ⬜ Pending — aura carries the cast; no distinct body animation |
-| `hugo_001_hyper_sense_damaged` | — | 8 | Gold rapid-pulse (same) | Idle pose + gold aura | ⬜ Pending |
-| `hugo_001_hyper_sense_hyper` | — | 10 | Intense gold aura | Energy release | ⬜ Pending — fires on status expiry; ranged energy burst animation |
+| `hugo_001_hyper_sense` | — | 8 | Silver neon rapid-pulse (silver, ADD, r=120, α=0.75, period=900ms) | Idle pose + silver aura | ⬜ Pending — aura carries the cast; no distinct body animation |
+| `hugo_001_hyper_sense_damaged` | — | 8 | Silver neon rapid-pulse (same) | Idle pose + silver aura | ⬜ Pending |
+| `hugo_001_hyper_sense_hyper` | — | 10 | Silver neon burst aura | Energy release | ⬜ Pending — fires on status expiry; ranged energy burst animation |
 
 ### Attack animation design notes
 
@@ -352,9 +358,9 @@ before the safety net resets.
 The slow pulse (1600 ms) reads as danger/distress. Matches the narrative beat
 where Primal Awareness fires and Hugo goes into survival mode.
 
-**`hyper_sense` aura** — gold rapid-pulse signals an active defensive posture.
-The fast pulse (900 ms) reads as heightened alertness/energy. Matches the
-biological hyper-sensitivity of Sekkar receptors under the Hyper Sense skill.
+**`hyper_sense` aura** — silver neon rapid-pulse signals an active defensive posture.
+The fast pulse (900 ms) reads as heightened alertness/energy. The silver neon
+colour evokes chrome ANBOT nanites at peak sensitivity rather than elemental energy.
 
 `projectile: null` — Hugo has no ranged attack; melee only.
 

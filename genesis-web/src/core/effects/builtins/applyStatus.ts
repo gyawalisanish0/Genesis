@@ -15,7 +15,7 @@ const handle: EffectHandler<ApplyStatusEffect> = (effect, ctx) => {
   const def = getStatusDef(effect.status)
   if (!def) return
 
-  const duration     = effect.duration ?? def.duration
+  const duration     = effect.duration ?? def.duration ?? Infinity
   const durationUnit = def.tags?.includes('turn-based') ? 'turns' : 'ticks'
 
   const firstInterval = findIntervalValue(def)
@@ -83,7 +83,7 @@ const handle: EffectHandler<ApplyStatusEffect> = (effect, ctx) => {
       duration,
       durationUnit,
       source:       ctx.caster.id,
-      stacks:       def.maxStacks ?? 1,
+      stacks:       effect.stacks ?? def.maxStacks ?? 1,
       payload,
       // nextIntervalFireTick = 0 when no interval effect exists (never fires).
       nextIntervalFireTick: firstInterval > 0 ? (ctx.currentTick ?? 0) + firstInterval : 0,

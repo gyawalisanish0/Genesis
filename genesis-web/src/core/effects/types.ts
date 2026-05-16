@@ -125,6 +125,7 @@ export type Condition =
   | { apAccumGte: number }
   | { selfSecondaryAbove: number }   // caster.secondaryResource > value
   | { selfSecondaryBelow: number }   // caster.secondaryResource < value
+  | { selfStatusStacksBelow: { id: string; stacks: number } }  // caster has status AND its stacks < value
   | { not: Condition }
   | { all: Condition[] }
   | { any: Condition[] }
@@ -205,6 +206,8 @@ export type Effect =
       /** Prevents the skill with this ID from being re-cast while this status is active. */
       blocksRecastOfSkill?:  string
       rangedBaseChanceBonus?: number
+      /** Override the initial stack count applied. Defaults to def.maxStacks ?? 1. */
+      stacks?: number
       /** Merged into slot payload at apply time — allows per-cast payload overrides. */
       payload?: Record<string, unknown>
     })
@@ -336,8 +339,23 @@ export interface StatusDef {
   stacking:   StatusStacking
   /** Required when stacking === 'stack'. */
   maxStacks?: number
-  /** Base duration in ticks; may be overridden by the applying skill. */
-  duration:   number
+  /** Base duration in ticks; may be overridden by the applying skill. Omit for stack-consumed statuses — they expire only when stacks reach 0. */
+  duration?:  number
+  /** When the named status is removed, this status is also removed and fires its onExpire effects. */
+  expiresWithStatus?: string
+  /** Key into the owner's anim_sequence.json to play when this status expires (stack or duration). Fire-and-forget. */
+  expireSequenceId?: string
+  /** Key into the owner's anim_sequence.json to play on the canvas when this status is first applied. */
+  activateSequenceId?: string
+  /** UI chip displayed in the battle status bar while this status is active. Absent = no chip shown. */
+  ui?: {
+    chip: {
+      label:           string
+      colour:          string
+      durationDisplay: 'ticks' | 'turns' | 'fade' | 'none'
+      icon?:           string
+    }
+  }
   tags?:      string[]
   /** Skill tags that are locked while this status is active on the unit. */
   blockedTags?: string[]

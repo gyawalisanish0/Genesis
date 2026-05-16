@@ -10,5 +10,8 @@
     "consumeOnAttempt": true
   },
   "hyperModeTrigger": true,
+  "hyperModeConfig": {
+    "activeBelowStacks": 3
+  },
   "effects": []
 }

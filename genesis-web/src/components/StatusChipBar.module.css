@@ -1,0 +1,80 @@
+.bar {
+  display:   flex;
+  flex-wrap: wrap;
+  gap:       0.25rem;
+  padding:   0.25rem 0;
+}
+
+.barCompact {
+  gap:     0.15rem;
+  padding: 0.1rem 0;
+}
+
+/* ── Individual chip ── */
+.chip {
+  position:      relative;
+  display:       flex;
+  align-items:   center;
+  gap:           0.25rem;
+  padding:       0.15rem 0.35rem 0.15rem 0.5rem;
+  border-radius: var(--radius-sm, 0.25rem);
+  background:    color-mix(in srgb, var(--chip-colour) 15%, var(--bg-card));
+  border:        1px solid color-mix(in srgb, var(--chip-colour) 40%, transparent);
+  overflow:      hidden;
+  min-height:    var(--touch-min);
+  align-items:   center;
+}
+
+.barCompact .chip {
+  padding:    0.1rem 0.2rem;
+  min-height: unset;
+}
+
+/* Left accent bar */
+.chipAccent {
+  position:         absolute;
+  left:             0;
+  top:              0;
+  bottom:           0;
+  width:            0.2rem;
+  background:       var(--chip-colour);
+  border-radius:    var(--radius-sm, 0.25rem) 0 0 var(--radius-sm, 0.25rem);
+}
+
+/* Icon placeholder — 1rem × 1rem reserved slot */
+.chipIcon {
+  width:         1rem;
+  height:        1rem;
+  border-radius: 0.15rem;
+  background:    color-mix(in srgb, var(--chip-colour) 25%, transparent);
+  flex-shrink:   0;
+}
+
+.barCompact .chipIcon {
+  width:  0.7rem;
+  height: 0.7rem;
+}
+
+.chipLabel {
+  font-size:      var(--t-label-size, 0.65rem);
+  font-weight:    600;
+  color:          var(--text-primary);
+  letter-spacing: 0.02em;
+  white-space:    nowrap;
+}
+
+.chipDuration {
+  font-size:   var(--t-label-size, 0.65rem);
+  color:       var(--chip-colour);
+  font-weight: 700;
+  white-space: nowrap;
+  margin-left: auto;
+  padding-left: 0.2rem;
+}
+
+/* Fade display — chip opacity drains as duration decreases.
+   Parent sets style opacity directly from durationFraction when needed.
+   For now just render normally — fine-tune in a later pass. */
+.chipFade {
+  opacity: 0.9;
+}

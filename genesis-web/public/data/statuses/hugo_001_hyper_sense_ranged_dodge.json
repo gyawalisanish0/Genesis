@@ -10,8 +10,5 @@
     "rangedChance": 0.30,
     "consumeOnSuccess": true
   },
-  "hyperModeConfig": {
-    "activeBelowStacks": 2
-  },
   "effects": []
 }

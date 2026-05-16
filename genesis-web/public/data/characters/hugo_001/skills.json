@@ -144,9 +144,24 @@
         "duration": 15
       },
       {
+        "id": "hugo_001_hyper_sense_primal_boost",
+        "when": { "event": "onCast" },
+        "condition": { "all": [
+          { "selfHasStatus": "hugo_001_primal_awareness_dodge" },
+          { "not": { "selfStatusStacksBelow": { "id": "hugo_001_primal_awareness_dodge", "stacks": 3 } } }
+        ]},
+        "type": "applyStatus",
+        "target": "self",
+        "status": "hugo_001_primal_awareness_dodge",
+        "stacks": 2
+      },
+      {
         "id": "hugo_001_hyper_sense_hyper",
         "when": { "event": "onCast" },
-        "condition": { "selfHasStatus": "hugo_001_primal_awareness_dodge" },
+        "condition": { "all": [
+          { "selfHasStatus": "hugo_001_primal_awareness_dodge" },
+          { "selfStatusStacksBelow": { "id": "hugo_001_primal_awareness_dodge", "stacks": 3 } }
+        ]},
         "type": "applyStatus",
         "target": "self",
         "status": "hugo_001_hyper_sense_hyper_active"

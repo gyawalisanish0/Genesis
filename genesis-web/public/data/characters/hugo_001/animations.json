@@ -48,7 +48,7 @@
       "hugo_001_hyper_sense": {
         "frames": 3, "frameRate": 8, "repeat": 0,
         "aura": {
-          "colour": "var(--accent-gold)",
+          "colour": "var(--accent-silver)",
           "blendMode": "ADD",
           "radius": 120,
           "alpha": 0.75,
@@ -60,7 +60,7 @@
       "hugo_001_hyper_sense_damaged": {
         "frames": 3, "frameRate": 8, "repeat": 0,
         "aura": {
-          "colour": "var(--accent-gold)",
+          "colour": "var(--accent-silver)",
           "blendMode": "ADD",
           "radius": 120,
           "alpha": 0.75,

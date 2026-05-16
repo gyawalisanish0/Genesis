@@ -94,18 +94,24 @@ export function updateStatusIntervalTick(unit: Unit, statusId: string, nextTick:
 }
 
 /** Decrements stacks on a named status by 1. Removes it when stacks reach 0. */
-export function consumeStatusStack(unit: Unit, statusId: string): Unit {
+export function consumeStatusStack(unit: Unit, statusId: string): { unit: Unit; expired: boolean } {
   const slot = unit.statusSlots.find(s => s.id === statusId)
-  if (!slot) return unit
+  if (!slot) return { unit, expired: false }
 
   if (slot.stacks <= 1) {
-    return { ...unit, statusSlots: unit.statusSlots.filter(s => s.id !== statusId) }
+    return {
+      unit: { ...unit, statusSlots: unit.statusSlots.filter(s => s.id !== statusId) },
+      expired: true,
+    }
   }
   return {
-    ...unit,
-    statusSlots: unit.statusSlots.map(s =>
-      s.id === statusId ? { ...s, stacks: s.stacks - 1 } : s,
-    ),
+    unit: {
+      ...unit,
+      statusSlots: unit.statusSlots.map(s =>
+        s.id === statusId ? { ...s, stacks: s.stacks - 1 } : s,
+      ),
+    },
+    expired: false,
   }
 }
 

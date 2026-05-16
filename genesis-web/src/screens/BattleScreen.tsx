@@ -24,7 +24,31 @@ import {
 import { getCachedSkill } from '../core/engines/skill/SkillInstance'
 import { isAlive, isSkillTagBlocked } from '../core/unit'
 import { ResourceBar } from '../components/ResourceBar'
+import { StatusChipBar } from '../components/StatusChipBar'
+import type { StatusChipData } from '../components/StatusChipBar'
+import type { Unit } from '../core/types'
 import styles from './BattleScreen.module.css'
+
+// ── Status chip helpers ──────────────────────────────────────────────────────
+
+function buildChips(
+  unit: Unit,
+  getChipDef: (id: string) => import('../core/types').StatusChipDef | null,
+  suppressedChipIds: ReadonlySet<string>,
+): StatusChipData[] {
+  return unit.statusSlots.flatMap((slot) => {
+    if (suppressedChipIds.has(slot.id)) return []
+    const chip = getChipDef(slot.id)
+    if (!chip) return []
+    return [{
+      slotId:          slot.id,
+      label:           chip.label,
+      colour:          chip.colour,
+      durationDisplay: chip.durationDisplay,
+      duration:        slot.duration,
+    }]
+  })
+}
 
 // ── Timeline helpers ─────────────────────────────────────────────────────────
 
@@ -78,7 +102,7 @@ const STACK_OFFSET_PX = 8
 
 // ── Timeline strip ──────────────────────────────────────────────────────────
 function BattleTimeline() {
-  const { tickValue, playerUnits, enemies, activeUnitIds, scrollBounds, historyEntries } = useBattleScreen()
+  const { tickValue, playerUnits, enemies, activeUnitIds, scrollBounds, historyEntries, getChipDef, suppressedChipIds } = useBattleScreen()
   const containerRef = useRef<HTMLDivElement>(null)
 
   const trackHeight = (scrollBounds.max - scrollBounds.min) * TIMELINE_PX_PER_TICK
@@ -200,35 +224,44 @@ function BattleTimeline() {
           </div>
         ))}
         {/* Live unit markers */}
-        {allUnits.map((unit) => (
-          <div
-            key={unit.id}
-            className={[
-              styles.marker,
-              activeUnitIds.has(unit.id)
-                ? (unit.isAlly ? styles.markerActiveAlly : styles.markerActiveEnemy)
-                : '',
-            ].join(' ')}
-            style={{ top: stackedTop(unit.id, unit.tickPosition) }}
-          >
-            <TimelineMarker
-              name={unit.name}
-              isAlly={unit.isAlly}
-              hpFraction={unit.maxHp > 0 ? unit.hp / unit.maxHp : 0}
-            />
-          </div>
-        ))}
+        {allUnits.map((unit) => {
+          const chips = buildChips(unit, getChipDef, suppressedChipIds)
+          return (
+            <div
+              key={unit.id}
+              className={[
+                styles.marker,
+                activeUnitIds.has(unit.id)
+                  ? (unit.isAlly ? styles.markerActiveAlly : styles.markerActiveEnemy)
+                  : '',
+              ].join(' ')}
+              style={{ top: stackedTop(unit.id, unit.tickPosition) }}
+            >
+              <TimelineMarker
+                name={unit.name}
+                isAlly={unit.isAlly}
+                hpFraction={unit.maxHp > 0 ? unit.hp / unit.maxHp : 0}
+              />
+              {chips.length > 0 && (
+                <StatusChipBar chips={chips} size="compact" />
+              )}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
 }
 
-// ── Status slots ────────────────────────────────────────────────────────────
-function StatusSlots() {
-  // TODO: render unit.statusSlots chips from BattleContext.playerUnit.
+// ── Status chip bar (leader) ─────────────────────────────────────────────────
+function LeaderChipBar() {
+  const { leader, getChipDef, suppressedChipIds } = useBattleScreen()
+  if (!leader) return null
+  const chips = buildChips(leader, getChipDef, suppressedChipIds)
+  if (!chips.length) return null
   return (
     <div className={styles.statusSlots}>
-      <span className={styles.statusPlaceholder}>No active effects</span>
+      <StatusChipBar chips={chips} size="full" />
     </div>
   )
 }
@@ -598,7 +631,7 @@ function BattleLayout() {
             BATTLE LOG
           </button>
         </div>
-        <StatusSlots />
+        <LeaderChipBar />
         <div className={styles.bottom}>
           <div className={styles.portraitCol}>
             <RollButton />

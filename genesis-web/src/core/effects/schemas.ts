@@ -29,10 +29,12 @@ export const diceOutcomeSchema = z.enum(['Boosted', 'Hit', 'Evade', 'Fail'])
 
 // ── ValueExpr (recursive) ────────────────────────────────────────────────────
 
+const valueStatKeySchema = z.union([statKeySchema, z.enum(['maxHp', 'maxAp'])])
+
 const valueExprBase = z.union([
   z.number(),
   z.object({
-    stat:    statKeySchema,
+    stat:    valueStatKeySchema,
     percent: z.number(),
     of:      z.enum(['caster', 'target']).optional(),
   }).strict(),
@@ -85,6 +87,7 @@ const conditionLeaf = z.union([
   z.object({ hasTag:        z.string() }).strict(),
   z.object({ diceOutcome:   diceOutcomeSchema }).strict(),
   z.object({ apAccumGte:    z.number() }).strict(),
+  z.object({ selfStatusStacksBelow: z.object({ id: z.string(), stacks: z.number() }) }).strict(),
 ])
 
 export const conditionSchema: z.ZodType<unknown> = z.lazy(() =>
@@ -159,6 +162,7 @@ export const effectSchema = z.discriminatedUnion('type', [
     onBreakTickCooldown:  onBreakTickCooldownSchema.optional(),
     blocksRecastOfSkill:  z.string().optional(),
     rangedBaseChanceBonus: z.number().optional(),
+    stacks:               z.number().int().positive().optional(),
   }).strict(),
   z.object({ ...effectCommon, type: z.literal('removeStatus'),      status: z.string().optional(), tag: z.string().optional() }).strict(),
   z.object({ ...effectCommon, type: z.literal('shiftProbability'),  outcome: diceOutcomeSchema, delta: z.number() }).strict(),
@@ -217,16 +221,38 @@ export const skillDefSchema = z.object({
 }).strict()
 
 export const statusDefSchema = z.object({
-  type:        z.literal('status'),
-  id:          z.string(),
-  name:        z.string(),
-  stacking:    z.enum(['refresh', 'extend', 'stack', 'independent']),
-  maxStacks:   z.number().int().positive().optional(),
-  duration:    z.number().int().positive(),
-  tags:        z.array(z.string()).optional(),
-  blockedTags: z.array(z.string()).optional(),
-  dodgeConfig: dodgeConfigSchema.optional(),
-  effects:     z.array(effectSchema),
+  type:              z.literal('status'),
+  id:                z.string(),
+  name:              z.string(),
+  stacking:          z.enum(['refresh', 'extend', 'stack', 'independent']),
+  maxStacks:         z.number().int().positive().optional(),
+  duration:           z.number().int().positive().optional(),
+  expiresWithStatus:  z.string().optional(),
+  expireSequenceId:    z.string().optional(),
+  activateSequenceId:  z.string().optional(),
+  ui: z.object({
+    chip: z.object({
+      label:           z.string(),
+      colour:          z.string(),
+      durationDisplay: z.enum(['ticks', 'turns', 'fade', 'none']),
+      icon:            z.string().optional(),
+    }).strict(),
+  }).strict().optional(),
+  tags:              z.array(z.string()).optional(),
+  blockedTags:       z.array(z.string()).optional(),
+  dodgeConfig:       dodgeConfigSchema.optional(),
+  tuCostConfig:      z.object({
+    delta:               z.number().optional(),
+    percentOfBase:       z.number().optional(),
+    percentPerSecondary: z.number().optional(),
+  }).optional(),
+  critConfig:        z.object({
+    chance:             z.number(),
+    attackerStrPercent: z.number(),
+  }).optional(),
+  hyperModeTrigger:  z.boolean().optional(),
+  hyperModeConfig:   z.object({ activeBelowStacks: z.number() }).optional(),
+  effects:           z.array(effectSchema),
 }).strict()
 
 export const passiveDefSchema = z.object({
