@@ -228,7 +228,16 @@ export const statusDefSchema = z.object({
   maxStacks:         z.number().int().positive().optional(),
   duration:           z.number().int().positive().optional(),
   expiresWithStatus:  z.string().optional(),
-  expireSequenceId:   z.string().optional(),
+  expireSequenceId:    z.string().optional(),
+  activateSequenceId:  z.string().optional(),
+  ui: z.object({
+    chip: z.object({
+      label:           z.string(),
+      colour:          z.string(),
+      durationDisplay: z.enum(['ticks', 'turns', 'fade', 'none']),
+      icon:            z.string().optional(),
+    }).strict(),
+  }).strict().optional(),
   tags:              z.array(z.string()).optional(),
   blockedTags:       z.array(z.string()).optional(),
   dodgeConfig:       dodgeConfigSchema.optional(),

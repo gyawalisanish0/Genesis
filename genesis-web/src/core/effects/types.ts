@@ -345,6 +345,17 @@ export interface StatusDef {
   expiresWithStatus?: string
   /** Key into the owner's anim_sequence.json to play when this status expires (stack or duration). Fire-and-forget. */
   expireSequenceId?: string
+  /** Key into the owner's anim_sequence.json to play on the canvas when this status is first applied. */
+  activateSequenceId?: string
+  /** UI chip displayed in the battle status bar while this status is active. Absent = no chip shown. */
+  ui?: {
+    chip: {
+      label:           string
+      colour:          string
+      durationDisplay: 'ticks' | 'turns' | 'fade' | 'none'
+      icon?:           string
+    }
+  }
   tags?:      string[]
   /** Skill tags that are locked while this status is active on the unit. */
   blockedTags?: string[]

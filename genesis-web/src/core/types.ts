@@ -357,6 +357,16 @@ export interface AppSettings {
   newContentAlerts:   boolean
 }
 
+// ── Status chip UI ────────────────────────────────────────────────────────────
+
+/** Visual config for a status chip shown in the battle UI. Defined on StatusDef.ui.chip. */
+export interface StatusChipDef {
+  label:           string
+  colour:          string
+  durationDisplay: 'ticks' | 'turns' | 'fade' | 'none'
+  icon?:           string   // reserved — logo asset key, not yet wired
+}
+
 // ── Animation sequence phases ─────────────────────────────────────────────────
 //
 // Pure JSON-serializable types so sequences can live in anim_sequence.json.
