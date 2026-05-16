@@ -27,9 +27,12 @@
   ],
 
   "hugo_001_shelling_point": [
-    { "type": "flash", "figure": "acting", "colour": "var(--accent-info)" },
-    { "type": "particles", "figure": "acting" },
-    { "type": "wait", "ms": 280 },
+    { "type": "playAnim", "figure": "acting", "stateKey": "idle" },
+    { "type": "parallel", "phases": [
+      { "type": "flash",     "figure": "acting", "colour": "var(--accent-info)" },
+      { "type": "particles", "figure": "acting" }
+    ]},
+    { "type": "wait", "ms": 360 },
     { "type": "statusText", "text": "SHIELD", "colour": "var(--accent-info)" }
   ],
 
