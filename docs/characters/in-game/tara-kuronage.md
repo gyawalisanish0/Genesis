@@ -41,12 +41,48 @@ The markings are not decorative. They are the Orb making itself visible.
 
 ## Appearance
 
-Human. Nep-Japanese heritage. Carries herself with the stillness of someone
-who has never needed to prove anything to anyone.
+Human. Nep-Japanese heritage. 28 years old at the time of the Mars deployment
+(born 2081, game year 2109). Carries herself with the stillness of someone who
+has never needed to prove anything to anyone.
 
-At full power the yellow veins spread visibly across her skin — Order and Chaos
-made physical. The design on her back is always present but only visible when
-exposed. Visual design still being finalised.
+### Attire — Neo-Japanese, Era 2109
+
+Silhouette drawn from traditional furisode lineage — kimono-inspired layered
+robes, long flowing sleeves, obi-style waist detail — but constructed from
+2109 smart textile. The fabric is deep black, near-opaque at rest, with subtle
+geometric panel breaks at shoulder and cuff that no woven material holds. Seams
+carry bioluminescent threading in yellow-gold, barely visible unless the Orb
+is drawing power. The garment reads ancient in shape and impossible in material.
+
+No armour. No cybernetic augments. No visible weapons. She is a caster
+deployed on a military operation — civilian-operative attire, not combat gear.
+The Kuronage family does not display wealth through decoration; it shows in the
+tailoring and in what is absent.
+
+**Accessories:** A single kanzashi hairpin — thin alloy, small amber-yellow
+crystal at the tip. Nothing else.
+
+**Hair:** Partially up at rest, simple and deliberate. Falls completely loose
+when the Orb reaches full output — the loosening is part of the power reveal,
+not incidental.
+
+### Power State
+
+At full Orb output the attire responds: sections of the fabric shift toward
+semi-translucency, the back markings becoming visible as light sources through
+the material rather than through any opening. The bioluminescent threading
+brightens and synchronises with the yellow veins spreading outward from the
+markings across her skin — at the collar, forearms, the line of her jaw. The
+suit and the body become one visual system.
+
+The markings on her back are always present. At rest they are hidden by the
+fabric. At full power the fabric reveals them.
+
+### Reference
+
+Visual aesthetic: Zhuxin (Mobile Legends) — same principle of composed base
+state giving way to a dramatic power reveal. Cultural register shifted from
+Chinese to Nep-Japanese. Power colour shifted from red to yellow-gold.
 
 ---
 
