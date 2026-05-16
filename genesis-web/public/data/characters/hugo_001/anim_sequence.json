@@ -44,6 +44,27 @@
     { "type": "feedback" }
   ],
 
+  "hugo_001_primal_awareness_activate": [
+    { "type": "parallel", "phases": [
+      { "type": "flash",     "figure": "acting", "colour": "var(--accent-info)" },
+      { "type": "particles", "figure": "acting" }
+    ]},
+    { "type": "wait", "ms": 180 },
+    { "type": "statusText", "text": "PRIMAL AWARENESS", "colour": "var(--accent-info)" }
+  ],
+
+  "hugo_001_hyper_sense_hyper_activate": [
+    { "type": "playAnim", "figure": "acting", "stateKey": "hugo_001_hyper_sense_hyper" },
+    { "type": "parallel", "phases": [
+      { "type": "flash", "figure": "acting", "colour": "var(--accent-gold)" },
+      { "type": "aura",  "figure": "acting", "show": true }
+    ]},
+    { "type": "wait", "ms": 480 },
+    { "type": "cameraShake", "duration": 180, "intensity": 0.003 },
+    { "type": "statusText", "text": "HYPER MODE", "colour": "var(--accent-gold)" },
+    { "type": "aura", "figure": "acting", "show": false }
+  ],
+
   "hugo_001_hyper_sense_expiry": [
     { "type": "aura", "figure": "acting", "show": true },
     { "type": "wait", "ms": 150 },

@@ -263,6 +263,11 @@ export async function loadAnimSequenceManifest(defId: string): Promise<AnimSeque
   }
 }
 
+/** Synchronous URL for a character's portrait PNG at the standard path. */
+export function characterPortraitUrl(defId: string): string {
+  return `${BASE_NORMALIZED}images/characters/${defId}/portrait.png`
+}
+
 /** Test utility — clears all cached data between test cases. */
 export function clearCache(): void {
   cache.characterIndex = null

@@ -8,6 +8,7 @@ import { useGameStore } from '../core/GameContext'
 import { ResourceBar } from '../components/ResourceBar'
 import { UnitPortrait } from '../components/UnitPortrait'
 import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
+import { characterPortraitUrl } from '../services/DataService'
 import styles from './BattleResultScreen.module.css'
 
 const MOCK_RESULT = {
@@ -91,7 +92,7 @@ export function BattleResultScreen() {
           <p className={styles.sectionLabel}>{victory ? 'SURVIVING UNITS' : 'FALLEN UNITS'}</p>
           {MOCK_SURVIVING.map((unit) => (
             <div key={unit.id} className={styles.unitRow}>
-              <UnitPortrait name={unit.name} rarity={unit.rarity} size="sm" greyscale={!victory} />
+              <UnitPortrait name={unit.name} rarity={unit.rarity} size="sm" greyscale={!victory} imageUrl={characterPortraitUrl(unit.id)} />
               <div className={styles.unitInfo}>
                 <div className={styles.unitMeta}>
                   <span className={styles.unitName}>{unit.name}</span>

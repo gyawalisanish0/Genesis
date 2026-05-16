@@ -6,6 +6,7 @@ import { UnitPortrait } from '../components/UnitPortrait'
 import { PagedGrid } from '../components/PagedGrid'
 import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import { useRosterData } from '../hooks/useRosterData'
+import { characterPortraitUrl } from '../services/DataService'
 import styles from './PreBattleStepTeam.module.css'
 
 const TEAM_MAX = 2
@@ -28,7 +29,7 @@ export function PreBattleStepTeam() {
             <div key={i} className={`${styles.slot} ${!unit ? styles.slotEmpty : ''}`}>
               {unit ? (
                 <>
-                  <UnitPortrait name={unit.name} rarity={unit.rarity} size="md" />
+                  <UnitPortrait name={unit.name} rarity={unit.rarity} size="md" imageUrl={characterPortraitUrl(unit.id)} />
                   <span className={styles.slotName}>{unit.name}</span>
                   <button className={styles.removeBtn} onPointerDown={createScrollAwareHandler({ onTap: () => toggleTeamMember(unit) })} aria-label="Remove">✕</button>
                 </>
@@ -66,7 +67,7 @@ export function PreBattleStepTeam() {
                     hp:        char.maxHp,
                   }) })}
                 >
-                  <UnitPortrait name={char.name} rarity={char.rarity} size="sm" />
+                  <UnitPortrait name={char.name} rarity={char.rarity} size="sm" imageUrl={characterPortraitUrl(char.id)} />
                   <span className={styles.cardName}>{char.name}</span>
                   {selected && <span className={styles.checkmark}>✓</span>}
                 </button>

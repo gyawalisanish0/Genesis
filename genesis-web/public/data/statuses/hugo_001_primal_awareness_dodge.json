@@ -4,7 +4,16 @@
   "name": "Primal Awareness",
   "stacking": "refresh",
   "maxStacks": 5,
+  "activateSequenceId": "hugo_001_primal_awareness_activate",
   "tags": ["dodge", "primal", "turn-based"],
+  "ui": {
+    "chip": {
+      "label":           "PRIMAL",
+      "colour":          "var(--accent-info)",
+      "durationDisplay": "turns",
+      "icon":            "hugo_001_psv_logo"
+    }
+  },
   "dodgeConfig": {
     "allChance": 0.70,
     "consumeOnAttempt": true

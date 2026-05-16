@@ -4,8 +4,16 @@
   "name": "Hyper Mode",
   "stacking": "refresh",
   "expiresWithStatus": "hugo_001_primal_awareness_dodge",
+  "activateSequenceId": "hugo_001_hyper_sense_hyper_activate",
   "expireSequenceId": "hugo_001_hyper_sense_expiry",
   "tags": ["dodge", "hyper", "melee-dodge", "turn-based", "energy", "ranged"],
+  "ui": {
+    "chip": {
+      "label":           "HYPER",
+      "colour":          "var(--accent-gold)",
+      "durationDisplay": "fade"
+    }
+  },
   "dodgeConfig": {
     "meleeChance": 0.90,
     "rangedChance": 0.50
