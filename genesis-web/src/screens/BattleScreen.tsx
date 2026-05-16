@@ -27,7 +27,7 @@ import { ResourceBar } from '../components/ResourceBar'
 import { StatusChipBar } from '../components/StatusChipBar'
 import type { StatusChipData } from '../components/StatusChipBar'
 import type { Unit } from '../core/types'
-import { characterPortraitUrl } from '../services/DataService'
+import { characterPortraitUrl, characterStatusIconUrl } from '../services/DataService'
 import styles from './BattleScreen.module.css'
 
 // ── Status chip helpers ──────────────────────────────────────────────────────
@@ -48,6 +48,7 @@ function buildChips(
       durationDisplay: chip.durationDisplay,
       // For indefinite statuses (no fixed duration), fall back to showing stacks.
       duration:        slot.duration > 0 ? slot.duration : slot.stacks,
+      iconUrl:         chip.icon ? characterStatusIconUrl(unit.defId, chip.icon) : undefined,
     }]
   })
 }
