@@ -198,6 +198,28 @@ expands to cover all registered positions plus a 15-tick buffer at each end and
 | `gridCollapsed` | `boolean` | Action grid collapse state |
 | `isPaused` | `boolean` | Pause overlay visible |
 
+### Status chip display
+
+| Field | Type | Description |
+|---|---|---|
+| `suppressedChipIds` | `ReadonlySet<string>` | Status slot IDs whose chips are held back until their canvas activation sequence completes. A chip whose `slotId` is in this set is excluded from `buildChips` output |
+| `getChipDef` | `(statusId: string) => StatusChipDef \| null` | Reads `StatusDef.ui.chip` for the given status ID. Returns `null` if the status has no chip definition (internal/invisible status) |
+
+**Activation flow** — when a skill resolves:
+
+1. `preSkillStatusSnapshotRef` snapshots each unit's status IDs before execution
+2. `applyEffect` runs — statuses are applied to units
+3. `detectNewActivations` diffs the snapshot against post-execution state: any newly-appeared status with `activateSequenceId` is queued in `pendingActivationAnimsRef` and its `slotId` added to `suppressedChipIds`
+4. The skill's own canvas sequence plays (`playAttack`)
+5. `playPendingActivationAnims` fires next: for each queued activation, calls `arena.playAttack(sequenceId, { onComplete })`. On completion, the `slotId` is removed from `suppressedChipIds` — the chip appears in the UI
+6. For passive-triggered statuses (no skill sequence), `detectNewActivations` fires from the status apply event; the activation canvas sequence is the only visual cue
+
+**`buildChips(unit, getChipDef, suppressedChipIds)`** — called per unit in `BattleTimeline` markers and `LeaderChipBar`:
+- Iterates `unit.statusSlots`
+- Skips any slot whose `id` is in `suppressedChipIds`
+- Calls `getChipDef(slot.id)` — skips if null
+- Maps to `StatusChipData`: label, colour, durationDisplay, `duration = slot.duration > 0 ? slot.duration : slot.stacks` (stacks fallback for indefinite statuses), `iconUrl` (resolved via `characterStatusIconUrl` when `chip.icon` is set)
+
 ---
 
 ## Tick advancement
@@ -406,18 +428,19 @@ timing chain whenever the enemy's own dice fires mid-turn.
 interface HistoryEntry {
   id:     string    // unique key: `${unitId}-${tick}-${timestamp}`
   unitId: string
-  name:   string    // unit display name — first char used as portrait initial
+  defId:  string    // CharacterDef.id — used to resolve portrait URL for ghost markers
+  name:   string    // unit display name
   tick:   number    // tick position at the moment the action was taken
   isAlly: boolean
 }
 
-function makeHistoryEntry(unitId, name, tick, isAlly): HistoryEntry
+function makeHistoryEntry(unitId, defId, name, tick, isAlly): HistoryEntry
 ```
 
 **Usage pattern** — call before advancing the unit's tick:
 
 ```ts
-pushHistory(makeHistoryEntry(unit.id, unit.name, unit.tickPosition, unit.isAlly))
+pushHistory(makeHistoryEntry(unit.id, unit.defId, unit.name, unit.tickPosition, unit.isAlly))
 registerTick(unit.id, advanceTick(unit.tickPosition, skill.tuCost + tumbleDelay))
 ```
 
@@ -545,7 +568,9 @@ src/
 │       └── DiceResolver.ts        # roll, applyOutcome, resolveCounterRoll
 ├── services/
 │   └── DataService.ts             # loadCharacterIndex, loadCharacter, loadCharacterSkillDefs,
-│                                  #   loadCharacterWithSkills, loadMode, loadAnimSequenceManifest(defId) (+ per-type cache)
+│                                  #   loadCharacterWithSkills, loadMode, loadAnimSequenceManifest(defId)
+│                                  #   characterPortraitUrl(defId) — sync URL: images/characters/{defId}/portrait.png
+│                                  #   characterStatusIconUrl(defId, iconKey) — sync URL: images/characters/{defId}/UI/Status/{iconKey}.png
 ├── scenes/
 │   ├── BattleScene.ts              # Orchestrator; re-exports tokenToHex
 │   └── battle/
@@ -564,7 +589,9 @@ src/
 │       └── TurnDisplayPanel.ts     # Turn info overlay
 └── screens/
     ├── BattleContext.tsx           # BattleContextValue + BattleProvider; loads AnimationManifests; wires manifests through arena handle
-    └── BattleScreen.tsx            # UI consumers — BattleTimeline, ActionGrid, etc.
+    └── BattleScreen.tsx            # UI consumers — BattleTimeline (portrait SVG markers, compact chips),
+                                #   LeaderChipBar (full chips with icon), PortraitPanel (portrait image),
+                                #   ActionGrid, etc.
 ```
 
 `DataService` is the only module that performs `fetch()` calls. `BattleProvider`

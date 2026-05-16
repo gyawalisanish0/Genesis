@@ -95,13 +95,12 @@ Finalised model references used as inputs to all spritesheet passes.
 | hugo_001 | `hurt` | base + damaged | ✅ Done |
 | hugo_001 | `dodge` | base + damaged | ✅ Done |
 | hugo_001 | `dash` | base + damaged | ✅ Done |
+| hugo_001 | `death` | base + damaged | ✅ Done |
 | hugo_001 | `hugo_001_basic_attack` | base + damaged | ✅ Done |
-| hugo_001 | `hugo_001_nanites_slash` | base + damaged | ✅ Generated |
-| hugo_001 | `hugo_001_hammer_bash` | base + damaged | ✅ Generated |
-| hugo_001 | `hugo_001_shelling_point` | base + damaged | ✅ Generated |
-| hugo_001 | `hugo_001_hyper_sense` | base + damaged | ✅ Generated |
-| hugo_001 | `hugo_001_hyper_sense_hyper` | damaged only | ✅ Generated |
-| hugo_001 | `death` | base + damaged | ✅ Generated |
+| hugo_001 | `hugo_001_nanites_slash` | base + damaged | ✅ Done |
+| hugo_001 | `hugo_001_hammer_bash` | base + damaged | ✅ Done |
+| hugo_001 | `hugo_001_hyper_sense_hyper` | single (SPCL — Hyper Burst expiry animation) | ✅ Done |
+| hugo_001 | `hugo_001_shelling_point` | — (sequence-only; no frames needed — self-cast stays in idle) | ✅ Done |
 | tara_001 | `idle` | base + powered | ⏳ Pending |
 | tara_001 | `hurt` | base + powered | ⏳ Pending |
 | tara_001 | `dodge` | base + powered | ⏳ Pending |
@@ -116,13 +115,40 @@ Finalised model references used as inputs to all spritesheet passes.
 
 ## Engine integration
 
+### Animation frames
+
 Once frames are cut, drop them into:
 
 ```
 public/images/characters/{defId}/{state_key}/
 ```
 
-The engine reads frame paths from `animations.json` per character. No code change
-required to add new frames — only the JSON manifest needs updating.
+Name frames `0.png`, `1.png`, `2.png` … (0-indexed). Then update `animations.json` for the character with the correct `frames` count. No code change required — only the JSON manifest.
 
-See `docs/mechanics/phaser-arena.md` for the full art upgrade path.
+### Portrait
+
+Each character needs one portrait PNG at the standard path:
+
+```
+public/images/characters/{defId}/portrait.png
+```
+
+This is displayed in the battle HUD portrait panel, timeline ghost markers, roster grid, pre-battle team screen, and battle result screen. The engine loads it via `DataService.characterPortraitUrl(defId)`.
+
+### Status / passive icons
+
+Status chip icons (passive logos, status logos) live under a UI subfolder:
+
+```
+public/images/characters/{defId}/UI/Status/{key}.png
+```
+
+The `key` is the bare filename stem referenced by `StatusDef.ui.chip.icon`. The passive icon uses the key `"psv_logo"` by convention:
+
+```
+public/images/characters/{defId}/UI/Status/psv_logo.png
+```
+
+The engine loads icons via `DataService.characterStatusIconUrl(defId, iconKey)`. If the file is absent, the chip renders a tinted placeholder square — no broken-image state.
+
+See `docs/mechanics/phaser-arena.md` for the full art upgrade path and `docs/engine/00_content_contract.md` for the full status chip JSON spec.
