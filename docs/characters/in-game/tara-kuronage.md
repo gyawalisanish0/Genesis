@@ -68,15 +68,18 @@ not incidental.
 
 ### Power State
 
-At full Orb output the attire responds: sections of the fabric shift toward
-semi-translucency, the back markings becoming visible as light sources through
-the material rather than through any opening. The bioluminescent threading
-brightens and synchronises with the yellow veins spreading outward from the
-markings across her skin — at the collar, forearms, the line of her jaw. The
-suit and the body become one visual system.
+The attire shows almost no change at full Orb output — the clothing is not the
+tell. What surfaces is on her body:
 
-The markings on her back are always present. At rest they are hidden by the
-fabric. At full power the fabric reveals them.
+- **Yellow veins** — glowing, spreading across the backs of her hands, up the
+  neck, tracing the jaw and cheekbones
+- **Golden glowing eyes** — the most visible marker; the Orb energy surfaces
+  there completely
+- The bioluminescent threading in the seams brightens slightly but is secondary
+
+The back markings are always present and the Orb's true origin point — but they
+are hidden under the robes at all times. The power reveal is in the face and
+hands, not the fabric. She looks composed until you see her eyes.
 
 ### Reference
 
