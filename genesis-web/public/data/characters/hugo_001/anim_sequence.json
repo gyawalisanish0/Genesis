@@ -54,26 +54,24 @@
   ],
 
   "hugo_001_hyper_sense_hyper_activate": [
-    { "type": "playAnim", "figure": "acting", "stateKey": "hugo_001_hyper_sense_hyper" },
-    { "type": "parallel", "phases": [
-      { "type": "flash", "figure": "acting", "colour": "var(--accent-gold)" },
-      { "type": "aura",  "figure": "acting", "show": true }
-    ]},
-    { "type": "wait", "ms": 480 },
-    { "type": "cameraShake", "duration": 180, "intensity": 0.003 },
-    { "type": "statusText", "text": "HYPER MODE", "colour": "var(--accent-gold)" },
-    { "type": "aura", "figure": "acting", "show": false }
+    { "type": "flash", "figure": "acting", "colour": "var(--accent-gold)" },
+    { "type": "aura",  "figure": "acting", "show": true },
+    { "type": "wait",  "ms": 400 },
+    { "type": "aura",  "figure": "acting", "show": false },
+    { "type": "statusText", "text": "HYPER MODE", "colour": "var(--accent-gold)" }
   ],
 
   "hugo_001_hyper_sense_expiry": [
+    { "type": "playAnim", "figure": "acting", "stateKey": "hugo_001_hyper_sense_hyper" },
     { "type": "aura", "figure": "acting", "show": true },
     { "type": "wait", "ms": 150 },
     { "type": "particles", "figure": "acting" },
     { "type": "wait", "ms": 100 },
     { "type": "impact" },
+    { "type": "cameraShake", "duration": 200, "intensity": 0.005 },
     { "type": "parallel", "phases": [
       { "type": "damageNumber" },
-      { "type": "statusText", "text": "HYPER BURST!", "colour": "var(--accent-silver)" }
+      { "type": "statusText", "text": "HYPER BURST!", "colour": "var(--accent-gold)" }
     ]},
     { "type": "aura", "figure": "acting", "show": false }
   ]
