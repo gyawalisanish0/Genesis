@@ -622,6 +622,12 @@ export function BattleProvider({ children }: Props) {
   // (which would lose the AI unit's HP/AP/tick update and freeze the battle).
   const aiChainVersionRef = useRef(0)
 
+  // ID of the AI unit whose applyAIState is currently mid-flight (between the
+  // playAttack onDone callback and the BATTLE_FEEDBACK_HOLD_MS timer firing).
+  // A new chain running while this is set would pick up the same unit again
+  // before its tick has advanced, duplicating the attack. We exclude it.
+  const pendingAIUnitIdRef = useRef<string | null>(null)
+
   // The player-controlled unit whose tick is currently active during the player phase.
   // null during the enemy phase or while resolving.
   const activePlayerUnit = useMemo<Unit | null>(() => {
@@ -1332,9 +1338,13 @@ export function BattleProvider({ children }: Props) {
     const myChain = ++aiChainVersionRef.current
 
     // AI handles: active non-controlled player allies + active enemies (sorted fastest-first).
+    // Exclude any unit whose applyAIState is still in-flight: if we included it,
+    // a new chain started by a dep toggle (narrative, inspect) would attack the
+    // same unit a second time before its tick has advanced.
     const controlled       = controlledIdsRef.current
-    const activeAIAllies   = playerUnitsRef.current.filter((u) => activeUnitIdsRef.current.has(u.id) && isAlive(u) && !controlled.has(u.id))
-    const activeEnemies    = enemiesRef.current.filter((e) => activeUnitIdsRef.current.has(e.id) && isAlive(e))
+    const pendingUnitId    = pendingAIUnitIdRef.current
+    const activeAIAllies   = playerUnitsRef.current.filter((u) => activeUnitIdsRef.current.has(u.id) && isAlive(u) && !controlled.has(u.id) && u.id !== pendingUnitId)
+    const activeEnemies    = enemiesRef.current.filter((e) => activeUnitIdsRef.current.has(e.id) && isAlive(e) && e.id !== pendingUnitId)
     const allAIUnits       = [...activeAIAllies, ...activeEnemies]
     if (!allAIUnits.length) return
 
@@ -1543,6 +1553,7 @@ export function BattleProvider({ children }: Props) {
         // Step 4: apply state after animations complete; chain the next AI unit.
         const aiEffectiveTu = getEffectiveTuCost(skill.tuCost, snap.get(aiUnit.id) ?? aiUnit)
         const applyAIState  = () => {
+          pendingAIUnitIdRef.current = null   // unit's apply is now running; safe to include it in new chains
           setPlayerUnits((prev) => prev.map((u) => snap.get(u.id) ?? u))
           setEnemies((prev)     => prev.map((e) => snap.get(e.id) ?? e))
           const fromTick = aiUnit.tickPosition
@@ -1613,10 +1624,12 @@ export function BattleProvider({ children }: Props) {
           }
           arena.playDice(outcome, () => {
             arena.playAttack(aiUnit.defId, primaryTarget.defId, outcome, primaryDamage, aiIsMelee, aiDashDx, aiProjectile, buildOutcomeLabel(outcome), outcomeColour(outcome), () => {
+              pendingAIUnitIdRef.current = aiUnit.id  // guard: exclude from new chains until apply fires
               applyTimerRef.current = setTimeout(applyAIState, BATTLE_FEEDBACK_HOLD_MS)
             }, aiSequence)
           })
         } else {
+          pendingAIUnitIdRef.current = aiUnit.id
           applyTimerRef.current = setTimeout(applyAIState, DICE_RESULT_DISMISS_MS)
         }
       }
@@ -1631,6 +1644,9 @@ export function BattleProvider({ children }: Props) {
       // here: canceling it would lose the AI's pending HP/AP/tick update and
       // freeze the battle on this enemy's turn (registerTick never fires, so
       // phase derivation can't progress).
+      // pendingAIUnitIdRef is NOT cleared here: the exclude filter in the
+      // next effect run must still see it so a new chain doesn't duplicate the
+      // in-flight unit's attack. applyAIState clears it when it fires.
       aiChainVersionRef.current++
     }
   }, [phase, narrativePaused, inspectingSkill, showTurnDisplay]) // activeUnitIds intentionally read via ref (see activeUnitIdsRef above); all other battle state read via refs to avoid mid-chain re-runs
