@@ -147,16 +147,47 @@ this without reading the rest of the doc, the contract is working.
 | `name` | `string` | yes | Display name |
 | `stacking` | `"refresh" \| "extend" \| "stack" \| "independent"` | yes | How repeated applications combine (§Stacking) |
 | `maxStacks` | `integer ≥ 1` | conditional | Required if `stacking: "stack"` |
-| `duration` | `integer ≥ 1` | yes | Base duration in ticks (may be overridden by the applying skill) |
-| `tags` | `string[]` | no | Tags for `hasTag` conditions |
+| `duration` | `integer ≥ 1` | no | Base duration in ticks; absent = indefinite (expires via other means: stack depletion, `expiresWithStatus`, break mechanic) |
+| `expiresWithStatus` | `string` | no | This status auto-removes when the referenced status ID is removed |
+| `activateSequenceId` | `string` | no | Key into the owning character's `anim_sequence.json`. Canvas sequence plays on activation; the UI chip is suppressed until the sequence completes. Use for passive-triggered statuses where there is no skill cast sequence to provide visual feedback |
+| `expireSequenceId` | `string` | no | Key into the owning character's `anim_sequence.json`. Canvas sequence plays when the status expires (e.g. Hyper Burst fires on Hyper Mode expiry) |
+| `tags` | `string[]` | no | Tags for `hasTag` conditions and status category filtering |
 | `effects` | `Effect[]` | yes | Flat effect list — same shape as skill effects |
-| `payload` | `object` | no | Arbitrary key-value bag; engine reads reserved keys (see below) |
+| `ui` | `object` | no | Optional UI configuration; currently only `chip` is supported |
+| `ui.chip` | `object` | conditional | Required if this status should appear as a chip in the battle HUD. Absent = status is internal/invisible |
+| `ui.chip.label` | `string` | yes (if chip) | Short chip label displayed in the HUD (e.g. `"PRIMAL"`, `"SHELL"`, `"HYPER"`) |
+| `ui.chip.colour` | `string` | yes (if chip) | CSS token or hex for the chip accent colour (e.g. `"var(--accent-info)"`) |
+| `ui.chip.durationDisplay` | `"ticks" \| "turns" \| "fade" \| "none"` | yes (if chip) | `ticks` = shows remaining ticks with "t" suffix; `turns` = shows remaining turns or stack count as plain number; `fade` = no number (indefinite statuses); `none` = label only |
+| `ui.chip.icon` | `string` | no | Bare filename stem of a PNG in `images/characters/{defId}/UI/Status/`. E.g. `"psv_logo"` → `UI/Status/psv_logo.png`. Passive icons use `"psv_logo"` by convention. Not yet rendered in compact (timeline) mode |
 
-#### Reserved `payload` keys for Status
+### Canonical example — a status with chip
 
-| Key | Type | Effect |
-|---|---|---|
-| `forcedSkipTuCost` | `number` | Overrides `SKIP_TU_COST` (default 10) for the affected unit while this status is active. Use for mechanics like stun where the target may only skip but at a different TU cost than the global default. |
+```json
+{
+  "type":    "status",
+  "id":      "hugo_001_primal_awareness_dodge",
+  "name":    "Primal Awareness",
+  "stacking": "refresh",
+  "maxStacks": 5,
+  "activateSequenceId": "hugo_001_primal_awareness_activate",
+  "tags":    ["dodge", "primal", "turn-based"],
+  "ui": {
+    "chip": {
+      "label":           "PRIMAL",
+      "colour":          "var(--accent-info)",
+      "durationDisplay": "turns",
+      "icon":            "psv_logo"
+    }
+  },
+  "dodgeConfig": {
+    "allChance": 0.70,
+    "consumeOnAttempt": true
+  },
+  "effects": []
+}
+```
+
+> `durationDisplay: "turns"` shows `slot.stacks` for indefinite statuses (no fixed `duration`). `activateSequenceId` causes the chip to be suppressed until the canvas animation completes — the sequence key is looked up in the owning character's `anim_sequence.json`.
 
 ### Passive
 
@@ -499,13 +530,14 @@ Corresponding content layout:
 public/data/
 ├── characters/
 │   ├── index.json               # ["warrior_001", "hunter_001", …] — discovery list
-│   ├── {id}/                    # one subfolder per character
-│   │   ├── main.json            # CharacterDef — stats, class, rarity, passive ref
-│   │   ├── skills.json          # SkillDef[] — full definitions, character-owned (decision #6)
-│   │   ├── animations.json      # AnimationManifest — display dims, animation states, aura defs, projectile config (optional; DataService returns null when absent)
-│   │   ├── anim_sequence.json   # AnimSequenceManifest — maps skill.id → AnimPhase[]; overrides default attack sequence per skill (optional; DataService returns null when absent)
-│   │   └── growth/              # progression/XP curves (TBD — placeholder only)
+│   └── {id}/                    # one subfolder per character
+│       ├── main.json            # CharacterDef — stats, class, rarity, passive ref
+│       ├── skills.json          # SkillDef[] — full definitions, character-owned (decision #6)
+│       ├── passive.json         # PassiveDef — single passive per character
+│       ├── animations.json      # AnimationManifest — display dims, animation states, aura defs, projectile config (optional; DataService returns null when absent)
+│       └── anim_sequence.json   # AnimSequenceManifest — maps skill.id or sequenceId → AnimPhase[]; covers skill attack sequences and status activation/expiry sequences (optional)
 ├── statuses/
+│   └── {id}.json                # StatusDef — one file per status; global namespace
 ├── passives/
 ├── items/
 │   ├── campaign/
@@ -536,12 +568,6 @@ contract version, update this document first, then update `core/` to match.
 
 ## Contract version
 
-**v0.3.0** — 4-outcome dice system live.
+**v0.4.0** — Status chip UI and canvas activation system live.
 
-`core/effects/` and `core/engines/skill/` are implemented. Six primitives are
-registered (`damage`, `heal`, `gainAp`, `spendAp`, `tickShove`, `modifyStat`).
-`DataService` loads and caches characters and skills. `BattleContext` wires the
-full execution pipeline (dice → `applyEffect` → state sync). `DiceOutcome` has
-4 members: `Boosted`, `Hit`, `Evade`, `Fail`.
-Remaining primitives (`applyStatus`, `shiftProbability`, `rerollDice`,
-`forceOutcome`, `triggerSkill`) and the status / passive engines are still planned.
+`StatusDef` now supports `ui.chip` for opt-in HUD chip display, `activateSequenceId` for canvas-before-chip sequencing, and `expireSequenceId` for expiry animations. `anim_sequence.json` maps both skill IDs and status sequence IDs to `AnimPhase[]` arrays. Portrait and status icon URL helpers added to `DataService` (`characterPortraitUrl`, `characterStatusIconUrl`).

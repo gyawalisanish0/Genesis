@@ -7,6 +7,7 @@ export interface StatusChipData {
   colour:          string
   durationDisplay: 'ticks' | 'turns' | 'fade' | 'none'
   duration:        number
+  iconUrl?:        string
 }
 
 interface Props {
@@ -36,8 +37,16 @@ export function StatusChipBar({ chips, size }: Props) {
             style={{ '--chip-colour': chip.colour } as React.CSSProperties}
           >
             <div className={styles.chipAccent} />
-            {/* Icon slot — reserved for future logo system */}
-            <div className={styles.chipIcon} />
+            <div className={styles.chipIcon}>
+              {chip.iconUrl && (
+                <img
+                  src={chip.iconUrl}
+                  alt=""
+                  className={styles.chipIconImg}
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+                />
+              )}
+            </div>
             {size === 'full' && (
               <span className={styles.chipLabel}>{chip.label}</span>
             )}

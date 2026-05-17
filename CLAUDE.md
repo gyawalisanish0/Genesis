@@ -219,7 +219,7 @@ Genesis/
 │       │   ├── backButtonRegistry.ts  # Module-level singleton: register/unregister/invoke one handler at a time
 │       │   └── useBackButton.ts       # Hook: registers handler, pushes URL-sentinel for web popstate interception
 │       ├── services/             # Side-effectful singletons; Capacitor allowed
-│       │   ├── DataService.ts    # JSON loader: loadCharacter, loadCharacterSkillDefs, loadMode, loadCharacterWithSkills, loadCharacterDialogue, loadLevelNarrative, loadTilesetDef, loadAnimationManifest, loadAnimSequenceManifest (all cached; loadAnimationManifest and loadAnimSequenceManifest return null silently when absent)
+│       │   ├── DataService.ts    # JSON loader: loadCharacter, loadCharacterSkillDefs, loadMode, loadCharacterWithSkills, loadCharacterDialogue, loadLevelNarrative, loadTilesetDef, loadAnimationManifest, loadAnimSequenceManifest (all cached; loadAnimationManifest and loadAnimSequenceManifest return null silently when absent); characterPortraitUrl(defId) and characterStatusIconUrl(defId, iconKey) — synchronous URL helpers (no fetch)
 │       │   ├── DisplayService.ts # Full-screen + StatusBar: Capacitor StatusBar.hide() on native; Fullscreen API on web
 │       │   ├── NarrativeService.ts # Global narrative bus: emit(), play(), subscribe(), subscribeDirect(), registerEntries(), unregisterEntries(), getAllEntries()
 │       │   ├── ResolutionService.ts # Quality tier: rAF benchmark → High/Medium/Low; localStorage persistence; stepUp(); subscribe()
@@ -493,14 +493,19 @@ All game content is in `public/data/`. No content is hardcoded in TypeScript.
 public/data/characters/index.json              # character discovery list
 public/data/characters/{id}/main.json          # CharacterDef (stats, class, rarity…)
 public/data/characters/{id}/skills.json        # SkillDef[] for that character
+public/data/characters/{id}/passive.json       # PassiveDef — single passive per character
 public/data/characters/{id}/dialogue.json      # CharacterDialogueDef — universal battle reactions (optional)
 public/data/characters/{id}/animations.json    # AnimationManifest — display dims, animation states, aura defs, projectile (optional; null return = placeholder fallback)
-public/data/characters/{id}/anim_sequence.json  # AnimSequenceManifest — skill.id → AnimPhase[] overrides (optional; null when absent)
+public/data/characters/{id}/anim_sequence.json # AnimSequenceManifest — skill.id or sequenceId → AnimPhase[]; covers skill attacks and status activation/expiry sequences (optional; null when absent)
+public/data/statuses/{id}.json                 # StatusDef — one file per status; global namespace
 public/data/campaign/index.json                # stage discovery list ["stage_001", ...]
 public/data/campaign/{stageId}/stage.json      # StageDef (playerUnits, moveRange, enemyAi, playerControl)
 public/data/campaign/{stageId}/map.json        # MapDef (tilemap, entities, wavePhase, fogOfWar, tilesetKey?)
 public/data/campaign/{stageId}/narrative.json  # LevelNarrativeDef — dungeon-specific story beats + cutscenes
 public/data/tilesets/{key}/tileset.json        # TilesetDef — sourceSize, tiles (id→PNG), optional pending stubs
+public/images/characters/{id}/portrait.png     # Character portrait — HUD panel, timeline markers, roster, pre-battle, result screen
+public/images/characters/{id}/{state_key}/     # Animation frames — 0.png, 1.png … (0-indexed); state_key matches animations.json
+public/images/characters/{id}/UI/Status/{key}.png  # Status/passive chip icons — key matches StatusDef.ui.chip.icon
 public/images/tilesets/{key}/{filename}.png    # Tile art — individual PNGs at sourceSize (e.g. mars_floor.png @ 1024×1024)
 public/data/modes/story.json
 ```

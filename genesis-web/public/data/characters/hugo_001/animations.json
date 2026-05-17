@@ -10,63 +10,44 @@
   },
   "idleSwapBelowHpPercent": 0.4,
   "meleeDashDx": 80,
-  "tagMap": {
-    "melee": "melee_attack"
-  },
+  "tagMap": {},
   "animations": {
-    "idle":                 { "frames": 2, "frameRate": 4,  "repeat": -1 },
-    "idle_damaged":         { "frames": 2, "frameRate": 4,  "repeat": -1,
+    "idle":          { "frames": 2, "frameRate": 4,  "repeat": -1 },
+    "idle_damaged":  { "frames": 2, "frameRate": 4,  "repeat": -1,
       "aura": {
-        "colour": "var(--accent-danger)",
+        "colour":    "var(--accent-danger)",
         "blendMode": "ADD",
-        "radius": 88,
-        "alpha": 0.45,
-        "pulse": { "period": 1600, "minAlpha": 0.18 },
-        "fadeIn": 300,
-        "fadeOut": 500
+        "radius":    88,
+        "alpha":     0.45,
+        "pulse":     { "period": 1600, "minAlpha": 0.18 },
+        "fadeIn":    300,
+        "fadeOut":   500
       }
     },
-    "dash":                 { "frames": 1, "frameRate": 12, "repeat": 0 },
-    "dash_damaged":         { "frames": 1, "frameRate": 12, "repeat": 0 },
-    "melee_attack":         { "frames": 2, "frameRate": 12, "repeat": 0 },
-    "melee_attack_damaged": { "frames": 2, "frameRate": 12, "repeat": 0 },
-    "hurt":                 { "frames": 2, "frameRate": 10, "repeat": 0 },
-    "hurt_damaged":         { "frames": 2, "frameRate": 10, "repeat": 0 },
-    "dodge":                { "frames": 2, "frameRate": 12, "repeat": 0 },
-    "dodge_damaged":        { "frames": 2, "frameRate": 12, "repeat": 0 },
-    "death":                { "frames": 2, "frameRate": 8,  "repeat": 0 },
-    "death_damaged":        { "frames": 2, "frameRate": 8,  "repeat": 0 },
+    "dash":          { "frames": 1, "frameRate": 12, "repeat": 0 },
+    "dash_damaged":  { "frames": 1, "frameRate": 12, "repeat": 0 },
+    "hurt":          { "frames": 2, "frameRate": 10, "repeat": 0 },
+    "hurt_damaged":  { "frames": 2, "frameRate": 10, "repeat": 0 },
+    "dodge":         { "frames": 2, "frameRate": 12, "repeat": 0 },
+    "dodge_damaged": { "frames": 2, "frameRate": 12, "repeat": 0 },
+    "death":         { "frames": 4, "frameRate": 8,  "repeat": 0 },
+    "death_damaged": { "frames": 4, "frameRate": 8,  "repeat": 0 },
     "skills": {
-      "hugo_001_basic_attack":            { "frames": 2, "frameRate": 12, "repeat": 0 },
-      "hugo_001_basic_attack_damaged":    { "frames": 2, "frameRate": 12, "repeat": 0 },
-      "hugo_001_nanites_slash":           { "frames": 4, "frameRate": 12, "repeat": 0 },
-      "hugo_001_nanites_slash_damaged":   { "frames": 4, "frameRate": 12, "repeat": 0 },
-      "hugo_001_hammer_bash":             { "frames": 4, "frameRate": 10, "repeat": 0 },
-      "hugo_001_hammer_bash_damaged":     { "frames": 4, "frameRate": 10, "repeat": 0 },
-      "hugo_001_shelling_point":          { "frames": 3, "frameRate": 8,  "repeat": 0 },
-      "hugo_001_shelling_point_damaged":  { "frames": 3, "frameRate": 8,  "repeat": 0 },
-      "hugo_001_hyper_sense": {
-        "frames": 3, "frameRate": 8, "repeat": 0,
+      "hugo_001_basic_attack":          { "frames": 3, "frameRate": 12, "repeat": 0 },
+      "hugo_001_basic_attack_damaged":  { "frames": 3, "frameRate": 12, "repeat": 0 },
+      "hugo_001_nanites_slash":         { "frames": 3, "frameRate": 12, "repeat": 0 },
+      "hugo_001_nanites_slash_damaged": { "frames": 3, "frameRate": 12, "repeat": 0 },
+      "hugo_001_hammer_bash":           { "frames": 4, "frameRate": 10, "repeat": 0 },
+      "hugo_001_hammer_bash_damaged":   { "frames": 4, "frameRate": 10, "repeat": 0 },
+      "hugo_001_hyper_sense_hyper":     { "frames": 7, "frameRate": 10, "repeat": 0,
         "aura": {
-          "colour": "var(--accent-silver)",
+          "colour":    "var(--accent-info)",
           "blendMode": "ADD",
-          "radius": 120,
-          "alpha": 0.75,
-          "pulse": { "period": 900, "minAlpha": 0.4 },
-          "fadeIn": 120,
-          "fadeOut": 800
-        }
-      },
-      "hugo_001_hyper_sense_damaged": {
-        "frames": 3, "frameRate": 8, "repeat": 0,
-        "aura": {
-          "colour": "var(--accent-silver)",
-          "blendMode": "ADD",
-          "radius": 120,
-          "alpha": 0.75,
-          "pulse": { "period": 900, "minAlpha": 0.4 },
-          "fadeIn": 120,
-          "fadeOut": 800
+          "radius":    120,
+          "alpha":     0.75,
+          "pulse":     { "period": 900, "minAlpha": 0.4 },
+          "fadeIn":    120,
+          "fadeOut":   800
         }
       }
     }

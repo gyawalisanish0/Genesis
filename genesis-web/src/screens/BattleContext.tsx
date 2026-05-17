@@ -1183,7 +1183,7 @@ export function BattleProvider({ children }: Props) {
     const effectiveTu  = getEffectiveTuCost(skill.tuCost, snap.get(actor.id) ?? actor)
     const nextTick     = advanceTick(fromTick, effectiveTu)
 
-    pushHistory(makeHistoryEntry(actor.id, actor.name, fromTick, actor.isAlly))
+    pushHistory(makeHistoryEntry(actor.id, actor.defId, actor.name, fromTick, actor.isAlly))
 
     const postTarget = snap.get(primaryTarget.id) ?? primaryTarget
     showTurnDisplay({
@@ -1437,7 +1437,7 @@ export function BattleProvider({ children }: Props) {
         })
         if (!availableSkills.length) {
           const fromTick = aiUnit.tickPosition
-          pushHistory(makeHistoryEntry(aiUnit.id, aiUnit.name, fromTick, aiUnit.isAlly))
+          pushHistory(makeHistoryEntry(aiUnit.id, aiUnit.defId, aiUnit.name, fromTick, aiUnit.isAlly))
           registerTick(aiUnit.id, advanceTick(fromTick, SKIP_TU_COST))
           globalBattleTickRef.current += SKIP_TU_COST
           const aiSkipSnap = makeSnapshot(currentPlayers, currentEnemies)
@@ -1518,7 +1518,7 @@ export function BattleProvider({ children }: Props) {
           setPlayerUnits((prev) => prev.map((u) => snap.get(u.id) ?? u))
           setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
           const fromTick = aiUnit.tickPosition
-          pushHistory(makeHistoryEntry(aiUnit.id, aiUnit.name, fromTick, aiUnit.isAlly))
+          pushHistory(makeHistoryEntry(aiUnit.id, aiUnit.defId, aiUnit.name, fromTick, aiUnit.isAlly))
           registerTick(aiUnit.id, advanceTick(fromTick, aiEffectiveTu))
           globalBattleTickRef.current += aiEffectiveTu
           fireBattleTickIntervalPassives(
@@ -1606,7 +1606,7 @@ export function BattleProvider({ children }: Props) {
     const fromTick  = actor.tickPosition
     const apFrozen  = actor.statusSlots.some(s => s.payload?.freezesApRegen === true)
     const apGained  = apFrozen ? 0 : calculateApGained(SKIP_TU_COST, actor.apRegenRate)
-    pushHistory(makeHistoryEntry(actor.id, actor.name, fromTick, actor.isAlly))
+    pushHistory(makeHistoryEntry(actor.id, actor.defId, actor.name, fromTick, actor.isAlly))
     setPlayerUnits((prev) => prev.map((u) =>
       u.id === actor.id
         ? incrementActionCount({ ...u, ap: Math.min(u.maxAp, u.ap + apGained) })

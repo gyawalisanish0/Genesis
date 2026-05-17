@@ -5,6 +5,7 @@
 export interface HistoryEntry {
   id:     string
   unitId: string
+  defId:  string
   name:   string   // unit display name — first char used as portrait initial
   tick:   number   // tick position at the time the action was taken
   isAlly: boolean
@@ -12,7 +13,7 @@ export interface HistoryEntry {
 
 /** Snapshot a unit's current tick position before they advance. */
 export function makeHistoryEntry(
-  unitId: string, name: string, tick: number, isAlly: boolean,
+  unitId: string, defId: string, name: string, tick: number, isAlly: boolean,
 ): HistoryEntry {
-  return { id: `${unitId}-${tick}-${Date.now()}`, unitId, name, tick, isAlly }
+  return { id: `${unitId}-${tick}-${Date.now()}`, unitId, defId, name, tick, isAlly }
 }

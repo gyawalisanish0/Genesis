@@ -4,6 +4,13 @@
   "name": "Shelling Point",
   "stacking": "refresh",
   "tags": ["shield"],
+  "ui": {
+    "chip": {
+      "label":           "SHELL",
+      "colour":          "var(--accent-info)",
+      "durationDisplay": "fade"
+    }
+  },
   "effects": [
     {
       "id": "hugo_001_shelling_point_regen",

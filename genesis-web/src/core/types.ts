@@ -364,7 +364,9 @@ export interface StatusChipDef {
   label:           string
   colour:          string
   durationDisplay: 'ticks' | 'turns' | 'fade' | 'none'
-  icon?:           string   // reserved — logo asset key, not yet wired
+  // Passive/status logo key. Resolves to images/characters/{defId}/UI/Status/{icon}.png
+  // 'psv_logo' = passive icon. Reserved — not yet rendered by StatusChipBar.
+  icon?:           string
 }
 
 // ── Animation sequence phases ─────────────────────────────────────────────────

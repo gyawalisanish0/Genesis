@@ -263,6 +263,19 @@ export async function loadAnimSequenceManifest(defId: string): Promise<AnimSeque
   }
 }
 
+/** Synchronous URL for a character's portrait PNG at the standard path. */
+export function characterPortraitUrl(defId: string): string {
+  return `${BASE_NORMALIZED}images/characters/${defId}/portrait.png`
+}
+
+/** Synchronous URL for a status/passive chip icon PNG.
+ *  iconKey is the bare filename stem from StatusDef.ui.chip.icon (e.g. 'psv_logo').
+ *  Resolves to: images/characters/{defId}/UI/Status/{iconKey}.png
+ */
+export function characterStatusIconUrl(defId: string, iconKey: string): string {
+  return `${BASE_NORMALIZED}images/characters/${defId}/UI/Status/${iconKey}.png`
+}
+
 /** Test utility — clears all cached data between test cases. */
 export function clearCache(): void {
   cache.characterIndex = null
