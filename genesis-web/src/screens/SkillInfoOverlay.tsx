@@ -53,6 +53,7 @@ function effectLine(e: Effect): string {
       return `${trigger}Surge ${(e.delta ?? 0) >= 0 ? '+' : ''}${e.delta ?? 0}`
     }
     case 'resetApAccum':     return `${trigger}Reset AP accumulator`
+    default:                 return ''
   }
 }
 

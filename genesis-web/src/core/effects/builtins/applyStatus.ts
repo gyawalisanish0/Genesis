@@ -103,7 +103,7 @@ const handle: EffectHandler<ApplyStatusEffect> = (effect, ctx) => {
     if (effect.companionStatus) {
       const companionDef = getStatusDef(effect.companionStatus)
       if (companionDef) {
-        const companionDuration  = effect.companionDuration ?? companionDef.duration
+        const companionDuration  = effect.companionDuration ?? companionDef.duration ?? 0
         const companionSlot: StatusEffect = {
           id:                   companionDef.id,
           name:                 companionDef.name,

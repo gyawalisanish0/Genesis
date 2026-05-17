@@ -19,8 +19,6 @@ export class AnimationPlayer {
   private sprite:     Phaser.GameObjects.Image
   private timer:      Phaser.Time.TimerEvent | null = null
   private frameIndex: number = 0
-  private defId:      string = ''
-  private stateKey:   string = ''
 
   constructor(scene: Phaser.Scene, sprite: Phaser.GameObjects.Image) {
     this.scene  = scene
@@ -40,8 +38,6 @@ export class AnimationPlayer {
 
   play(defId: string, stateKey: string, entry: AnimationStateDef, onComplete?: () => void): void {
     this.stop()
-    this.defId    = defId
-    this.stateKey = stateKey
     this.frameIndex = 0
 
     const intervalMs = 1000 / entry.frameRate
