@@ -7,7 +7,7 @@
 
   "playerUnits": {
     "mode": "fixed",
-    "units": ["hugo_001", "husty_001"]
+    "units": ["hugo_001", "husty_001", "tara_001"]
   },
 
   "moveRange": 1,
