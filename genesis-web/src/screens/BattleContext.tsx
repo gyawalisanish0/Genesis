@@ -609,6 +609,13 @@ export function BattleProvider({ children }: Props) {
     return ids
   }, [registeredTicks, tickValue])
 
+  // Ref mirror so the AI effect can read the current active-unit set without
+  // listing it as a reactive dependency — listing it caused the effect to
+  // re-run mid-chain whenever registerTick advanced a unit's tick, producing
+  // duplicate telegraphTimer/actionTimer pairs that double-fired each unit.
+  const activeUnitIdsRef = useRef<Set<string>>(new Set())
+  useEffect(() => { activeUnitIdsRef.current = activeUnitIds }, [activeUnitIds])
+
   // The player-controlled unit whose tick is currently active during the player phase.
   // null during the enemy phase or while resolving.
   const activePlayerUnit = useMemo<Unit | null>(() => {
@@ -1318,8 +1325,8 @@ export function BattleProvider({ children }: Props) {
 
     // AI handles: active non-controlled player allies + active enemies (sorted fastest-first).
     const controlled       = controlledIdsRef.current
-    const activeAIAllies   = playerUnitsRef.current.filter((u) => activeUnitIds.has(u.id) && isAlive(u) && !controlled.has(u.id))
-    const activeEnemies    = enemiesRef.current.filter((e) => activeUnitIds.has(e.id) && isAlive(e))
+    const activeAIAllies   = playerUnitsRef.current.filter((u) => activeUnitIdsRef.current.has(u.id) && isAlive(u) && !controlled.has(u.id))
+    const activeEnemies    = enemiesRef.current.filter((e) => activeUnitIdsRef.current.has(e.id) && isAlive(e))
     const allAIUnits       = [...activeAIAllies, ...activeEnemies]
     if (!allAIUnits.length) return
 
@@ -1609,7 +1616,7 @@ export function BattleProvider({ children }: Props) {
       clearTimeout(actionTimer)
       if (applyTimerRef.current) clearTimeout(applyTimerRef.current)
     }
-  }, [phase, activeUnitIds, narrativePaused, inspectingSkill, showTurnDisplay]) // refs keep callbacks current; diceResult intentionally excluded
+  }, [phase, narrativePaused, inspectingSkill, showTurnDisplay]) // activeUnitIds intentionally read via ref (see activeUnitIdsRef above); all other battle state read via refs to avoid mid-chain re-runs
 
   // ── Misc actions ───────────────────────────────────────────────────────────
 
