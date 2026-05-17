@@ -47,7 +47,7 @@ export interface BattleArenaHandle {
     targetManifest?: AnimationManifest | null,
     isDamaged?:      { acting: boolean; target: boolean },
   ): void
-  clearTurn(): void
+  clearTurn(onDone?: () => void): void
   // Stage 3 — phase-gated: React awaits onDone before advancing
   playDice(outcome: string, onDone: () => void): void
   skipActiveDice(): void
@@ -147,8 +147,8 @@ export const BattleArena = forwardRef<BattleArenaHandle>(
           pendingTurnState.current = [actingDefId, targetDefId, actingManifest, targetManifest, isDamaged]
         }
       },
-      clearTurn() {
-        sceneRef.current?.clearTurn()
+      clearTurn(onDone) {
+        sceneRef.current?.clearTurn(onDone)
       },
       playDice(outcome, onDone) {
         if (sceneRef.current) {
