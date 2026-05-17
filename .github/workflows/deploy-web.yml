@@ -5,7 +5,10 @@ name: Deploy Web
 #
 # REQUIRED ONE-TIME REPO SETTING:
 #   Settings → Pages → Source → "GitHub Actions"
-#   (not "Deploy from a branch" — that serves the raw repo, not the built app)
+#
+# The base URL is derived directly from the repository name so the build
+# is never broken by configure-pages returning an empty base_path on the
+# first run of a newly-configured Pages environment.
 
 on:
   push:
@@ -22,11 +25,10 @@ on:
           - staging
 
 permissions:
-  contents: read   # checkout
-  pages:    write  # upload + deploy Pages artifact
-  id-token: write  # OIDC token required by deploy-pages
+  contents: read
+  pages:    write
+  id-token: write
 
-# One deployment at a time; new pushes cancel any queued run.
 concurrency:
   group: pages
   cancel-in-progress: true
@@ -57,30 +59,57 @@ jobs:
         working-directory: genesis-web
         run: npm run test
 
-      # configure-pages reads the repo's Pages settings and emits base_path
-      # (e.g. /Genesis) so Vite can set absolute asset URLs correctly.
+      # configure-pages wires up the GitHub Pages environment and emits
+      # base_path.  We also compute a hard-coded fallback from the repo name
+      # so the build is never silently broken by an empty output on first run.
       - name: Configure GitHub Pages
         id: pages
         uses: actions/configure-pages@v4
 
+      - name: Resolve base path
+        id: base
+        run: |
+          PAGES_BASE="${{ steps.pages.outputs.base_path }}"
+          REPO_BASE="/${{ github.event.repository.name }}"
+          # Prefer the value from configure-pages; fall back to repo name.
+          if [ -n "$PAGES_BASE" ]; then
+            echo "path=${PAGES_BASE}" >> "$GITHUB_OUTPUT"
+            echo "Using configure-pages base: ${PAGES_BASE}"
+          else
+            echo "path=${REPO_BASE}" >> "$GITHUB_OUTPUT"
+            echo "configure-pages returned empty — using repo name: ${REPO_BASE}"
+          fi
+
       - name: Build for GitHub Pages
         working-directory: genesis-web
+        env:
+          VITE_BASE: ${{ steps.base.outputs.path }}
         run: |
-          echo "Building with base ${{ steps.pages.outputs.base_path }}/"
-          npm run build -- --base "${{ steps.pages.outputs.base_path }}/"
+          echo "Building with base: ${VITE_BASE}/"
+          npm run build -- --base "${VITE_BASE}/"
 
       - name: Verify build output
         run: |
-          if [ ! -f genesis-web/dist/index.html ]; then
-            echo "ERROR: genesis-web/dist/index.html not found"
+          DIST=genesis-web/dist
+
+          # index.html must exist
+          [ -f "${DIST}/index.html" ] \
+            || { echo "ERROR: ${DIST}/index.html missing"; exit 1; }
+
+          # Built index.html must reference assets under the correct base,
+          # not root-relative paths like /assets/ (sign of an empty base).
+          BASE="${{ steps.base.outputs.path }}"
+          if ! grep -q "\"${BASE}/" "${DIST}/index.html"; then
+            echo "ERROR: index.html does not contain asset paths prefixed with ${BASE}/"
+            echo "--- index.html snippet ---"
+            head -20 "${DIST}/index.html"
             exit 1
           fi
-          echo "dist/ contents:"
-          ls -lh genesis-web/dist/
-          echo "Asset references in index.html:"
-          grep -o 'src="[^"]*"\|href="[^"]*"' genesis-web/dist/index.html | head -20
 
-      # upload-pages-artifact automatically adds .nojekyll so Jekyll does not
+          echo "✓ index.html exists and contains correct base-prefixed asset paths"
+          ls -lh "${DIST}/"
+
+      # upload-pages-artifact adds .nojekyll automatically so Jekyll does not
       # strip Vite's _assets/ directory (leading-underscore rule).
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
@@ -103,10 +132,11 @@ jobs:
       - name: Deployment summary
         run: |
           LABEL="${{ github.event.inputs.label || 'auto' }}"
-          echo "### Web deployed to GitHub Pages"               >> $GITHUB_STEP_SUMMARY
+          URL="${{ steps.deploy.outputs.page_url }}"
+          echo "### Deployed to GitHub Pages"                   >> $GITHUB_STEP_SUMMARY
           echo "| Property | Value |"                           >> $GITHUB_STEP_SUMMARY
           echo "|---|---|"                                       >> $GITHUB_STEP_SUMMARY
           echo "| Label  | \`${LABEL}\` |"                      >> $GITHUB_STEP_SUMMARY
-          echo "| URL    | ${{ steps.deploy.outputs.page_url }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| URL    | ${URL} |"                            >> $GITHUB_STEP_SUMMARY
           echo "| Commit | \`${{ github.sha }}\` |"             >> $GITHUB_STEP_SUMMARY
           echo "| Branch | \`${{ github.ref_name }}\` |"        >> $GITHUB_STEP_SUMMARY
