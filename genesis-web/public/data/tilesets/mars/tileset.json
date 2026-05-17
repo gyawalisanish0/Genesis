@@ -7,8 +7,8 @@
     "floor":          "mars_floor.png",
     "rift":           "mars_rift.png",
     "edge":           "mars_edge.png",
-    "surface_corner": "mars_surface_corner.png",
-    "rift_corner":    "mars_rift_corner.png",
+    "surface_corner": "mars_rift_corner.png",
+    "rift_corner":    "mars_surface_corner.png",
     "hill":           "mars_hill.png",
     "crater":         "mars_crater.png"
   }
