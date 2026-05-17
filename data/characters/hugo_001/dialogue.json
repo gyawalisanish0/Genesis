@@ -1,0 +1,80 @@
+{
+  "type": "dialogue",
+  "defId": "hugo_001",
+  "entries": [
+    {
+      "narrativeId": "hugo_001_battle_start",
+      "trigger": { "event": "battle_start" },
+      "animations": [{ "type": "dialogue" }],
+      "lines": [
+        { "speakerId": "hugo_001", "text": "Mars doesn't forgive mistakes. Neither do I." },
+        { "speakerId": "hugo_001", "text": "I've broken stronger things than this." },
+        { "speakerId": "hugo_001", "text": "Let's make this quick. I have work to get back to." }
+      ]
+    },
+    {
+      "narrativeId": "hugo_001_skill_used",
+      "trigger": { "event": "skill_used", "actorId": "hugo_001", "chance": 0.55 },
+      "animations": [
+        { "type": "dialogue" },
+        { "type": "portrait_fly", "speakerId": "hugo_001", "side": "left" }
+      ],
+      "lines": [
+        { "speakerId": "hugo_001", "text": "Stress fracture. Right where I calculated." },
+        { "speakerId": "hugo_001", "text": "Everything breaks eventually." },
+        { "speakerId": "hugo_001", "text": "Hold still." }
+      ]
+    },
+    {
+      "narrativeId": "hugo_001_counter",
+      "trigger": { "event": "counter", "actorId": "hugo_001" },
+      "animations": [
+        { "type": "portrait_fly", "speakerId": "hugo_001", "side": "left" },
+        { "type": "dialogue" }
+      ],
+      "lines": [
+        { "speakerId": "hugo_001", "text": "Scales. Try harder." },
+        { "speakerId": "hugo_001", "text": "That's what they're for." }
+      ]
+    },
+    {
+      "narrativeId": "hugo_001_clash_win",
+      "trigger": { "event": "clash_resolved", "actorId": "hugo_001" },
+      "animations": [
+        { "type": "screen_flash", "colour": "var(--accent-warn)", "duration": 400 },
+        { "type": "dialogue" }
+      ],
+      "lines": [
+        { "speakerId": "hugo_001", "text": "Mass wins." }
+      ]
+    },
+    {
+      "narrativeId": "hugo_001_death",
+      "trigger": { "event": "unit_death", "actorId": "hugo_001" },
+      "once": true,
+      "priority": 10,
+      "animations": [
+        { "type": "screen_flash", "colour": "var(--accent-danger)", "duration": 800 },
+        { "type": "dialogue" }
+      ],
+      "lines": [
+        { "speakerId": "hugo_001", "text": "I... miscalculated." }
+      ]
+    },
+    {
+      "narrativeId": "hugo_001_boosted_hit",
+      "trigger": { "event": "boosted_hit", "actorId": "hugo_001", "chance": 0.7 },
+      "animations": [
+        { "type": "floating_text", "text": "FRACTURE POINT!", "colour": "var(--accent-gold)" }
+      ]
+    },
+    {
+      "narrativeId": "hugo_001_evaded",
+      "trigger": { "event": "evaded", "actorId": "hugo_001", "chance": 0.5 },
+      "animations": [{ "type": "dialogue" }],
+      "lines": [
+        { "speakerId": "hugo_001", "text": "Adjusting." }
+      ]
+    }
+  ]
+}

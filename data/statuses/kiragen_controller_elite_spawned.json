@@ -1,0 +1,9 @@
+{
+  "type": "status",
+  "id": "kiragen_controller_elite_spawned",
+  "name": "Elite Spawned",
+  "stacking": "refresh",
+  "duration": 9999,
+  "tags": [],
+  "effects": []
+}

@@ -1,0 +1,15 @@
+{
+  "type": "status",
+  "id": "kiragen_critical_spawn_grunt",
+  "name": "Critical Spawn: Grunt",
+  "stacking": "independent",
+  "duration": 1,
+  "tags": [],
+  "effects": [
+    {
+      "when": { "event": "onApply" },
+      "type": "spawnUnit",
+      "defId": "netrolume_grunt_001"
+    }
+  ]
+}

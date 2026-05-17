@@ -1,0 +1,148 @@
+[
+  {
+    "type": "skill",
+    "id": "husty_001_basic_attack",
+    "name": "Basic Attack",
+    "tuCost": 11,
+    "apCost": 0,
+    "tags": ["energy", "ranged", "basic"],
+    "maxLevel": 1,
+    "targeting": { "selector": "enemy", "range": "ranged" },
+    "resolution": { "baseChance": 1.0 },
+    "effects": [
+      {
+        "when": { "event": "onHit" },
+        "type": "damage",
+        "amount": { "stat": "power", "percent": 40 },
+        "damageType": "energy"
+      }
+    ],
+    "levelUpgrades": []
+  },
+  {
+    "type": "skill",
+    "id": "husty_001_disruption",
+    "name": "Disruption",
+    "description": "A focused psychic burst that scrambles motor-nerve signals. Deals 15 flat + 20% Power energy damage. On hit, locks all movement-tagged skills on the target team for 15 ticks.",
+    "tuCost": 12,
+    "apCost": 16,
+    "tags": ["utility", "ranged", "energy"],
+    "maxLevel": 5,
+    "targeting": {
+      "selector": "all-enemies",
+      "range": "ranged"
+    },
+    "resolution": {
+      "baseChance": 1.0
+    },
+    "effects": [
+      {
+        "id": "husty_001_disruption_dmg",
+        "when": { "event": "onHit" },
+        "type": "damage",
+        "amount": { "sum": [15, { "stat": "power", "percent": 20 }] },
+        "damageType": "energy"
+      },
+      {
+        "id": "husty_001_disruption_block",
+        "when": { "event": "onHit" },
+        "type": "applyStatus",
+        "status": "husty_001_movement_block",
+        "duration": 15
+      }
+    ],
+    "levelUpgrades": [
+      { "level": 2, "patch": { "effects.husty_001_disruption_dmg.amount.sum.1.percent": 28 } },
+      { "level": 3, "patch": { "effects.husty_001_disruption_dmg.amount.sum.1.percent": 36 } },
+      { "level": 4, "patch": { "effects.husty_001_disruption_dmg.amount.sum.1.percent": 46 } },
+      { "level": 5, "patch": { "effects.husty_001_disruption_dmg.amount.sum.1.percent": 58 } }
+    ]
+  },
+  {
+    "type": "skill",
+    "id": "husty_001_cached_shockwave",
+    "name": "Cached Shockwave",
+    "description": "Releases all stored Power Surge as a focused energy blast. Full hit: 250% surge + 15% Power. Evaded: 125% surge + 15% Power (shockwave can't be fully dodged). Surge resets on cast regardless of outcome.",
+    "tuCost": 16,
+    "apCost": 25,
+    "tickCooldown": 25,
+    "tags": ["ranged", "energy"],
+    "maxLevel": 1,
+    "targeting": {
+      "selector": "enemy",
+      "range": "ranged"
+    },
+    "resolution": {
+      "baseChance": 1.0
+    },
+    "effects": [
+      {
+        "when": { "event": "onCast" },
+        "type": "applyStatus",
+        "target": "self",
+        "status": "husty_001_power_surge"
+      },
+      {
+        "id": "husty_001_cached_shockwave_dmg_hit",
+        "when": { "event": "onHit" },
+        "type": "damage",
+        "amount": { "sum": [{ "secondary": 2.5 }, { "stat": "power", "percent": 15 }] },
+        "damageType": "energy"
+      },
+      {
+        "id": "husty_001_cached_shockwave_dmg_evade",
+        "when": { "event": "onEvade" },
+        "type": "damage",
+        "amount": { "sum": [{ "secondary": 1.25 }, { "stat": "power", "percent": 15 }] },
+        "damageType": "energy"
+      },
+      {
+        "when": { "event": "onCast" },
+        "type": "secondaryResource",
+        "set": 0
+      }
+    ],
+    "levelUpgrades": []
+  },
+  {
+    "type": "skill",
+    "id": "husty_001_neural_barrier",
+    "name": "Neural Barrier",
+    "description": "Generates a psychic field that absorbs damage and scrambles enemy sensors. On hit: gains a 20 HP shield. Reduces all enemies' accuracy by 15 for 8 ticks.",
+    "tuCost": 12,
+    "apCost": 14,
+    "turnCooldown": 5,
+    "tags": ["utility", "ranged", "energy"],
+    "maxLevel": 5,
+    "targeting": {
+      "selector": "enemy",
+      "range": "ranged"
+    },
+    "resolution": {
+      "baseChance": 1.0
+    },
+    "effects": [
+      {
+        "id": "husty_001_neural_barrier_shield",
+        "when": { "event": "onHit" },
+        "type": "applyStatus",
+        "target": "self",
+        "status": "husty_001_neural_barrier",
+        "shieldFlat": 20
+      },
+      {
+        "id": "husty_001_neural_barrier_debuff",
+        "when": { "event": "onHit" },
+        "type": "applyStatus",
+        "target": "all-enemies",
+        "status": "husty_001_neural_disruption"
+      }
+    ],
+    "levelUpgrades": [
+      { "level": 2, "patch": { "effects.husty_001_neural_barrier_shield.shieldFlat": 30 } },
+      { "level": 3, "patch": { "effects.husty_001_neural_barrier_shield.shieldFlat": 45 } },
+      { "level": 4, "patch": { "effects.husty_001_neural_barrier_shield.shieldFlat": 60 } },
+      { "level": 5, "patch": { "effects.husty_001_neural_barrier_shield.shieldFlat": 80 } }
+    ]
+  }
+]

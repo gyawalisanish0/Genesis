@@ -1,0 +1,26 @@
+{
+  "type": "status",
+  "id": "hugo_001_primal_awareness_dodge",
+  "name": "Primal Awareness",
+  "stacking": "refresh",
+  "maxStacks": 5,
+  "activateSequenceId": "hugo_001_primal_awareness_activate",
+  "tags": ["dodge", "primal", "turn-based"],
+  "ui": {
+    "chip": {
+      "label":           "PRIMAL",
+      "colour":          "var(--accent-info)",
+      "durationDisplay": "turns",
+      "icon":            "psv_logo"
+    }
+  },
+  "dodgeConfig": {
+    "allChance": 0.70,
+    "consumeOnAttempt": true
+  },
+  "hyperModeTrigger": true,
+  "hyperModeConfig": {
+    "activeBelowStacks": 3
+  },
+  "effects": []
+}

@@ -1,0 +1,17 @@
+{
+  "type": "status",
+  "id": "kiragen_accuracy_debuff",
+  "name": "Accuracy Compromised",
+  "stacking": "refresh",
+  "duration": 6,
+  "tags": [],
+  "effects": [
+    {
+      "when": { "event": "onApply" },
+      "type": "modifyStat",
+      "stat": "precision",
+      "deltaPercent": -20,
+      "duration": "untilStatusGone"
+    }
+  ]
+}

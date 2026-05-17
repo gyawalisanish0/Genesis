@@ -1,0 +1,21 @@
+{
+  "type": "character",
+  "id": "husty_001",
+  "name": "Husty",
+  "className": "Caster",
+  "rarity": 3,
+  "stats": {
+    "strength": 20,
+    "endurance": 50,
+    "power": 75,
+    "resistance": 45,
+    "speed": 45,
+    "precision": 65
+  },
+  "maxHp": 336,
+  "maxAp": 100,
+  "apRegenRate": 0.7,
+  "startingAp": 10,
+  "passive": "husty_001_precise_calibration",
+  "skillPath": "husty_path"
+}

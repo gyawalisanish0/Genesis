@@ -1,0 +1,9 @@
+{
+  "type": "status",
+  "id": "kiragen_plasma_stun",
+  "name": "Stunned",
+  "stacking": "refresh",
+  "duration": 2,
+  "tags": ["turn-based", "stun"],
+  "effects": []
+}

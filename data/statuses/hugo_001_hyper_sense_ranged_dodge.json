@@ -1,0 +1,21 @@
+{
+  "type": "status",
+  "id": "hugo_001_hyper_sense_ranged_dodge",
+  "name": "Hyper Sense",
+  "stacking": "refresh",
+  "maxStacks": 2,
+  "duration": 15,
+  "tags": ["dodge", "ranged-dodge"],
+  "ui": {
+    "chip": {
+      "label":           "DODGE",
+      "colour":          "var(--accent-evasion)",
+      "durationDisplay": "ticks"
+    }
+  },
+  "dodgeConfig": {
+    "rangedChance": 0.30,
+    "consumeOnSuccess": true
+  },
+  "effects": []
+}

@@ -1,0 +1,17 @@
+{
+  "type": "status",
+  "id": "kiragen_virus",
+  "name": "Virus",
+  "stacking": "refresh",
+  "duration": 8,
+  "tags": [],
+  "effects": [
+    {
+      "when": { "event": "onApply" },
+      "type": "modifyStat",
+      "stat": "precision",
+      "deltaPercent": -6,
+      "duration": "untilStatusGone"
+    }
+  ]
+}

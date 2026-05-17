@@ -1,0 +1,76 @@
+{
+  "type": "narrative",
+  "levelId": "stage_001",
+  "entries": [
+    {
+      "narrativeId": "stage_001_intro",
+      "once": true,
+      "sequence": true,
+      "priority": 20,
+      "animations": [{ "type": "dialogue" }],
+      "lines": [
+        { "speakerId": "hugo_001",  "text": "This outpost shouldn't be this quiet." },
+        { "speakerId": "husty_001", "text": "Something's wrong. I can feel it." },
+        { "speakerId": "hugo_001",  "text": "Stay sharp. We move together." }
+      ]
+    },
+    {
+      "narrativeId": "stage_001_tutorial_move",
+      "once": true,
+      "sequence": true,
+      "animations": [{ "type": "dialogue" }],
+      "lines": [
+        { "speakerId": "husty_001", "text": "Tap the arrows to move. One tile at a time." },
+        { "speakerId": "hugo_001",  "text": "Watch the fog. Don't walk blind." }
+      ]
+    },
+    {
+      "narrativeId": "stage_001_tutorial_combat",
+      "once": true,
+      "sequence": true,
+      "animations": [{ "type": "dialogue" }],
+      "lines": [
+        { "speakerId": "husty_001", "text": "Guard ahead. If they see us — we fight." },
+        { "speakerId": "hugo_001",  "text": "Stay out of their line of sight." }
+      ]
+    },
+    {
+      "narrativeId": "stage_001_guard_spotted",
+      "once": false,
+      "animations": [
+        { "type": "screen_flash", "colour": "var(--accent-danger)", "duration": 400 },
+        { "type": "floating_text", "text": "SPOTTED!", "colour": "var(--accent-danger)" }
+      ]
+    },
+    {
+      "narrativeId": "stage_001_elder_greeting",
+      "once": true,
+      "sequence": true,
+      "priority": 10,
+      "animations": [{ "type": "dialogue" }],
+      "lines": [
+        { "speakerId": "hugo_001",  "text": "Elder — what happened here?" },
+        { "speakerId": "hugo_001",  "text": "The garrison fell three nights ago. Something old came through the eastern pass." },
+        { "speakerId": "husty_001", "text": "The exit is north. We need to move." }
+      ]
+    },
+    {
+      "narrativeId": "stage_001_first_chest",
+      "once": true,
+      "animations": [
+        { "type": "floating_text", "text": "SUPPLIES FOUND", "colour": "var(--accent-gold)" }
+      ]
+    },
+    {
+      "narrativeId": "stage_001_exit_reached",
+      "once": true,
+      "sequence": true,
+      "priority": 20,
+      "animations": [{ "type": "dialogue" }],
+      "lines": [
+        { "speakerId": "husty_001", "text": "There's the pass. We made it." },
+        { "speakerId": "hugo_001",  "text": "This is just the beginning." }
+      ]
+    }
+  ]
+}

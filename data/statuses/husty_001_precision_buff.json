@@ -1,0 +1,9 @@
+{
+  "type": "status",
+  "id": "husty_001_precision_buff",
+  "name": "Precise Calibration",
+  "stacking": "refresh",
+  "duration": 4,
+  "tags": ["buff", "turn-based"],
+  "effects": []
+}

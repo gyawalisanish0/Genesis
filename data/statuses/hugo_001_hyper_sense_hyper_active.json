@@ -1,0 +1,31 @@
+{
+  "type": "status",
+  "id": "hugo_001_hyper_sense_hyper_active",
+  "name": "Hyper Mode",
+  "stacking": "refresh",
+  "expiresWithStatus": "hugo_001_primal_awareness_dodge",
+  "activateSequenceId": "hugo_001_hyper_sense_hyper_activate",
+  "expireSequenceId": "hugo_001_hyper_sense_expiry",
+  "tags": ["dodge", "hyper", "melee-dodge", "turn-based", "energy", "ranged"],
+  "ui": {
+    "chip": {
+      "label":           "HYPER",
+      "colour":          "var(--accent-gold)",
+      "durationDisplay": "fade"
+    }
+  },
+  "dodgeConfig": {
+    "meleeChance": 0.90,
+    "rangedChance": 0.50
+  },
+  "effects": [
+    {
+      "id": "hugo_001_hyper_sense_expire_counter",
+      "when": { "event": "onExpire" },
+      "target": "all-enemies",
+      "type": "damage",
+      "amount": { "stat": "power", "percent": 200 },
+      "damageType": "energy"
+    }
+  ]
+}

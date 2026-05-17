@@ -1,0 +1,20 @@
+{
+  "type": "passive",
+  "id": "kiragen_combatant_001_tactical_scan",
+  "name": "Tactical Scan",
+  "description": "Context Bar (secondaryResource, 0–100) fills 4–8% per opponent action. Thresholds are live checks against current bar value. 30%: dodge → 40%. 70%: dodge → 55%, deflect 30% at 15% chance. 100%: dodge → 60%, deflect 35% at 18%, crit 10% at 300% attacker STR. Engine needs: onOpponentAction event; secondaryAbove condition; threshold status management.",
+  "effects": [
+    {
+      "when": { "event": "onBattleStart" },
+      "type": "secondaryResource",
+      "set": 0,
+      "max": 100
+    },
+    {
+      "when": { "event": "onBattleStart" },
+      "type": "applyStatus",
+      "target": "self",
+      "status": "kiragen_tactical_scan_monitor"
+    }
+  ]
+}

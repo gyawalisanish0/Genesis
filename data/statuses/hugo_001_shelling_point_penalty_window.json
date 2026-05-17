@@ -1,0 +1,9 @@
+{
+  "type": "status",
+  "id": "hugo_001_shelling_point_penalty_window",
+  "name": "Shelling Point: Penalty Window",
+  "stacking": "refresh",
+  "duration": 9,
+  "tags": ["turn-based", "shield-penalty-window"],
+  "effects": []
+}

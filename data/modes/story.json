@@ -1,0 +1,13 @@
+{
+  "type": "mode",
+  "id": "story",
+  "name": "Story Mode",
+  "description": "Follow the Genesis narrative through a series of escalating battles.",
+  "settings": {
+    "enemyAi": "story",
+    "respawn": false,
+    "timeLimitTicks": null,
+    "playerControl": "single",
+    "enemies": ["husty_001"]
+  }
+}
