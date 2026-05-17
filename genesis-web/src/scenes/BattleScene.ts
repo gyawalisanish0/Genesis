@@ -45,6 +45,9 @@ export class BattleScene extends Phaser.Scene {
   private sequenceRunner!:   SequenceRunner
   private feedbackPanel!:    FeedbackPanel
   private turnDisplayPanel!: TurnDisplayPanel
+  // Incremented on every setTurnState call so stale doShowWithTransition
+  // callbacks (from a superseded call) no-op instead of showing old figures.
+  private turnVersion = 0
 
   constructor() {
     super({ key: 'BattleScene' })
@@ -92,10 +95,13 @@ export class BattleScene extends Phaser.Scene {
     targetManifest: AnimationManifest | null = null,
     isDamaged:      { acting: boolean; target: boolean } = { acting: false, target: false },
   ): void {
-    const show = () => this.unitStage.show(
-      actingDefId, targetDefId, actingManifest, targetManifest, isDamaged,
-    )
+    const myVersion = ++this.turnVersion
+    const show = () => {
+      if (this.turnVersion !== myVersion) return
+      this.unitStage.show(actingDefId, targetDefId, actingManifest, targetManifest, isDamaged)
+    }
     const doShowWithTransition = () => {
+      if (this.turnVersion !== myVersion) return
       if (this.unitStage.isVisible) {
         this.unitStage.hide(() => { this.time.delayedCall(BETWEEN_TURN_PAUSE_MS, show) })
       } else {
