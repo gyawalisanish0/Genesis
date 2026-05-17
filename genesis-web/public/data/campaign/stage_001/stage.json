@@ -1,13 +1,17 @@
 {
   "type": "stage",
   "id": "stage_001",
+
   "name": "The Outpost",
   "description": "A ruined outpost at the edge of the frontier. Something has gone very wrong here.",
+
   "playerUnits": {
     "mode": "fixed",
     "units": ["hugo_001", "husty_001"]
   },
+
   "moveRange": 1,
+
   "settings": {
     "enemyAi": "patrol",
     "respawn": false,

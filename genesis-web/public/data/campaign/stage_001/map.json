@@ -1,17 +1,32 @@
 {
   "type": "map",
   "stageId": "stage_001",
-  "grid": { "cols": 8, "rows": 8 },
+
+  "grid": { "cols": 12, "rows": 20 },
+
   "tiles": [
-    [1, 1, 1, 0, 1, 1, 1, 0],
-    [1, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 1, 0, 1, 0, 0, 1],
-    [0, 0, 1, 0, 1, 0, 1, 1],
-    [0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 1, 0, 1, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1]
+    [1, 1, 1, 1,  1, 1,  1,  1, 1,  1,  1, 1],
+    [1, 1, 1, 1,  1, 1,  1,  1, 0,  0,  0, 1],
+    [1, 1, 0, 0,  0, 0,  0,  0, 0,  0,  1, 1],
+    [1, 0, 0, 8,  5, 5,  9,  0, 0,  0,  0, 1],
+    [1, 0, 0, 4,  0, 0,  6,  0, 1,  0,  0, 1],
+    [1, 0, 0, 10, 7, 7,  11, 0, 1,  0,  0, 1],
+    [1, 0, 0, 0,  0, 0,  0,  0, 0,  0,  0, 1],
+    [1, 0, 0, 8,  7, 7,  7,  9, 0,  0,  0, 1],
+    [1, 0, 0, 6,  3, 3,  3,  4, 0,  0,  0, 1],
+    [1, 0, 0, 15, 3, 3,  14, 0, 0,  0,  0, 1],
+    [1, 0, 0, 0,  5, 5,  0,  0, 0,  0,  0, 1],
+    [1, 0, 0, 0,  0, 0,  0,  0, 12, 13, 0, 1],
+    [1, 0, 1, 0,  0, 0,  0,  0, 3,  3,  0, 1],
+    [1, 0, 1, 0,  1, 0,  0,  0, 3,  3,  0, 1],
+    [1, 0, 0, 0,  0, 0,  0,  0, 15, 14, 0, 1],
+    [1, 0, 0, 2,  0, 0,  0,  2, 0,  0,  0, 1],
+    [1, 0, 1, 0,  0, 0,  0,  0, 0,  1,  0, 1],
+    [1, 0, 0, 0,  0, 0,  0,  0, 0,  0,  0, 1],
+    [1, 0, 0, 0,  0, 0,  0,  0, 0,  0,  0, 1],
+    [1, 1, 1, 1,  1, 1,  1,  1, 1,  1,  1, 1]
   ],
+
   "tileTypes": {
     "0":  { "passable": true,  "id": "floor" },
     "1":  { "passable": false, "id": "hill" },
@@ -30,80 +45,69 @@
     "14": { "passable": true,  "id": "rift_corner",    "rotation": 180, "entityOffset": { "x":  0.2,  "y":  0.2  } },
     "15": { "passable": true,  "id": "rift_corner",    "rotation": 270, "entityOffset": { "x": -0.2,  "y":  0.2  } }
   },
-  "playerStart": { "x": 1, "y": 6 },
+
+  "playerStart": { "x": 1, "y": 18 },
+
   "fogOfWar": true,
   "revealRadius": 2,
+
   "entities": [
+
     {
-      "entityId": "patrol_guard_a",
+      "entityId": "enemy_a",
       "type": "enemy",
-      "defId": "husty_001",
-      "x": 3, "y": 3,
+      "defId": "warrior_001",
+      "x": 5, "y": 17,
       "patrol": [
-        { "x": 3, "y": 3 },
-        { "x": 5, "y": 3 },
-        { "x": 5, "y": 4 },
-        { "x": 3, "y": 4 }
+        { "x": 5, "y": 17 },
+        { "x": 9, "y": 17 }
       ],
       "visualRange": 1,
       "narrativeId": "stage_001_guard_spotted"
     },
+
     {
-      "entityId": "patrol_guard_b",
-      "type": "enemy",
-      "defId": "husty_001",
-      "x": 1, "y": 3,
-      "patrol": [
-        { "x": 1, "y": 3 },
-        { "x": 1, "y": 4 },
-        { "x": 1, "y": 5 }
-      ],
-      "visualRange": 1,
-      "narrativeId": "stage_001_guard_spotted"
-    },
-    {
-      "entityId": "npc_elder",
+      "entityId": "npc_a",
       "type": "npc",
       "defId": "npc_elder_001",
-      "x": 5, "y": 1,
+      "x": 2, "y": 10,
       "destination": null,
       "visualRange": 1,
       "blocksMovement": true,
-      "narrativeId": "stage_001_elder_greeting"
+      "narrativeId": "stage_001_npc_greeting"
     },
+
     {
       "entityId": "chest_a",
       "type": "interactable",
       "subtype": "chest",
-      "x": 3, "y": 0,
+      "x": 9, "y": 3,
       "reward": {
         "gold": 50,
         "xp": 25,
-        "narrativeText": "An emergency supply cache left by the previous squad."
+        "narrativeText": "A sealed supply cache."
       }
     },
+
     {
       "entityId": "exit_a",
       "type": "exit",
-      "x": 7, "y": 0,
+      "x": 10, "y": 1,
       "leadsTo": "stage_002",
       "narrativeId": "stage_001_exit_reached"
     },
+
     {
-      "entityId": "tut_move",
+      "entityId": "trigger_a",
       "type": "trigger",
-      "x": 2, "y": 6,
+      "x": 2, "y": 17,
       "once": true,
       "narrativeId": "stage_001_tutorial_move"
-    },
-    {
-      "entityId": "tut_combat",
-      "type": "trigger",
-      "x": 3, "y": 5,
-      "once": true,
-      "narrativeId": "stage_001_tutorial_combat"
     }
+
   ],
+
   "wavePhase": { "mode": "player-select" },
+
   "tilesetKey": "mars"
 }
