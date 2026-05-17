@@ -72,7 +72,7 @@ interface TimelineMarkerProps {
   hpFraction:  number   // 0–1; drives arc fill length
 }
 
-function TimelineMarker({ name, defId, isAlly, hpFraction }: TimelineMarkerProps) {
+function TimelineMarker({ defId, isAlly, hpFraction }: TimelineMarkerProps) {
   const circ      = 2 * Math.PI * 10
   const ringColor = isAlly ? 'var(--accent-info)' : 'var(--accent-danger)'
   const clipId    = `tm-clip-${defId}`

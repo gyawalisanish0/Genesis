@@ -4,7 +4,7 @@
 
 import { registerEffect }    from '../registry'
 import { getStatusDef }      from '../statusRegistry'
-import type { Effect, EffectContext, EffectHandler } from '../types'
+import type { Effect, EffectHandler } from '../types'
 import type { StatusEffect, Unit }                   from '../../types'
 
 type BroadcastResourceEffect = Extract<Effect, { type: 'broadcastResource' }>

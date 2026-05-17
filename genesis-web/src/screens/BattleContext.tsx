@@ -24,7 +24,7 @@ import { applyEffect } from '../core/effects/applyEffect'
 import { createSkillInstance, getCachedSkill } from '../core/engines/skill/SkillInstance'
 import { loadCharacterWithSkills, loadStatusDef, loadAnimationManifest, loadAnimSequenceManifest } from '../services/DataService'
 import { registerStatusDef, clearStatusRegistry }  from '../core/effects/statusRegistry'
-import type { PassiveDef, StatusDef, Effect }       from '../core/effects/types'
+import type { PassiveDef, StatusDef }               from '../core/effects/types'
 import { NarrativeService } from '../services/NarrativeService'
 import { NarrativeUnits }   from '../components/NarrativeLayer'
 import type { BattleArenaHandle, TurnDisplayData } from '../components/BattleArena'
@@ -1163,7 +1163,6 @@ export function BattleProvider({ children }: Props) {
         appendLog({ text: `${actor.name} → ${skill.name} on ${extra.name} [${outcome}]`, colour: outcomeColour(outcome) })
       }
     }
-    const totalDamage = primaryDamage + extraDamage
 
     // Apply cooldown immediately at cast time so the badge updates right away.
     // hyper-tagged skills use hyperCooldown (turn-based) when cast in hyper mode.
@@ -1502,7 +1501,6 @@ export function BattleProvider({ children }: Props) {
             appendLog({ text: `${aiUnit.name} → ${skill.name} on ${extra.name} [${outcome}]`, colour: outcomeColour(outcome) })
           }
         }
-        const totalDamage = primaryDamage + extraDamage
 
         const withCooldown = applyCooldown(aiUnit, skillInst, skill)
         setUnitSkillsMap((prev) => {
