@@ -28,6 +28,7 @@ export class DungeonScene extends Phaser.Scene {
   private tapCallback:    DungeonTapCallback | null = null
   private canvasW:        number = 360
   private canvasH:        number = 400
+  private pendingReveal:  { cx: number; cy: number; radius: number } | null = null
 
   constructor() {
     super({ key: 'DungeonScene' })
@@ -69,6 +70,11 @@ export class DungeonScene extends Phaser.Scene {
       (textureMap) => {
         this.tilemap.load(mapDef, tileSize, textureMap)
         this.entityLayer.loadEntities(mapDef.entities)
+        if (this.pendingReveal) {
+          const { cx, cy, radius } = this.pendingReveal
+          this.tilemap.revealAround(cx, cy, radius)
+          this.pendingReveal = null
+        }
       },
       onTilesetError,
     )
@@ -84,6 +90,7 @@ export class DungeonScene extends Phaser.Scene {
   }
 
   revealTiles(cx: number, cy: number, radius: number): void {
+    this.pendingReveal = { cx, cy, radius }
     this.tilemap.revealAround(cx, cy, radius)
   }
 
