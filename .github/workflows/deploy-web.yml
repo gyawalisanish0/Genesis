@@ -1,6 +1,16 @@
 name: Deploy Web
 
-# Auto-deploy on push to main; manual dispatch still available.
+# Deploys the Vite app to GitHub Pages via a gh-pages branch.
+#
+# REQUIRED REPO SETTING (one-time):
+#   Settings → Pages → Source: "Deploy from a branch"
+#   Branch: gh-pages   Folder: / (root)
+#
+# This approach is more reliable than the Actions-API deployment method:
+# - No "github-pages" environment setup needed
+# - Works with the standard branch-based Pages source
+# - The gh-pages branch is always inspectable for debugging
+
 on:
   push:
     branches: [main]
@@ -15,25 +25,22 @@ on:
           - production
           - staging
 
-# Required for GitHub Pages deployment
+# contents: write is needed to push the gh-pages branch.
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
-# Only one deployment runs at a time; new runs cancel queued ones.
+# Cancel any in-flight deploy so pushes don't queue up.
 concurrency:
-  group: pages
+  group: gh-pages
   cancel-in-progress: true
 
-# ── Jobs ───────────────────────────────────────────────────────────────────────
 jobs:
-  build:
-    name: Build Vite app
+  build-and-deploy:
+    name: Build and deploy
     runs-on: ubuntu-24.04
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up Node.js
@@ -51,42 +58,43 @@ jobs:
         working-directory: genesis-web
         run: npm run test
 
-      # configure-pages outputs the correct base_path for this repo,
-      # which we pass to Vite so asset URLs work on GitHub Pages.
-      # The vite.config.ts base ('./') remains correct for Capacitor.
-      - name: Configure GitHub Pages
-        id: pages
-        uses: actions/configure-pages@v4
-
       - name: Build for GitHub Pages
         working-directory: genesis-web
-        run: npm run build -- --base "${{ steps.pages.outputs.base_path }}"
+        run: |
+          REPO_NAME="${{ github.event.repository.name }}"
+          echo "Building with base /${REPO_NAME}/"
+          npm run build -- --base "/${REPO_NAME}/"
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Verify build output
+        run: |
+          if [ ! -f genesis-web/dist/index.html ]; then
+            echo "ERROR: genesis-web/dist/index.html not found — build may have failed"
+            exit 1
+          fi
+          echo "dist/ contents:"
+          ls -lh genesis-web/dist/
+          echo "asset references in index.html:"
+          grep -o 'src="[^"]*"\|href="[^"]*"' genesis-web/dist/index.html | head -20
+
+      - name: Deploy to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: genesis-web/dist
-
-  deploy:
-    name: Deploy to GitHub Pages
-    needs: build
-    runs-on: ubuntu-24.04
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
-
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deploy
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: genesis-web/dist
+          # enable_jekyll defaults to false, which adds .nojekyll automatically.
+          # This prevents Jekyll from skipping Vite's _assets/ directory
+          # (Jekyll silently drops directories whose names start with '_').
 
       - name: Deployment summary
         run: |
+          OWNER="${{ github.repository_owner }}"
+          REPO="${{ github.event.repository.name }}"
           LABEL="${{ github.event.inputs.label || 'auto' }}"
-          echo "### Web deployed successfully"                        >> $GITHUB_STEP_SUMMARY
-          echo "| Property | Value |"                                >> $GITHUB_STEP_SUMMARY
-          echo "|---|---|"                                            >> $GITHUB_STEP_SUMMARY
-          echo "| Label | \`${LABEL}\` |"                            >> $GITHUB_STEP_SUMMARY
-          echo "| URL | ${{ steps.deploy.outputs.page_url }} |"      >> $GITHUB_STEP_SUMMARY
-          echo "| Commit | \`${{ github.sha }}\` |"                  >> $GITHUB_STEP_SUMMARY
-          echo "| Branch | \`${{ github.ref_name }}\` |"             >> $GITHUB_STEP_SUMMARY
+          URL="https://${OWNER}.github.io/${REPO}/"
+          echo "### Web deployed to gh-pages"           >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |"                   >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|"                               >> $GITHUB_STEP_SUMMARY
+          echo "| Label    | \`${LABEL}\` |"            >> $GITHUB_STEP_SUMMARY
+          echo "| URL      | ${URL} |"                  >> $GITHUB_STEP_SUMMARY
+          echo "| Commit   | \`${{ github.sha }}\` |"   >> $GITHUB_STEP_SUMMARY
+          echo "| Branch   | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
