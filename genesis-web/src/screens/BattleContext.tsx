@@ -1423,7 +1423,15 @@ export function BattleProvider({ children }: Props) {
         setEnemies(updatedEnemies)
       }
 
-      for (const aiUnit of sortedAIUnits) {
+      // Sequential execution: each AI unit completes its full dice→attack→applyState
+      // chain before the next one starts. A parallel for-loop would call playDice()
+      // multiple times synchronously, destroying the previous unit's onDone callback
+      // and permanently freezing that unit's tick.
+      const fireAIUnit = (index: number): void => {
+        if (index >= sortedAIUnits.length) return
+        const aiUnit    = sortedAIUnits[index]
+        const chainNext = () => fireAIUnit(index + 1)
+
         const allUnitSkills   = currentSkills.get(aiUnit.id) ?? []
         const availableSkills = allUnitSkills.filter((s) => {
           if (isOnCooldown(aiUnit, s)) return false
@@ -1434,6 +1442,7 @@ export function BattleProvider({ children }: Props) {
           if (isSkillTagBlocked(aiUnit, def.tags)) return false
           return true
         })
+
         if (!availableSkills.length) {
           const fromTick = aiUnit.tickPosition
           pushHistory(makeHistoryEntry(aiUnit.id, aiUnit.defId, aiUnit.name, fromTick, aiUnit.isAlly))
@@ -1448,25 +1457,28 @@ export function BattleProvider({ children }: Props) {
             globalApAccumRef.current,
           )
           appendLog({ text: `${aiUnit.name} is gathering strength…`, colour: 'var(--text-muted)' })
-          arenaRef.current?.clearTurn()
-          continue
+          const skipArena = arenaRef.current
+          if (skipArena) skipArena.clearTurn(chainNext); else chainNext()
+          return
         }
 
         // Selector-aware skill: prefer AoE when caster has multiple foes.
-        const aliveFoes = aiUnit.isAlly
-          ? currentEnemies.filter(isAlive)
-          : currentPlayers.filter(isAlive)
+        const aliveFoes  = aiUnit.isAlly ? currentEnemies.filter(isAlive) : currentPlayers.filter(isAlive)
         const skillInst  = pickAiSkill(availableSkills, aliveFoes.length)
         const skill      = getCachedSkill(skillInst)
         const snap       = makeSnapshot(currentPlayers, currentEnemies)
         const allTargets = resolveSkillTargets(aiUnit, skill.targeting.selector, snap)
-        if (!allTargets.length) { arenaRef.current?.clearTurn(); continue }
+        if (!allTargets.length) {
+          const noTgtArena = arenaRef.current
+          if (noTgtArena) noTgtArena.clearTurn(chainNext); else chainNext()
+          return
+        }
 
         // Deduct skill cost — from HP when HP/AP swap is active, otherwise from AP.
         if (skill.apCost > 0) {
-          const aiSnap     = snap.get(aiUnit.id) ?? aiUnit
+          const aiSnap      = snap.get(aiUnit.id) ?? aiUnit
           const hpApSwapped = aiSnap.statusSlots.some(s => s.payload?.hpApSwapped === true)
-          const withCost   = hpApSwapped
+          const withCost    = hpApSwapped
             ? addApSpent({ ...aiSnap, hp: Math.max(0, aiSnap.hp - skill.apCost) }, skill.apCost)
             : addApSpent({ ...aiSnap, ap: Math.max(0, aiSnap.ap - skill.apCost) }, skill.apCost)
           snap.set(aiUnit.id, withCost)
@@ -1478,13 +1490,12 @@ export function BattleProvider({ children }: Props) {
         const { outcome, damage: primaryDamage } = runAttack(aiUnit, primaryTarget, skillInst, snap)
 
         // Additional targets for multi-target skills.
-        let extraDamage = 0
         if (allTargets.length > 1) {
           const noDamage = outcome === 'Evade' || outcome === 'Fail'
           for (const extra of allTargets.slice(1)) {
             const extraSnap = snap.get(extra.id) ?? extra
             if (!isAlive(extraSnap)) continue
-            const hpBefore = extraSnap.hp
+            const hpBefore  = extraSnap.hp
             const ctx: EffectContext = {
               caster:      aiUnit,
               target:      noDamage ? undefined : extra,
@@ -1497,7 +1508,7 @@ export function BattleProvider({ children }: Props) {
             for (const effect of skillInst.cachedEffects) {
               if (effect.when.event === 'onCast') applyEffect(effect, ctx)
             }
-            extraDamage += Math.max(0, hpBefore - (snap.get(extra.id) ?? extra).hp)
+            void hpBefore  // tracked via snap; used only for damage log in primary runAttack
             appendLog({ text: `${aiUnit.name} → ${skill.name} on ${extra.name} [${outcome}]`, colour: outcomeColour(outcome) })
           }
         }
@@ -1510,11 +1521,11 @@ export function BattleProvider({ children }: Props) {
           return next
         })
 
-        // Step 4: apply state after animations complete.
+        // Step 4: apply state after animations complete; chain the next AI unit.
         const aiEffectiveTu = getEffectiveTuCost(skill.tuCost, snap.get(aiUnit.id) ?? aiUnit)
-        const applyAIState = () => {
+        const applyAIState  = () => {
           setPlayerUnits((prev) => prev.map((u) => snap.get(u.id) ?? u))
-          setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
+          setEnemies((prev)     => prev.map((e) => snap.get(e.id) ?? e))
           const fromTick = aiUnit.tickPosition
           pushHistory(makeHistoryEntry(aiUnit.id, aiUnit.defId, aiUnit.name, fromTick, aiUnit.isAlly))
           registerTick(aiUnit.id, advanceTick(fromTick, aiEffectiveTu))
@@ -1542,7 +1553,7 @@ export function BattleProvider({ children }: Props) {
             }
             const firstDeadPlayer = deadPlayers[0]
             if (firstDeadPlayer && arena) {
-              arena.playDeath(firstDeadPlayer.defId, () => arena.clearTurn())
+              arena.playDeath(firstDeadPlayer.defId, () => arena.clearTurn(chainNext))
               return
             }
           } else {
@@ -1557,11 +1568,11 @@ export function BattleProvider({ children }: Props) {
             }
             const firstDeadEnemy = deadEnemies[0]
             if (firstDeadEnemy && arena) {
-              arena.playDeath(firstDeadEnemy.defId, () => arena.clearTurn())
+              arena.playDeath(firstDeadEnemy.defId, () => arena.clearTurn(chainNext))
               return
             }
           }
-          arena?.clearTurn()
+          if (arena) arena.clearTurn(chainNext); else chainNext()
         }
 
         const arena = arenaRef.current
@@ -1573,6 +1584,14 @@ export function BattleProvider({ children }: Props) {
           const aiDashDx     = aiResolved?.dashDx  ?? 0
           const aiProjectile: AnimationProjectileDef | null = aiManifest?.projectile ?? null
           const aiSequence   = animSequencesRef.current.get(aiUnit.defId)?.[skill.id]
+          // Update arena figures for units after the first (telegraph set up unit 0).
+          if (index > 0) {
+            const targetMf = manifestsRef.current.get(primaryTarget.defId) ?? null
+            arena.setTurnState(aiUnit.defId, primaryTarget.defId, aiManifest, targetMf, {
+              acting: unitIsDamaged(aiUnit, aiManifest),
+              target: unitIsDamaged(primaryTarget, targetMf),
+            })
+          }
           arena.playDice(outcome, () => {
             arena.playAttack(aiUnit.defId, primaryTarget.defId, outcome, primaryDamage, aiIsMelee, aiDashDx, aiProjectile, buildOutcomeLabel(outcome), outcomeColour(outcome), () => {
               applyTimerRef.current = setTimeout(applyAIState, BATTLE_FEEDBACK_HOLD_MS)
@@ -1582,6 +1601,7 @@ export function BattleProvider({ children }: Props) {
           applyTimerRef.current = setTimeout(applyAIState, DICE_RESULT_DISMISS_MS)
         }
       }
+      fireAIUnit(0)
     }, remainingDice + ENEMY_AI_DELAY_MS)
 
     return () => {

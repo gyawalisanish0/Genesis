@@ -10,7 +10,7 @@
 // The battle log now lives in a React overlay (BattleLogOverlay) — not here.
 
 import Phaser from 'phaser'
-import type { AnimationManifest, AnimationProjectileDef, AnimPhase } from '../core/types'
+import type { AnimationManifest, AnimationStateDef, AnimationProjectileDef, AnimPhase } from '../core/types'
 import { tokenToHex }       from './battle/tokens'
 import { UnitStage }        from './battle/UnitStage'
 import { DicePanel }        from './battle/DicePanel'
@@ -25,6 +25,7 @@ import { TurnDisplayPanel, TURN_PANEL_RESERVE } from './battle/TurnDisplayPanel'
 import type { TurnPanelData } from './battle/TurnDisplayPanel'
 import { BETWEEN_TURN_PAUSE_MS } from '../core/constants'
 import { ResolutionAdaptor }    from './battle/ResolutionAdaptor'
+import { frameKey, framePath }  from './battle/AnimationPlayer'
 
 const TOP_INSET = TURN_PANEL_RESERVE
 
@@ -94,18 +95,31 @@ export class BattleScene extends Phaser.Scene {
     const show = () => this.unitStage.show(
       actingDefId, targetDefId, actingManifest, targetManifest, isDamaged,
     )
-
-    if (this.unitStage.isVisible) {
-      this.unitStage.hide(() => {
-        this.time.delayedCall(BETWEEN_TURN_PAUSE_MS, show)
-      })
-    } else {
-      show()
+    const doShowWithTransition = () => {
+      if (this.unitStage.isVisible) {
+        this.unitStage.hide(() => { this.time.delayedCall(BETWEEN_TURN_PAUSE_MS, show) })
+      } else {
+        show()
+      }
     }
+
+    const toLoad = [
+      ...this.collectFramesToLoad(actingManifest, actingDefId),
+      ...this.collectFramesToLoad(targetManifest, targetDefId),
+    ]
+
+    if (toLoad.length === 0) {
+      doShowWithTransition()
+      return
+    }
+
+    for (const { key, path } of toLoad) this.load.image(key, path)
+    this.load.once('complete', doShowWithTransition)
+    this.load.start()
   }
 
-  clearTurn(): void {
-    this.unitStage.hide()
+  clearTurn(onDone?: () => void): void {
+    this.unitStage.hide(onDone)
   }
 
   /** True while a play-once animation (dash, death, hurt, dodge) is running on any figure. */
@@ -169,6 +183,33 @@ export class BattleScene extends Phaser.Scene {
   }
 
   // ── Private helpers ───────────────────────────────────────────────────────
+
+  /** Returns frame { key, path } pairs for every animation state not yet in the texture cache. */
+  private collectFramesToLoad(
+    manifest: AnimationManifest | null,
+    defId:    string,
+  ): Array<{ key: string; path: string }> {
+    if (!manifest) return []
+    const result: Array<{ key: string; path: string }> = []
+
+    const addState = (stateKey: string, frames: number) => {
+      for (let i = 0; i < frames; i++) {
+        const k = frameKey(defId, stateKey, i)
+        if (!this.textures.exists(k)) result.push({ key: k, path: framePath(defId, stateKey, i) })
+      }
+    }
+
+    const anims = manifest.animations
+    for (const [stateKey, entry] of Object.entries(anims)) {
+      if (stateKey === 'skills') continue
+      addState(stateKey, (entry as AnimationStateDef).frames)
+    }
+    for (const [skillId, entry] of Object.entries(anims.skills ?? {})) {
+      addState(skillId, entry.frames)   // folder = skillId — no 'skills/' subdirectory
+    }
+
+    return result
+  }
 
   private drawVignette(w: number, h: number): void {
     const edge = Math.floor(h * 0.2)

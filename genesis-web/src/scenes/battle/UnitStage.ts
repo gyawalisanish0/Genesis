@@ -270,9 +270,10 @@ export class UnitStage {
   playFigureAnim(figure: 'acting' | 'target', stateKey: string, onDone: () => void): void {
     const fig = figure === 'acting' ? this.acting : this.target
     if (!fig || !fig.manifest) { onDone(); return }
-    const entry = stateKey.startsWith('skills/')
-      ? fig.manifest.animations.skills?.[stateKey.slice(7)]
-      : fig.manifest.animations[stateKey]
+    // Check skills sub-object first (most playAnim phases reference skill IDs),
+    // then fall back to top-level states (idle, hurt, dodge, etc.).
+    const entry = fig.manifest.animations.skills?.[stateKey]
+      ?? (fig.manifest.animations[stateKey] as import('../../core/types').AnimationStateDef | undefined)
     if (!entry || fig.locked) { onDone(); return }
     this.playOneShot(fig, stateKey, entry, onDone)
   }

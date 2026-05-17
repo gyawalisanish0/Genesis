@@ -24,7 +24,7 @@ export function resolveAttackAnimation(
   if (isDamaged) {
     const damagedKey = `${skillId}_damaged`
     const entry = manifest.animations.skills?.[damagedKey]
-    if (entry) return { stateKey: `skills/${damagedKey}`, entry, isMelee, dashDx }
+    if (entry) return { stateKey: damagedKey, entry, isMelee, dashDx }
   }
 
   // 2. Skill-specific base
@@ -32,7 +32,7 @@ export function resolveAttackAnimation(
   if (skillEntry) {
     // if damaged variant doesn't exist, fall through to tag resolution
     if (!isDamaged || !manifest.animations.skills?.[`${skillId}_damaged`]) {
-      return { stateKey: `skills/${skillId}`, entry: skillEntry, isMelee, dashDx }
+      return { stateKey: skillId, entry: skillEntry, isMelee, dashDx }
     }
   }
 
