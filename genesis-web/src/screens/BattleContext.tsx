@@ -616,6 +616,12 @@ export function BattleProvider({ children }: Props) {
   const activeUnitIdsRef = useRef<Set<string>>(new Set())
   useEffect(() => { activeUnitIdsRef.current = activeUnitIds }, [activeUnitIds])
 
+  // Incremented on every AI useEffect run (and on cleanup). chainNext bails when
+  // the captured version no longer matches — so a phase/narrative/inspect change
+  // mid-chain stops the chain cleanly without canceling the in-flight applyAIState
+  // (which would lose the AI unit's HP/AP/tick update and freeze the battle).
+  const aiChainVersionRef = useRef(0)
+
   // The player-controlled unit whose tick is currently active during the player phase.
   // null during the enemy phase or while resolving.
   const activePlayerUnit = useMemo<Unit | null>(() => {
@@ -1323,6 +1329,8 @@ export function BattleProvider({ children }: Props) {
     if (phase !== 'enemy') return
     if (narrativePaused || inspectingSkill) return
 
+    const myChain = ++aiChainVersionRef.current
+
     // AI handles: active non-controlled player allies + active enemies (sorted fastest-first).
     const controlled       = controlledIdsRef.current
     const activeAIAllies   = playerUnitsRef.current.filter((u) => activeUnitIdsRef.current.has(u.id) && isAlive(u) && !controlled.has(u.id))
@@ -1436,8 +1444,12 @@ export function BattleProvider({ children }: Props) {
       // and permanently freezing that unit's tick.
       const fireAIUnit = (index: number): void => {
         if (index >= sortedAIUnits.length) return
+        if (aiChainVersionRef.current !== myChain) return  // cleanup ran — abandon stale chain
         const aiUnit    = sortedAIUnits[index]
-        const chainNext = () => fireAIUnit(index + 1)
+        const chainNext = () => {
+          if (aiChainVersionRef.current !== myChain) return  // cleanup ran mid-apply — bail
+          fireAIUnit(index + 1)
+        }
 
         const allUnitSkills   = currentSkills.get(aiUnit.id) ?? []
         const availableSkills = allUnitSkills.filter((s) => {
@@ -1614,7 +1626,12 @@ export function BattleProvider({ children }: Props) {
     return () => {
       clearTimeout(telegraphTimer)
       clearTimeout(actionTimer)
-      if (applyTimerRef.current) clearTimeout(applyTimerRef.current)
+      // Invalidate any in-flight chain so chainNext bails after the current
+      // applyAIState completes. We intentionally do NOT clear applyTimerRef
+      // here: canceling it would lose the AI's pending HP/AP/tick update and
+      // freeze the battle on this enemy's turn (registerTick never fires, so
+      // phase derivation can't progress).
+      aiChainVersionRef.current++
     }
   }, [phase, narrativePaused, inspectingSkill, showTurnDisplay]) // activeUnitIds intentionally read via ref (see activeUnitIdsRef above); all other battle state read via refs to avoid mid-chain re-runs
 
