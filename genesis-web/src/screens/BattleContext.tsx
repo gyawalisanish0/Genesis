@@ -1244,6 +1244,11 @@ export function BattleProvider({ children }: Props) {
       const snapEnemies = enemiesRef.current.map((e) => snap.get(e.id) ?? e)
       const deadEnemies = snapEnemies.filter((e) => !isAlive(e))
       deadEnemies.forEach((e) => NarrativeService.emit({ type: 'unit_death', actorId: e.defId }))
+      // Remove dead enemies from the tick registry so the auto-advance clock
+      // can progress. Without this, a dead unit whose tick equals tickValue
+      // blocks advancement: the "every tick > tickValue" check never passes,
+      // phase derivation loops on the dead unit, and the battle freezes.
+      deadEnemies.forEach((e) => unregisterTick(e.id))
       if (snapEnemies.every((e) => !isAlive(e))) {
         appendLog({ text: 'Victory! All enemies defeated.', colour: 'var(--accent-genesis)' })
         NarrativeService.emit({ type: 'battle_victory' })
@@ -1576,6 +1581,7 @@ export function BattleProvider({ children }: Props) {
             const updatedPlayers = currentPlayers.map((u) => snap.get(u.id) ?? u)
             const deadPlayers    = updatedPlayers.filter((u) => !isAlive(u))
             deadPlayers.forEach((u) => NarrativeService.emit({ type: 'unit_death', actorId: u.defId }))
+            deadPlayers.forEach((u) => unregisterTick(u.id))
             if (updatedPlayers.every((u) => !isAlive(u))) {
               appendLog({ text: 'Defeat! All allies have been slain.', colour: 'var(--accent-danger)' })
               NarrativeService.emit({ type: 'battle_defeat' })
@@ -1591,6 +1597,7 @@ export function BattleProvider({ children }: Props) {
             const updatedEnemies = currentEnemies.map((e) => snap.get(e.id) ?? e)
             const deadEnemies    = updatedEnemies.filter((e) => !isAlive(e))
             deadEnemies.forEach((e) => NarrativeService.emit({ type: 'unit_death', actorId: e.defId }))
+            deadEnemies.forEach((e) => unregisterTick(e.id))
             if (updatedEnemies.every((e) => !isAlive(e))) {
               appendLog({ text: 'Victory! All enemies defeated.', colour: 'var(--accent-genesis)' })
               NarrativeService.emit({ type: 'battle_victory' })
