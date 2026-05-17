@@ -54,9 +54,9 @@
   "entities": [
 
     {
-      "entityId": "enemy_a",
+      "entityId": "grunt_alpha",
       "type": "enemy",
-      "defId": "warrior_001",
+      "defId": "netrolume_grunt_001",
       "x": 5, "y": 17,
       "patrol": [
         { "x": 5, "y": 17 },
@@ -67,14 +67,18 @@
     },
 
     {
-      "entityId": "npc_a",
-      "type": "npc",
-      "defId": "npc_elder_001",
-      "x": 2, "y": 10,
-      "destination": null,
+      "entityId": "grunt_beta",
+      "type": "enemy",
+      "defId": "netrolume_grunt_001",
+      "x": 5, "y": 13,
+      "patrol": [
+        { "x": 5, "y": 13 },
+        { "x": 5, "y": 11 },
+        { "x": 1, "y": 11 },
+        { "x": 1, "y": 13 }
+      ],
       "visualRange": 1,
-      "blocksMovement": true,
-      "narrativeId": "stage_001_npc_greeting"
+      "narrativeId": "stage_001_guard_spotted"
     },
 
     {
