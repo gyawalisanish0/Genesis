@@ -628,6 +628,12 @@ export function BattleProvider({ children }: Props) {
   // before its tick has advanced, duplicating the attack. We exclude it.
   const pendingAIUnitIdRef = useRef<string | null>(null)
 
+  // Incremented every time applyAIState fires. Kept in state (not a ref) so the
+  // AI effect re-runs after applyAIState completes, even when phase stays 'enemy'
+  // (same-value setPhase calls are no-ops in React). Without this, a faster enemy
+  // that gets the lowest tick again after acting would never trigger a new chain.
+  const [aiApplyCounter, setAiApplyCounter] = useState(0)
+
   // The player-controlled unit whose tick is currently active during the player phase.
   // null during the enemy phase or while resolving.
   const activePlayerUnit = useMemo<Unit | null>(() => {
@@ -1503,6 +1509,21 @@ export function BattleProvider({ children }: Props) {
         const snap       = makeSnapshot(currentPlayers, currentEnemies)
         const allTargets = resolveSkillTargets(aiUnit, skill.targeting.selector, snap)
         if (!allTargets.length) {
+          // No valid targets (e.g. all foes died from a counter/status before this unit
+          // acted). Advance the tick like the no-skills path so the clock progresses.
+          const fromTick = aiUnit.tickPosition
+          pushHistory(makeHistoryEntry(aiUnit.id, aiUnit.defId, aiUnit.name, fromTick, aiUnit.isAlly))
+          registerTick(aiUnit.id, advanceTick(fromTick, SKIP_TU_COST))
+          globalBattleTickRef.current += SKIP_TU_COST
+          const noTgtSnap = makeSnapshot(currentPlayers, currentEnemies)
+          fireBattleTickIntervalPassives(
+            globalBattleTickRef.current, noTgtSnap,
+            passiveDefsRef.current,
+            lastBattleIntervalFireRef.current,
+            lastBattleIntervalApAccumRef.current,
+            globalApAccumRef.current,
+          )
+          appendLog({ text: `${aiUnit.name} has no valid targets.`, colour: 'var(--text-muted)' })
           const noTgtArena = arenaRef.current
           if (noTgtArena) noTgtArena.clearTurn(chainNext); else chainNext()
           return
@@ -1559,6 +1580,7 @@ export function BattleProvider({ children }: Props) {
         const aiEffectiveTu = getEffectiveTuCost(skill.tuCost, snap.get(aiUnit.id) ?? aiUnit)
         const applyAIState  = () => {
           pendingAIUnitIdRef.current = null   // unit's apply is now running; safe to include it in new chains
+          setAiApplyCounter((c) => c + 1)    // wake AI effect if phase stays 'enemy' (same-value setPhase is a no-op)
           setPlayerUnits((prev) => prev.map((u) => snap.get(u.id) ?? u))
           setEnemies((prev)     => prev.map((e) => snap.get(e.id) ?? e))
           const fromTick = aiUnit.tickPosition
@@ -1656,7 +1678,9 @@ export function BattleProvider({ children }: Props) {
       // in-flight unit's attack. applyAIState clears it when it fires.
       aiChainVersionRef.current++
     }
-  }, [phase, narrativePaused, inspectingSkill, showTurnDisplay]) // activeUnitIds intentionally read via ref (see activeUnitIdsRef above); all other battle state read via refs to avoid mid-chain re-runs
+  // activeUnitIds intentionally read via ref (see activeUnitIdsRef above); all other battle state read via refs
+  // to avoid mid-chain re-runs. aiApplyCounter wakes the effect after applyAIState fires when phase stays 'enemy'.
+  }, [phase, narrativePaused, inspectingSkill, showTurnDisplay, aiApplyCounter])
 
   // ── Misc actions ───────────────────────────────────────────────────────────
 
