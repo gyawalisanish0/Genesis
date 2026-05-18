@@ -49,4 +49,9 @@ describe('calculateApGained', () => {
     expect(calculateApGained(10, 8.0)).toBe(80)
     expect(calculateApGained(0, 12.0)).toBe(0)
   })
+
+  it('rounds to integer to prevent float drift (e.g. 25 × 0.6 ≠ 14.999…)', () => {
+    expect(calculateApGained(25, 0.6)).toBe(15)
+    expect(calculateApGained(7, 0.6)).toBe(4)
+  })
 })

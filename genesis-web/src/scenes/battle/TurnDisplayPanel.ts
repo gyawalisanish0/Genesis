@@ -14,8 +14,10 @@ const CHIP_H       = 13
 const SLIDE        = 250
 
 // Pixels permanently reserved at the top of the canvas for this panel.
-// Sized for actor + skill + target with one status-chip row each.
-export const TURN_PANEL_RESERVE = 200
+// Sized for actor + skill + target without status chips (153 px actual) + 7 px buffer.
+// Status chips temporarily push the panel past this boundary — acceptable since the
+// panel slides in on top of content; it does not resize the canvas.
+export const TURN_PANEL_RESERVE = 160
 
 // ── Colour palette ────────────────────────────────────────────────────────────
 const BG_COL       = 0x0d0d1a

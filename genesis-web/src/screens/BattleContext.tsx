@@ -10,7 +10,7 @@ import {
 import { useNavigate } from 'react-router-dom'
 import type { Unit, AnimationManifest, AnimationProjectileDef, AnimSequenceManifest } from '../core/types'
 import type { SkillInstance, EffectContext } from '../core/effects/types'
-import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, CLASH_ANNOUNCE_MS, ENEMY_AI_DELAY_MS, COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE, BATTLE_FEEDBACK_HOLD_MS, SKIP_TU_COST } from '../core/constants'
+import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, CLASH_ANNOUNCE_MS, AI_THINKING_MIN_MS, AI_THINKING_MAX_MS, AI_INPUT_MIN_MS, AI_INPUT_MAX_MS, COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE, BATTLE_FEEDBACK_HOLD_MS, SKIP_TU_COST } from '../core/constants'
 import { resolveTickDisplacement } from '../core/combat/TickDisplacer'
 import { resolveClashWinner, factionAvgSpeed } from '../core/combat/ClashResolver'
 import { createUnit, isAlive, setTickPosition, incrementActionCount, tickStatusDurations, updateStatusIntervalTick, isSkillTagBlocked, addApSpent, takeDamage } from '../core/unit'
@@ -156,6 +156,8 @@ export function useBattleScreen(): BattleContextValue {
 }
 
 // ── Provider ──────────────────────────────────────────────────────────────────
+
+const randomMs = (min: number, max: number) => min + Math.floor(Math.random() * (max - min + 1))
 
 interface Props { children: ReactNode }
 
@@ -1295,89 +1297,8 @@ export function BattleProvider({ children }: Props) {
       }
 
       const firstAIUnit = allAIUnits[0]
-      const aiSkills    = unitSkillsMapRef.current.get(firstAIUnit.id) ?? []
-      const result      = computeAITurn(firstAIUnit, aiSkills, players, foes)
 
-      if (result.type === 'skip') {
-        const fromTick = firstAIUnit.tickPosition
-        pushHistory(makeHistoryEntry(firstAIUnit.id, firstAIUnit.defId, firstAIUnit.name, fromTick, firstAIUnit.isAlly))
-        registerTick(firstAIUnit.id, advanceTick(fromTick, SKIP_TU_COST))
-        globalBattleTickRef.current += SKIP_TU_COST
-        const skipSnap = makeSnapshot(players, foes)
-        fireBattleTickIntervalPassives(
-          globalBattleTickRef.current, skipSnap,
-          passiveDefsRef.current,
-          lastBattleIntervalFireRef.current,
-          lastBattleIntervalApAccumRef.current,
-          globalApAccumRef.current,
-        )
-        appendLog({ text: `${firstAIUnit.name} is gathering strength…`, colour: 'var(--text-muted)' })
-        arenaRef.current?.clearTurn()
-        setBattleStep('advance_tick')
-        return
-      }
-
-      if (result.type === 'no_targets') {
-        const fromTick = firstAIUnit.tickPosition
-        pushHistory(makeHistoryEntry(firstAIUnit.id, firstAIUnit.defId, firstAIUnit.name, fromTick, firstAIUnit.isAlly))
-        registerTick(firstAIUnit.id, advanceTick(fromTick, SKIP_TU_COST))
-        globalBattleTickRef.current += SKIP_TU_COST
-        const noTgtSnap = makeSnapshot(players, foes)
-        fireBattleTickIntervalPassives(
-          globalBattleTickRef.current, noTgtSnap,
-          passiveDefsRef.current,
-          lastBattleIntervalFireRef.current,
-          lastBattleIntervalApAccumRef.current,
-          globalApAccumRef.current,
-        )
-        appendLog({ text: `${firstAIUnit.name} has no valid targets.`, colour: 'var(--text-muted)' })
-        arenaRef.current?.clearTurn()
-        setBattleStep('advance_tick')
-        return
-      }
-
-      // Has an attack to perform — show telegraph preview.
-      const { skillInst, target } = result
-      const skill      = getCachedSkill(skillInst)
-      const actingMf   = manifestsRef.current.get(firstAIUnit.defId) ?? null
-      const targetMf   = manifestsRef.current.get(target.defId) ?? null
-
-      arenaRef.current?.setTurnState(firstAIUnit.defId, target.defId, actingMf, targetMf, {
-        acting: unitIsDamaged(firstAIUnit, actingMf),
-        target: unitIsDamaged(target, targetMf),
-      })
-      showTurnDisplay(
-        {
-          actor: {
-            name:        firstAIUnit.name,
-            className:   firstAIUnit.className,
-            rarity:      firstAIUnit.rarity,
-            hp:          firstAIUnit.hp,
-            maxHp:       firstAIUnit.maxHp,
-            ap:          firstAIUnit.ap,
-            maxAp:       firstAIUnit.maxAp,
-            statusSlots: firstAIUnit.statusSlots,
-          },
-          skillName:  skill.name,
-          tuCost:     skill.tuCost,
-          apCost:     skill.apCost,
-          skillLevel: skillInst.currentLevel,
-          target: {
-            name:        target.name,
-            className:   target.className,
-            rarity:      target.rarity,
-            hp:          target.hp,
-            maxHp:       target.maxHp,
-            ap:          target.ap,
-            maxAp:       target.maxAp,
-            statusSlots: target.statusSlots,
-          },
-          isAlly: firstAIUnit.isAlly,
-        },
-        ENEMY_AI_DELAY_MS + DICE_RESULT_DISMISS_MS,
-      )
-
-      // Compute remaining player-dice time so AI doesn't overlap.
+      // Remaining dice display time — thinking starts only after player's dice clear.
       const remainingDice = diceResultRef.current !== null
         ? Math.max(0, DICE_RESULT_DISMISS_MS - (Date.now() - diceShowTimeRef.current))
         : 0
@@ -1385,90 +1306,186 @@ export function BattleProvider({ children }: Props) {
       // Lock the step immediately — enemy_acting is yielded so driver won't re-run.
       setBattleStep('enemy_acting')
 
-      // After the delay, execute the full attack and start the animation.
+      // Phase 1 — Thinking: AI deliberates before revealing its decision.
       telegraphTimerRef.current = setTimeout(() => {
-        const currentPlayers = playerUnitsRef.current
-        const currentEnemies = enemiesRef.current
-        if (!currentPlayers.some(isAlive) && !currentEnemies.some(isAlive)) return
+        const thinkPlayers = playerUnitsRef.current
+        const thinkEnemies = enemiesRef.current
+        if (!thinkPlayers.some(isAlive) && !thinkEnemies.some(isAlive)) return
 
-        const { allTargets } = result
-        const snap = makeSnapshot(currentPlayers, currentEnemies)
-        const thisTick = tickValueRef.current
+        // Re-read unit state — turn-start effects may have propagated since the sync phase.
+        const freshAIUnit = (firstAIUnit.isAlly ? thinkPlayers : thinkEnemies)
+          .find(u => u.id === firstAIUnit.id) ?? firstAIUnit
+        const freshSkills = unitSkillsMapRef.current.get(firstAIUnit.id) ?? []
+        const result      = computeAITurn(freshAIUnit, freshSkills, thinkPlayers, thinkEnemies)
 
-        if (skill.apCost > 0) {
-          const aiSnap      = snap.get(firstAIUnit.id) ?? firstAIUnit
-          const hpApSwapped = aiSnap.statusSlots.some(s => s.payload?.hpApSwapped === true)
-          const withCost    = hpApSwapped
-            ? addApSpent({ ...aiSnap, hp: Math.max(0, aiSnap.hp - skill.apCost) }, skill.apCost)
-            : addApSpent({ ...aiSnap, ap: Math.max(0, aiSnap.ap - skill.apCost) }, skill.apCost)
-          snap.set(firstAIUnit.id, withCost)
-          globalApAccumRef.current += skill.apCost
-          fireOnApSpent(withCost, passiveDefsRef.current.get(firstAIUnit.id) ?? null, snap, thisTick)
+        if (result.type === 'skip') {
+          const fromTick = firstAIUnit.tickPosition
+          pushHistory(makeHistoryEntry(firstAIUnit.id, firstAIUnit.defId, firstAIUnit.name, fromTick, firstAIUnit.isAlly))
+          registerTick(firstAIUnit.id, advanceTick(fromTick, SKIP_TU_COST))
+          globalBattleTickRef.current += SKIP_TU_COST
+          const skipSnap = makeSnapshot(thinkPlayers, thinkEnemies)
+          fireBattleTickIntervalPassives(
+            globalBattleTickRef.current, skipSnap,
+            passiveDefsRef.current,
+            lastBattleIntervalFireRef.current,
+            lastBattleIntervalApAccumRef.current,
+            globalApAccumRef.current,
+          )
+          appendLog({ text: `${firstAIUnit.name} is gathering strength…`, colour: 'var(--text-muted)' })
+          arenaRef.current?.clearTurn()
+          setBattleStep('advance_tick')
+          return
         }
 
-        const { outcome, damage: primaryDamage } = runAttackRef.current!(firstAIUnit, target, skillInst, snap)
-
-        if (allTargets.length > 1) {
-          const noDamage = outcome === 'Evade' || outcome === 'Fail'
-          for (const extra of allTargets.slice(1)) {
-            const extraSnap = snap.get(extra.id) ?? extra
-            if (!isAlive(extraSnap)) continue
-            const ctx: EffectContext = {
-              caster:      firstAIUnit,
-              target:      noDamage ? undefined : extra,
-              battle:      snapshotToBattleState(snap),
-              source:      'skill',
-              event:       { event: 'onCast' },
-              dice:        outcome,
-              currentTick: thisTick,
-            }
-            for (const effect of skillInst.cachedEffects) {
-              if (effect.when.event === 'onCast') applyEffect(effect, ctx)
-            }
-            appendLog({ text: `${firstAIUnit.name} → ${skill.name} on ${extra.name} [${outcome}]`, colour: outcomeColour(outcome) })
-          }
+        if (result.type === 'no_targets') {
+          const fromTick = firstAIUnit.tickPosition
+          pushHistory(makeHistoryEntry(firstAIUnit.id, firstAIUnit.defId, firstAIUnit.name, fromTick, firstAIUnit.isAlly))
+          registerTick(firstAIUnit.id, advanceTick(fromTick, SKIP_TU_COST))
+          globalBattleTickRef.current += SKIP_TU_COST
+          const noTgtSnap = makeSnapshot(thinkPlayers, thinkEnemies)
+          fireBattleTickIntervalPassives(
+            globalBattleTickRef.current, noTgtSnap,
+            passiveDefsRef.current,
+            lastBattleIntervalFireRef.current,
+            lastBattleIntervalApAccumRef.current,
+            globalApAccumRef.current,
+          )
+          appendLog({ text: `${firstAIUnit.name} has no valid targets.`, colour: 'var(--text-muted)' })
+          arenaRef.current?.clearTurn()
+          setBattleStep('advance_tick')
+          return
         }
 
-        const withCooldown = applyCooldown(firstAIUnit, skillInst, skill)
-        setUnitSkillsMap((prev) => {
-          const next   = new Map(prev)
-          const skills = next.get(firstAIUnit.id) ?? []
-          next.set(firstAIUnit.id, skills.map(s => s.defId === skillInst.defId ? withCooldown : s))
-          return next
+        // Decision revealed — show target and skill telegraph.
+        const { skillInst, target, allTargets } = result
+        const skill    = getCachedSkill(skillInst)
+        const actingMf = manifestsRef.current.get(firstAIUnit.defId) ?? null
+        const targetMf = manifestsRef.current.get(target.defId) ?? null
+
+        arenaRef.current?.setTurnState(freshAIUnit.defId, target.defId, actingMf, targetMf, {
+          acting: unitIsDamaged(freshAIUnit, actingMf),
+          target: unitIsDamaged(target, targetMf),
         })
 
-        const aiEffectiveTu = getEffectiveTuCost(skill.tuCost, snap.get(firstAIUnit.id) ?? firstAIUnit)
+        const inputMs = randomMs(AI_INPUT_MIN_MS, AI_INPUT_MAX_MS)
 
-        pendingAITurnRef.current = {
-          aiUnit:        firstAIUnit,
-          snap,
-          effectiveTu:   aiEffectiveTu,
-          primaryTarget: target,
-          primaryDamage,
-          outcome,
-          isAlly:        firstAIUnit.isAlly,
-        }
+        showTurnDisplay(
+          {
+            actor: {
+              name:        freshAIUnit.name,
+              className:   freshAIUnit.className,
+              rarity:      freshAIUnit.rarity,
+              hp:          freshAIUnit.hp,
+              maxHp:       freshAIUnit.maxHp,
+              ap:          freshAIUnit.ap,
+              maxAp:       freshAIUnit.maxAp,
+              statusSlots: freshAIUnit.statusSlots,
+            },
+            skillName:  skill.name,
+            tuCost:     skill.tuCost,
+            apCost:     skill.apCost,
+            skillLevel: skillInst.currentLevel,
+            target: {
+              name:        target.name,
+              className:   target.className,
+              rarity:      target.rarity,
+              hp:          target.hp,
+              maxHp:       target.maxHp,
+              ap:          target.ap,
+              maxAp:       target.maxAp,
+              statusSlots: target.statusSlots,
+            },
+            isAlly: freshAIUnit.isAlly,
+          },
+          inputMs + DICE_RESULT_DISMISS_MS,
+        )
 
-        const arena = arenaRef.current
-        if (arena) {
-          const aiManifest = manifestsRef.current.get(firstAIUnit.defId) ?? null
-          const aiDamaged  = unitIsDamaged(firstAIUnit, aiManifest)
-          const aiResolved = aiManifest ? resolveAttackAnimation(aiManifest, skill.id, skill.tags, aiDamaged) : null
-          const aiIsMelee  = aiResolved?.isMelee ?? false
-          const aiDashDx   = aiResolved?.dashDx  ?? 0
-          const aiProjectile: AnimationProjectileDef | null = aiManifest?.projectile ?? null
-          const aiSequence   = animSequencesRef.current.get(firstAIUnit.defId)?.[skill.id]
-          arena.playDice(outcome, () => {
-            arena.playAttack(firstAIUnit.defId, target.defId, outcome, primaryDamage, aiIsMelee, aiDashDx, aiProjectile, buildOutcomeLabel(outcome), outcomeColour(outcome), () => {
-              if (applyTimerRef.current) clearTimeout(applyTimerRef.current)
-              applyTimerRef.current = setTimeout(() => setBattleStep('enemy_applying'), BATTLE_FEEDBACK_HOLD_MS)
-            }, aiSequence)
+        // Phase 2 — Input: AI commits to the attack after the input delay.
+        if (applyTimerRef.current) clearTimeout(applyTimerRef.current)
+        applyTimerRef.current = setTimeout(() => {
+          const execPlayers = playerUnitsRef.current
+          const execEnemies = enemiesRef.current
+          if (!execPlayers.some(isAlive) && !execEnemies.some(isAlive)) return
+
+          const snap     = makeSnapshot(execPlayers, execEnemies)
+          const thisTick = tickValueRef.current
+
+          if (skill.apCost > 0) {
+            const aiSnap      = snap.get(firstAIUnit.id) ?? freshAIUnit
+            const hpApSwapped = aiSnap.statusSlots.some(s => s.payload?.hpApSwapped === true)
+            const withCost    = hpApSwapped
+              ? addApSpent({ ...aiSnap, hp: Math.max(0, aiSnap.hp - skill.apCost) }, skill.apCost)
+              : addApSpent({ ...aiSnap, ap: Math.max(0, aiSnap.ap - skill.apCost) }, skill.apCost)
+            snap.set(firstAIUnit.id, withCost)
+            globalApAccumRef.current += skill.apCost
+            fireOnApSpent(withCost, passiveDefsRef.current.get(firstAIUnit.id) ?? null, snap, thisTick)
+          }
+
+          const { outcome, damage: primaryDamage } = runAttackRef.current!(freshAIUnit, target, skillInst, snap)
+
+          if (allTargets.length > 1) {
+            const noDamage = outcome === 'Evade' || outcome === 'Fail'
+            for (const extra of allTargets.slice(1)) {
+              const extraSnap = snap.get(extra.id) ?? extra
+              if (!isAlive(extraSnap)) continue
+              const ctx: EffectContext = {
+                caster:      freshAIUnit,
+                target:      noDamage ? undefined : extra,
+                battle:      snapshotToBattleState(snap),
+                source:      'skill',
+                event:       { event: 'onCast' },
+                dice:        outcome,
+                currentTick: thisTick,
+              }
+              for (const effect of skillInst.cachedEffects) {
+                if (effect.when.event === 'onCast') applyEffect(effect, ctx)
+              }
+              appendLog({ text: `${freshAIUnit.name} → ${skill.name} on ${extra.name} [${outcome}]`, colour: outcomeColour(outcome) })
+            }
+          }
+
+          const withCooldown = applyCooldown(freshAIUnit, skillInst, skill)
+          setUnitSkillsMap((prev) => {
+            const next   = new Map(prev)
+            const skills = next.get(firstAIUnit.id) ?? []
+            next.set(firstAIUnit.id, skills.map(s => s.defId === skillInst.defId ? withCooldown : s))
+            return next
           })
-        } else {
-          if (applyTimerRef.current) clearTimeout(applyTimerRef.current)
-          applyTimerRef.current = setTimeout(() => setBattleStep('enemy_applying'), DICE_RESULT_DISMISS_MS)
-        }
-      }, remainingDice + ENEMY_AI_DELAY_MS)
+
+          const aiEffectiveTu = getEffectiveTuCost(skill.tuCost, snap.get(firstAIUnit.id) ?? freshAIUnit)
+
+          pendingAITurnRef.current = {
+            aiUnit:        freshAIUnit,
+            snap,
+            effectiveTu:   aiEffectiveTu,
+            primaryTarget: target,
+            primaryDamage,
+            outcome,
+            isAlly:        freshAIUnit.isAlly,
+          }
+
+          const arena = arenaRef.current
+          if (arena) {
+            const aiManifest = manifestsRef.current.get(firstAIUnit.defId) ?? null
+            const aiDamaged  = unitIsDamaged(freshAIUnit, aiManifest)
+            const aiResolved = aiManifest ? resolveAttackAnimation(aiManifest, skill.id, skill.tags, aiDamaged) : null
+            const aiIsMelee  = aiResolved?.isMelee ?? false
+            const aiDashDx   = aiResolved?.dashDx  ?? 0
+            const aiProjectile: AnimationProjectileDef | null = aiManifest?.projectile ?? null
+            const aiSequence   = animSequencesRef.current.get(firstAIUnit.defId)?.[skill.id]
+            arena.playDice(outcome, () => {
+              arena.playAttack(freshAIUnit.defId, target.defId, outcome, primaryDamage, aiIsMelee, aiDashDx, aiProjectile, buildOutcomeLabel(outcome), outcomeColour(outcome), () => {
+                if (applyTimerRef.current) clearTimeout(applyTimerRef.current)
+                applyTimerRef.current = setTimeout(() => setBattleStep('enemy_applying'), BATTLE_FEEDBACK_HOLD_MS)
+              }, aiSequence)
+            })
+          } else {
+            if (applyTimerRef.current) clearTimeout(applyTimerRef.current)
+            applyTimerRef.current = setTimeout(() => setBattleStep('enemy_applying'), DICE_RESULT_DISMISS_MS)
+          }
+        }, inputMs)
+
+      }, remainingDice + randomMs(AI_THINKING_MIN_MS, AI_THINKING_MAX_MS))
 
       return
     }
