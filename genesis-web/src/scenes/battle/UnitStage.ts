@@ -422,22 +422,26 @@ export class UnitStage {
     const bg        = this.scene.add.rectangle(0, 0, UNIT_W, UNIT_H, UNIT_BG).setStrokeStyle(2, stroke)
     container.add(bg)
 
-    container.add(this.scene.add.text(0, -UNIT_H / 2 + 8, roleText, {
+    const labelRole = this.scene.add.text(0, -UNIT_H / 2 + 8, roleText, {
       fontFamily: 'system-ui,sans-serif', fontSize: '9px', color: roleTint,
-    }).setOrigin(0.5, 0))
+    }).setOrigin(0.5, 0)
+    container.add(labelRole)
 
     const parts = defId.replace(/_/g, ' ').toUpperCase().split(' ')
     const line1 = parts.slice(0, -1).join(' ') || parts[0]
     const line2 = parts.length > 1 ? parts[parts.length - 1] : ''
 
-    container.add(this.scene.add.text(0, -10, line1, {
+    const labelLine1 = this.scene.add.text(0, -10, line1, {
       fontFamily: 'system-ui,sans-serif', fontSize: '13px', color: '#f1f0ff', fontStyle: 'bold',
-    }).setOrigin(0.5))
+    }).setOrigin(0.5)
+    container.add(labelLine1)
 
+    let labelLine2: Phaser.GameObjects.Text | null = null
     if (line2) {
-      container.add(this.scene.add.text(0, 7, line2, {
+      labelLine2 = this.scene.add.text(0, 7, line2, {
         fontFamily: 'system-ui,sans-serif', fontSize: '10px', color: '#9b8ec4',
-      }).setOrigin(0.5))
+      }).setOrigin(0.5)
+      container.add(labelLine2)
     }
 
     let sprite:     Phaser.GameObjects.Image | null = null
@@ -449,6 +453,9 @@ export class UnitStage {
 
       if (resolved && firstKey && this.scene.textures.exists(firstKey)) {
         bg.setVisible(false)
+        labelRole.setVisible(false)
+        labelLine1.setVisible(false)
+        labelLine2?.setVisible(false)
         sprite = this.scene.add.image(0, 0, firstKey)
         sprite.setScale(manifest.display.scale)
         sprite.setOrigin(manifest.display.anchorX, manifest.display.anchorY)
