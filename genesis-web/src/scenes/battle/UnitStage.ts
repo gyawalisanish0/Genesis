@@ -92,8 +92,9 @@ export class UnitStage {
 
     const { width, height } = this.scene.scale
     const contentH = height - this.topInset
-    const stageH   = Math.floor(contentH * 0.55)
-    const cy       = this.topInset + Math.floor(stageH * 0.48)
+    // Place container at 45% of the content zone so sprites (centered via buildFigure's
+    // spriteOffY) occupy the upper half of the content area with room for dice/feedback below.
+    const cy = this.topInset + Math.floor(contentH * 0.45)
 
     const ax = Math.floor(width * 0.22)
     this.acting = this.buildFigure(actingDefId, cy, 'acting', actingManifest, isDamaged.acting)
@@ -456,7 +457,12 @@ export class UnitStage {
         labelRole.setVisible(false)
         labelLine1.setVisible(false)
         labelLine2?.setVisible(false)
-        sprite = this.scene.add.image(0, 0, firstKey)
+        // Offset the sprite so its visual centre sits at the container origin (canvas cy),
+        // regardless of the manifest's anchorY. Without this, anchorY=1.0 (bottom anchor)
+        // would place the entire sprite above cy, pushing it into the TurnDisplayPanel zone.
+        const spriteH   = manifest.display.sourceHeight * manifest.display.scale
+        const spriteOffY = (manifest.display.anchorY - 0.5) * spriteH
+        sprite = this.scene.add.image(0, spriteOffY, firstKey)
         sprite.setScale(manifest.display.scale)
         sprite.setOrigin(manifest.display.anchorX, manifest.display.anchorY)
         if (role === 'target') sprite.setFlipX(true)
