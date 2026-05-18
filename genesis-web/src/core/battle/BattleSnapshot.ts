@@ -1,8 +1,8 @@
 // Snapshot utilities — create mutable unit maps for the effects engine and
 // collect status IDs referenced by a set of effects.
 
-import type { Unit }                           from '../../core/types'
-import type { BattleState as EngineBattleState, Effect } from '../../core/effects/types'
+import type { Unit }                           from '../types'
+import type { BattleState as EngineBattleState, Effect } from '../effects/types'
 
 /** Creates a shallow-copy snapshot so effect handlers can mutate safely. */
 export function makeSnapshot(playerUnits: Unit[], enemies: Unit[]): Map<string, Unit> {

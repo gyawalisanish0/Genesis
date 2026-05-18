@@ -1,9 +1,9 @@
 // Damage resolution pipeline — dodge checks, shield routing, TU cost modifiers,
 // crit config reading, and hyper mode detection. All pure functions; no React.
 
-import type { Unit }                                     from '../../core/types'
-import type { BattleState as EngineBattleState, DodgeConfig } from '../../core/effects/types'
-import { consumeStatusStack }                            from '../../core/unit'
+import type { Unit }                                     from '../types'
+import type { BattleState as EngineBattleState, DodgeConfig } from '../effects/types'
+import { consumeStatusStack }                            from '../unit'
 
 /**
  * Checks dodge statuses on the target before applying damage.
