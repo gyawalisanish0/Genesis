@@ -14,6 +14,7 @@
   },
   "maxHp": 280,
   "maxAp": 80,
+  "startingAp": 8,
   "apRegenRate": 0.5,
   "passive": "netrolume_grunt_001_hertz_beats",
   "skillPath": "netrolume_grunt_path"
