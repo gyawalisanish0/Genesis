@@ -1119,18 +1119,19 @@ export function BattleProvider({ children }: Props) {
     setSelectedTarget(null)
     setShowTargetPicker(false)
 
-    const fromTick  = actor.tickPosition
-    const apFrozen  = actor.statusSlots.some(s => s.payload?.freezesApRegen === true)
-    const apGained  = apFrozen ? 0 : calculateApGained(SKIP_TU_COST, actor.apRegenRate)
+    const fromTick = actor.tickPosition
+    const apFrozen = actor.statusSlots.some(s => s.payload?.freezesApRegen === true)
+    const apGained = apFrozen ? 0 : calculateApGained(SKIP_TU_COST, actor.apRegenRate)
     pushHistory(makeHistoryEntry(actor.id, actor.defId, actor.name, fromTick, actor.isAlly))
-    setPlayerUnits((prev) => prev.map((u) =>
-      u.id === actor.id
-        ? incrementActionCount({ ...u, ap: Math.min(u.maxAp, u.ap + apGained) })
-        : u
-    ))
-    registerTick(actor.id, fromTick + SKIP_TU_COST)
     globalBattleTickRef.current += SKIP_TU_COST
-    const skipSnap = makeSnapshot(playerUnitsRef.current, enemiesRef.current)
+
+    // Build snap, apply AP regen + action-count increment, tick status durations.
+    const skipSnap  = makeSnapshot(playerUnitsRef.current, enemiesRef.current)
+    const skipEntry = skipSnap.get(actor.id) ?? actor
+    skipSnap.set(actor.id, incrementActionCount({ ...skipEntry, ap: Math.min(skipEntry.maxAp, skipEntry.ap + apGained) }))
+    const { unit: skipTicked, expired: skipExpired } = tickStatusDurations(skipSnap.get(actor.id)!)
+    skipSnap.set(actor.id, skipTicked)
+    for (const slot of skipExpired) fireExpiryChain(actor.defId, slot.id, skipSnap)
     fireBattleTickIntervalPassives(
       globalBattleTickRef.current, skipSnap,
       passiveDefsRef.current,
@@ -1138,10 +1139,14 @@ export function BattleProvider({ children }: Props) {
       lastBattleIntervalApAccumRef.current,
       globalApAccumRef.current,
     )
+    // Commit snap first; registerTick after so its tick position wins.
+    setPlayerUnits(prev => prev.map(u => skipSnap.get(u.id) ?? u))
+    setEnemies(prev => prev.map(e => skipSnap.get(e.id) ?? e))
+    registerTick(actor.id, fromTick + SKIP_TU_COST)
     appendLog({ text: 'You skipped your turn.' })
     arenaRef.current?.clearTurn()
     setBattleStep('advance_tick')
-  }, [narrativePaused, inspectingSkill, pushHistory, registerTick, appendLog])
+  }, [narrativePaused, inspectingSkill, pushHistory, registerTick, appendLog, fireExpiryChain])
 
   // ── Step machine driver ────────────────────────────────────────────────────
   useEffect(() => {
@@ -1334,11 +1339,12 @@ export function BattleProvider({ children }: Props) {
           const apGained  = apFrozen ? 0 : calculateApGained(SKIP_TU_COST, freshAIUnit.apRegenRate)
           pushHistory(makeHistoryEntry(firstAIUnit.id, firstAIUnit.defId, firstAIUnit.name, fromTick, firstAIUnit.isAlly))
           globalBattleTickRef.current += SKIP_TU_COST
-          const skipSnap = makeSnapshot(thinkPlayers, thinkEnemies)
-          if (apGained > 0) {
-            const unitSnap = skipSnap.get(freshAIUnit.id) ?? freshAIUnit
-            skipSnap.set(freshAIUnit.id, { ...unitSnap, ap: Math.min(unitSnap.maxAp, unitSnap.ap + apGained) })
-          }
+          const skipSnap  = makeSnapshot(thinkPlayers, thinkEnemies)
+          const skipEntry = skipSnap.get(freshAIUnit.id) ?? freshAIUnit
+          skipSnap.set(freshAIUnit.id, { ...skipEntry, ap: Math.min(skipEntry.maxAp, skipEntry.ap + apGained) })
+          const { unit: skipTicked, expired: skipExpired } = tickStatusDurations(skipSnap.get(freshAIUnit.id)!)
+          skipSnap.set(freshAIUnit.id, skipTicked)
+          for (const slot of skipExpired) fireExpiryChain(freshAIUnit.defId, slot.id, skipSnap)
           fireBattleTickIntervalPassives(
             globalBattleTickRef.current, skipSnap,
             passiveDefsRef.current,
@@ -1346,7 +1352,7 @@ export function BattleProvider({ children }: Props) {
             lastBattleIntervalApAccumRef.current,
             globalApAccumRef.current,
           )
-          // Commit AP regen + passive effects first; registerTick after so its tick position wins.
+          // Commit snap first; registerTick after so its tick position wins.
           setPlayerUnits(prev => prev.map(u => skipSnap.get(u.id) ?? u))
           setEnemies(prev => prev.map(e => skipSnap.get(e.id) ?? e))
           registerTick(firstAIUnit.id, advanceTick(fromTick, SKIP_TU_COST))
@@ -1357,16 +1363,17 @@ export function BattleProvider({ children }: Props) {
         }
 
         if (result.type === 'no_targets') {
-          const fromTick  = firstAIUnit.tickPosition
-          const apFrozen  = freshAIUnit.statusSlots.some(s => s.payload?.freezesApRegen === true)
-          const apGained  = apFrozen ? 0 : calculateApGained(SKIP_TU_COST, freshAIUnit.apRegenRate)
+          const fromTick   = firstAIUnit.tickPosition
+          const apFrozen   = freshAIUnit.statusSlots.some(s => s.payload?.freezesApRegen === true)
+          const apGained   = apFrozen ? 0 : calculateApGained(SKIP_TU_COST, freshAIUnit.apRegenRate)
           pushHistory(makeHistoryEntry(firstAIUnit.id, firstAIUnit.defId, firstAIUnit.name, fromTick, firstAIUnit.isAlly))
           globalBattleTickRef.current += SKIP_TU_COST
-          const noTgtSnap = makeSnapshot(thinkPlayers, thinkEnemies)
-          if (apGained > 0) {
-            const unitSnap = noTgtSnap.get(freshAIUnit.id) ?? freshAIUnit
-            noTgtSnap.set(freshAIUnit.id, { ...unitSnap, ap: Math.min(unitSnap.maxAp, unitSnap.ap + apGained) })
-          }
+          const noTgtSnap  = makeSnapshot(thinkPlayers, thinkEnemies)
+          const noTgtEntry = noTgtSnap.get(freshAIUnit.id) ?? freshAIUnit
+          noTgtSnap.set(freshAIUnit.id, { ...noTgtEntry, ap: Math.min(noTgtEntry.maxAp, noTgtEntry.ap + apGained) })
+          const { unit: noTgtTicked, expired: noTgtExpired } = tickStatusDurations(noTgtSnap.get(freshAIUnit.id)!)
+          noTgtSnap.set(freshAIUnit.id, noTgtTicked)
+          for (const slot of noTgtExpired) fireExpiryChain(freshAIUnit.defId, slot.id, noTgtSnap)
           fireBattleTickIntervalPassives(
             globalBattleTickRef.current, noTgtSnap,
             passiveDefsRef.current,
