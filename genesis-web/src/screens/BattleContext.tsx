@@ -1,6 +1,7 @@
 // Screen-local context for the Battle screen.
 // Ephemeral within-session state: units, log, tick timeline, skill execution.
-// The global Zustand store is NOT written during battle frames — only on end.
+// Turn sequencing driven by a single step-machine useEffect — no concurrent
+// reactive effects; each step explicitly dispatches the next.
 
 import {
   createContext, useContext, useState, useCallback,
@@ -37,15 +38,18 @@ import { makeSnapshot, snapshotToBattleState, collectStatusIds } from './battle/
 import { resolveIncomingDodge, makeShieldedBattleState, isHyperModeActive, getEffectiveTuCost, readCritConfig } from './battle/BattleDamage'
 import { fireHpThresholdPassives, fireStatusExpiry, fireOpponentActionEffects, fireCounterTriggerEffects, fireCounterCastEffects, fireOnApSpent, fireBattleTickIntervalPassives, fireTurnStartEffects } from './battle/BattlePassive'
 import { resolveSkillTargets, pickAiSkill, unitIsDamaged, outcomeColour, buildOutcomeMessage, buildOutcomeLabel } from './battle/BattleResolution'
+import type { BattleStep } from './battle/BattleStepMachine'
+import { YIELDED_STEPS } from './battle/BattleStepMachine'
+import { computeAITurn } from './battle/BattleAIRunner'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type TurnPhase = 'player' | 'enemy' | 'resolving'
 
 export interface DiceResult {
-  outcome: DiceOutcome  // 'Boosted' | 'Success' | 'Tumbling' | 'GuardUp' | 'Evasion' | 'Fail'
-  message: string       // short flavour description shown below the outcome name
-  animKey: number       // incremented on each show; React key for animation retrigger
+  outcome: DiceOutcome
+  message: string
+  animKey: number
 }
 
 export interface LogEntry {
@@ -72,18 +76,38 @@ export interface TeamCollisionState {
   choices: Map<string, 'now' | 'later' | null>
 }
 
+// Data carried through player_acting → player_applying.
+interface PendingPlayerTurnData {
+  snap:              Map<string, Unit>
+  actor:             Unit
+  effectiveTu:       number
+  primaryTarget:     Unit
+  primaryDamage:     number
+  outcome:           DiceOutcome
+  preStatusSnapshot: Map<string, Set<string>>
+}
+
+// Data carried through enemy_acting → enemy_applying.
+interface PendingAITurnData {
+  aiUnit:        Unit
+  snap:          Map<string, Unit>
+  effectiveTu:   number
+  primaryTarget: Unit
+  primaryDamage: number
+  outcome:       DiceOutcome
+  isAlly:        boolean
+}
+
 interface BattleContextValue {
-  // Phaser arena handle — set by BattleLayout via <BattleArena ref={arenaRef} />
   arenaRef: React.RefObject<BattleArenaHandle | null>
-  // State
   phase:            TurnPhase
-  narrativePaused:  boolean   // true while a dialogue entry is showing — battle is frozen
-  turnNumber:       number    // derived: playerUnits[0].actionCount + 1
+  narrativePaused:  boolean
+  turnNumber:       number
   tickValue:        number
   activeUnitIds:    Set<string>
-  playerUnits:      Unit[]    // all player-side units (controlled + AI allies)
-  leader:           Unit | null  // the controlled leader (always present once loaded); HUD binds here
-  activePlayerUnit: Unit | null  // player-controlled unit currently acting; null during enemy phase
+  playerUnits:      Unit[]
+  leader:           Unit | null
+  activePlayerUnit: Unit | null
   enemies:          Unit[]
   log:             LogEntry[]
   historyEntries:  HistoryEntry[]
@@ -93,24 +117,16 @@ interface BattleContextValue {
   gridCollapsed:    boolean
   isPaused:         boolean
   isLoading:        boolean
-  // Status chip system
   suppressedChipIds: ReadonlySet<string>
   getChipDef: (statusId: string) => import('../core/types').StatusChipDef | null
-  // Dice result overlay
   diceResult:      DiceResult | null
-  // Counter choice prompt — set when player's counter roll succeeds
   pendingCounterDecision: CounterDecision | null
-  // Collision overlays
   pendingClash:            ClashState | null
   pendingTeamCollision:    TeamCollisionState | null
-  // Timeline
   registeredTicks: Map<string, number>
   scrollBounds:    { min: number; max: number }
-  // Skill access
   getUnitSkills:     (unitId: string) => SkillInstance[]
-  /** True when the active player unit meets Hyper Mode conditions for Hyper Sense. */
   hyperSenseModeActive: boolean
-  // Actions
   executeSkill:          (skill: SkillInstance) => void
   skipTurn:              () => void
   confirmCounter:        () => void
@@ -126,12 +142,7 @@ interface BattleContextValue {
   selectTarget:    (unit: Unit) => void
   toggleGrid:      () => void
   setPaused:       (v: boolean | ((prev: boolean) => boolean)) => void
-  // Skip active dice animation early (tap-to-skip UX). Cancels Phaser timers
-  // and fires onDone immediately so the attack flow advances without waiting.
   skipDice:        () => void
-  // Skill info inspector — long-press a skill to open a centered modal with
-  // full description / costs / effects. Setting this also silently freezes the
-  // battle (same gate as narrativePaused) so the player can read at leisure.
   inspectingSkill:    SkillInstance | null
   setInspectingSkill: (skill: SkillInstance | null) => void
 }
@@ -152,24 +163,14 @@ export function BattleProvider({ children }: Props) {
   const selectedMode = useGameStore((s) => s.selectedMode)
   const navigate     = useNavigate()
 
-  // Guard: fires only once per battle — prevents double-navigation on multi-kill.
   const battleEndedRef = useRef(false)
 
-  // Maps unitId → PassiveDef (null when the unit has no passive).
   const passiveDefsRef = useRef<Map<string, PassiveDef | null>>(new Map())
-
-  // Maps statusId → StatusDef — populated at load, used by status expiry processing.
   const statusDefsRef  = useRef<Map<string, StatusDef>>(new Map())
-
-  // Global battle-time tracker: cumulative TU spent by all units since battle start.
   const globalBattleTickRef = useRef<number>(0)
-  // Total AP spent by all units since battle start — feeds globalApSpentPercent ValueExpr.
   const globalApAccumRef    = useRef<number>(0)
-  // Per-unit baseline for AP accumulation at each onBattleTickInterval trigger.
   const lastBattleIntervalFireRef  = useRef<Map<string, number>>(new Map())
   const lastBattleIntervalApAccumRef = useRef<Map<string, number>>(new Map())
-
-  // Tracks "{unitId}:{tickValue}" keys where onUnitTurnStart was already fired this turn.
   const turnStartFiredRef = useRef(new Set<string>())
 
   // ── Core unit state ────────────────────────────────────────────────────────
@@ -177,14 +178,11 @@ export function BattleProvider({ children }: Props) {
   const [playerUnits, setPlayerUnits] = useState<Unit[]>([])
   const [enemies, setEnemies]         = useState<Unit[]>([])
 
-  // Per-unit skill instances: Map<unitId, SkillInstance[]>
   const [unitSkillsMap, setUnitSkillsMap] = useState<Map<string, SkillInstance[]>>(
     () => new Map(),
   )
 
   // ── Controlled-unit derivation ─────────────────────────────────────────────
-  // 'single' (default): only playerUnits[0] responds to player input; the rest are AI allies.
-  // 'all': every player unit is player-controlled, acting on their own tick turns.
   const controlledIds = useMemo<Set<string>>(() => {
     if (selectedMode?.settings.playerControl === 'all') {
       return new Set(playerUnits.map((u) => u.id))
@@ -194,22 +192,21 @@ export function BattleProvider({ children }: Props) {
   }, [selectedMode, playerUnits])
 
   const controlledIdsRef = useRef<Set<string>>(new Set())
-  useEffect(() => { controlledIdsRef.current = controlledIds }, [controlledIds])
 
-  // Turn display dismiss timer — controls showTurnDisplay auto-hide timing
-  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // ── Battle step machine ────────────────────────────────────────────────────
+  const [battleStep, setBattleStep] = useState<BattleStep>('init')
+  const battleStepRef = useRef<BattleStep>('init')
 
-  // Dice result overlay — shown simultaneously with action resolution
-  const [diceResult, setDiceResult]     = useState<DiceResult | null>(null)
-  const diceTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const diceKeyRef         = useRef(0)
-  const diceResultRef      = useRef<DiceResult | null>(null)   // ref copy — keeps enemy AI current without adding diceResult to its deps
-  const diceShowTimeRef    = useRef<number>(0)                 // Date.now() when the last dice animation started
-  const applyTimerRef      = useRef<ReturnType<typeof setTimeout> | null>(null) // enemy deferred state-apply timer
-  const playerApplyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null) // player deferred state-apply timer
+  // ── Timeline state ─────────────────────────────────────────────────────────
+  const [registeredTicks, setRegisteredTicks] = useState<Map<string, number>>(
+    () => new Map(),
+  )
+  const registeredTicksRef = useRef<Map<string, number>>(new Map())
+
+  const [tickValue, setTickValue] = useState(0)
+  const tickValueRef = useRef(0)
 
   // ── Other battle state ─────────────────────────────────────────────────────
-  const [phase, setPhase]             = useState<TurnPhase>('resolving')
   const [log, setLog]                 = useState<LogEntry[]>([
     { id: '0', text: 'Loading battle…', colour: 'var(--text-muted)' },
   ])
@@ -221,45 +218,59 @@ export function BattleProvider({ children }: Props) {
   const [isPaused, setPaused]               = useState(false)
   const [narrativePaused, setNarrativePaused] = useState(false)
   const [inspectingSkill, setInspectingSkill] = useState<SkillInstance | null>(null)
+
   const arenaRef      = useRef<BattleArenaHandle>(null)
   const manifestsRef           = useRef<Map<string, AnimationManifest | null>>(new Map())
   const animSequencesRef       = useRef<Map<string, AnimSequenceManifest | null>>(new Map())
   const pendingExpiryAnimsRef      = useRef<Array<{ ownerDefId: string; sequenceId: string; damage: number }>>([])
   const pendingActivationAnimsRef  = useRef<Array<{ ownerDefId: string; sequenceId: string; slotId: string }>>([])
   const preSkillStatusSnapshotRef  = useRef<Map<string, Set<string>>>(new Map())
+
   const [suppressedChipIds, setSuppressedChipIds] = useState<ReadonlySet<string>>(new Set())
   const [pendingCounterDecision, setPendingCounterDecision] = useState<CounterDecision | null>(null)
   const [pendingClash, setPendingClash]               = useState<ClashState | null>(null)
   const [pendingTeamCollision, setPendingTeamCollision] = useState<TeamCollisionState | null>(null)
-  // Set to the winner side while the clash-result log entry is briefly shown.
-  // Phase is advanced to the winner's side after CLASH_ANNOUNCE_MS.
-  const [pendingClashAnnounce, setPendingClashAnnounce] = useState<'player' | 'enemy' | null>(null)
-  const clashAnnounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Ref mirrors for the three clash guard values.
-  // The phase derivation effect reads these instead of the state values so that
-  // clearing any of them (setState → null) does NOT re-trigger the effect and
-  // re-detect a clash that was already resolved at the same tick.
   const pendingClashRef         = useRef<ClashState | null>(null)
   const pendingTeamCollisionRef = useRef<TeamCollisionState | null>(null)
-  const pendingClashAnnounceRef = useRef<'player' | 'enemy' | null>(null)
 
-  // Timeline tick registry — seeded from real unit positions after load.
-  const [registeredTicks, setRegisteredTicks] = useState<Map<string, number>>(
-    () => new Map(),
-  )
+  // Step machine pending-turn refs — carry computed data between steps.
+  const pendingPlayerTurnRef = useRef<PendingPlayerTurnData | null>(null)
+  const pendingAITurnRef     = useRef<PendingAITurnData | null>(null)
+  // Winner decided in clash_check; read when the announce timer fires.
+  const clashAnnounceWinnerRef = useRef<'player' | 'enemy' | null>(null)
 
-  // Ref copy of registeredTicks so registerTick (a useCallback) can read
-  // current occupancy synchronously without a stale closure.
-  const registeredTicksRef = useRef<Map<string, number>>(new Map())
-  useEffect(() => { registeredTicksRef.current = registeredTicks }, [registeredTicks])
+  // Timers owned by the step machine.
+  const telegraphTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const clashAnnounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Global battle clock — starts at 0, auto-advances when all units have acted.
-  const [tickValue, setTickValue] = useState(0)
+  // Dice result overlay — shown simultaneously with action resolution.
+  const [diceResult, setDiceResult]     = useState<DiceResult | null>(null)
+  const diceTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const diceKeyRef         = useRef(0)
+  const diceResultRef      = useRef<DiceResult | null>(null)
+  const diceShowTimeRef    = useRef<number>(0)
+  const applyTimerRef      = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const playerApplyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // ── Ref sync effects (must be before driver) ───────────────────────────────
+  useEffect(() => { controlledIdsRef.current = controlledIds },       [controlledIds])
+  useEffect(() => { registeredTicksRef.current = registeredTicks },   [registeredTicks])
+  useEffect(() => { tickValueRef.current = tickValue },               [tickValue])
+  useEffect(() => { battleStepRef.current = battleStep },             [battleStep])
+
+  // Fresh-value refs so timer callbacks always see current state.
+  const playerUnitsRef   = useRef(playerUnits)
+  const enemiesRef       = useRef(enemies)
+  const unitSkillsMapRef = useRef(unitSkillsMap)
+  useEffect(() => { playerUnitsRef.current = playerUnits },     [playerUnits])
+  useEffect(() => { enemiesRef.current = enemies },             [enemies])
+  useEffect(() => { unitSkillsMapRef.current = unitSkillsMap }, [unitSkillsMap])
+  useEffect(() => { diceResultRef.current = diceResult },       [diceResult])
 
   // ── Load battle data ───────────────────────────────────────────────────────
   useEffect(() => {
-    // If no team was confirmed at pre-battle, skip loading — BattleScreen will show a warning.
     const { selectedTeamIds } = useGameStore.getState()
     if (!selectedTeamIds.length) {
       setIsLoading(false)
@@ -281,8 +292,7 @@ export function BattleProvider({ children }: Props) {
           Promise.all(enemyIds.map((id) => loadCharacterWithSkills(id))),
         ])
 
-        // Load animation manifests and sequence overrides for all characters in parallel.
-        const allDefIds        = [...new Set([...selectedTeamIds, ...enemyIds])]
+        const allDefIds = [...new Set([...selectedTeamIds, ...enemyIds])]
         const [manifestResults, seqResults] = await Promise.all([
           Promise.all(allDefIds.map((id) => loadAnimationManifest(id))),
           Promise.all(allDefIds.map((id) => loadAnimSequenceManifest(id))),
@@ -306,12 +316,7 @@ export function BattleProvider({ children }: Props) {
           ),
         )
 
-        // Force every unit onto a unique starting tick. The general
-        // resolveTickDisplacement only displaces when TICK_MAX_OCCUPANCY (4) is
-        // reached, but the synchronous AI for-loop calls arena.playDice once per
-        // active unit — a second call destroys the first call's onDone chain,
-        // which freezes the battle. Strict uniqueness at battle open prevents
-        // any starting collision regardless of party size.
+        // Force unique starting ticks to prevent simultaneous multi-unit attacks.
         const ticks = new Map<string, number>()
         const used  = new Set<number>()
         const allLoaded = [...loadedPlayers, ...loadedEnemies]
@@ -321,8 +326,6 @@ export function BattleProvider({ children }: Props) {
           ticks.set(u.id, tick)
           used.add(tick)
         }
-        // Sync displaced ticks back into unit objects so registeredTicks and
-        // unit.tickPosition stay consistent.
         const displacedPlayers = loadedPlayers.map((u) => {
           const t = ticks.get(u.id)
           return t !== undefined && t !== u.tickPosition ? setTickPosition(u, t) : u
@@ -336,7 +339,6 @@ export function BattleProvider({ children }: Props) {
         playerDataArr.forEach((d, i) => skillsMap.set(displacedPlayers[i].id, d.skillDefs.map(createSkillInstance)))
         enemyDataArr.forEach((d, i)  => skillsMap.set(displacedEnemies[i].id, d.skillDefs.map(createSkillInstance)))
 
-        // Load passives and referenced status defs; register statuses for sync lookup.
         clearStatusRegistry()
         const passiveDefs = new Map<string, PassiveDef | null>()
         const allData = [
@@ -365,7 +367,6 @@ export function BattleProvider({ children }: Props) {
           if (def) {
             registerStatusDef(def)
             statusDefs.set(id, def)
-            // Also collect status IDs referenced inside the status's own effects.
             const nestedIds = collectStatusIds(def.effects)
             Promise.all(nestedIds.map(nid => loadStatusDef(nid))).then(nested => {
               nestedIds.forEach((nid, ni) => {
@@ -377,7 +378,6 @@ export function BattleProvider({ children }: Props) {
         })
         statusDefsRef.current = statusDefs
 
-        // Fire onBattleStart passive effects for all units before committing state.
         const battleStartSnap = makeSnapshot(displacedPlayers, displacedEnemies)
         for (const { unitId, passive } of passiveResults) {
           if (!passive) continue
@@ -386,12 +386,9 @@ export function BattleProvider({ children }: Props) {
           for (const effect of passive.effects) {
             if (effect.when.event !== 'onBattleStart') continue
             const ctx: EffectContext = {
-              caster: unit,
-              target: unit,
+              caster: unit, target: unit,
               battle: snapshotToBattleState(battleStartSnap),
-              source: 'passive',
-              event:  { event: 'onBattleStart' },
-              currentTick: 0,
+              source: 'passive', event: { event: 'onBattleStart' }, currentTick: 0,
             }
             applyEffect(effect, ctx)
           }
@@ -406,6 +403,7 @@ export function BattleProvider({ children }: Props) {
           setRegisteredTicks(ticks)
           setLog([{ id: '1', text: 'Battle started!', colour: 'var(--accent-genesis)' }])
           setIsLoading(false)
+          setBattleStep('advance_tick')  // kick off the step machine
           NarrativeUnits.register([...startedPlayers, ...startedEnemies])
           NarrativeService.emit({
             type:     'battle_start',
@@ -425,6 +423,7 @@ export function BattleProvider({ children }: Props) {
         }
       }
     }
+
     registerSpawnHandler(async (req: SpawnRequest) => {
       try {
         const data    = await loadCharacterWithSkills(req.defId)
@@ -441,7 +440,6 @@ export function BattleProvider({ children }: Props) {
           passiveDefsRef.current = new Map([...passiveDefsRef.current, [newUnit.id, data.passiveDef]])
         }
 
-        // Register status defs for any statuses the spawned unit references.
         const allEffects = [
           ...data.skillDefs.flatMap(s => s.effects),
           ...(data.passiveDef ? data.passiveDef.effects : []),
@@ -453,19 +451,16 @@ export function BattleProvider({ children }: Props) {
           if (def) { registerStatusDef(def); statusDefsRef.current.set(id, def) }
         })
 
-        // Fire onBattleStart passive effects for the newly spawned unit.
         let finalUnit = newUnit
         if (data.passiveDef) {
           const spawnSnap = new Map<string, Unit>([[newUnit.id, newUnit]])
           for (const effect of data.passiveDef.effects) {
             if (effect.when.event !== 'onBattleStart') continue
             const ctx: EffectContext = {
-              caster:      spawnSnap.get(newUnit.id) ?? newUnit,
-              target:      spawnSnap.get(newUnit.id) ?? newUnit,
-              battle:      snapshotToBattleState(spawnSnap),
-              source:      'passive',
-              event:       { event: 'onBattleStart' },
-              currentTick: req.currentTick,
+              caster: spawnSnap.get(newUnit.id) ?? newUnit,
+              target: spawnSnap.get(newUnit.id) ?? newUnit,
+              battle: snapshotToBattleState(spawnSnap),
+              source: 'passive', event: { event: 'onBattleStart' }, currentTick: req.currentTick,
             }
             applyEffect(effect, ctx)
           }
@@ -480,7 +475,6 @@ export function BattleProvider({ children }: Props) {
         } else {
           setEnemies(prev => [...prev, finalUnit])
         }
-
         appendLog({ text: `${data.characterDef.name} has entered the battle!`, colour: 'var(--accent-genesis)' })
       } catch (err) {
         console.error('[SpawnBus] failed to spawn unit:', err)
@@ -492,15 +486,16 @@ export function BattleProvider({ children }: Props) {
       cancelled = true
       clearSpawnHandler()
     }
+  }, [])  // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Narrative pause listeners ──────────────────────────────────────────────
+  useEffect(() => {
+    const unsubPause  = NarrativeService.onNarrativePause(()  => setNarrativePaused(true))
+    const unsubResume = NarrativeService.onNarrativeResume(() => setNarrativePaused(false))
+    return () => { unsubPause(); unsubResume() }
   }, [])
 
   // ── Turn display helpers ───────────────────────────────────────────────────
-
-  // Shows the Phaser TurnDisplayPanel and schedules its auto-dismiss.
-  // Clears any pending dismiss so a new action replaces the previous display.
-  // dismissAfter defaults to TURN_DISPLAY_DISMISS_MS; enemy telegraph passes a
-  // longer value (ENEMY_AI_DELAY_MS + DICE_RESULT_DISMISS_MS) to keep the panel
-  // visible through the full AI delay + dice animation sequence.
   const showTurnDisplay = useCallback((
     d: TurnDisplayData,
     dismissAfter = TURN_DISPLAY_DISMISS_MS,
@@ -513,24 +508,11 @@ export function BattleProvider({ children }: Props) {
     )
   }, [])
 
-  // Freeze battle while a narrative dialogue is showing.
-  useEffect(() => {
-    const unsubPause  = NarrativeService.onNarrativePause(()  => setNarrativePaused(true))
-    const unsubResume = NarrativeService.onNarrativeResume(() => setNarrativePaused(false))
-    return () => { unsubPause(); unsubResume() }
-  }, [])
-
-  // Cleanup pending dismiss on unmount.
-  useEffect(() => () => {
-    if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current)
-  }, [])
-
-  // Shows the dice outcome burst and schedules its auto-dismiss.
-  // Clears any pending dismiss so a rapid new roll replaces the previous display.
+  // ── Dice result overlay ────────────────────────────────────────────────────
   const showDiceResult = useCallback((outcome: DiceOutcome, message: string) => {
     if (diceTimerRef.current) clearTimeout(diceTimerRef.current)
     diceKeyRef.current += 1
-    diceShowTimeRef.current = Date.now()   // record start so enemy AI can compute remaining time
+    diceShowTimeRef.current = Date.now()
     setDiceResult({ outcome, message, animKey: diceKeyRef.current })
     diceTimerRef.current = setTimeout(
       () => setDiceResult(null),
@@ -538,14 +520,6 @@ export function BattleProvider({ children }: Props) {
     )
   }, [])
 
-  // Cleanup pending dice dismiss on unmount.
-  useEffect(() => () => {
-    if (diceTimerRef.current) clearTimeout(diceTimerRef.current)
-  }, [])
-
-  // Tap-to-skip dice: cancels the Phaser dice spin animation (firing its
-  // onDone immediately so the attack flow advances) AND clears the React-side
-  // dice-result auto-dismiss so subsequent enemy AI timing computes 0 remaining.
   const skipDice = useCallback(() => {
     if (!diceResultRef.current) return
     if (diceTimerRef.current) {
@@ -556,28 +530,17 @@ export function BattleProvider({ children }: Props) {
     arenaRef.current?.skipActiveDice()
   }, [])
 
-  // Cleanup deferred state-apply timers on unmount.
+  // ── Cleanup on unmount ─────────────────────────────────────────────────────
   useEffect(() => () => {
-    if (applyTimerRef.current) clearTimeout(applyTimerRef.current)
+    if (dismissTimerRef.current)    clearTimeout(dismissTimerRef.current)
+    if (diceTimerRef.current)       clearTimeout(diceTimerRef.current)
+    if (applyTimerRef.current)      clearTimeout(applyTimerRef.current)
     if (playerApplyTimerRef.current) clearTimeout(playerApplyTimerRef.current)
+    if (telegraphTimerRef.current)  clearTimeout(telegraphTimerRef.current)
     if (clashAnnounceTimerRef.current) clearTimeout(clashAnnounceTimerRef.current)
   }, [])
 
-  // After clash winner is determined, advance to the winning phase.
-  useEffect(() => {
-    if (!pendingClashAnnounce) return
-    clashAnnounceTimerRef.current = setTimeout(() => {
-      setPhase(pendingClashAnnounce === 'player' ? 'player' : 'enemy')
-      pendingClashAnnounceRef.current = null
-      setPendingClashAnnounce(null)
-    }, CLASH_ANNOUNCE_MS)
-    return () => {
-      if (clashAnnounceTimerRef.current) clearTimeout(clashAnnounceTimerRef.current)
-    }
-  }, [pendingClashAnnounce])
-
   // ── Timeline mechanics ─────────────────────────────────────────────────────
-
   const registerTick = useCallback((id: string, tick: number) => {
     const finalTick = resolveTickDisplacement(tick, registeredTicksRef.current, id)
     setRegisteredTicks((prev) => new Map(prev).set(id, finalTick))
@@ -593,13 +556,6 @@ export function BattleProvider({ children }: Props) {
     })
   }, [])
 
-  // Auto-advance global clock when all registered units have moved past it.
-  useEffect(() => {
-    const ticks = [...registeredTicks.values()]
-    if (!ticks.length) return
-    if (ticks.every((t) => t > tickValue)) setTickValue(Math.min(...ticks))
-  }, [registeredTicks, tickValue])
-
   // Active units: those whose registered tick equals the global clock.
   const activeUnitIds = useMemo(() => {
     const ids = new Set<string>()
@@ -609,45 +565,31 @@ export function BattleProvider({ children }: Props) {
     return ids
   }, [registeredTicks, tickValue])
 
-  // Ref mirror so the AI effect can read the current active-unit set without
-  // listing it as a reactive dependency — listing it caused the effect to
-  // re-run mid-chain whenever registerTick advanced a unit's tick, producing
-  // duplicate telegraphTimer/actionTimer pairs that double-fired each unit.
-  const activeUnitIdsRef = useRef<Set<string>>(new Set())
-  useEffect(() => { activeUnitIdsRef.current = activeUnitIds }, [activeUnitIds])
+  // Phase derived from battleStep — for UI compatibility.
+  const phase = useMemo<TurnPhase>(() => {
+    if (battleStep === 'player_turn') return 'player'
+    if (
+      battleStep === 'enemy_telegraph' ||
+      battleStep === 'enemy_acting' ||
+      battleStep === 'enemy_applying'
+    ) return 'enemy'
+    return 'resolving'
+  }, [battleStep])
 
-  // Incremented on every AI useEffect run (and on cleanup). chainNext bails when
-  // the captured version no longer matches — so a phase/narrative/inspect change
-  // mid-chain stops the chain cleanly without canceling the in-flight applyAIState
-  // (which would lose the AI unit's HP/AP/tick update and freeze the battle).
-  const aiChainVersionRef = useRef(0)
-
-  // ID of the AI unit whose applyAIState is currently mid-flight (between the
-  // playAttack onDone callback and the BATTLE_FEEDBACK_HOLD_MS timer firing).
-  // A new chain running while this is set would pick up the same unit again
-  // before its tick has advanced, duplicating the attack. We exclude it.
-  const pendingAIUnitIdRef = useRef<string | null>(null)
-
-  // The player-controlled unit whose tick is currently active during the player phase.
-  // null during the enemy phase or while resolving.
+  // The player-controlled unit currently eligible to act.
   const activePlayerUnit = useMemo<Unit | null>(() => {
-    if (phase !== 'player') return null
+    if (battleStep !== 'player_turn') return null
     return playerUnits.find((u) => activeUnitIds.has(u.id) && controlledIds.has(u.id)) ?? null
-  }, [phase, playerUnits, activeUnitIds, controlledIds])
+  }, [battleStep, playerUnits, activeUnitIds, controlledIds])
 
   const activePlayerUnitRef = useRef<Unit | null>(null)
   useEffect(() => { activePlayerUnitRef.current = activePlayerUnit }, [activePlayerUnit])
 
-  // The leader unit — always derived from controlledIds. With the default
-  // 'single' control mode, controlledIds has one entry: playerUnits[0].
-  // With 'all' mode, the first controlled unit is treated as the HUD anchor.
   const leader = useMemo<Unit | null>(() => {
     return playerUnits.find((u) => controlledIds.has(u.id)) ?? null
   }, [playerUnits, controlledIds])
 
   // ── Log + history helpers ──────────────────────────────────────────────────
-  // Declared here (before phase-derivation) so the phase effect can call appendLog.
-
   const appendLog = useCallback((entry: Omit<LogEntry, 'id'>) => {
     setLog((prev) => [...prev, { ...entry, id: String(Date.now() + Math.random()) }])
   }, [])
@@ -656,89 +598,13 @@ export function BattleProvider({ children }: Props) {
     setHistoryEntries((prev) => [...prev, entry])
   }, [])
 
-  // Derive phase from active unit ids — with collision detection.
-  // Guard values are read from refs (not state) so that clearing any of them
-  // does not re-trigger this effect and re-detect an already-resolved clash
-  // while activeUnitIds still has both units at the same tick.
+  // Clear target selection when leaving player_turn step.
   useEffect(() => {
-    if (isLoading || activeUnitIds.size === 0) return
-    if (narrativePaused || inspectingSkill) return
-    if (pendingClashRef.current || pendingTeamCollisionRef.current || pendingClashAnnounceRef.current) return
-
-    // Player-controlled units active at this tick vs all AI units (enemies + non-controlled allies).
-    const activeControlled = playerUnits.filter((u) => activeUnitIds.has(u.id) && controlledIds.has(u.id))
-    const activeAIAllies   = playerUnits.filter((u) => activeUnitIds.has(u.id) && !controlledIds.has(u.id))
-    const activeEnemyUnits = enemies.filter((e) => activeUnitIds.has(e.id))
-    const hasClash         = activeControlled.length > 0 && activeEnemyUnits.length > 0
-
-    if (hasClash) {
-      const allActive = [...activeControlled, ...activeEnemyUnits]
-      const hasUniqueClash = allActive.some((u) => u.clashUniqueEnabled)
-
-      if (hasUniqueClash) {
-        pendingClashRef.current = { playerUnits: activeControlled, enemyUnits: activeEnemyUnits }
-        setPendingClash(pendingClashRef.current)
-        return
-      }
-
-      // Normal clash: resolve by average effective speed + weighted dice on tie.
-      const winner      = resolveClashWinner(activeControlled, activeEnemyUnits)
-      const winnerUnits = winner === 'player' ? activeControlled  : activeEnemyUnits
-      const loserUnits  = winner === 'player' ? activeEnemyUnits  : activeControlled
-      const winnerAvg   = Math.round(factionAvgSpeed(winnerUnits))
-      const loserAvg    = Math.round(factionAvgSpeed(loserUnits))
-      appendLog({
-        text:   `CLASH — ${winnerUnits.map((u) => u.name).join(' & ')} acts first (avg. speed ${winnerAvg} vs ${loserAvg})`,
-        colour: winner === 'player' ? 'var(--accent-info)' : 'var(--accent-danger)',
-      })
-      winnerUnits.forEach((u) => NarrativeService.emit({ type: 'clash_resolved', actorId: u.defId }))
-      pendingClashAnnounceRef.current = winner
-      setPendingClashAnnounce(winner)
-      return
-    }
-
-    // Multiple controlled player units at the same tick — speed check or Now/Later prompt.
-    if (activeControlled.length > 1) {
-      const bySpeed = [...activeControlled].sort((a, b) => b.stats.speed - a.stats.speed)
-      if (bySpeed[0].stats.speed !== bySpeed[1].stats.speed) {
-        setPhase('player')
-      } else {
-        const choices = new Map(activeControlled.map((u) => [u.id, null as 'now' | 'later' | null]))
-        pendingTeamCollisionRef.current = { units: activeControlled, choices }
-        setPendingTeamCollision(pendingTeamCollisionRef.current)
-      }
-      return
-    }
-
-    // AI units (enemies + non-controlled allies) — AI handles all of them.
-    const allActiveAI = [...activeAIAllies, ...activeEnemyUnits]
-    if (allActiveAI.length > 0) {
-      setPhase('enemy')
-      return
-    }
-
-    if (activeControlled.length === 1) {
-      const activeUnit = activeControlled[0]
-      const turnKey    = `${activeUnit.id}:${tickValue}`
-      if (!turnStartFiredRef.current.has(turnKey)) {
-        turnStartFiredRef.current.add(turnKey)
-        const snap = makeSnapshot(playerUnitsRef.current, enemiesRef.current)
-        fireTurnStartEffects(activeUnit, statusDefsRef.current, snap, tickValue)
-        const updated = snap.get(activeUnit.id)
-        if (updated) setPlayerUnits(prev => prev.map(u => u.id === updated.id ? updated : u))
-      }
-      setPhase('player')
-      // Canvas stays blank until player selects a target — setTurnState is called in selectTarget/selectSkill.
-    }
-  }, [activeUnitIds, playerUnits, enemies, controlledIds, isLoading, narrativePaused, inspectingSkill, appendLog, tickValue])
-
-  // Clear pending target selection whenever it is no longer the player's turn.
-  useEffect(() => {
-    if (phase !== 'player') {
+    if (battleStep !== 'player_turn') {
       setSelectedTarget(null)
       setShowTargetPicker(false)
     }
-  }, [phase])
+  }, [battleStep])
 
   // Timeline scroll bounds.
   const scrollBounds = useMemo(() => {
@@ -751,19 +617,7 @@ export function BattleProvider({ children }: Props) {
     }
   }, [registeredTicks, tickValue])
 
-  // ── Core skill execution ───────────────────────────────────────────────────
-
-  // Fresh-value refs so timer callbacks inside enemy AI always see current state.
-  const playerUnitsRef   = useRef(playerUnits)
-  const enemiesRef       = useRef(enemies)
-  const unitSkillsMapRef = useRef(unitSkillsMap)
-  useEffect(() => { playerUnitsRef.current = playerUnits },   [playerUnits])
-  useEffect(() => { enemiesRef.current = enemies },           [enemies])
-  useEffect(() => { unitSkillsMapRef.current = unitSkillsMap }, [unitSkillsMap])
-  useEffect(() => { diceResultRef.current = diceResult },    [diceResult])
-
-  // End-of-battle: commit result to the store and navigate to the result screen.
-  // Guarded by battleEndedRef so only the first call fires (multi-kill safety).
+  // ── End-of-battle ──────────────────────────────────────────────────────────
   const endBattle = useCallback((outcome: 'victory' | 'defeat') => {
     if (battleEndedRef.current) return
     battleEndedRef.current = true
@@ -776,13 +630,11 @@ export function BattleProvider({ children }: Props) {
   const endBattleRef = useRef(endBattle)
   useEffect(() => { endBattleRef.current = endBattle }, [endBattle])
 
-  // Refs for mutual recursion between runAttack and scheduleCounterChain.
-  // Both useCallbacks reference each other only through these refs so neither
-  // has the other in its dependency array.
+  // ── Mutual-recursion refs for runAttack ↔ scheduleCounterChain ────────────
   const runAttackRef            = useRef<((caster: Unit, target: Unit, skillInst: SkillInstance, snap: Map<string, Unit>, chainDepth?: number) => { outcome: DiceOutcome; damage: number }) | null>(null)
   const scheduleCounterChainRef = useRef<((defender: Unit, originalCaster: Unit, counterSkill: SkillInstance, snap: Map<string, Unit>, depth: number) => void) | null>(null)
 
-  // Fires expiry effects for a status and cascades to any status linked via expiresWithStatus.
+  // ── Status chip helpers ────────────────────────────────────────────────────
   const getChipDef = useCallback((statusId: string) => {
     return statusDefsRef.current.get(statusId)?.ui?.chip ?? null
   }, [])
@@ -819,7 +671,6 @@ export function BattleProvider({ children }: Props) {
     if (!def) return
     const damage = fireStatusExpiry(snap.get(ownerUnit.id) ?? ownerUnit, def, snap)
     if (def.expireSequenceId) pendingExpiryAnimsRef.current.push({ ownerDefId, sequenceId: def.expireSequenceId, damage })
-    // Cascade: remove any status whose expiresWithStatus points to this one.
     const linkedUnit = snap.get(ownerUnit.id) ?? ownerUnit
     for (const slot of linkedUnit.statusSlots) {
       const linkedDef = statusDefsRef.current.get(slot.id)
@@ -831,7 +682,37 @@ export function BattleProvider({ children }: Props) {
     }
   }, [])
 
-  /** Execute one attack: caster hits target using the given SkillInstance. */
+  // ── Animation helpers ──────────────────────────────────────────────────────
+  const playPendingActivationAnims = useCallback((arena: BattleArenaHandle) => {
+    const pending = pendingActivationAnimsRef.current.splice(0)
+    if (!pending.length) return
+    for (const { ownerDefId, sequenceId, slotId } of pending) {
+      const seq = animSequencesRef.current.get(ownerDefId)?.[sequenceId]
+      const release = () => setSuppressedChipIds(prev => {
+        const next = new Set(prev)
+        next.delete(slotId)
+        return next
+      })
+      if (!seq) { release(); continue }
+      arena.setTurnState(ownerDefId, ownerDefId)
+      arena.playAttack(ownerDefId, ownerDefId, 'Hit', 0, false, 0, null, '', '', release, seq)
+    }
+  }, [])
+
+  const playPendingExpiryAnims = useCallback((arena: BattleArenaHandle, snap: Map<string, Unit>) => {
+    const pending = pendingExpiryAnimsRef.current.splice(0)
+    if (!pending.length) return
+    const firstLivingEnemy = [...snap.values()].find(u => !u.isAlly && u.hp > 0)
+    if (!firstLivingEnemy) return
+    for (const { ownerDefId, sequenceId, damage } of pending) {
+      const seq = animSequencesRef.current.get(ownerDefId)?.[sequenceId]
+      if (!seq) continue
+      arena.setTurnState(ownerDefId, firstLivingEnemy.defId)
+      arena.playAttack(ownerDefId, firstLivingEnemy.defId, 'Hit', damage, false, 0, null, '', '', () => arena.clearTurn(), seq)
+    }
+  }, [])
+
+  // ── Core attack execution ──────────────────────────────────────────────────
   const runAttack = useCallback((
     caster: Unit,
     target: Unit,
@@ -839,9 +720,9 @@ export function BattleProvider({ children }: Props) {
     snap: Map<string, Unit>,
     chainDepth = 0,
   ): { outcome: DiceOutcome; damage: number } => {
-    const skill       = getCachedSkill(skillInst)
+    const skill = getCachedSkill(skillInst)
+    const currentTick = tickValueRef.current
 
-    // Dodge status check: resolve before dice so status-based evasion overrides the roll.
     const { dodged, expiredStatusIds } = resolveIncomingDodge(target, skill.targeting.range, snap)
     for (const statusId of expiredStatusIds) {
       fireExpiryChain(target.defId, statusId, snap)
@@ -873,10 +754,9 @@ export function BattleProvider({ children }: Props) {
 
     const shieldBrokeIds = new Map<string, { skillId: string; ticks: number } | undefined>()
     const battle = makeShieldedBattleState(snap, shieldBrokeIds)
-    // AP regen for the caster — skipped when any status has freezesApRegen in its payload.
     const casterSnap   = snap.get(caster.id)
     const apFrozen     = casterSnap?.statusSlots.some(s => s.payload?.freezesApRegen === true) ?? false
-    const ticksElapsed = tickValue > 0 ? skill.tuCost : 0
+    const ticksElapsed = currentTick > 0 ? skill.tuCost : 0
     const apGained     = apFrozen ? 0 : calculateApGained(ticksElapsed, caster.apRegenRate)
     if (apGained > 0 && casterSnap) {
       snap.set(caster.id, { ...casterSnap, ap: Math.min(casterSnap.maxAp, casterSnap.ap + apGained) })
@@ -889,21 +769,19 @@ export function BattleProvider({ children }: Props) {
       source:      'skill',
       event:       { event: 'onCast' },
       dice:        diceOutcome,
-      currentTick: tickValue,
+      currentTick,
     }
 
     for (const effect of skillInst.cachedEffects) {
       if (effect.when.event === 'onCast') applyEffect(effect, ctx)
     }
 
-    // Dispatch outcome-specific events after onCast.
     if (!noDamage) {
       const hitCtx = { ...ctx, event: { event: 'onHit' } as const }
       for (const effect of skillInst.cachedEffects) {
         if (effect.when.event === 'onHit') applyEffect(effect, hitCtx)
       }
     } else if (diceOutcome === 'Evade') {
-      // onEvade effects always receive the target so partial-damage mechanics work.
       const evadeCtx = { ...ctx, target, event: { event: 'onEvade' } as const }
       for (const effect of skillInst.cachedEffects) {
         if (effect.when.event === 'onEvade') applyEffect(effect, evadeCtx)
@@ -915,9 +793,6 @@ export function BattleProvider({ children }: Props) {
       }
     }
 
-    // Crit bonus damage — fires when attacker has an active critConfig status and
-    // the attack landed. Applies 180% (or configured %) of attacker STR as bonus
-    // damage on top of normal skill effects. Routes through shield like any damage.
     if (!noDamage) {
       const casterCurrent = snap.get(caster.id) ?? caster
       const critCfg = readCritConfig(casterCurrent)
@@ -935,10 +810,8 @@ export function BattleProvider({ children }: Props) {
       `${caster.name} → ${skill.name} on ${target.name} [${diceOutcome}]`
     appendLog({ text: logMsg, colour: outcomeColour(diceOutcome) })
 
-    // Notify opposing passives that an action occurred.
-    fireOpponentActionEffects(caster, snap, passiveDefsRef.current, tickValue)
+    fireOpponentActionEffects(caster, snap, passiveDefsRef.current, currentTick)
 
-    // Reactive counter: check if the evading unit can counter-attack.
     if (diceOutcome === 'Evade' && isSingleTarget(skill)) {
       const defenderSnap   = snap.get(target.id) ?? target
       const defenderSkills = unitSkillsMapRef.current.get(target.id) ?? []
@@ -948,14 +821,11 @@ export function BattleProvider({ children }: Props) {
       }
     }
 
-    // Fire passive onHpThreshold for the target if HP crossed below a threshold.
-    fireHpThresholdPassives(target.id, targetHpBefore, passiveDefsRef.current.get(target.id) ?? null, snap, tickValue)
-    // Fire passive onHpThreshold for the caster too (self-damage skills, recoil, etc.).
+    fireHpThresholdPassives(target.id, targetHpBefore, passiveDefsRef.current.get(target.id) ?? null, snap, currentTick)
     if (caster.id !== target.id) {
-      fireHpThresholdPassives(caster.id, casterHpBefore, passiveDefsRef.current.get(caster.id) ?? null, snap, tickValue)
+      fireHpThresholdPassives(caster.id, casterHpBefore, passiveDefsRef.current.get(caster.id) ?? null, snap, currentTick)
     }
 
-    // Apply break cooldown to the relevant skill on any unit whose shield broke.
     if (shieldBrokeIds.size > 0) {
       setUnitSkillsMap((prev) => {
         const next = new Map(prev)
@@ -974,7 +844,6 @@ export function BattleProvider({ children }: Props) {
       })
     }
 
-    // Tick down caster's turn-based statuses, fire interval heals and onExpire.
     const casterAfter = snap.get(caster.id) ?? caster
     const { unit: casterTicked, expired } = tickStatusDurations(casterAfter)
     let casterFinal = casterTicked
@@ -985,8 +854,7 @@ export function BattleProvider({ children }: Props) {
       for (const effect of def.effects) {
         if (effect.when.event !== 'onTickInterval') continue
         const interval = (effect.when as { event: 'onTickInterval'; interval: number }).interval
-        if (slot.nextIntervalFireTick === 0 || tickValue < slot.nextIntervalFireTick) continue
-        // Use the original applier as caster so 'of: caster' stat refs resolve to the applier.
+        if (slot.nextIntervalFireTick === 0 || currentTick < slot.nextIntervalFireTick) continue
         const applier = snap.get(slot.source)
         const ctx: EffectContext = {
           caster: applier ?? casterFinal,
@@ -997,7 +865,7 @@ export function BattleProvider({ children }: Props) {
         }
         applyEffect(effect, ctx)
         casterFinal = snap.get(caster.id) ?? casterFinal
-        casterFinal = updateStatusIntervalTick(casterFinal, slot.id, tickValue + interval)
+        casterFinal = updateStatusIntervalTick(casterFinal, slot.id, currentTick + interval)
         snap.set(caster.id, casterFinal)
       }
     }
@@ -1009,13 +877,11 @@ export function BattleProvider({ children }: Props) {
 
     const damage = Math.max(0, targetHpBefore - (snap.get(target.id)?.hp ?? targetHpBefore))
     return { outcome: diceOutcome, damage }
-  }, [tickValue, appendLog, showDiceResult])
+  }, [appendLog, showDiceResult, fireExpiryChain])
 
-  // Keep both refs current so the mutual-recursion closures always see the
-  // latest callbacks without adding them to each other's dependency arrays.
   useEffect(() => { runAttackRef.current = runAttack }, [runAttack])
 
-  /** Player confirms the counter prompt — deducts AP and fires the counter attack. */
+  // ── Counter chain ──────────────────────────────────────────────────────────
   const confirmCounter = useCallback(() => {
     if (!pendingCounterDecision) return
     const { defender, originalCaster, counterSkill, snap, depth } = pendingCounterDecision
@@ -1024,11 +890,11 @@ export function BattleProvider({ children }: Props) {
     const defSnap = snap.get(defender.id) ?? defender
     snap.set(defender.id, { ...defSnap, ap: defSnap.ap - counterSkill.cachedCosts.apCost })
 
-    // Brief pause so the overlay visually dismisses before the dice animation starts.
+    const currentTick = tickValueRef.current
     setTimeout(() => {
       runAttackRef.current?.(defender, originalCaster, counterSkill, snap, depth + 1)
-      fireCounterCastEffects(defender, originalCaster, counterSkill, snap, tickValue)
-      fireCounterTriggerEffects(defender, snap, passiveDefsRef.current, tickValue)
+      fireCounterCastEffects(defender, originalCaster, counterSkill, snap, currentTick)
+      fireCounterTriggerEffects(defender, snap, passiveDefsRef.current, currentTick)
       setTimeout(() => {
         setPlayerUnits((prev) => prev.map((u) => snap.get(u.id) ?? u))
         setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
@@ -1036,16 +902,15 @@ export function BattleProvider({ children }: Props) {
     }, 200)
   }, [pendingCounterDecision])
 
-  /** Player skips the counter opportunity — no AP spent, no attack fired. */
   const skipCounter = useCallback(() => {
     setPendingCounterDecision(null)
   }, [])
 
-  /** Called by ClashQteOverlay when bar settles — 'player' = player side wins. */
+  /** Called by ClashQteOverlay — 'player' or 'enemy' side wins. */
   const resolveClash = useCallback((winner: 'player' | 'enemy') => {
     pendingClashRef.current = null
     setPendingClash(null)
-    setPhase(winner === 'player' ? 'player' : 'enemy')
+    setBattleStep(winner === 'player' ? 'player_turn' : 'enemy_telegraph')
   }, [])
 
   /** Called by TeamCollisionOverlay when all Now/Later choices are collected. */
@@ -1058,10 +923,9 @@ export function BattleProvider({ children }: Props) {
         registerTick(unitId, currentTick + 1)
       }
     })
-    setPhase('player')
+    setBattleStep('advance_tick')
   }, [registerTick])
 
-  /** Animate a counter attempt and, on success, present a choice (player) or decide (enemy AI). */
   const scheduleCounterChain = useCallback((
     defender: Unit,
     originalCaster: Unit,
@@ -1071,6 +935,7 @@ export function BattleProvider({ children }: Props) {
   ): void => {
     showDiceResult('Evade', `${defender.name} attempts a counter!`)
 
+    const currentTick = tickValueRef.current
     setTimeout(() => {
       const succeeded     = resolveCounterRoll(depth)
       const chancePercent = Math.round(Math.max(COUNTER_MIN, COUNTER_BASE - depth * COUNTER_STEP) * 100)
@@ -1083,64 +948,53 @@ export function BattleProvider({ children }: Props) {
 
       NarrativeService.emit({ type: 'counter', actorId: defender.defId, targetId: originalCaster.defId })
 
-      // Player-controlled ally evades → prompt; AI ally or enemy evades → auto-fire.
       if (defender.isAlly && controlledIdsRef.current.has(defender.id)) {
-        // Player counter — present choice prompt; AP deducted only on confirm.
-        // Counter reactions bypass cooldown: no applyCooldown here or in confirmCounter.
         setPendingCounterDecision({ defender, originalCaster, counterSkill, snap, depth })
       } else {
-        // AI counter (enemy or non-controlled ally) — fire only if AP reserve allows.
         const defSnap    = snap.get(defender.id) ?? defender
         const shouldFire = defSnap.ap - counterSkill.cachedCosts.apCost >= AI_COUNTER_AP_RESERVE
 
         if (shouldFire) {
           snap.set(defender.id, { ...defSnap, ap: defSnap.ap - counterSkill.cachedCosts.apCost })
-          // Counter reactions bypass cooldown: no applyCooldown called.
           setTimeout(() => {
             runAttackRef.current?.(defender, originalCaster, counterSkill, snap, depth + 1)
-            fireCounterCastEffects(defender, originalCaster, counterSkill, snap, tickValue)
-            fireCounterTriggerEffects(defender, snap, passiveDefsRef.current, tickValue)
+            fireCounterCastEffects(defender, originalCaster, counterSkill, snap, currentTick)
+            fireCounterTriggerEffects(defender, snap, passiveDefsRef.current, currentTick)
             setTimeout(() => {
               setPlayerUnits((prev) => prev.map((u) => snap.get(u.id) ?? u))
               setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
             }, DICE_RESULT_DISMISS_MS)
           }, DICE_RESULT_DISMISS_MS)
         }
-        // If not firing: the calling flow's deferred snap commit handles evasion state.
       }
     }, COUNTER_ANNOUNCE_MS)
   }, [showDiceResult])
 
   useEffect(() => { scheduleCounterChainRef.current = scheduleCounterChain }, [scheduleCounterChain])
 
-  /** Player presses ROLL with a skill selected. */
+  // ── Player skill execution ─────────────────────────────────────────────────
   const executeSkill = useCallback((skillInst: SkillInstance) => {
     const actor = activePlayerUnitRef.current
-    if (!actor || phase !== 'player') return
+    if (battleStepRef.current !== 'player_turn') return
+    if (!actor) return
     if (narrativePaused || inspectingSkill) return
     if (isOnCooldown(actor, skillInst)) return
 
     const skill = getCachedSkill(skillInst)
-
-    // Block skills that haven't met the minimum turns requirement.
     if (isBeforeMinTurns(actor, skill.minTurns)) return
-
-    // Block skills that are guarded by an active status's blocksRecastOfSkill payload.
     if (actor.statusSlots.some(s => s.payload?.blocksRecastOfSkill === skill.id)) return
-
-    // Block stunned units from executing any skill.
     if (actor.statusSlots.some(s => s.payload?.stunned === true)) return
-
-    // Block skills whose tags are locked by an active status on the caster.
     if (isSkillTagBlocked(actor, skill.tags)) return
-    const snap       = makeSnapshot(playerUnitsRef.current, enemiesRef.current)
+
+    const snap = makeSnapshot(playerUnitsRef.current, enemiesRef.current)
     preSkillStatusSnapshotRef.current = new Map(
       [...snap].map(([uid, u]) => [uid, new Set(u.statusSlots.map(s => s.id))])
     )
     const allTargets = resolveSkillTargets(actor, skill.targeting.selector, snap, selectedTarget)
     if (!allTargets.length) return
 
-    // Deduct skill cost — from HP when HP/AP swap is active, otherwise from AP.
+    const currentTick = tickValueRef.current
+
     if (skill.apCost > 0) {
       const actorSnap = snap.get(actor.id) ?? actor
       const hpApSwapped = actorSnap.statusSlots.some(s => s.payload?.hpApSwapped === true)
@@ -1149,16 +1003,12 @@ export function BattleProvider({ children }: Props) {
         : addApSpent({ ...actorSnap, ap: Math.max(0, actorSnap.ap - skill.apCost) }, skill.apCost)
       snap.set(actor.id, withCost)
       globalApAccumRef.current += skill.apCost
-      fireOnApSpent(withCost, passiveDefsRef.current.get(actor.id) ?? null, snap, tickValue)
+      fireOnApSpent(withCost, passiveDefsRef.current.get(actor.id) ?? null, snap, currentTick)
     }
 
     const primaryTarget = allTargets[0]
-
-    // Primary target: full dice roll + narrative + effects.
     const { outcome, damage: primaryDamage } = runAttack(actor, primaryTarget, skillInst, snap)
 
-    // Additional targets (multi-target skills): same outcome, effects re-applied without re-rolling.
-    let extraDamage = 0
     if (allTargets.length > 1) {
       const noDamage = outcome === 'Evade' || outcome === 'Fail'
       for (const extra of allTargets.slice(1)) {
@@ -1172,19 +1022,18 @@ export function BattleProvider({ children }: Props) {
           source:      'skill',
           event:       { event: 'onCast' },
           dice:        outcome,
-          currentTick: tickValue,
+          currentTick,
         }
         for (const effect of skillInst.cachedEffects) {
           if (effect.when.event === 'onCast') applyEffect(effect, ctx)
         }
         const hpAfter = (snap.get(extra.id) ?? extra).hp
-        extraDamage += Math.max(0, hpBefore - hpAfter)
+        const extraDmg = Math.max(0, hpBefore - hpAfter)
+        void extraDmg
         appendLog({ text: `${actor.name} → ${skill.name} on ${extra.name} [${outcome}]`, colour: outcomeColour(outcome) })
       }
     }
 
-    // Apply cooldown immediately at cast time so the badge updates right away.
-    // hyper-tagged skills use hyperCooldown (turn-based) when cast in hyper mode.
     const isHyperCast = skill.tags.includes('hyper') && skill.hyperCooldown !== undefined
       && isHyperModeActive(snap.get(actor.id) ?? actor)
     const withCooldown = isHyperCast
@@ -1197,9 +1046,8 @@ export function BattleProvider({ children }: Props) {
       return next
     })
 
-    const fromTick     = actor.tickPosition
-    const effectiveTu  = getEffectiveTuCost(skill.tuCost, snap.get(actor.id) ?? actor)
-    const nextTick     = advanceTick(fromTick, effectiveTu)
+    const fromTick    = actor.tickPosition
+    const effectiveTu = getEffectiveTuCost(skill.tuCost, snap.get(actor.id) ?? actor)
 
     pushHistory(makeHistoryEntry(actor.id, actor.defId, actor.name, fromTick, actor.isAlly))
 
@@ -1223,471 +1071,52 @@ export function BattleProvider({ children }: Props) {
       isAlly: true,
     })
 
-    // Apply state after animations complete: HP bars + timeline marker jump.
-    const applyState = () => {
-      detectNewActivations(snap, preSkillStatusSnapshotRef.current)
-      setPlayerUnits((prev) => prev.map((u) => {
-        const updated = snap.get(u.id) ?? u
-        return u.id === actor.id ? incrementActionCount(updated) : updated
-      }))
-      setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
-      registerTick(actor.id, nextTick)
-      globalBattleTickRef.current += effectiveTu
-      fireBattleTickIntervalPassives(
-        globalBattleTickRef.current, snap,
-        passiveDefsRef.current,
-        lastBattleIntervalFireRef.current,
-        lastBattleIntervalApAccumRef.current,
-        globalApAccumRef.current,
-      )
-
-      const snapEnemies = enemiesRef.current.map((e) => snap.get(e.id) ?? e)
-      const deadEnemies = snapEnemies.filter((e) => !isAlive(e))
-      deadEnemies.forEach((e) => NarrativeService.emit({ type: 'unit_death', actorId: e.defId }))
-      // Remove dead enemies from the tick registry so the auto-advance clock
-      // can progress. Without this, a dead unit whose tick equals tickValue
-      // blocks advancement: the "every tick > tickValue" check never passes,
-      // phase derivation loops on the dead unit, and the battle freezes.
-      deadEnemies.forEach((e) => unregisterTick(e.id))
-      if (snapEnemies.every((e) => !isAlive(e))) {
-        appendLog({ text: 'Victory! All enemies defeated.', colour: 'var(--accent-genesis)' })
-        NarrativeService.emit({ type: 'battle_victory' })
-        endBattleRef.current('victory')
-      }
-
-      const arena     = arenaRef.current
-      arena?.hideTurnDisplay()
-      const firstDead = deadEnemies[0]
-      if (firstDead && arena) {
-        arena.playDeath(firstDead.defId, () => {
-          arena.clearTurn()
-          playPendingExpiryAnims(arena)
-          playPendingActivationAnims(arena)
-        })
-      } else {
-        arena?.clearTurn()
-        if (arena) {
-          playPendingExpiryAnims(arena)
-          playPendingActivationAnims(arena)
-        }
-      }
+    // Store data for player_applying step.
+    pendingPlayerTurnRef.current = {
+      snap,
+      actor,
+      effectiveTu,
+      primaryTarget,
+      primaryDamage,
+      outcome,
+      preStatusSnapshot: preSkillStatusSnapshotRef.current,
     }
 
-    const playPendingActivationAnims = (arena: BattleArenaHandle) => {
-      const pending = pendingActivationAnimsRef.current.splice(0)
-      if (!pending.length) return
-      for (const { ownerDefId, sequenceId, slotId } of pending) {
-        const seq = animSequencesRef.current.get(ownerDefId)?.[sequenceId]
-        const release = () => setSuppressedChipIds(prev => {
-          const next = new Set(prev)
-          next.delete(slotId)
-          return next
-        })
-        if (!seq) { release(); continue }
-        arena.setTurnState(ownerDefId, ownerDefId)
-        arena.playAttack(ownerDefId, ownerDefId, 'Hit', 0, false, 0, null, '', '', release, seq)
-      }
-    }
+    // Transition to animated step immediately so the driver won't re-run.
+    setBattleStep('player_acting')
 
-    const playPendingExpiryAnims = (arena: BattleArenaHandle) => {
-      const pending = pendingExpiryAnimsRef.current.splice(0)
-      if (!pending.length) return
-      const firstLivingEnemy = [...snap.values()].find(u => !u.isAlly && u.hp > 0)
-      if (!firstLivingEnemy) return
-      for (const { ownerDefId, sequenceId, damage } of pending) {
-        const seq = animSequencesRef.current.get(ownerDefId)?.[sequenceId]
-        if (!seq) continue
-        arena.setTurnState(ownerDefId, firstLivingEnemy.defId)
-        arena.playAttack(ownerDefId, firstLivingEnemy.defId, 'Hit', damage, false, 0, null, '', '', () => arena.clearTurn(), seq)
-      }
-    }
-
-    // Phase-gated: dice animation → attack animation (includes feedback) → apply state.
-    // Falls back to plain timer when the Phaser canvas is not mounted.
     const arena = arenaRef.current
     if (arena) {
-      const actorManifest    = manifestsRef.current.get(actor.defId) ?? null
-      const actorDamaged     = unitIsDamaged(actor, actorManifest)
-      const resolved         = actorManifest ? resolveAttackAnimation(actorManifest, skill.id, skill.tags, actorDamaged) : null
-      const isMelee          = resolved?.isMelee ?? false
-      const dashDx           = resolved?.dashDx  ?? 0
+      const actorManifest  = manifestsRef.current.get(actor.defId) ?? null
+      const actorDamaged   = unitIsDamaged(actor, actorManifest)
+      const resolved       = actorManifest ? resolveAttackAnimation(actorManifest, skill.id, skill.tags, actorDamaged) : null
+      const isMelee        = resolved?.isMelee ?? false
+      const dashDx         = resolved?.dashDx  ?? 0
       const projectile: AnimationProjectileDef | null = actorManifest?.projectile ?? null
-      const customSequence   = animSequencesRef.current.get(actor.defId)?.[skill.id]
+      const customSequence = animSequencesRef.current.get(actor.defId)?.[skill.id]
       arena.playDice(outcome, () => {
         arena.playAttack(actor.defId, primaryTarget.defId, outcome, primaryDamage, isMelee, dashDx, projectile, buildOutcomeLabel(outcome), outcomeColour(outcome), () => {
           if (playerApplyTimerRef.current) clearTimeout(playerApplyTimerRef.current)
-          playerApplyTimerRef.current = setTimeout(applyState, BATTLE_FEEDBACK_HOLD_MS)
+          playerApplyTimerRef.current = setTimeout(() => setBattleStep('player_applying'), BATTLE_FEEDBACK_HOLD_MS)
         }, customSequence)
       })
     } else {
       if (playerApplyTimerRef.current) clearTimeout(playerApplyTimerRef.current)
-      playerApplyTimerRef.current = setTimeout(applyState, DICE_RESULT_DISMISS_MS)
+      playerApplyTimerRef.current = setTimeout(() => setBattleStep('player_applying'), DICE_RESULT_DISMISS_MS)
     }
-  }, [phase, narrativePaused, inspectingSkill, selectedTarget, runAttack, pushHistory, registerTick, appendLog, showTurnDisplay, setUnitSkillsMap])
+  }, [narrativePaused, inspectingSkill, selectedTarget, runAttack, pushHistory, appendLog, showTurnDisplay, setUnitSkillsMap])
 
-  // ── Enemy AI ───────────────────────────────────────────────────────────────
-  //
-  // Sequencing (full chain):
-  //   1. Wait for any player dice animation to finish (remainingDice ms).
-  //   2. Show enemy telegraph for ENEMY_AI_DELAY_MS + DICE_RESULT_DISMISS_MS total.
-  //   3. After ENEMY_AI_DELAY_MS, fire attack → dice animation starts.
-  //   4. After another DICE_RESULT_DISMISS_MS, commit HP/tick state changes.
-  //
-  // diceResult is intentionally NOT in deps. We read it via diceResultRef so the
-  // effect doesn't restart when the enemy's own dice fires during step 3.
-
-  useEffect(() => {
-    if (phase !== 'enemy') return
-    if (narrativePaused || inspectingSkill) return
-
-    const myChain = ++aiChainVersionRef.current
-
-    // AI handles: active non-controlled player allies + active enemies (sorted fastest-first).
-    // Exclude any unit whose applyAIState is still in-flight: if we included it,
-    // a new chain started by a dep toggle (narrative, inspect) would attack the
-    // same unit a second time before its tick has advanced.
-    const controlled       = controlledIdsRef.current
-    const pendingUnitId    = pendingAIUnitIdRef.current
-    const activeAIAllies   = playerUnitsRef.current.filter((u) => activeUnitIdsRef.current.has(u.id) && isAlive(u) && !controlled.has(u.id) && u.id !== pendingUnitId)
-    const activeEnemies    = enemiesRef.current.filter((e) => activeUnitIdsRef.current.has(e.id) && isAlive(e) && e.id !== pendingUnitId)
-    const allAIUnits       = [...activeAIAllies, ...activeEnemies]
-    if (!allAIUnits.length) return
-
-    // Compute remaining player-dice animation time (0 if no active dice).
-    const remainingDice = diceResultRef.current !== null
-      ? Math.max(0, DICE_RESULT_DISMISS_MS - (Date.now() - diceShowTimeRef.current))
-      : 0
-
-    // Step 1 + 2: after player dice clears, show telegraph + arena unit stage.
-    const telegraphTimer = setTimeout(() => {
-      const firstAIUnit    = allAIUnits[0]
-      const currentPlayers = playerUnitsRef.current
-      const currentEnemies = enemiesRef.current
-      const previewSkills  = (unitSkillsMapRef.current.get(firstAIUnit.id) ?? [])
-        .filter((s) => {
-          if (isOnCooldown(firstAIUnit, s)) return false
-          const def = getCachedSkill(s)
-          if (isBeforeMinTurns(firstAIUnit, def.minTurns)) return false
-          if (isSkillTagBlocked(firstAIUnit, def.tags)) return false
-          return true
-        })
-      if (!previewSkills.length) return
-
-      // Foe count for this unit: allies count enemies as foes, enemies count player units.
-      const aliveFoes = firstAIUnit.isAlly
-        ? currentEnemies.filter(isAlive)
-        : currentPlayers.filter(isAlive)
-      const previewSkillInst = pickAiSkill(previewSkills, aliveFoes.length)
-      const previewSkill     = getCachedSkill(previewSkillInst)
-
-      const telegraphSnap  = makeSnapshot(currentPlayers, currentEnemies)
-      const previewTargets = resolveSkillTargets(firstAIUnit, previewSkill.targeting.selector, telegraphSnap)
-      const previewTarget  = previewTargets[0] ?? null
-
-      if (previewTarget) {
-        const actingMf  = manifestsRef.current.get(firstAIUnit.defId) ?? null
-        const targetMf  = manifestsRef.current.get(previewTarget.defId) ?? null
-        arenaRef.current?.setTurnState(
-          firstAIUnit.defId, previewTarget.defId, actingMf, targetMf,
-          {
-            acting: unitIsDamaged(firstAIUnit, actingMf),
-            target: unitIsDamaged(previewTarget, targetMf),
-          },
-        )
-      }
-
-      showTurnDisplay(
-        {
-          actor: {
-            name:        firstAIUnit.name,
-            className:   firstAIUnit.className,
-            rarity:      firstAIUnit.rarity,
-            hp:          firstAIUnit.hp,
-            maxHp:       firstAIUnit.maxHp,
-            ap:          firstAIUnit.ap,
-            maxAp:       firstAIUnit.maxAp,
-            statusSlots: firstAIUnit.statusSlots,
-          },
-          skillName:  previewSkill.name,
-          tuCost:     previewSkill.tuCost,
-          apCost:     previewSkill.apCost,
-          skillLevel: previewSkillInst.currentLevel,
-          target: previewTarget ? {
-            name:        previewTarget.name,
-            className:   previewTarget.className,
-            rarity:      previewTarget.rarity,
-            hp:          previewTarget.hp,
-            maxHp:       previewTarget.maxHp,
-            ap:          previewTarget.ap,
-            maxAp:       previewTarget.maxAp,
-            statusSlots: previewTarget.statusSlots,
-          } : { name: '—', className: '—', rarity: 1, hp: 0, maxHp: 1, ap: 0, maxAp: 1, statusSlots: [] },
-          isAlly: firstAIUnit.isAlly,
-        },
-        ENEMY_AI_DELAY_MS + DICE_RESULT_DISMISS_MS,
-      )
-    }, remainingDice)
-
-    // Step 3: after telegraph delay, fire the attack (dice starts here).
-    const actionTimer = setTimeout(() => {
-      const currentPlayers = playerUnitsRef.current
-      const currentEnemies = enemiesRef.current
-      const currentSkills  = unitSkillsMapRef.current
-      if (!currentPlayers.some(isAlive) && !currentEnemies.some(isAlive)) return
-
-      const sortedAIUnits = [...allAIUnits].sort((a, b) => b.stats.speed - a.stats.speed)
-
-      // Fire onUnitTurnStart status effects for each AI unit before it acts.
-      {
-        const snap = makeSnapshot(currentPlayers, currentEnemies)
-        for (const aiUnit of sortedAIUnits) {
-          const key = `${aiUnit.id}:${tickValue}`
-          if (!turnStartFiredRef.current.has(key)) {
-            turnStartFiredRef.current.add(key)
-            fireTurnStartEffects(aiUnit, statusDefsRef.current, snap, tickValue)
-          }
-        }
-        const updatedPlayers = currentPlayers.map(u => snap.get(u.id) ?? u)
-        const updatedEnemies = currentEnemies.map(u => snap.get(u.id) ?? u)
-        setPlayerUnits(updatedPlayers)
-        setEnemies(updatedEnemies)
-      }
-
-      // Sequential execution: each AI unit completes its full dice→attack→applyState
-      // chain before the next one starts. A parallel for-loop would call playDice()
-      // multiple times synchronously, destroying the previous unit's onDone callback
-      // and permanently freezing that unit's tick.
-      const fireAIUnit = (index: number): void => {
-        if (index >= sortedAIUnits.length) return
-        if (aiChainVersionRef.current !== myChain) return  // cleanup ran — abandon stale chain
-        const aiUnit    = sortedAIUnits[index]
-        const chainNext = () => {
-          if (aiChainVersionRef.current !== myChain) return  // cleanup ran mid-apply — bail
-          fireAIUnit(index + 1)
-        }
-
-        const allUnitSkills   = currentSkills.get(aiUnit.id) ?? []
-        const availableSkills = allUnitSkills.filter((s) => {
-          if (isOnCooldown(aiUnit, s)) return false
-          const def = getCachedSkill(s)
-          if (isBeforeMinTurns(aiUnit, def.minTurns)) return false
-          if (aiUnit.statusSlots.some(st => st.payload?.blocksRecastOfSkill === def.id)) return false
-          if (aiUnit.statusSlots.some(st => st.payload?.stunned === true)) return false
-          if (isSkillTagBlocked(aiUnit, def.tags)) return false
-          return true
-        })
-
-        if (!availableSkills.length) {
-          const fromTick = aiUnit.tickPosition
-          pushHistory(makeHistoryEntry(aiUnit.id, aiUnit.defId, aiUnit.name, fromTick, aiUnit.isAlly))
-          registerTick(aiUnit.id, advanceTick(fromTick, SKIP_TU_COST))
-          globalBattleTickRef.current += SKIP_TU_COST
-          const aiSkipSnap = makeSnapshot(currentPlayers, currentEnemies)
-          fireBattleTickIntervalPassives(
-            globalBattleTickRef.current, aiSkipSnap,
-            passiveDefsRef.current,
-            lastBattleIntervalFireRef.current,
-            lastBattleIntervalApAccumRef.current,
-            globalApAccumRef.current,
-          )
-          appendLog({ text: `${aiUnit.name} is gathering strength…`, colour: 'var(--text-muted)' })
-          const skipArena = arenaRef.current
-          if (skipArena) skipArena.clearTurn(chainNext); else chainNext()
-          return
-        }
-
-        // Selector-aware skill: prefer AoE when caster has multiple foes.
-        const aliveFoes  = aiUnit.isAlly ? currentEnemies.filter(isAlive) : currentPlayers.filter(isAlive)
-        const skillInst  = pickAiSkill(availableSkills, aliveFoes.length)
-        const skill      = getCachedSkill(skillInst)
-        const snap       = makeSnapshot(currentPlayers, currentEnemies)
-        const allTargets = resolveSkillTargets(aiUnit, skill.targeting.selector, snap)
-        if (!allTargets.length) {
-          // No valid targets (e.g. all foes died from a counter/status before this unit
-          // acted). Advance the tick like the no-skills path so the clock progresses.
-          const fromTick = aiUnit.tickPosition
-          pushHistory(makeHistoryEntry(aiUnit.id, aiUnit.defId, aiUnit.name, fromTick, aiUnit.isAlly))
-          registerTick(aiUnit.id, advanceTick(fromTick, SKIP_TU_COST))
-          globalBattleTickRef.current += SKIP_TU_COST
-          const noTgtSnap = makeSnapshot(currentPlayers, currentEnemies)
-          fireBattleTickIntervalPassives(
-            globalBattleTickRef.current, noTgtSnap,
-            passiveDefsRef.current,
-            lastBattleIntervalFireRef.current,
-            lastBattleIntervalApAccumRef.current,
-            globalApAccumRef.current,
-          )
-          appendLog({ text: `${aiUnit.name} has no valid targets.`, colour: 'var(--text-muted)' })
-          const noTgtArena = arenaRef.current
-          if (noTgtArena) noTgtArena.clearTurn(chainNext); else chainNext()
-          return
-        }
-
-        // Deduct skill cost — from HP when HP/AP swap is active, otherwise from AP.
-        if (skill.apCost > 0) {
-          const aiSnap      = snap.get(aiUnit.id) ?? aiUnit
-          const hpApSwapped = aiSnap.statusSlots.some(s => s.payload?.hpApSwapped === true)
-          const withCost    = hpApSwapped
-            ? addApSpent({ ...aiSnap, hp: Math.max(0, aiSnap.hp - skill.apCost) }, skill.apCost)
-            : addApSpent({ ...aiSnap, ap: Math.max(0, aiSnap.ap - skill.apCost) }, skill.apCost)
-          snap.set(aiUnit.id, withCost)
-          globalApAccumRef.current += skill.apCost
-          fireOnApSpent(withCost, passiveDefsRef.current.get(aiUnit.id) ?? null, snap, tickValue)
-        }
-
-        const primaryTarget = allTargets[0]
-        const { outcome, damage: primaryDamage } = runAttack(aiUnit, primaryTarget, skillInst, snap)
-
-        // Additional targets for multi-target skills.
-        if (allTargets.length > 1) {
-          const noDamage = outcome === 'Evade' || outcome === 'Fail'
-          for (const extra of allTargets.slice(1)) {
-            const extraSnap = snap.get(extra.id) ?? extra
-            if (!isAlive(extraSnap)) continue
-            const hpBefore  = extraSnap.hp
-            const ctx: EffectContext = {
-              caster:      aiUnit,
-              target:      noDamage ? undefined : extra,
-              battle:      snapshotToBattleState(snap),
-              source:      'skill',
-              event:       { event: 'onCast' },
-              dice:        outcome,
-              currentTick: tickValue,
-            }
-            for (const effect of skillInst.cachedEffects) {
-              if (effect.when.event === 'onCast') applyEffect(effect, ctx)
-            }
-            void hpBefore  // tracked via snap; used only for damage log in primary runAttack
-            appendLog({ text: `${aiUnit.name} → ${skill.name} on ${extra.name} [${outcome}]`, colour: outcomeColour(outcome) })
-          }
-        }
-
-        const withCooldown = applyCooldown(aiUnit, skillInst, skill)
-        setUnitSkillsMap((prev) => {
-          const next   = new Map(prev)
-          const skills = next.get(aiUnit.id) ?? []
-          next.set(aiUnit.id, skills.map((s) => s.defId === skillInst.defId ? withCooldown : s))
-          return next
-        })
-
-        // Step 4: apply state after animations complete; chain the next AI unit.
-        const aiEffectiveTu = getEffectiveTuCost(skill.tuCost, snap.get(aiUnit.id) ?? aiUnit)
-        const applyAIState  = () => {
-          pendingAIUnitIdRef.current = null   // unit's apply is now running; safe to include it in new chains
-          setPlayerUnits((prev) => prev.map((u) => snap.get(u.id) ?? u))
-          setEnemies((prev)     => prev.map((e) => snap.get(e.id) ?? e))
-          const fromTick = aiUnit.tickPosition
-          pushHistory(makeHistoryEntry(aiUnit.id, aiUnit.defId, aiUnit.name, fromTick, aiUnit.isAlly))
-          registerTick(aiUnit.id, advanceTick(fromTick, aiEffectiveTu))
-          globalBattleTickRef.current += aiEffectiveTu
-          fireBattleTickIntervalPassives(
-            globalBattleTickRef.current, snap,
-            passiveDefsRef.current,
-            lastBattleIntervalFireRef.current,
-            lastBattleIntervalApAccumRef.current,
-            globalApAccumRef.current,
-          )
-
-          const arena = arenaRef.current
-          arena?.hideTurnDisplay()
-
-          if (!aiUnit.isAlly) {
-            // Enemy attacked: check if all player units are now dead (defeat).
-            const updatedPlayers = currentPlayers.map((u) => snap.get(u.id) ?? u)
-            const deadPlayers    = updatedPlayers.filter((u) => !isAlive(u))
-            deadPlayers.forEach((u) => NarrativeService.emit({ type: 'unit_death', actorId: u.defId }))
-            deadPlayers.forEach((u) => unregisterTick(u.id))
-            if (updatedPlayers.every((u) => !isAlive(u))) {
-              appendLog({ text: 'Defeat! All allies have been slain.', colour: 'var(--accent-danger)' })
-              NarrativeService.emit({ type: 'battle_defeat' })
-              endBattleRef.current('defeat')
-            }
-            const firstDeadPlayer = deadPlayers[0]
-            if (firstDeadPlayer && arena) {
-              arena.playDeath(firstDeadPlayer.defId, () => arena.clearTurn(chainNext))
-              return
-            }
-          } else {
-            // AI ally attacked: check if all enemies are now dead (victory).
-            const updatedEnemies = currentEnemies.map((e) => snap.get(e.id) ?? e)
-            const deadEnemies    = updatedEnemies.filter((e) => !isAlive(e))
-            deadEnemies.forEach((e) => NarrativeService.emit({ type: 'unit_death', actorId: e.defId }))
-            deadEnemies.forEach((e) => unregisterTick(e.id))
-            if (updatedEnemies.every((e) => !isAlive(e))) {
-              appendLog({ text: 'Victory! All enemies defeated.', colour: 'var(--accent-genesis)' })
-              NarrativeService.emit({ type: 'battle_victory' })
-              endBattleRef.current('victory')
-            }
-            const firstDeadEnemy = deadEnemies[0]
-            if (firstDeadEnemy && arena) {
-              arena.playDeath(firstDeadEnemy.defId, () => arena.clearTurn(chainNext))
-              return
-            }
-          }
-          if (arena) arena.clearTurn(chainNext); else chainNext()
-        }
-
-        const arena = arenaRef.current
-        if (arena) {
-          const aiManifest   = manifestsRef.current.get(aiUnit.defId) ?? null
-          const aiDamaged    = unitIsDamaged(aiUnit, aiManifest)
-          const aiResolved   = aiManifest ? resolveAttackAnimation(aiManifest, skill.id, skill.tags, aiDamaged) : null
-          const aiIsMelee    = aiResolved?.isMelee ?? false
-          const aiDashDx     = aiResolved?.dashDx  ?? 0
-          const aiProjectile: AnimationProjectileDef | null = aiManifest?.projectile ?? null
-          const aiSequence   = animSequencesRef.current.get(aiUnit.defId)?.[skill.id]
-          // Update arena figures for units after the first (telegraph set up unit 0).
-          if (index > 0) {
-            const targetMf = manifestsRef.current.get(primaryTarget.defId) ?? null
-            arena.setTurnState(aiUnit.defId, primaryTarget.defId, aiManifest, targetMf, {
-              acting: unitIsDamaged(aiUnit, aiManifest),
-              target: unitIsDamaged(primaryTarget, targetMf),
-            })
-          }
-          arena.playDice(outcome, () => {
-            arena.playAttack(aiUnit.defId, primaryTarget.defId, outcome, primaryDamage, aiIsMelee, aiDashDx, aiProjectile, buildOutcomeLabel(outcome), outcomeColour(outcome), () => {
-              pendingAIUnitIdRef.current = aiUnit.id  // guard: exclude from new chains until apply fires
-              applyTimerRef.current = setTimeout(applyAIState, BATTLE_FEEDBACK_HOLD_MS)
-            }, aiSequence)
-          })
-        } else {
-          pendingAIUnitIdRef.current = aiUnit.id
-          applyTimerRef.current = setTimeout(applyAIState, DICE_RESULT_DISMISS_MS)
-        }
-      }
-      fireAIUnit(0)
-    }, remainingDice + ENEMY_AI_DELAY_MS)
-
-    return () => {
-      clearTimeout(telegraphTimer)
-      clearTimeout(actionTimer)
-      // Invalidate any in-flight chain so chainNext bails after the current
-      // applyAIState completes. We intentionally do NOT clear applyTimerRef
-      // here: canceling it would lose the AI's pending HP/AP/tick update and
-      // freeze the battle on this enemy's turn (registerTick never fires, so
-      // phase derivation can't progress).
-      // pendingAIUnitIdRef is NOT cleared here: the exclude filter in the
-      // next effect run must still see it so a new chain doesn't duplicate the
-      // in-flight unit's attack. applyAIState clears it when it fires.
-      aiChainVersionRef.current++
-    }
-  // tickValue is included so the effect re-runs each time the global clock advances (auto-advance fires a new
-  // render with the correct tickValue AFTER registeredTicks settles). This wakes the chain when the enemy is
-  // the fastest unit and phase stays 'enemy' — setPhase('enemy') is a same-value no-op in React, so without
-  // this dep the AI effect would never re-run for a faster enemy.
-  // activeUnitIds intentionally read via ref (see activeUnitIdsRef) to avoid mid-chain re-runs.
-  }, [phase, narrativePaused, inspectingSkill, showTurnDisplay, tickValue])
-
-  // ── Misc actions ───────────────────────────────────────────────────────────
-
-  /** Player skips their turn — no dice, immediate timeline update. */
+  // ── Skip turn ──────────────────────────────────────────────────────────────
   const skipTurn = useCallback(() => {
     const actor = activePlayerUnitRef.current
-    if (!actor || phase !== 'player') return
+    if (battleStepRef.current !== 'player_turn') return
+    if (!actor) return
     if (narrativePaused || inspectingSkill) return
+
     setSelectedSkill(null)
     setSelectedTarget(null)
     setShowTargetPicker(false)
+
     const fromTick  = actor.tickPosition
     const apFrozen  = actor.statusSlots.some(s => s.payload?.freezesApRegen === true)
     const apGained  = apFrozen ? 0 : calculateApGained(SKIP_TU_COST, actor.apRegenRate)
@@ -1709,8 +1138,493 @@ export function BattleProvider({ children }: Props) {
     )
     appendLog({ text: 'You skipped your turn.' })
     arenaRef.current?.clearTurn()
-  }, [phase, narrativePaused, inspectingSkill, pushHistory, registerTick, appendLog])
+    setBattleStep('advance_tick')
+  }, [narrativePaused, inspectingSkill, pushHistory, registerTick, appendLog])
 
+  // ── Step machine driver ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (isLoading) return
+    if (YIELDED_STEPS.has(battleStep)) return
+    // Only pause advance/check for narrative/inspect; applying steps always run.
+    if (
+      (battleStep === 'advance_tick' || battleStep === 'clash_check' || battleStep === 'enemy_telegraph') &&
+      (narrativePaused || inspectingSkill)
+    ) return
+
+    // ── advance_tick ──────────────────────────────────────────────────────────
+    if (battleStep === 'advance_tick') {
+      const ticks = [...registeredTicksRef.current.values()]
+      if (!ticks.length) return
+
+      const current = tickValueRef.current
+      const hasActiveNow = ticks.some(t => t === current)
+
+      if (!hasActiveNow) {
+        const next = Math.min(...ticks)
+        tickValueRef.current = next
+        setTickValue(next)
+      }
+      setBattleStep('clash_check')
+      return
+    }
+
+    // ── clash_check ───────────────────────────────────────────────────────────
+    if (battleStep === 'clash_check') {
+      const current    = tickValueRef.current
+      const ticks      = registeredTicksRef.current
+      const controlled = controlledIdsRef.current
+      const players    = playerUnitsRef.current
+      const foes       = enemiesRef.current
+
+      const activeIds = new Set<string>()
+      for (const [id, tick] of ticks) {
+        if (tick === current) activeIds.add(id)
+      }
+
+      const activeControlled = players.filter(u => activeIds.has(u.id) && controlled.has(u.id) && isAlive(u))
+      const activeAIAllies   = players.filter(u => activeIds.has(u.id) && !controlled.has(u.id) && isAlive(u))
+      const activeEnemies    = foes.filter(e => activeIds.has(e.id) && isAlive(e))
+      const hasClash         = activeControlled.length > 0 && activeEnemies.length > 0
+
+      if (hasClash) {
+        const allActive    = [...activeControlled, ...activeEnemies]
+        const hasUniqueClash = allActive.some(u => u.clashUniqueEnabled)
+
+        if (hasUniqueClash) {
+          pendingClashRef.current = { playerUnits: activeControlled, enemyUnits: activeEnemies }
+          setPendingClash(pendingClashRef.current)
+          setBattleStep('clash_qte')
+          return
+        }
+
+        // Normal clash: resolve immediately and show a brief log delay.
+        const winner    = resolveClashWinner(activeControlled, activeEnemies)
+        const winnerUs  = winner === 'player' ? activeControlled : activeEnemies
+        const loserUs   = winner === 'player' ? activeEnemies    : activeControlled
+        const winnerAvg = Math.round(factionAvgSpeed(winnerUs))
+        const loserAvg  = Math.round(factionAvgSpeed(loserUs))
+        appendLog({
+          text:   `CLASH — ${winnerUs.map(u => u.name).join(' & ')} acts first (avg. speed ${winnerAvg} vs ${loserAvg})`,
+          colour: winner === 'player' ? 'var(--accent-info)' : 'var(--accent-danger)',
+        })
+        winnerUs.forEach(u => NarrativeService.emit({ type: 'clash_resolved', actorId: u.defId }))
+        clashAnnounceWinnerRef.current = winner
+        setBattleStep('clash_announcing')
+        clashAnnounceTimerRef.current = setTimeout(() => {
+          const w = clashAnnounceWinnerRef.current
+          setBattleStep(w === 'player' ? 'player_turn' : 'enemy_telegraph')
+        }, CLASH_ANNOUNCE_MS)
+        return
+      }
+
+      // Same-team collision: multiple controlled units at the same tick.
+      if (activeControlled.length > 1) {
+        const bySpeed = [...activeControlled].sort((a, b) => b.stats.speed - a.stats.speed)
+        if (bySpeed[0].stats.speed !== bySpeed[1].stats.speed) {
+          setBattleStep('player_turn')
+        } else {
+          const choices = new Map(activeControlled.map(u => [u.id, null as 'now' | 'later' | null]))
+          pendingTeamCollisionRef.current = { units: activeControlled, choices }
+          setPendingTeamCollision(pendingTeamCollisionRef.current)
+          setBattleStep('team_collision')
+        }
+        return
+      }
+
+      // AI units (enemies + non-controlled allies).
+      const allActiveAI = [...activeAIAllies, ...activeEnemies]
+      if (allActiveAI.length > 0) {
+        setBattleStep('enemy_telegraph')
+        return
+      }
+
+      // Single controlled unit — fire turn-start effects and wait for input.
+      if (activeControlled.length === 1) {
+        const activeUnit = activeControlled[0]
+        const turnKey    = `${activeUnit.id}:${current}`
+        if (!turnStartFiredRef.current.has(turnKey)) {
+          turnStartFiredRef.current.add(turnKey)
+          const snap = makeSnapshot(players, foes)
+          fireTurnStartEffects(activeUnit, statusDefsRef.current, snap, current)
+          const updated = snap.get(activeUnit.id)
+          if (updated) setPlayerUnits(prev => prev.map(u => u.id === updated.id ? updated : u))
+        }
+        setBattleStep('player_turn')
+        return
+      }
+
+      // No active units — re-evaluate.
+      setBattleStep('advance_tick')
+      return
+    }
+
+    // ── enemy_telegraph ───────────────────────────────────────────────────────
+    if (battleStep === 'enemy_telegraph') {
+      const current    = tickValueRef.current
+      const ticks      = registeredTicksRef.current
+      const controlled = controlledIdsRef.current
+      const players    = playerUnitsRef.current
+      const foes       = enemiesRef.current
+
+      const activeIds = new Set<string>()
+      for (const [id, tick] of ticks) {
+        if (tick === current) activeIds.add(id)
+      }
+
+      const activeAIAllies = players.filter(u => activeIds.has(u.id) && !controlled.has(u.id) && isAlive(u))
+      const activeEnemies  = foes.filter(e => activeIds.has(e.id) && isAlive(e))
+      const allAIUnits     = [...activeAIAllies, ...activeEnemies].sort((a, b) => b.stats.speed - a.stats.speed)
+
+      if (!allAIUnits.length) {
+        setBattleStep('advance_tick')
+        return
+      }
+
+      // Fire onUnitTurnStart effects for all AI units at this tick.
+      {
+        const snap = makeSnapshot(players, foes)
+        for (const aiUnit of allAIUnits) {
+          const key = `${aiUnit.id}:${current}`
+          if (!turnStartFiredRef.current.has(key)) {
+            turnStartFiredRef.current.add(key)
+            fireTurnStartEffects(aiUnit, statusDefsRef.current, snap, current)
+          }
+        }
+        setPlayerUnits(prev => prev.map(u => snap.get(u.id) ?? u))
+        setEnemies(prev => prev.map(e => snap.get(e.id) ?? e))
+      }
+
+      const firstAIUnit = allAIUnits[0]
+      const aiSkills    = unitSkillsMapRef.current.get(firstAIUnit.id) ?? []
+      const result      = computeAITurn(firstAIUnit, aiSkills, players, foes)
+
+      if (result.type === 'skip') {
+        const fromTick = firstAIUnit.tickPosition
+        pushHistory(makeHistoryEntry(firstAIUnit.id, firstAIUnit.defId, firstAIUnit.name, fromTick, firstAIUnit.isAlly))
+        registerTick(firstAIUnit.id, advanceTick(fromTick, SKIP_TU_COST))
+        globalBattleTickRef.current += SKIP_TU_COST
+        const skipSnap = makeSnapshot(players, foes)
+        fireBattleTickIntervalPassives(
+          globalBattleTickRef.current, skipSnap,
+          passiveDefsRef.current,
+          lastBattleIntervalFireRef.current,
+          lastBattleIntervalApAccumRef.current,
+          globalApAccumRef.current,
+        )
+        appendLog({ text: `${firstAIUnit.name} is gathering strength…`, colour: 'var(--text-muted)' })
+        arenaRef.current?.clearTurn()
+        setBattleStep('advance_tick')
+        return
+      }
+
+      if (result.type === 'no_targets') {
+        const fromTick = firstAIUnit.tickPosition
+        pushHistory(makeHistoryEntry(firstAIUnit.id, firstAIUnit.defId, firstAIUnit.name, fromTick, firstAIUnit.isAlly))
+        registerTick(firstAIUnit.id, advanceTick(fromTick, SKIP_TU_COST))
+        globalBattleTickRef.current += SKIP_TU_COST
+        const noTgtSnap = makeSnapshot(players, foes)
+        fireBattleTickIntervalPassives(
+          globalBattleTickRef.current, noTgtSnap,
+          passiveDefsRef.current,
+          lastBattleIntervalFireRef.current,
+          lastBattleIntervalApAccumRef.current,
+          globalApAccumRef.current,
+        )
+        appendLog({ text: `${firstAIUnit.name} has no valid targets.`, colour: 'var(--text-muted)' })
+        arenaRef.current?.clearTurn()
+        setBattleStep('advance_tick')
+        return
+      }
+
+      // Has an attack to perform — show telegraph preview.
+      const { skillInst, target } = result
+      const skill      = getCachedSkill(skillInst)
+      const actingMf   = manifestsRef.current.get(firstAIUnit.defId) ?? null
+      const targetMf   = manifestsRef.current.get(target.defId) ?? null
+
+      arenaRef.current?.setTurnState(firstAIUnit.defId, target.defId, actingMf, targetMf, {
+        acting: unitIsDamaged(firstAIUnit, actingMf),
+        target: unitIsDamaged(target, targetMf),
+      })
+      showTurnDisplay(
+        {
+          actor: {
+            name:        firstAIUnit.name,
+            className:   firstAIUnit.className,
+            rarity:      firstAIUnit.rarity,
+            hp:          firstAIUnit.hp,
+            maxHp:       firstAIUnit.maxHp,
+            ap:          firstAIUnit.ap,
+            maxAp:       firstAIUnit.maxAp,
+            statusSlots: firstAIUnit.statusSlots,
+          },
+          skillName:  skill.name,
+          tuCost:     skill.tuCost,
+          apCost:     skill.apCost,
+          skillLevel: skillInst.currentLevel,
+          target: {
+            name:        target.name,
+            className:   target.className,
+            rarity:      target.rarity,
+            hp:          target.hp,
+            maxHp:       target.maxHp,
+            ap:          target.ap,
+            maxAp:       target.maxAp,
+            statusSlots: target.statusSlots,
+          },
+          isAlly: firstAIUnit.isAlly,
+        },
+        ENEMY_AI_DELAY_MS + DICE_RESULT_DISMISS_MS,
+      )
+
+      // Compute remaining player-dice time so AI doesn't overlap.
+      const remainingDice = diceResultRef.current !== null
+        ? Math.max(0, DICE_RESULT_DISMISS_MS - (Date.now() - diceShowTimeRef.current))
+        : 0
+
+      // Lock the step immediately — enemy_acting is yielded so driver won't re-run.
+      setBattleStep('enemy_acting')
+
+      // After the delay, execute the full attack and start the animation.
+      telegraphTimerRef.current = setTimeout(() => {
+        const currentPlayers = playerUnitsRef.current
+        const currentEnemies = enemiesRef.current
+        if (!currentPlayers.some(isAlive) && !currentEnemies.some(isAlive)) return
+
+        const { allTargets } = result
+        const snap = makeSnapshot(currentPlayers, currentEnemies)
+        const thisTick = tickValueRef.current
+
+        if (skill.apCost > 0) {
+          const aiSnap      = snap.get(firstAIUnit.id) ?? firstAIUnit
+          const hpApSwapped = aiSnap.statusSlots.some(s => s.payload?.hpApSwapped === true)
+          const withCost    = hpApSwapped
+            ? addApSpent({ ...aiSnap, hp: Math.max(0, aiSnap.hp - skill.apCost) }, skill.apCost)
+            : addApSpent({ ...aiSnap, ap: Math.max(0, aiSnap.ap - skill.apCost) }, skill.apCost)
+          snap.set(firstAIUnit.id, withCost)
+          globalApAccumRef.current += skill.apCost
+          fireOnApSpent(withCost, passiveDefsRef.current.get(firstAIUnit.id) ?? null, snap, thisTick)
+        }
+
+        const { outcome, damage: primaryDamage } = runAttackRef.current!(firstAIUnit, target, skillInst, snap)
+
+        if (allTargets.length > 1) {
+          const noDamage = outcome === 'Evade' || outcome === 'Fail'
+          for (const extra of allTargets.slice(1)) {
+            const extraSnap = snap.get(extra.id) ?? extra
+            if (!isAlive(extraSnap)) continue
+            const ctx: EffectContext = {
+              caster:      firstAIUnit,
+              target:      noDamage ? undefined : extra,
+              battle:      snapshotToBattleState(snap),
+              source:      'skill',
+              event:       { event: 'onCast' },
+              dice:        outcome,
+              currentTick: thisTick,
+            }
+            for (const effect of skillInst.cachedEffects) {
+              if (effect.when.event === 'onCast') applyEffect(effect, ctx)
+            }
+            appendLog({ text: `${firstAIUnit.name} → ${skill.name} on ${extra.name} [${outcome}]`, colour: outcomeColour(outcome) })
+          }
+        }
+
+        const withCooldown = applyCooldown(firstAIUnit, skillInst, skill)
+        setUnitSkillsMap((prev) => {
+          const next   = new Map(prev)
+          const skills = next.get(firstAIUnit.id) ?? []
+          next.set(firstAIUnit.id, skills.map(s => s.defId === skillInst.defId ? withCooldown : s))
+          return next
+        })
+
+        const aiEffectiveTu = getEffectiveTuCost(skill.tuCost, snap.get(firstAIUnit.id) ?? firstAIUnit)
+
+        pendingAITurnRef.current = {
+          aiUnit:        firstAIUnit,
+          snap,
+          effectiveTu:   aiEffectiveTu,
+          primaryTarget: target,
+          primaryDamage,
+          outcome,
+          isAlly:        firstAIUnit.isAlly,
+        }
+
+        const arena = arenaRef.current
+        if (arena) {
+          const aiManifest = manifestsRef.current.get(firstAIUnit.defId) ?? null
+          const aiDamaged  = unitIsDamaged(firstAIUnit, aiManifest)
+          const aiResolved = aiManifest ? resolveAttackAnimation(aiManifest, skill.id, skill.tags, aiDamaged) : null
+          const aiIsMelee  = aiResolved?.isMelee ?? false
+          const aiDashDx   = aiResolved?.dashDx  ?? 0
+          const aiProjectile: AnimationProjectileDef | null = aiManifest?.projectile ?? null
+          const aiSequence   = animSequencesRef.current.get(firstAIUnit.defId)?.[skill.id]
+          arena.playDice(outcome, () => {
+            arena.playAttack(firstAIUnit.defId, target.defId, outcome, primaryDamage, aiIsMelee, aiDashDx, aiProjectile, buildOutcomeLabel(outcome), outcomeColour(outcome), () => {
+              if (applyTimerRef.current) clearTimeout(applyTimerRef.current)
+              applyTimerRef.current = setTimeout(() => setBattleStep('enemy_applying'), BATTLE_FEEDBACK_HOLD_MS)
+            }, aiSequence)
+          })
+        } else {
+          if (applyTimerRef.current) clearTimeout(applyTimerRef.current)
+          applyTimerRef.current = setTimeout(() => setBattleStep('enemy_applying'), DICE_RESULT_DISMISS_MS)
+        }
+      }, remainingDice + ENEMY_AI_DELAY_MS)
+
+      return
+    }
+
+    // ── enemy_applying ────────────────────────────────────────────────────────
+    if (battleStep === 'enemy_applying') {
+      const pending = pendingAITurnRef.current
+      if (!pending) { setBattleStep('advance_tick'); return }
+      pendingAITurnRef.current = null
+
+      const { aiUnit, snap, effectiveTu, primaryTarget, isAlly: aiIsAlly } = pending
+      const currentPlayers = playerUnitsRef.current
+      const currentEnemies = enemiesRef.current
+
+      setPlayerUnits((prev) => prev.map((u) => snap.get(u.id) ?? u))
+      setEnemies((prev)     => prev.map((e) => snap.get(e.id) ?? e))
+
+      const fromTick = aiUnit.tickPosition
+      pushHistory(makeHistoryEntry(aiUnit.id, aiUnit.defId, aiUnit.name, fromTick, aiUnit.isAlly))
+      registerTick(aiUnit.id, advanceTick(fromTick, effectiveTu))
+      globalBattleTickRef.current += effectiveTu
+      fireBattleTickIntervalPassives(
+        globalBattleTickRef.current, snap,
+        passiveDefsRef.current,
+        lastBattleIntervalFireRef.current,
+        lastBattleIntervalApAccumRef.current,
+        globalApAccumRef.current,
+      )
+
+      const arena = arenaRef.current
+      arena?.hideTurnDisplay()
+
+      if (!aiIsAlly) {
+        const updatedPlayers = currentPlayers.map((u) => snap.get(u.id) ?? u)
+        const deadPlayers    = updatedPlayers.filter((u) => !isAlive(u))
+        deadPlayers.forEach((u) => NarrativeService.emit({ type: 'unit_death', actorId: u.defId }))
+        deadPlayers.forEach((u) => unregisterTick(u.id))
+        if (updatedPlayers.every((u) => !isAlive(u))) {
+          appendLog({ text: 'Defeat! All allies have been slain.', colour: 'var(--accent-danger)' })
+          NarrativeService.emit({ type: 'battle_defeat' })
+          endBattleRef.current('defeat')
+          setBattleStep('battle_over')
+          return
+        }
+        const firstDeadPlayer = deadPlayers[0]
+        if (firstDeadPlayer && arena) {
+          arena.playDeath(firstDeadPlayer.defId, () => {
+            arena.clearTurn()
+            setBattleStep('advance_tick')
+          })
+          return
+        }
+      } else {
+        const updatedEnemies = currentEnemies.map((e) => snap.get(e.id) ?? e)
+        const deadEnemies    = updatedEnemies.filter((e) => !isAlive(e))
+        deadEnemies.forEach((e) => NarrativeService.emit({ type: 'unit_death', actorId: e.defId }))
+        deadEnemies.forEach((e) => unregisterTick(e.id))
+        if (updatedEnemies.every((e) => !isAlive(e))) {
+          appendLog({ text: 'Victory! All enemies defeated.', colour: 'var(--accent-genesis)' })
+          NarrativeService.emit({ type: 'battle_victory' })
+          endBattleRef.current('victory')
+          setBattleStep('battle_over')
+          return
+        }
+        const firstDeadEnemy = deadEnemies[0]
+        if (firstDeadEnemy && arena) {
+          arena.playDeath(firstDeadEnemy.defId, () => {
+            arena.clearTurn()
+            setBattleStep('advance_tick')
+          })
+          return
+        }
+      }
+
+      void primaryTarget  // referenced via pendingAITurnRef; kept for symmetry
+      if (arena) arena.clearTurn(() => setBattleStep('advance_tick'))
+      else setBattleStep('advance_tick')
+      return
+    }
+
+    // ── player_applying ───────────────────────────────────────────────────────
+    if (battleStep === 'player_applying') {
+      const pending = pendingPlayerTurnRef.current
+      if (!pending) { setBattleStep('advance_tick'); return }
+      pendingPlayerTurnRef.current = null
+
+      const { snap, actor, effectiveTu, primaryTarget, preStatusSnapshot } = pending
+      const currentEnemies = enemiesRef.current
+
+      detectNewActivations(snap, preStatusSnapshot)
+      setPlayerUnits((prev) => prev.map((u) => {
+        const updated = snap.get(u.id) ?? u
+        return u.id === actor.id ? incrementActionCount(updated) : updated
+      }))
+      setEnemies((prev) => prev.map((e) => snap.get(e.id) ?? e))
+
+      const nextTick = advanceTick(actor.tickPosition, effectiveTu)
+      registerTick(actor.id, nextTick)
+      globalBattleTickRef.current += effectiveTu
+      fireBattleTickIntervalPassives(
+        globalBattleTickRef.current, snap,
+        passiveDefsRef.current,
+        lastBattleIntervalFireRef.current,
+        lastBattleIntervalApAccumRef.current,
+        globalApAccumRef.current,
+      )
+
+      const snapEnemies = currentEnemies.map((e) => snap.get(e.id) ?? e)
+      const deadEnemies = snapEnemies.filter((e) => !isAlive(e))
+      deadEnemies.forEach((e) => NarrativeService.emit({ type: 'unit_death', actorId: e.defId }))
+      deadEnemies.forEach((e) => unregisterTick(e.id))
+
+      const arena = arenaRef.current
+      arena?.hideTurnDisplay()
+
+      if (snapEnemies.every((e) => !isAlive(e))) {
+        appendLog({ text: 'Victory! All enemies defeated.', colour: 'var(--accent-genesis)' })
+        NarrativeService.emit({ type: 'battle_victory' })
+        endBattleRef.current('victory')
+        setBattleStep('battle_over')
+        return
+      }
+
+      const firstDead = deadEnemies[0]
+      if (firstDead && arena) {
+        arena.playDeath(firstDead.defId, () => {
+          arena.clearTurn()
+          playPendingExpiryAnims(arena, snap)
+          playPendingActivationAnims(arena)
+          setBattleStep('advance_tick')
+        })
+      } else {
+        if (arena) {
+          arena.clearTurn()
+          playPendingExpiryAnims(arena, snap)
+          playPendingActivationAnims(arena)
+        }
+        setBattleStep('advance_tick')
+      }
+
+      void primaryTarget  // referenced via pendingPlayerTurnRef; kept for symmetry
+      return
+    }
+  }, [battleStep, isLoading, narrativePaused, inspectingSkill,
+    appendLog, pushHistory, registerTick, unregisterTick,
+    showTurnDisplay, setUnitSkillsMap, detectNewActivations,
+    playPendingExpiryAnims, playPendingActivationAnims])
+
+  // ── setPhase shim (for external callers that still use it) ─────────────────
+  const setPhase = useCallback((p: TurnPhase) => {
+    if (p === 'player') setBattleStep('player_turn')
+    else if (p === 'enemy') setBattleStep('enemy_telegraph')
+    else setBattleStep('advance_tick')
+  }, [])
+
+  // ── Misc player actions ────────────────────────────────────────────────────
   const selectSkill = useCallback((skill: SkillInstance | null) => {
     setSelectedSkill(skill)
     if (!skill) {
@@ -1718,10 +1632,9 @@ export function BattleProvider({ children }: Props) {
       setShowTargetPicker(false)
       return
     }
-    const def      = getCachedSkill(skill)
+    const def          = getCachedSkill(skill)
     const selector     = def.targeting.selector
-    const currentEnemies = enemiesRef.current
-    const aliveEnemies   = currentEnemies.filter(isAlive)
+    const aliveEnemies = enemiesRef.current.filter(isAlive)
 
     if (selector === 'enemy' && aliveEnemies.length > 1) {
       setSelectedTarget(null)
@@ -1754,7 +1667,6 @@ export function BattleProvider({ children }: Props) {
     }
   }, [])
 
-  /** Player confirms a target from the target picker overlay. */
   const selectTarget = useCallback((unit: Unit) => {
     setSelectedTarget(unit)
     setShowTargetPicker(false)
@@ -1772,7 +1684,7 @@ export function BattleProvider({ children }: Props) {
     }
   }, [])
 
-  const toggleGrid  = useCallback(() => setGridCollapsed((v) => !v), [])
+  const toggleGrid = useCallback(() => setGridCollapsed((v) => !v), [])
 
   const getUnitSkills = useCallback((unitId: string): SkillInstance[] => {
     return unitSkillsMap.get(unitId) ?? []
@@ -1784,7 +1696,6 @@ export function BattleProvider({ children }: Props) {
   )
 
   // ── Provide ────────────────────────────────────────────────────────────────
-
   return (
     <BattleContext.Provider value={{
       arenaRef,
