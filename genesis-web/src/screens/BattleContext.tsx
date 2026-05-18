@@ -1308,9 +1308,9 @@ export function BattleProvider({ children }: Props) {
 
       // Phase 1 — Thinking: AI deliberates before revealing its decision.
       telegraphTimerRef.current = setTimeout(() => {
+        if (battleStepRef.current !== 'enemy_acting') return
         const thinkPlayers = playerUnitsRef.current
         const thinkEnemies = enemiesRef.current
-        if (!thinkPlayers.some(isAlive) && !thinkEnemies.some(isAlive)) return
 
         // Re-read unit state — turn-start effects may have propagated since the sync phase.
         const freshAIUnit = (firstAIUnit.isAlly ? thinkPlayers : thinkEnemies)
@@ -1403,9 +1403,9 @@ export function BattleProvider({ children }: Props) {
         // Phase 2 — Input: AI commits to the attack after the input delay.
         if (applyTimerRef.current) clearTimeout(applyTimerRef.current)
         applyTimerRef.current = setTimeout(() => {
+          if (battleStepRef.current !== 'enemy_acting') return
           const execPlayers = playerUnitsRef.current
           const execEnemies = enemiesRef.current
-          if (!execPlayers.some(isAlive) && !execEnemies.some(isAlive)) return
 
           const snap     = makeSnapshot(execPlayers, execEnemies)
           const thisTick = tickValueRef.current
@@ -1476,12 +1476,16 @@ export function BattleProvider({ children }: Props) {
             arena.playDice(outcome, () => {
               arena.playAttack(freshAIUnit.defId, target.defId, outcome, primaryDamage, aiIsMelee, aiDashDx, aiProjectile, buildOutcomeLabel(outcome), outcomeColour(outcome), () => {
                 if (applyTimerRef.current) clearTimeout(applyTimerRef.current)
-                applyTimerRef.current = setTimeout(() => setBattleStep('enemy_applying'), BATTLE_FEEDBACK_HOLD_MS)
+                applyTimerRef.current = setTimeout(() => {
+                  if (battleStepRef.current === 'enemy_acting') setBattleStep('enemy_applying')
+                }, BATTLE_FEEDBACK_HOLD_MS)
               }, aiSequence)
             })
           } else {
             if (applyTimerRef.current) clearTimeout(applyTimerRef.current)
-            applyTimerRef.current = setTimeout(() => setBattleStep('enemy_applying'), DICE_RESULT_DISMISS_MS)
+            applyTimerRef.current = setTimeout(() => {
+              if (battleStepRef.current === 'enemy_acting') setBattleStep('enemy_applying')
+            }, DICE_RESULT_DISMISS_MS)
           }
         }, inputMs)
 
