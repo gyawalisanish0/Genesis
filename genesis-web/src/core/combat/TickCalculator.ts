@@ -17,6 +17,8 @@ export function advanceTick(currentTick: number, tuCost: number): number {
 }
 
 // AP regenerated over a number of elapsed ticks.
+// Math.round prevents IEEE 754 drift (e.g. 7 × 0.6 = 4.1999... → 4)
+// that would cause AP to display as 14.9999... and fail integer cost comparisons.
 export function calculateApGained(ticksElapsed: number, apRegenRate: number): number {
-  return ticksElapsed * apRegenRate
+  return Math.round(ticksElapsed * apRegenRate)
 }
