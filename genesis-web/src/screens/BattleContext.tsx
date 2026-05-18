@@ -1184,7 +1184,21 @@ export function BattleProvider({ children }: Props) {
     // ── advance_tick ──────────────────────────────────────────────────────────
     if (battleStep === 'advance_tick') {
       const ticks = [...registeredTicksRef.current.values()]
-      if (!ticks.length) return
+      if (!ticks.length) {
+        // Safety: no ticks registered — derive outcome from alive counts.
+        const alivePlayers = playerUnitsRef.current.filter(isAlive)
+        const aliveEnemies = enemiesRef.current.filter(isAlive)
+        if (!alivePlayers.length) {
+          appendLog({ text: 'Defeat! All allies have been slain.', colour: 'var(--accent-danger)' })
+          endBattleRef.current('defeat')
+          setBattleStep('battle_over')
+        } else if (!aliveEnemies.length) {
+          appendLog({ text: 'Victory! All enemies defeated.', colour: 'var(--accent-genesis)' })
+          endBattleRef.current('victory')
+          setBattleStep('battle_over')
+        }
+        return
+      }
 
       const current = tickValueRef.current
       const hasActiveNow = ticks.some(t => t === current)
@@ -1283,7 +1297,12 @@ export function BattleProvider({ children }: Props) {
         return
       }
 
-      // No active units — re-evaluate.
+      // No active units at this tick — purge any dead stale registrations first.
+      for (const id of activeIds) {
+        const deadInPlayers = players.find(u => u.id === id && !isAlive(u))
+        const deadInFoes    = foes.find(e => e.id === id && !isAlive(e))
+        if (deadInPlayers ?? deadInFoes) unregisterTick(id)
+      }
       setBattleStep('advance_tick')
       return
     }
@@ -1306,6 +1325,12 @@ export function BattleProvider({ children }: Props) {
       const allAIUnits     = [...activeAIAllies, ...activeEnemies].sort((a, b) => b.stats.speed - a.stats.speed)
 
       if (!allAIUnits.length) {
+        // Purge any dead stale registrations at this tick before re-evaluating.
+        for (const id of activeIds) {
+          const deadInPlayers = players.find(u => u.id === id && !isAlive(u))
+          const deadInFoes    = foes.find(e => e.id === id && !isAlive(e))
+          if (deadInPlayers ?? deadInFoes) unregisterTick(id)
+        }
         setBattleStep('advance_tick')
         return
       }
@@ -1621,49 +1646,39 @@ export function BattleProvider({ children }: Props) {
       const arena = arenaRef.current
       arena?.hideTurnDisplay()
 
-      if (!aiIsAlly) {
-        const updatedPlayers = currentPlayers.map((u) => snap.get(u.id) ?? u)
-        const deadPlayers    = updatedPlayers.filter((u) => !isAlive(u))
-        deadPlayers.forEach((u) => NarrativeService.emit({ type: 'unit_death', actorId: u.defId }))
-        deadPlayers.forEach((u) => unregisterTick(u.id))
-        if (updatedPlayers.every((u) => !isAlive(u))) {
-          appendLog({ text: 'Defeat! All allies have been slain.', colour: 'var(--accent-danger)' })
-          NarrativeService.emit({ type: 'battle_defeat' })
-          endBattleRef.current('defeat')
-          setBattleStep('battle_over')
-          return
-        }
-        const firstDeadPlayer = deadPlayers[0]
-        if (firstDeadPlayer && arena) {
-          arena.playDeath(firstDeadPlayer.defId, () => {
-            arena.clearTurn()
-            if (battleStepRef.current === 'enemy_applying') setBattleStep('advance_tick')
-          })
-          return
-        }
-      } else {
-        const updatedEnemies = currentEnemies.map((e) => snap.get(e.id) ?? e)
-        const deadEnemies    = updatedEnemies.filter((e) => !isAlive(e))
-        deadEnemies.forEach((e) => NarrativeService.emit({ type: 'unit_death', actorId: e.defId }))
-        deadEnemies.forEach((e) => unregisterTick(e.id))
-        if (updatedEnemies.every((e) => !isAlive(e))) {
-          appendLog({ text: 'Victory! All enemies defeated.', colour: 'var(--accent-genesis)' })
-          NarrativeService.emit({ type: 'battle_victory' })
-          endBattleRef.current('victory')
-          setBattleStep('battle_over')
-          return
-        }
-        const firstDeadEnemy = deadEnemies[0]
-        if (firstDeadEnemy && arena) {
-          arena.playDeath(firstDeadEnemy.defId, () => {
-            arena.clearTurn()
-            if (battleStepRef.current === 'enemy_applying') setBattleStep('advance_tick')
-          })
-          return
-        }
+      // Check both factions — passives/counters can kill units on either side.
+      const updatedPlayers = currentPlayers.map((u) => snap.get(u.id) ?? u)
+      const updatedEnemies = currentEnemies.map((e) => snap.get(e.id) ?? e)
+      const deadPlayers    = updatedPlayers.filter((u) => !isAlive(u))
+      const deadEnemies    = updatedEnemies.filter((e) => !isAlive(e))
+      deadPlayers.forEach((u) => { NarrativeService.emit({ type: 'unit_death', actorId: u.defId }); unregisterTick(u.id) })
+      deadEnemies.forEach((e) => { NarrativeService.emit({ type: 'unit_death', actorId: e.defId }); unregisterTick(e.id) })
+
+      if (updatedPlayers.every((u) => !isAlive(u))) {
+        appendLog({ text: 'Defeat! All allies have been slain.', colour: 'var(--accent-danger)' })
+        NarrativeService.emit({ type: 'battle_defeat' })
+        endBattleRef.current('defeat')
+        setBattleStep('battle_over')
+        return
+      }
+      if (updatedEnemies.every((e) => !isAlive(e))) {
+        appendLog({ text: 'Victory! All enemies defeated.', colour: 'var(--accent-genesis)' })
+        NarrativeService.emit({ type: 'battle_victory' })
+        endBattleRef.current('victory')
+        setBattleStep('battle_over')
+        return
       }
 
+      // Death animation: primary victim is the attacked faction's first casualty.
+      const primaryVictim = !aiIsAlly ? deadPlayers[0] : deadEnemies[0]
       void primaryTarget  // referenced via pendingAITurnRef; kept for symmetry
+      if (primaryVictim && arena) {
+        arena.playDeath(primaryVictim.defId, () => {
+          arena.clearTurn()
+          if (battleStepRef.current === 'enemy_applying') setBattleStep('advance_tick')
+        })
+        return
+      }
       if (arena) arena.clearTurn(() => {
         if (battleStepRef.current === 'enemy_applying') setBattleStep('advance_tick')
       })
@@ -1678,6 +1693,7 @@ export function BattleProvider({ children }: Props) {
       pendingPlayerTurnRef.current = null
 
       const { snap, actor, effectiveTu, primaryTarget, preStatusSnapshot } = pending
+      const currentPlayers = playerUnitsRef.current
       const currentEnemies = enemiesRef.current
 
       detectNewActivations(snap, preStatusSnapshot)
@@ -1698,14 +1714,24 @@ export function BattleProvider({ children }: Props) {
         globalApAccumRef.current,
       )
 
+      // Check both factions — counters and passives can kill units on either side.
       const snapEnemies = currentEnemies.map((e) => snap.get(e.id) ?? e)
+      const snapPlayers = currentPlayers.map((u) => snap.get(u.id) ?? u)
       const deadEnemies = snapEnemies.filter((e) => !isAlive(e))
-      deadEnemies.forEach((e) => NarrativeService.emit({ type: 'unit_death', actorId: e.defId }))
-      deadEnemies.forEach((e) => unregisterTick(e.id))
+      const deadPlayers = snapPlayers.filter((u) => !isAlive(u))
+      deadEnemies.forEach((e) => { NarrativeService.emit({ type: 'unit_death', actorId: e.defId }); unregisterTick(e.id) })
+      deadPlayers.forEach((u) => { NarrativeService.emit({ type: 'unit_death', actorId: u.defId }); unregisterTick(u.id) })
 
       const arena = arenaRef.current
       arena?.hideTurnDisplay()
 
+      if (snapPlayers.every((u) => !isAlive(u))) {
+        appendLog({ text: 'Defeat! All allies have been slain.', colour: 'var(--accent-danger)' })
+        NarrativeService.emit({ type: 'battle_defeat' })
+        endBattleRef.current('defeat')
+        setBattleStep('battle_over')
+        return
+      }
       if (snapEnemies.every((e) => !isAlive(e))) {
         appendLog({ text: 'Victory! All enemies defeated.', colour: 'var(--accent-genesis)' })
         NarrativeService.emit({ type: 'battle_victory' })
