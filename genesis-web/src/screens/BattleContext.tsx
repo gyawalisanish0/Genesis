@@ -1140,13 +1140,36 @@ export function BattleProvider({ children }: Props) {
       globalApAccumRef.current,
     )
     // Commit snap first; registerTick after so its tick position wins.
+    const snapPlayers = playerUnitsRef.current
+    const snapEnemies = enemiesRef.current
     setPlayerUnits(prev => prev.map(u => skipSnap.get(u.id) ?? u))
     setEnemies(prev => prev.map(e => skipSnap.get(e.id) ?? e))
     registerTick(actor.id, fromTick + SKIP_TU_COST)
+    // Death check — expiry/passive effects can kill units during a skip.
+    const skipDeadPlayers = snapPlayers.map(u => skipSnap.get(u.id) ?? u).filter(u => !isAlive(u))
+    const skipDeadEnemies = snapEnemies.map(e => skipSnap.get(e.id) ?? e).filter(e => !isAlive(e))
+    ;[...skipDeadPlayers, ...skipDeadEnemies].forEach(u => {
+      NarrativeService.emit({ type: 'unit_death', actorId: u.defId })
+      unregisterTick(u.id)
+    })
+    if (snapPlayers.map(u => skipSnap.get(u.id) ?? u).every(u => !isAlive(u))) {
+      appendLog({ text: 'Defeat! All allies have been slain.', colour: 'var(--accent-danger)' })
+      NarrativeService.emit({ type: 'battle_defeat' })
+      endBattleRef.current('defeat')
+      setBattleStep('battle_over')
+      return
+    }
+    if (snapEnemies.map(e => skipSnap.get(e.id) ?? e).every(e => !isAlive(e))) {
+      appendLog({ text: 'Victory! All enemies defeated.', colour: 'var(--accent-genesis)' })
+      NarrativeService.emit({ type: 'battle_victory' })
+      endBattleRef.current('victory')
+      setBattleStep('battle_over')
+      return
+    }
     appendLog({ text: 'You skipped your turn.' })
     arenaRef.current?.clearTurn()
     setBattleStep('advance_tick')
-  }, [narrativePaused, inspectingSkill, pushHistory, registerTick, appendLog, fireExpiryChain])
+  }, [narrativePaused, inspectingSkill, pushHistory, registerTick, unregisterTick, appendLog, fireExpiryChain])
 
   // ── Step machine driver ────────────────────────────────────────────────────
   useEffect(() => {
@@ -1356,6 +1379,27 @@ export function BattleProvider({ children }: Props) {
           setPlayerUnits(prev => prev.map(u => skipSnap.get(u.id) ?? u))
           setEnemies(prev => prev.map(e => skipSnap.get(e.id) ?? e))
           registerTick(firstAIUnit.id, advanceTick(fromTick, SKIP_TU_COST))
+          // Death check — expiry/passive effects can kill units during a skip.
+          const skipDeadPlayers = thinkPlayers.map(u => skipSnap.get(u.id) ?? u).filter(u => !isAlive(u))
+          const skipDeadEnemies = thinkEnemies.map(e => skipSnap.get(e.id) ?? e).filter(e => !isAlive(e))
+          ;[...skipDeadPlayers, ...skipDeadEnemies].forEach(u => {
+            NarrativeService.emit({ type: 'unit_death', actorId: u.defId })
+            unregisterTick(u.id)
+          })
+          if (thinkPlayers.map(u => skipSnap.get(u.id) ?? u).every(u => !isAlive(u))) {
+            appendLog({ text: 'Defeat! All allies have been slain.', colour: 'var(--accent-danger)' })
+            NarrativeService.emit({ type: 'battle_defeat' })
+            endBattleRef.current('defeat')
+            setBattleStep('battle_over')
+            return
+          }
+          if (thinkEnemies.map(e => skipSnap.get(e.id) ?? e).every(e => !isAlive(e))) {
+            appendLog({ text: 'Victory! All enemies defeated.', colour: 'var(--accent-genesis)' })
+            NarrativeService.emit({ type: 'battle_victory' })
+            endBattleRef.current('victory')
+            setBattleStep('battle_over')
+            return
+          }
           appendLog({ text: `${firstAIUnit.name} is gathering strength…`, colour: 'var(--text-muted)' })
           arenaRef.current?.clearTurn()
           setBattleStep('advance_tick')
@@ -1384,6 +1428,27 @@ export function BattleProvider({ children }: Props) {
           setPlayerUnits(prev => prev.map(u => noTgtSnap.get(u.id) ?? u))
           setEnemies(prev => prev.map(e => noTgtSnap.get(e.id) ?? e))
           registerTick(firstAIUnit.id, advanceTick(fromTick, SKIP_TU_COST))
+          // Death check — expiry/passive effects can kill units during a skip.
+          const noTgtDeadPlayers = thinkPlayers.map(u => noTgtSnap.get(u.id) ?? u).filter(u => !isAlive(u))
+          const noTgtDeadEnemies = thinkEnemies.map(e => noTgtSnap.get(e.id) ?? e).filter(e => !isAlive(e))
+          ;[...noTgtDeadPlayers, ...noTgtDeadEnemies].forEach(u => {
+            NarrativeService.emit({ type: 'unit_death', actorId: u.defId })
+            unregisterTick(u.id)
+          })
+          if (thinkPlayers.map(u => noTgtSnap.get(u.id) ?? u).every(u => !isAlive(u))) {
+            appendLog({ text: 'Defeat! All allies have been slain.', colour: 'var(--accent-danger)' })
+            NarrativeService.emit({ type: 'battle_defeat' })
+            endBattleRef.current('defeat')
+            setBattleStep('battle_over')
+            return
+          }
+          if (thinkEnemies.map(e => noTgtSnap.get(e.id) ?? e).every(e => !isAlive(e))) {
+            appendLog({ text: 'Victory! All enemies defeated.', colour: 'var(--accent-genesis)' })
+            NarrativeService.emit({ type: 'battle_victory' })
+            endBattleRef.current('victory')
+            setBattleStep('battle_over')
+            return
+          }
           appendLog({ text: `${firstAIUnit.name} has no valid targets.`, colour: 'var(--text-muted)' })
           arenaRef.current?.clearTurn()
           setBattleStep('advance_tick')
