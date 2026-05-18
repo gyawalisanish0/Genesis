@@ -452,6 +452,7 @@ export class UnitStage {
         sprite = this.scene.add.image(0, 0, firstKey)
         sprite.setScale(manifest.display.scale)
         sprite.setOrigin(manifest.display.anchorX, manifest.display.anchorY)
+        if (role === 'target') sprite.setFlipX(true)
         container.add(sprite)
 
         animPlayer = new AnimationPlayer(this.scene, sprite)
