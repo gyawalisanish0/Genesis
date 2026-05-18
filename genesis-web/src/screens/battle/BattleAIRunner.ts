@@ -28,6 +28,7 @@ export function computeAITurn(
     if (aiUnit.statusSlots.some((st) => st.payload?.blocksRecastOfSkill === def.id)) return false
     if (aiUnit.statusSlots.some((st) => st.payload?.stunned === true)) return false
     if (isSkillTagBlocked(aiUnit, def.tags)) return false
+    if (def.apCost > aiUnit.ap) return false
     return true
   })
 
