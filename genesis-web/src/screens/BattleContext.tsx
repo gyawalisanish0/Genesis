@@ -628,12 +628,6 @@ export function BattleProvider({ children }: Props) {
   // before its tick has advanced, duplicating the attack. We exclude it.
   const pendingAIUnitIdRef = useRef<string | null>(null)
 
-  // Incremented every time applyAIState fires. Kept in state (not a ref) so the
-  // AI effect re-runs after applyAIState completes, even when phase stays 'enemy'
-  // (same-value setPhase calls are no-ops in React). Without this, a faster enemy
-  // that gets the lowest tick again after acting would never trigger a new chain.
-  const [aiApplyCounter, setAiApplyCounter] = useState(0)
-
   // The player-controlled unit whose tick is currently active during the player phase.
   // null during the enemy phase or while resolving.
   const activePlayerUnit = useMemo<Unit | null>(() => {
@@ -1580,7 +1574,6 @@ export function BattleProvider({ children }: Props) {
         const aiEffectiveTu = getEffectiveTuCost(skill.tuCost, snap.get(aiUnit.id) ?? aiUnit)
         const applyAIState  = () => {
           pendingAIUnitIdRef.current = null   // unit's apply is now running; safe to include it in new chains
-          setAiApplyCounter((c) => c + 1)    // wake AI effect if phase stays 'enemy' (same-value setPhase is a no-op)
           setPlayerUnits((prev) => prev.map((u) => snap.get(u.id) ?? u))
           setEnemies((prev)     => prev.map((e) => snap.get(e.id) ?? e))
           const fromTick = aiUnit.tickPosition
@@ -1678,9 +1671,12 @@ export function BattleProvider({ children }: Props) {
       // in-flight unit's attack. applyAIState clears it when it fires.
       aiChainVersionRef.current++
     }
-  // activeUnitIds intentionally read via ref (see activeUnitIdsRef above); all other battle state read via refs
-  // to avoid mid-chain re-runs. aiApplyCounter wakes the effect after applyAIState fires when phase stays 'enemy'.
-  }, [phase, narrativePaused, inspectingSkill, showTurnDisplay, aiApplyCounter])
+  // tickValue is included so the effect re-runs each time the global clock advances (auto-advance fires a new
+  // render with the correct tickValue AFTER registeredTicks settles). This wakes the chain when the enemy is
+  // the fastest unit and phase stays 'enemy' — setPhase('enemy') is a same-value no-op in React, so without
+  // this dep the AI effect would never re-run for a faster enemy.
+  // activeUnitIds intentionally read via ref (see activeUnitIdsRef) to avoid mid-chain re-runs.
+  }, [phase, narrativePaused, inspectingSkill, showTurnDisplay, tickValue])
 
   // ── Misc actions ───────────────────────────────────────────────────────────
 
