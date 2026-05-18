@@ -544,18 +544,22 @@ export function BattleProvider({ children }: Props) {
 
   // ── Timeline mechanics ─────────────────────────────────────────────────────
   const registerTick = useCallback((id: string, tick: number) => {
-    const finalTick = resolveTickDisplacement(tick, registeredTicksRef.current, id)
-    setRegisteredTicks((prev) => new Map(prev).set(id, finalTick))
+    const finalTick = resolveTickDisplacement(tick, registeredTicksRef.current, id, tickValueRef.current)
+    // Sync the ref immediately so subsequent calls in the same batch see
+    // this registration (e.g. multiple "later" choices in team_collision).
+    const next = new Map(registeredTicksRef.current).set(id, finalTick)
+    registeredTicksRef.current = next
+    setRegisteredTicks(next)
     setPlayerUnits((prev) => prev.map((u) => u.id === id ? { ...u, tickPosition: finalTick } : u))
     setEnemies((prev) => prev.map((e) => e.id === id ? { ...e, tickPosition: finalTick } : e))
   }, [])
 
   const unregisterTick = useCallback((id: string) => {
-    setRegisteredTicks((prev) => {
-      const next = new Map(prev)
-      next.delete(id)
-      return next
-    })
+    // Sync ref immediately so the same render batch sees the removal.
+    const next = new Map(registeredTicksRef.current)
+    next.delete(id)
+    registeredTicksRef.current = next
+    setRegisteredTicks(next)
   }, [])
 
   // Active units: those whose registered tick equals the global clock.
@@ -581,7 +585,7 @@ export function BattleProvider({ children }: Props) {
   // The player-controlled unit currently eligible to act.
   const activePlayerUnit = useMemo<Unit | null>(() => {
     if (battleStep !== 'player_turn') return null
-    return playerUnits.find((u) => activeUnitIds.has(u.id) && controlledIds.has(u.id)) ?? null
+    return playerUnits.find((u) => activeUnitIds.has(u.id) && controlledIds.has(u.id) && isAlive(u)) ?? null
   }, [battleStep, playerUnits, activeUnitIds, controlledIds])
 
   const activePlayerUnitRef = useRef<Unit | null>(null)
@@ -979,6 +983,7 @@ export function BattleProvider({ children }: Props) {
     const actor = activePlayerUnitRef.current
     if (battleStepRef.current !== 'player_turn') return
     if (!actor) return
+    if (!isAlive(actor)) return
     if (narrativePaused || inspectingSkill) return
     if (isOnCooldown(actor, skillInst)) return
 
@@ -1113,6 +1118,12 @@ export function BattleProvider({ children }: Props) {
     const actor = activePlayerUnitRef.current
     if (battleStepRef.current !== 'player_turn') return
     if (!actor) return
+    if (!isAlive(actor)) {
+      // Defensive: a dead actor shouldn't be active; clean up and re-evaluate.
+      unregisterTick(actor.id)
+      setBattleStep('advance_tick')
+      return
+    }
     if (narrativePaused || inspectingSkill) return
 
     setSelectedSkill(null)
@@ -1286,12 +1297,32 @@ export function BattleProvider({ children }: Props) {
       if (activeControlled.length === 1) {
         const activeUnit = activeControlled[0]
         const turnKey    = `${activeUnit.id}:${current}`
+        let postTurnStart: Unit = activeUnit
         if (!turnStartFiredRef.current.has(turnKey)) {
           turnStartFiredRef.current.add(turnKey)
           const snap = makeSnapshot(players, foes)
           fireTurnStartEffects(activeUnit, statusDefsRef.current, snap, current)
           const updated = snap.get(activeUnit.id)
-          if (updated) setPlayerUnits(prev => prev.map(u => u.id === updated.id ? updated : u))
+          if (updated) {
+            postTurnStart = updated
+            setPlayerUnits(prev => prev.map(u => u.id === updated.id ? updated : u))
+            setEnemies(prev => prev.map(e => snap.get(e.id) ?? e))
+          }
+        }
+        // Turn-start effect (poison, burn, etc.) could have killed the unit.
+        if (!isAlive(postTurnStart)) {
+          NarrativeService.emit({ type: 'unit_death', actorId: postTurnStart.defId })
+          unregisterTick(activeUnit.id)
+          const allDead = players.every(u => u.id === activeUnit.id ? !isAlive(postTurnStart) : !isAlive(u))
+          if (allDead) {
+            appendLog({ text: 'Defeat! All allies have been slain.', colour: 'var(--accent-danger)' })
+            NarrativeService.emit({ type: 'battle_defeat' })
+            endBattleRef.current('defeat')
+            setBattleStep('battle_over')
+            return
+          }
+          setBattleStep('advance_tick')
+          return
         }
         setBattleStep('player_turn')
         return
@@ -1336,6 +1367,7 @@ export function BattleProvider({ children }: Props) {
       }
 
       // Fire onUnitTurnStart effects for all AI units at this tick.
+      // Turn-start effects (poison, burn, etc.) may kill the unit before it acts.
       {
         const snap = makeSnapshot(players, foes)
         for (const aiUnit of allAIUnits) {
@@ -1347,6 +1379,39 @@ export function BattleProvider({ children }: Props) {
         }
         setPlayerUnits(prev => prev.map(u => snap.get(u.id) ?? u))
         setEnemies(prev => prev.map(e => snap.get(e.id) ?? e))
+
+        // Purge any AI units killed by turn-start effects.
+        const postPlayers = players.map(u => snap.get(u.id) ?? u)
+        const postEnemies = foes.map(e => snap.get(e.id) ?? e)
+        const allDeadPlayers = postPlayers.every(u => !isAlive(u))
+        const allDeadEnemies = postEnemies.every(e => !isAlive(e))
+        if (allDeadPlayers) {
+          appendLog({ text: 'Defeat! All allies have been slain.', colour: 'var(--accent-danger)' })
+          NarrativeService.emit({ type: 'battle_defeat' })
+          endBattleRef.current('defeat')
+          setBattleStep('battle_over')
+          return
+        }
+        if (allDeadEnemies) {
+          appendLog({ text: 'Victory! All enemies defeated.', colour: 'var(--accent-genesis)' })
+          NarrativeService.emit({ type: 'battle_victory' })
+          endBattleRef.current('victory')
+          setBattleStep('battle_over')
+          return
+        }
+        let purgedAny = false
+        for (const aiUnit of allAIUnits) {
+          const post = snap.get(aiUnit.id) ?? aiUnit
+          if (!isAlive(post)) {
+            NarrativeService.emit({ type: 'unit_death', actorId: post.defId })
+            unregisterTick(aiUnit.id)
+            purgedAny = true
+          }
+        }
+        if (purgedAny) {
+          setBattleStep('advance_tick')
+          return
+        }
       }
 
       const firstAIUnit = allAIUnits[0]
