@@ -12,8 +12,8 @@
   "meleeDashDx": 80,
   "tagMap": {},
   "animations": {
-    "idle":          { "frames": 2, "frameRate": 4,  "repeat": -1 },
-    "idle_damaged":  { "frames": 2, "frameRate": 4,  "repeat": -1,
+    "idle":          { "frames": 2, "frameRate": 1.25, "repeat": -1 },
+    "idle_damaged":  { "frames": 2, "frameRate": 1.25, "repeat": -1,
       "aura": {
         "colour":    "var(--accent-danger)",
         "blendMode": "ADD",

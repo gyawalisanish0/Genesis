@@ -58,6 +58,7 @@ export const ENEMY_AI_DELAY_MS           = 2000 // ms between telegraph and enem
 export const BACK_DEBOUNCE_MS            = 300  // min ms between back-button presses in battle
 export const BATTLE_FEEDBACK_HOLD_MS     = 500  // ms to hold after attack animation before applying state
 export const BETWEEN_TURN_PAUSE_MS       = 150  // pause between unit exit and next unit entrance
+export const ANIM_FRAME_INTERVAL_MS      = 800  // default ms per animation frame (idle loops)
 
 // Input timing thresholds (milliseconds / px)
 export const HOVER_THROTTLE_MS         = 100
@@ -84,6 +85,10 @@ export const DUNGEON_ENCOUNTER_BANNER_MS   = 1200 // ms encounter telegraph bann
 
 // First-time hint toaster
 export const HINT_TOASTER_DURATION_MS = 5000  // ms the hint stays visible before auto-dismiss
+
+// Insufficient-AP feedback
+export const AP_WARN_SHAKE_MS   = 380   // shake animation duration on tapped AP-short button
+export const AP_WARN_DISMISS_MS = 3000  // ms the insufficient-AP toast stays visible
 export const HINT_STORAGE_PREFIX      = 'genesis-hint-'
 
 // Narrative layer — dialogue box + animation timings
