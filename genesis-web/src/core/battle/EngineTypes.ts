@@ -3,7 +3,6 @@
 import type { Unit, AnimationManifest, AnimationProjectileDef, AnimPhase, AnimSequenceManifest } from '../types'
 import type { SkillInstance, PassiveDef, StatusDef } from '../effects/types'
 import type { DiceOutcome } from '../combat/DiceResolver'
-import type { ModeDef } from '../types'
 import type { HistoryEntry } from '../battleHistory'
 import type { BattleStep } from './BattleStepMachine'
 
@@ -102,7 +101,6 @@ export interface BattleEngineConfig {
   manifests:       Map<string, AnimationManifest | null>
   animSequences:   Map<string, AnimSequenceManifest | null>
   controlledIds:   Set<string>
-  selectedMode:    ModeDef | null
 }
 
 // ── Engine callbacks ───────────────────────────────────────────────────────────

@@ -23,7 +23,6 @@ import type { PassiveDef, StatusDef } from '../core/effects/types'
 import { NarrativeService } from '../services/NarrativeService'
 import { NarrativeUnits } from '../components/NarrativeLayer'
 import type { BattleArenaHandle } from '../components/BattleArena'
-import { makeHistoryEntry } from '../core/battleHistory'
 import type { HistoryEntry } from '../core/battleHistory'
 import { useGameStore } from '../core/GameContext'
 import { SCREEN_REGISTRY, SCREEN_IDS } from '../navigation/screenRegistry'
@@ -420,7 +419,6 @@ export function BattleProvider({ children }: Props) {
             manifests:       manifestMap,
             animSequences:   seqMap,
             controlledIds:   engineControlledIds,
-            selectedMode:    storeMode,
           }, callbacks)
 
           engineRef.current = engine

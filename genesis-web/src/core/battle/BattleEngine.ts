@@ -5,7 +5,6 @@
 import type { Unit, AnimationManifest, AnimationProjectileDef, AnimSequenceManifest, AnimPhase } from '../types'
 import type { SkillInstance, EffectContext, PassiveDef, StatusDef } from '../effects/types'
 import type { DiceOutcome } from '../combat/DiceResolver'
-import type { ModeDef } from '../types'
 import type {
   BattleEngineConfig, BattleEngineCallbacks, BattleEngineSnapshot,
   PendingPlayerTurnData, PendingAITurnData, CounterDecision, ClashState, TeamCollisionState,
@@ -21,7 +20,7 @@ import {
 } from '../constants'
 import { resolveTickDisplacement } from '../combat/TickDisplacer'
 import { resolveClashWinner, factionAvgSpeed } from '../combat/ClashResolver'
-import { isAlive, setTickPosition, incrementActionCount, tickStatusDurations, updateStatusIntervalTick, isSkillTagBlocked, addApSpent, takeDamage } from '../unit'
+import { isAlive, incrementActionCount, tickStatusDurations, updateStatusIntervalTick, isSkillTagBlocked, addApSpent, takeDamage } from '../unit'
 import { advanceTick, calculateApGained } from '../combat/TickCalculator'
 import { calculateFinalChance, shiftProbabilities } from '../combat/HitChanceEvaluator'
 import { roll, resolveCounterRoll } from '../combat/DiceResolver'
@@ -69,7 +68,6 @@ export class BattleEngine {
   private readonly statusDefs:    Map<string, StatusDef>
   private manifests:    Map<string, AnimationManifest | null>
   private animSequences: Map<string, AnimSequenceManifest | null>
-  private readonly selectedMode: ModeDef | null
 
   // ── Pending turn data ────────────────────────────────────────────────────────
   private pendingPlayerTurn:   PendingPlayerTurnData | null
@@ -125,7 +123,6 @@ export class BattleEngine {
     this.statusDefs    = config.statusDefs
     this.manifests     = config.manifests
     this.animSequences = config.animSequences
-    this.selectedMode  = config.selectedMode
 
     this.pendingPlayerTurn   = null
     this.pendingAITurn       = null
