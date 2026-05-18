@@ -500,6 +500,51 @@
   border-color: var(--accent-danger);
 }
 
+/* Insufficient AP — dimmer than cooldown, amber border to distinguish from blocked. */
+.skillBtnApShort {
+  opacity: 0.55;
+  cursor: not-allowed;
+  border-color: var(--accent-warn);
+}
+
+/* Shake feedback when player taps an AP-short button. */
+@keyframes btnShake {
+  0%,  100% { transform: translateX(0); }
+  18%        { transform: translateX(-6px); }
+  36%        { transform: translateX(5px); }
+  54%        { transform: translateX(-4px); }
+  72%        { transform: translateX(3px); }
+  90%        { transform: translateX(-2px); }
+}
+.skillBtnShake {
+  animation: btnShake 380ms ease-out;
+  transition: none;
+}
+
+/* Insufficient-AP toast — overlays the top of the action grid. */
+.apWarningToast {
+  position: absolute;
+  top: var(--s-sm);
+  left: var(--s-sm);
+  right: var(--s-sm);
+  z-index: 10;
+  background: var(--bg-overlay);
+  border: 1px solid var(--accent-warn);
+  border-radius: var(--r-md);
+  color: var(--accent-warn);
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  text-align: center;
+  padding: var(--s-xs) var(--s-sm);
+  pointer-events: none;
+  animation: toastSlideIn 180ms ease-out;
+}
+
+@keyframes toastSlideIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 .skillCdBadge {
   grid-column: 1 / -1;
   font-size: 0.65rem;

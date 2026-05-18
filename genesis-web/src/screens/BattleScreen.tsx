@@ -20,6 +20,7 @@ import { isOnCooldown, ticksRemaining, turnsRemaining } from '../core/combat/Coo
 import {
   TIMELINE_PX_PER_TICK, TIMELINE_OVERLAY_PX,
   TIMELINE_RECENTER_DELAY_MS, BACK_DEBOUNCE_MS,
+  AP_WARN_SHAKE_MS, AP_WARN_DISMISS_MS,
 } from '../core/constants'
 import { getCachedSkill } from '../core/engines/skill/SkillInstance'
 import { isAlive, isSkillTagBlocked } from '../core/unit'
@@ -330,6 +331,26 @@ function ActionGrid() {
   const createHandler = useScrollAwarePointer()
   const disabled = phase !== 'player'
 
+  const [apWarning, setApWarning]   = useState<{ needed: number; have: number } | null>(null)
+  const [shakingKey, setShakingKey] = useState<string | null>(null)
+  const warnTimer  = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const shakeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => () => {
+    if (warnTimer.current)  clearTimeout(warnTimer.current)
+    if (shakeTimer.current) clearTimeout(shakeTimer.current)
+  }, [])
+
+  const triggerApWarning = (apCost: number, key: string) => {
+    if (!activePlayerUnit) return
+    if (warnTimer.current)  clearTimeout(warnTimer.current)
+    if (shakeTimer.current) clearTimeout(shakeTimer.current)
+    setApWarning({ needed: apCost, have: activePlayerUnit.ap })
+    setShakingKey(key)
+    shakeTimer.current = setTimeout(() => setShakingKey(null), AP_WARN_SHAKE_MS)
+    warnTimer.current  = setTimeout(() => setApWarning(null),  AP_WARN_DISMISS_MS)
+  }
+
   const playerSkills  = activePlayerUnit ? getUnitSkills(activePlayerUnit.id) : []
   const basicSkill    = playerSkills.find(s => s.baseDef.tags.includes('basic')) ?? null
   const activeSkills  = playerSkills.filter(s => !s.baseDef.tags.includes('basic'))
@@ -339,19 +360,34 @@ function ActionGrid() {
 
   return (
     <div className={[styles.actionGrid, phase === 'player' ? styles.actionGridActive : ''].join(' ')}>
+      {apWarning && (
+        <div className={styles.apWarningToast} role="alert">
+          Need {apWarning.needed} AP · have {apWarning.have}
+        </div>
+      )}
       {!gridCollapsed && (
         <>
           <div className={styles.actionRow}>
             {basicSkill && (() => {
-              const isSelected  = selectedSkill?.defId === basicSkill.defId
-              const tapHandler  = !disabled ? () => selectSkill(isSelected ? null : basicSkill) : undefined
+              const isSelected     = selectedSkill?.defId === basicSkill.defId
+              const notEnoughAp    = !!activePlayerUnit && basicSkill.cachedCosts.apCost > activePlayerUnit.ap
+              const tapHandler     = !disabled
+                ? (notEnoughAp
+                  ? () => triggerApWarning(basicSkill.cachedCosts.apCost, 'basic')
+                  : () => selectSkill(isSelected ? null : basicSkill))
+                : undefined
               const holdHandler = () => setInspectingSkill(basicSkill)
               const targetLabel = isSelected && selectedTarget ? selectedTarget.name : null
               return (
                 <button
-                  className={`${styles.actionBtn} ${styles.actionBtnBasic} ${isSelected ? styles.skillBtnSelected : ''}`}
+                  className={[
+                    styles.actionBtn, styles.actionBtnBasic,
+                    isSelected    ? styles.skillBtnSelected : '',
+                    notEnoughAp   ? styles.skillBtnApShort  : '',
+                    shakingKey === 'basic' ? styles.skillBtnShake : '',
+                  ].join(' ')}
                   onPointerDown={createHandler({ onTap: tapHandler, onHold: holdHandler })}
-                  aria-disabled={disabled}
+                  aria-disabled={disabled || notEnoughAp}
                 >
                   <span className={styles.actionBtnName}>Attack</span>
                   <span className={styles.skillTu}>TU: {basicSkill.cachedCosts.tuCost}</span>
@@ -372,13 +408,17 @@ function ActionGrid() {
               const name        = hasSkill ? (isHyperSlot ? 'Hyper Sense ★' : skillInst.baseDef.name) : '—'
               const onCooldown  = hasSkill && !!activePlayerUnit && isOnCooldown(activePlayerUnit, skillInst)
               const tagBlocked  = hasSkill && !!activePlayerUnit && isSkillTagBlocked(activePlayerUnit, skillInst.baseDef.tags)
-              const tickCD     = onCooldown && activePlayerUnit ? ticksRemaining(activePlayerUnit, skillInst) : 0
-              const turnCD     = onCooldown && activePlayerUnit ? turnsRemaining(activePlayerUnit, skillInst) : 0
-              const isDisabled = !hasSkill || disabled || onCooldown || tagBlocked
+              const notEnoughAp = hasSkill && !!activePlayerUnit && skillInst.cachedCosts.apCost > activePlayerUnit.ap
+              const tickCD      = onCooldown && activePlayerUnit ? ticksRemaining(activePlayerUnit, skillInst) : 0
+              const turnCD      = onCooldown && activePlayerUnit ? turnsRemaining(activePlayerUnit, skillInst) : 0
+              const isDisabled  = !hasSkill || disabled || onCooldown || tagBlocked || notEnoughAp
               // Show selected target name on the active skill button.
               const targetLabel = isSelected && selectedTarget ? selectedTarget.name : null
-              const tapHandler = (hasSkill && !disabled && !onCooldown && !tagBlocked)
-                ? () => selectSkill(isSelected ? null : skillInst)
+              const canTap      = hasSkill && !disabled && !onCooldown && !tagBlocked
+              const tapHandler  = canTap
+                ? (notEnoughAp
+                  ? () => triggerApWarning(skillInst.cachedCosts.apCost, String(i))
+                  : () => selectSkill(isSelected ? null : skillInst))
                 : undefined
               const holdHandler = hasSkill
                 ? () => setInspectingSkill(skillInst)
@@ -391,7 +431,9 @@ function ActionGrid() {
                     (!hasSkill || disabled) ? styles.skillBtnDisabled : '',
                     onCooldown              ? styles.skillBtnCooldown  : '',
                     tagBlocked              ? styles.skillBtnBlocked   : '',
+                    notEnoughAp             ? styles.skillBtnApShort   : '',
                     isSelected              ? styles.skillBtnSelected  : '',
+                    shakingKey === String(i) ? styles.skillBtnShake    : '',
                   ].join(' ')}
                   // Note: no `disabled` attribute — long-press for skill info must
                   // work even on cooldown / off-turn. Tap is gated inside tapHandler.
