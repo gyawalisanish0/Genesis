@@ -102,6 +102,7 @@ export class BattleScene extends Phaser.Scene {
     }
     const doShowWithTransition = () => {
       if (this.turnVersion !== myVersion) return
+      if (!this.unitStage) return  // called before create() in the pendingTurnState path
       if (this.unitStage.isVisible) {
         this.unitStage.hide(() => { this.time.delayedCall(BETWEEN_TURN_PAUSE_MS, show) })
       } else {
@@ -120,6 +121,9 @@ export class BattleScene extends Phaser.Scene {
     }
 
     for (const { key, path } of toLoad) this.load.image(key, path)
+    this.load.once('loaderror', (file: { key: string; src: string }) => {
+      console.warn('[BattleScene] frame failed to load:', file.key, file.src)
+    })
     this.load.once('complete', doShowWithTransition)
     this.load.start()
   }

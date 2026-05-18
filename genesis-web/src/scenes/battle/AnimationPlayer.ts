@@ -65,8 +65,7 @@ export class AnimationPlayer {
     advance()
 
     if (entry.repeat === 0 && totalFrames <= 1) {
-      // Single frame play-once — already done
-      onComplete?.()
+      // Single frame play-once — advance() already called onComplete above.
       return
     }
 
