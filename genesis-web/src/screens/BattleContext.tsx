@@ -1493,7 +1493,7 @@ export function BattleProvider({ children }: Props) {
     // ── enemy_applying ────────────────────────────────────────────────────────
     if (battleStep === 'enemy_applying') {
       const pending = pendingAITurnRef.current
-      if (!pending) { setBattleStep('advance_tick'); return }
+      if (!pending) { return }   // re-run from narrativePaused change; async callbacks handle advance
       pendingAITurnRef.current = null
 
       const { aiUnit, snap, effectiveTu, primaryTarget, isAlly: aiIsAlly } = pending
@@ -1534,7 +1534,7 @@ export function BattleProvider({ children }: Props) {
         if (firstDeadPlayer && arena) {
           arena.playDeath(firstDeadPlayer.defId, () => {
             arena.clearTurn()
-            setBattleStep('advance_tick')
+            if (battleStepRef.current === 'enemy_applying') setBattleStep('advance_tick')
           })
           return
         }
@@ -1554,14 +1554,16 @@ export function BattleProvider({ children }: Props) {
         if (firstDeadEnemy && arena) {
           arena.playDeath(firstDeadEnemy.defId, () => {
             arena.clearTurn()
-            setBattleStep('advance_tick')
+            if (battleStepRef.current === 'enemy_applying') setBattleStep('advance_tick')
           })
           return
         }
       }
 
       void primaryTarget  // referenced via pendingAITurnRef; kept for symmetry
-      if (arena) arena.clearTurn(() => setBattleStep('advance_tick'))
+      if (arena) arena.clearTurn(() => {
+        if (battleStepRef.current === 'enemy_applying') setBattleStep('advance_tick')
+      })
       else setBattleStep('advance_tick')
       return
     }
@@ -1569,7 +1571,7 @@ export function BattleProvider({ children }: Props) {
     // ── player_applying ───────────────────────────────────────────────────────
     if (battleStep === 'player_applying') {
       const pending = pendingPlayerTurnRef.current
-      if (!pending) { setBattleStep('advance_tick'); return }
+      if (!pending) { return }   // re-run from narrativePaused change; async callbacks handle advance
       pendingPlayerTurnRef.current = null
 
       const { snap, actor, effectiveTu, primaryTarget, preStatusSnapshot } = pending
@@ -1615,7 +1617,7 @@ export function BattleProvider({ children }: Props) {
           arena.clearTurn()
           playPendingExpiryAnims(arena, snap)
           playPendingActivationAnims(arena)
-          setBattleStep('advance_tick')
+          if (battleStepRef.current === 'player_applying') setBattleStep('advance_tick')
         })
       } else {
         if (arena) {
