@@ -10,7 +10,7 @@ import {
 import { useNavigate } from 'react-router-dom'
 import type { Unit, AnimationManifest, AnimationProjectileDef, AnimSequenceManifest } from '../core/types'
 import type { SkillInstance, EffectContext } from '../core/effects/types'
-import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, CLASH_ANNOUNCE_MS, AI_THINKING_MIN_MS, AI_THINKING_MAX_MS, AI_INPUT_MIN_MS, AI_INPUT_MAX_MS, COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE, BATTLE_FEEDBACK_HOLD_MS, SKIP_TU_COST } from '../core/constants'
+import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, TURN_DISPLAY_DISMISS_MS, DICE_RESULT_DISMISS_MS, CLASH_ANNOUNCE_MS, AI_THINKING_MIN_MS, AI_THINKING_MAX_MS, AI_INPUT_MIN_MS, AI_INPUT_MAX_MS, COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE, BATTLE_FEEDBACK_HOLD_MS, SKIP_TU_COST, BETWEEN_TURN_PAUSE_MS } from '../core/constants'
 import { resolveTickDisplacement } from '../core/combat/TickDisplacer'
 import { resolveClashWinner, factionAvgSpeed } from '../core/combat/ClashResolver'
 import { createUnit, isAlive, setTickPosition, incrementActionCount, tickStatusDurations, updateStatusIntervalTick, isSkillTagBlocked, addApSpent, takeDamage } from '../core/unit'
@@ -1303,6 +1303,16 @@ export function BattleProvider({ children }: Props) {
         ? Math.max(0, DICE_RESULT_DISMISS_MS - (Date.now() - diceShowTimeRef.current))
         : 0
 
+      // Pre-check the decision now so skip/no_targets use a short delay instead of
+      // the full 3–5 s thinking time (which would look like a freeze to the player).
+      const preCheckUnit   = (firstAIUnit.isAlly ? playerUnitsRef.current : enemiesRef.current)
+        .find(u => u.id === firstAIUnit.id) ?? firstAIUnit
+      const preCheckSkills = unitSkillsMapRef.current.get(firstAIUnit.id) ?? []
+      const preCheckResult = computeAITurn(preCheckUnit, preCheckSkills, playerUnitsRef.current, enemiesRef.current)
+      const thinkDelay     = preCheckResult.type === 'attack'
+        ? randomMs(AI_THINKING_MIN_MS, AI_THINKING_MAX_MS)
+        : BETWEEN_TURN_PAUSE_MS
+
       // Lock the step immediately — enemy_acting is yielded so driver won't re-run.
       setBattleStep('enemy_acting')
 
@@ -1319,11 +1329,16 @@ export function BattleProvider({ children }: Props) {
         const result      = computeAITurn(freshAIUnit, freshSkills, thinkPlayers, thinkEnemies)
 
         if (result.type === 'skip') {
-          const fromTick = firstAIUnit.tickPosition
+          const fromTick  = firstAIUnit.tickPosition
+          const apFrozen  = freshAIUnit.statusSlots.some(s => s.payload?.freezesApRegen === true)
+          const apGained  = apFrozen ? 0 : calculateApGained(SKIP_TU_COST, freshAIUnit.apRegenRate)
           pushHistory(makeHistoryEntry(firstAIUnit.id, firstAIUnit.defId, firstAIUnit.name, fromTick, firstAIUnit.isAlly))
-          registerTick(firstAIUnit.id, advanceTick(fromTick, SKIP_TU_COST))
           globalBattleTickRef.current += SKIP_TU_COST
           const skipSnap = makeSnapshot(thinkPlayers, thinkEnemies)
+          if (apGained > 0) {
+            const unitSnap = skipSnap.get(freshAIUnit.id) ?? freshAIUnit
+            skipSnap.set(freshAIUnit.id, { ...unitSnap, ap: Math.min(unitSnap.maxAp, unitSnap.ap + apGained) })
+          }
           fireBattleTickIntervalPassives(
             globalBattleTickRef.current, skipSnap,
             passiveDefsRef.current,
@@ -1331,6 +1346,10 @@ export function BattleProvider({ children }: Props) {
             lastBattleIntervalApAccumRef.current,
             globalApAccumRef.current,
           )
+          // Commit AP regen + passive effects first; registerTick after so its tick position wins.
+          setPlayerUnits(prev => prev.map(u => skipSnap.get(u.id) ?? u))
+          setEnemies(prev => prev.map(e => skipSnap.get(e.id) ?? e))
+          registerTick(firstAIUnit.id, advanceTick(fromTick, SKIP_TU_COST))
           appendLog({ text: `${firstAIUnit.name} is gathering strength…`, colour: 'var(--text-muted)' })
           arenaRef.current?.clearTurn()
           setBattleStep('advance_tick')
@@ -1338,11 +1357,16 @@ export function BattleProvider({ children }: Props) {
         }
 
         if (result.type === 'no_targets') {
-          const fromTick = firstAIUnit.tickPosition
+          const fromTick  = firstAIUnit.tickPosition
+          const apFrozen  = freshAIUnit.statusSlots.some(s => s.payload?.freezesApRegen === true)
+          const apGained  = apFrozen ? 0 : calculateApGained(SKIP_TU_COST, freshAIUnit.apRegenRate)
           pushHistory(makeHistoryEntry(firstAIUnit.id, firstAIUnit.defId, firstAIUnit.name, fromTick, firstAIUnit.isAlly))
-          registerTick(firstAIUnit.id, advanceTick(fromTick, SKIP_TU_COST))
           globalBattleTickRef.current += SKIP_TU_COST
           const noTgtSnap = makeSnapshot(thinkPlayers, thinkEnemies)
+          if (apGained > 0) {
+            const unitSnap = noTgtSnap.get(freshAIUnit.id) ?? freshAIUnit
+            noTgtSnap.set(freshAIUnit.id, { ...unitSnap, ap: Math.min(unitSnap.maxAp, unitSnap.ap + apGained) })
+          }
           fireBattleTickIntervalPassives(
             globalBattleTickRef.current, noTgtSnap,
             passiveDefsRef.current,
@@ -1350,6 +1374,9 @@ export function BattleProvider({ children }: Props) {
             lastBattleIntervalApAccumRef.current,
             globalApAccumRef.current,
           )
+          setPlayerUnits(prev => prev.map(u => noTgtSnap.get(u.id) ?? u))
+          setEnemies(prev => prev.map(e => noTgtSnap.get(e.id) ?? e))
+          registerTick(firstAIUnit.id, advanceTick(fromTick, SKIP_TU_COST))
           appendLog({ text: `${firstAIUnit.name} has no valid targets.`, colour: 'var(--text-muted)' })
           arenaRef.current?.clearTurn()
           setBattleStep('advance_tick')
@@ -1489,7 +1516,7 @@ export function BattleProvider({ children }: Props) {
           }
         }, inputMs)
 
-      }, remainingDice + randomMs(AI_THINKING_MIN_MS, AI_THINKING_MAX_MS))
+      }, remainingDice + thinkDelay)
 
       return
     }
