@@ -28,7 +28,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: genesis-web/package-lock.json
 
@@ -82,6 +82,9 @@ jobs:
           npx cap sync android
 
       # 8. Build the APK via Gradle
+      - name: Make Gradle wrapper executable
+        run: chmod +x genesis-web/android/gradlew
+
       - name: Build APK (${{ github.event.inputs.build_type }})
         working-directory: genesis-web/android
         run: |
