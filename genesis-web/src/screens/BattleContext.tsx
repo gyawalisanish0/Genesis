@@ -68,6 +68,7 @@ interface BattleContextValue {
   scrollBounds:    { min: number; max: number }
   getUnitSkills:     (unitId: string) => SkillInstance[]
   hyperSenseModeActive: boolean
+  battleError:           string | null
   executeSkill:          (skill: SkillInstance) => void
   skipTurn:              () => void
   confirmCounter:        () => void
@@ -122,6 +123,7 @@ export function BattleProvider({ children }: Props) {
   })
 
   // ── Pure UI state (not tracked by engine) ─────────────────────────────────
+  const [battleError, setBattleError]       = useState<string | null>(null)
   const [isLoading, setIsLoading]           = useState(true)
   const [log, setLog]                       = useState<LogEntry[]>([
     { id: '0', text: 'Loading battle…', colour: 'var(--text-muted)' },
@@ -211,6 +213,19 @@ export function BattleProvider({ children }: Props) {
     dismissTimerRef.current = setTimeout(() => arenaRef.current?.hideTurnDisplay(), delay)
   }, [])
 
+  // ── Error reporting ───────────────────────────────────────────────────────
+  const reportError = useCallback((err: unknown) => {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[BattleEngine]', err)
+    setBattleError(msg)
+    engineRef.current?.destroy()
+    engineRef.current = null
+  }, [])
+
+  const safeEngineCall = useCallback((fn: () => void): void => {
+    try { fn() } catch (err) { reportError(err) }
+  }, [reportError])
+
   // ── Dice result overlay ────────────────────────────────────────────────────
   const showDiceResult = useCallback((outcome: import('../core/combat/DiceResolver').DiceOutcome, message: string) => {
     if (diceTimerRef.current) clearTimeout(diceTimerRef.current)
@@ -228,53 +243,59 @@ export function BattleProvider({ children }: Props) {
   }, [])
 
   // ── Engine callbacks ───────────────────────────────────────────────────────
-  const buildCallbacks = useCallback((): BattleEngineCallbacks => ({
-    onSetTurnState(actingDefId, targetDefId, actingMf, targetMf, isDamaged) {
-      arenaRef.current?.setTurnState(actingDefId, targetDefId, actingMf ?? undefined, targetMf ?? undefined, isDamaged)
-    },
-    onClearTurn(onDone) {
-      arenaRef.current?.clearTurn(onDone)
-    },
-    onPlayDice(outcome, onDone) {
-      arenaRef.current?.playDice(outcome, onDone)
-    },
-    onPlayAttack(actingDefId, targetDefId, outcome, damage, isMelee, dashDx, projectile, label, colour, onDone, seq) {
-      arenaRef.current?.playAttack(actingDefId, targetDefId, outcome, damage, isMelee, dashDx, projectile, label, colour, onDone, seq)
-    },
-    onPlayDeath(defId, onDone) {
-      arenaRef.current?.playDeath(defId, onDone)
-    },
-    onShowTurnDisplay(data, dismissAfter) {
-      showTurnDisplay(data, dismissAfter)
-    },
-    onHideTurnDisplay() {
-      if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current)
-      arenaRef.current?.hideTurnDisplay()
-    },
-    onShowDiceResult(outcome, message) {
-      showDiceResult(outcome, message)
-    },
-    onClearDiceResult() {
-      if (diceTimerRef.current) clearTimeout(diceTimerRef.current)
-      setDiceResult(null)
-    },
-    onNarrativeEmit(event) {
-      NarrativeService.emit(event)
-    },
-    onStateChanged(s) {
-      setSnapshot({ ...s })
-    },
-    onBattleEnd(outcome, turns, xpGained) {
-      useGameStore.getState().setBattleResult({ outcome, turns, xpGained })
-      setTimeout(() => navigateRef.current(SCREEN_REGISTRY[SCREEN_IDS.BATTLE_RESULT].path), 2500)
-    },
-    onLog(entry) {
-      setLog(prev => [...prev, { ...entry, id: String(Date.now() + Math.random()) }])
-    },
-    onHistory(entry) {
-      setHistoryEntries(prev => [...prev, entry])
-    },
-  }), [showTurnDisplay, showDiceResult])
+  const buildCallbacks = useCallback((): BattleEngineCallbacks => {
+    // Wrap each callback so errors that fire from within engine setTimeout calls
+    // surface as the error toast rather than crashing the React tree silently.
+    const safe = (fn: () => void) => { try { fn() } catch (err) { reportError(err) } }
+
+    return {
+      onSetTurnState(actingDefId, targetDefId, actingMf, targetMf, isDamaged) {
+        safe(() => arenaRef.current?.setTurnState(actingDefId, targetDefId, actingMf ?? undefined, targetMf ?? undefined, isDamaged))
+      },
+      onClearTurn(onDone) {
+        safe(() => arenaRef.current?.clearTurn(onDone))
+      },
+      onPlayDice(outcome, onDone) {
+        safe(() => arenaRef.current?.playDice(outcome, onDone))
+      },
+      onPlayAttack(actingDefId, targetDefId, outcome, damage, isMelee, dashDx, projectile, label, colour, onDone, seq) {
+        safe(() => arenaRef.current?.playAttack(actingDefId, targetDefId, outcome, damage, isMelee, dashDx, projectile, label, colour, onDone, seq))
+      },
+      onPlayDeath(defId, onDone) {
+        safe(() => arenaRef.current?.playDeath(defId, onDone))
+      },
+      onShowTurnDisplay(data, dismissAfter) {
+        safe(() => showTurnDisplay(data, dismissAfter))
+      },
+      onHideTurnDisplay() {
+        safe(() => { if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current); arenaRef.current?.hideTurnDisplay() })
+      },
+      onShowDiceResult(outcome, message) {
+        safe(() => showDiceResult(outcome, message))
+      },
+      onClearDiceResult() {
+        safe(() => { if (diceTimerRef.current) clearTimeout(diceTimerRef.current); setDiceResult(null) })
+      },
+      onNarrativeEmit(event) {
+        safe(() => NarrativeService.emit(event))
+      },
+      onStateChanged(s) {
+        safe(() => setSnapshot({ ...s }))
+      },
+      onBattleEnd(outcome, turns, xpGained) {
+        safe(() => {
+          useGameStore.getState().setBattleResult({ outcome, turns, xpGained })
+          setTimeout(() => navigateRef.current(SCREEN_REGISTRY[SCREEN_IDS.BATTLE_RESULT].path), 2500)
+        })
+      },
+      onLog(entry) {
+        safe(() => setLog(prev => [...prev, { ...entry, id: String(Date.now() + Math.random()) }]))
+      },
+      onHistory(entry) {
+        safe(() => setHistoryEntries(prev => [...prev, entry]))
+      },
+    }
+  }, [showTurnDisplay, showDiceResult, reportError])
 
   // ── Narrative pause listeners ──────────────────────────────────────────────
   useEffect(() => {
@@ -524,29 +545,30 @@ export function BattleProvider({ children }: Props) {
   }, [unitSkillsMap])
 
   // These forward to engine; engine drives the step machine.
+  // safeEngineCall catches any synchronous throws and routes them to the error toast.
   const executeSkill = useCallback((skill: SkillInstance) => {
-    engineRef.current?.executeSkill(skill, selectedTarget)
-  }, [selectedTarget])
+    safeEngineCall(() => engineRef.current?.executeSkill(skill, selectedTarget))
+  }, [selectedTarget, safeEngineCall])
 
   const skipTurn = useCallback(() => {
-    engineRef.current?.skipTurn()
-  }, [])
+    safeEngineCall(() => engineRef.current?.skipTurn())
+  }, [safeEngineCall])
 
   const confirmCounter = useCallback(() => {
-    engineRef.current?.confirmCounter()
-  }, [])
+    safeEngineCall(() => engineRef.current?.confirmCounter())
+  }, [safeEngineCall])
 
   const skipCounter = useCallback(() => {
-    engineRef.current?.skipCounter()
-  }, [])
+    safeEngineCall(() => engineRef.current?.skipCounter())
+  }, [safeEngineCall])
 
   const resolveClash = useCallback((winner: 'player' | 'enemy') => {
-    engineRef.current?.resolveClash(winner)
-  }, [])
+    safeEngineCall(() => engineRef.current?.resolveClash(winner))
+  }, [safeEngineCall])
 
   const resolveTeamCollision = useCallback((choices: Map<string, 'now' | 'later'>) => {
-    engineRef.current?.resolveTeamCollision(choices)
-  }, [])
+    safeEngineCall(() => engineRef.current?.resolveTeamCollision(choices))
+  }, [safeEngineCall])
 
   // registerTick and unregisterTick are still exposed for timeline component.
   // Internally engine owns tick registration; bridge delegates.
@@ -653,6 +675,7 @@ export function BattleProvider({ children }: Props) {
       diceResult, pendingCounterDecision,
       pendingClash, pendingTeamCollision,
       registeredTicks, scrollBounds,
+      battleError,
       getUnitSkills, hyperSenseModeActive, executeSkill, skipTurn, confirmCounter, skipCounter,
       resolveClash, resolveTeamCollision,
       registerTick, unregisterTick, pushHistory,
