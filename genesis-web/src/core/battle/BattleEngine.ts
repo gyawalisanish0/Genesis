@@ -16,7 +16,7 @@ import {
   DICE_RESULT_DISMISS_MS, TURN_DISPLAY_DISMISS_MS, CLASH_ANNOUNCE_MS,
   AI_THINKING_MIN_MS, AI_THINKING_MAX_MS, AI_INPUT_MIN_MS, AI_INPUT_MAX_MS,
   COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE,
-  BATTLE_FEEDBACK_HOLD_MS, SKIP_TU_COST, BETWEEN_TURN_PAUSE_MS,
+  BATTLE_FEEDBACK_HOLD_MS, ANIM_TIMEOUT_MS, SKIP_TU_COST, BETWEEN_TURN_PAUSE_MS,
 } from '../constants'
 import { resolveTickDisplacement } from '../combat/TickDisplacer'
 import { resolveClashWinner, factionAvgSpeed } from '../combat/ClashResolver'
@@ -97,6 +97,7 @@ export class BattleEngine {
   private telegraphTimer:      ReturnType<typeof setTimeout> | null
   private applyTimer:          ReturnType<typeof setTimeout> | null
   private playerApplyTimer:    ReturnType<typeof setTimeout> | null
+  private attackTimer:         ReturnType<typeof setTimeout> | null
   private clashAnnounceTimer:  ReturnType<typeof setTimeout> | null
   private diceTimer:           ReturnType<typeof setTimeout> | null
   private dismissTimer:        ReturnType<typeof setTimeout> | null
@@ -146,6 +147,7 @@ export class BattleEngine {
     this.telegraphTimer     = null
     this.applyTimer         = null
     this.playerApplyTimer   = null
+    this.attackTimer        = null
     this.clashAnnounceTimer = null
     this.diceTimer          = null
     this.dismissTimer       = null
@@ -165,6 +167,7 @@ export class BattleEngine {
     if (this.diceTimer)           clearTimeout(this.diceTimer)
     if (this.applyTimer)          clearTimeout(this.applyTimer)
     if (this.playerApplyTimer)    clearTimeout(this.playerApplyTimer)
+    if (this.attackTimer)         clearTimeout(this.attackTimer)
     if (this.telegraphTimer)      clearTimeout(this.telegraphTimer)
     if (this.clashAnnounceTimer)  clearTimeout(this.clashAnnounceTimer)
   }
@@ -289,20 +292,20 @@ export class BattleEngine {
     const { isMelee, dashDx, projectile, customSequence } =
       this.buildAttackAnimConfig(actor.defId, skill.id, skill.tags, actorDamaged)
 
-    this.cb.onPlayDice(outcome, () => {
+    this.cb.onPlayDice(outcome)
+    if (this.attackTimer) clearTimeout(this.attackTimer)
+    this.attackTimer = setTimeout(() => {
       this.cb.onPlayAttack(
         actor.defId, primaryTarget.defId, outcome, primaryDamage, isMelee, dashDx,
         projectile, buildOutcomeLabel(outcome), outcomeColour(outcome),
-        () => {
-          if (this.playerApplyTimer) clearTimeout(this.playerApplyTimer)
-          this.playerApplyTimer = setTimeout(() => {
-            this.setStep('player_applying')
-            this.drive()
-          }, BATTLE_FEEDBACK_HOLD_MS)
-        },
         customSequence,
       )
-    })
+      if (this.playerApplyTimer) clearTimeout(this.playerApplyTimer)
+      this.playerApplyTimer = setTimeout(() => {
+        this.setStep('player_applying')
+        this.drive()
+      }, ANIM_TIMEOUT_MS)
+    }, DICE_RESULT_DISMISS_MS)
   }
 
   skipTurn(): void {
@@ -798,23 +801,23 @@ export class BattleEngine {
         const { isMelee: aiIsMelee, dashDx: aiDashDx, projectile: aiProjectile, customSequence: aiSequence } =
           this.buildAttackAnimConfig(firstAIUnit.defId, skill.id, skill.tags, aiDamaged)
 
-        this.cb.onPlayDice(outcome, () => {
+        this.cb.onPlayDice(outcome)
+        if (this.attackTimer) clearTimeout(this.attackTimer)
+        this.attackTimer = setTimeout(() => {
           this.cb.onPlayAttack(
             freshAIUnit.defId, target.defId, outcome, primaryDamage, aiIsMelee, aiDashDx,
             aiProjectile, buildOutcomeLabel(outcome), outcomeColour(outcome),
-            () => {
-              if (this.applyTimer) clearTimeout(this.applyTimer)
-              this.applyTimer = setTimeout(() => {
-                if (this.step === 'enemy_acting') {
-                  this.setStep('enemy_applying')
-                  this.notify()
-                  this.drive()
-                }
-              }, BATTLE_FEEDBACK_HOLD_MS)
-            },
             aiSequence,
           )
-        })
+          if (this.applyTimer) clearTimeout(this.applyTimer)
+          this.applyTimer = setTimeout(() => {
+            if (this.step === 'enemy_acting') {
+              this.setStep('enemy_applying')
+              this.notify()
+              this.drive()
+            }
+          }, ANIM_TIMEOUT_MS)
+        }, DICE_RESULT_DISMISS_MS)
       }, inputMs)
 
     }, remainingDice + thinkDelay)
@@ -878,7 +881,8 @@ export class BattleEngine {
     const primaryVictim = !aiIsAlly ? deadPlayers[0] : deadEnemies[0]
     if (primaryVictim) {
       this.notify()
-      this.cb.onPlayDeath(primaryVictim.defId, () => {
+      this.cb.onPlayDeath(primaryVictim.defId)
+      setTimeout(() => {
         this.cb.onClearTurn()
         this.playPendingExpiryAnims(snap)
         this.playPendingActivationAnims()
@@ -887,7 +891,7 @@ export class BattleEngine {
           this.notify()
           this.drive()
         }
-      })
+      }, ANIM_TIMEOUT_MS)
       return
     }
     this.notify()
@@ -960,7 +964,8 @@ export class BattleEngine {
     const firstDead = deadEnemies[0]
     if (firstDead) {
       this.notify()
-      this.cb.onPlayDeath(firstDead.defId, () => {
+      this.cb.onPlayDeath(firstDead.defId)
+      setTimeout(() => {
         this.cb.onClearTurn()
         this.playPendingExpiryAnims(snap)
         this.playPendingActivationAnims()
@@ -969,7 +974,7 @@ export class BattleEngine {
           this.notify()
           this.drive()
         }
-      })
+      }, ANIM_TIMEOUT_MS)
     } else {
       this.notify()
       this.cb.onClearTurn()
@@ -1417,7 +1422,7 @@ export class BattleEngine {
       const seq = this.animSequences.get(ownerDefId)?.[sequenceId]
       if (!seq) continue
       this.cb.onSetTurnState(ownerDefId, firstLivingEnemy.defId, null, null, { acting: false, target: false })
-      this.cb.onPlayAttack(ownerDefId, firstLivingEnemy.defId, 'Hit', damage, false, 0, null, '', '', () => this.cb.onClearTurn(), seq)
+      this.cb.onPlayAttack(ownerDefId, firstLivingEnemy.defId, 'Hit', damage, false, 0, null, '', '', seq)
     }
   }
 
@@ -1434,7 +1439,8 @@ export class BattleEngine {
       }
       if (!seq) { release(); continue }
       this.cb.onSetTurnState(ownerDefId, ownerDefId, null, null, { acting: false, target: false })
-      this.cb.onPlayAttack(ownerDefId, ownerDefId, 'Hit', 0, false, 0, null, '', '', release, seq)
+      this.cb.onPlayAttack(ownerDefId, ownerDefId, 'Hit', 0, false, 0, null, '', '', seq)
+      setTimeout(release, ANIM_TIMEOUT_MS)
     }
   }
 

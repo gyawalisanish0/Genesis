@@ -60,6 +60,7 @@ export const AI_INPUT_MIN_MS             = 2000 // min ms between target reveal 
 export const AI_INPUT_MAX_MS             = 3000 // max ms between target reveal and attack execution
 export const BACK_DEBOUNCE_MS            = 300  // min ms between back-button presses in battle
 export const BATTLE_FEEDBACK_HOLD_MS     = 500  // ms to hold after attack animation before applying state
+export const ANIM_TIMEOUT_MS             = 1200 // fixed engine wait after firing an attack/death animation (fire-and-forget model)
 export const BETWEEN_TURN_PAUSE_MS       = 150  // pause between unit exit and next unit entrance
 export const ANIM_FRAME_INTERVAL_MS      = 800  // default ms per animation frame (idle loops)
 

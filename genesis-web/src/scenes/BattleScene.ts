@@ -128,8 +128,8 @@ export class BattleScene extends Phaser.Scene {
     this.load.start()
   }
 
-  clearTurn(onDone?: () => void): void {
-    this.unitStage.hide(onDone)
+  clearTurn(): void {
+    this.unitStage.hide()
   }
 
   /** True while a play-once animation (dash, death, hurt, dodge) is running on any figure. */
@@ -139,8 +139,8 @@ export class BattleScene extends Phaser.Scene {
 
   // ── Stage 3: dice → attack → feedback (phase-gated via onDone) ───────────
 
-  playDice(outcome: string, onDone: () => void): void {
-    this.dicePanel.spin(outcome, onDone)
+  playDice(outcome: string): void {
+    this.dicePanel.spin(outcome)
   }
 
   skipActiveDice(): void {
@@ -157,7 +157,6 @@ export class BattleScene extends Phaser.Scene {
     projectile:      AnimationProjectileDef | null,
     feedbackText:    string,
     feedbackColour:  string,
-    onDone:          () => void,
     customSequence?: AnimPhase[],
   ): void {
     const diceOutcome = outcome as DiceOutcome
@@ -168,7 +167,7 @@ export class BattleScene extends Phaser.Scene {
       feedbackText, feedbackColour,
     }
     const phases = customSequence ?? buildDefaultSequence(isMelee, diceOutcome)
-    this.sequenceRunner.run(phases, ctx, onDone)
+    this.sequenceRunner.run(phases, ctx, () => {})
   }
 
   /** Skip the active attack sequence — cancels pending waits and fires onDone. */
@@ -178,8 +177,8 @@ export class BattleScene extends Phaser.Scene {
 
   // ── Stage 4: death collapse ───────────────────────────────────────────────
 
-  playDeath(defId: string, onDone: () => void): void {
-    this.unitStage.collapseByDefId(defId, onDone)
+  playDeath(defId: string): void {
+    this.unitStage.collapseByDefId(defId, () => {})
   }
 
   // ── Stage 5: turn display overlay ────────────────────────────────────────
