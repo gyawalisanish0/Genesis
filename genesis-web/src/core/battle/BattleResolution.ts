@@ -1,10 +1,10 @@
 // Target resolution, AI skill selection, and outcome display helpers.
 // All pure functions; no React.
 
-import type { Unit, AnimationManifest }         from '../../core/types'
-import type { SkillInstance, TargetSelector }   from '../../core/effects/types'
-import type { DiceOutcome }                     from '../../core/combat/DiceResolver'
-import { getCachedSkill }                       from '../../core/engines/skill/SkillInstance'
+import type { Unit, AnimationManifest }         from '../types'
+import type { SkillInstance, TargetSelector }   from '../effects/types'
+import type { DiceOutcome }                     from '../combat/DiceResolver'
+import { getCachedSkill }                       from '../engines/skill/SkillInstance'
 
 /**
  * Resolves the full list of targets for a skill cast.

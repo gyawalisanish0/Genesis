@@ -1,11 +1,11 @@
 // Pure AI turn computation — no React, no side effects.
 // Returns what the AI unit WILL do this tick; the caller handles state + animations.
 
-import type { Unit } from '../../core/types'
-import type { SkillInstance } from '../../core/effects/types'
-import { getCachedSkill } from '../../core/engines/skill/SkillInstance'
-import { isAlive, isSkillTagBlocked } from '../../core/unit'
-import { isOnCooldown, isBeforeMinTurns } from '../../core/combat/CooldownResolver'
+import type { Unit } from '../types'
+import type { SkillInstance } from '../effects/types'
+import { getCachedSkill } from '../engines/skill/SkillInstance'
+import { isAlive, isSkillTagBlocked } from '../unit'
+import { isOnCooldown, isBeforeMinTurns } from '../combat/CooldownResolver'
 import { resolveSkillTargets, pickAiSkill } from './BattleResolution'
 import { makeSnapshot } from './BattleSnapshot'
 

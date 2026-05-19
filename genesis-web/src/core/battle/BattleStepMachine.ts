@@ -1,9 +1,9 @@
 // BattleStepMachine — step enum and pending-turn data types for the sequential
 // battle driver. No React, no side-effects — pure type definitions.
 
-import type { Unit } from '../../core/types'
-import type { SkillInstance } from '../../core/effects/types'
-import type { DiceOutcome } from '../../core/combat/DiceResolver'
+import type { Unit } from '../types'
+import type { SkillInstance } from '../effects/types'
+import type { DiceOutcome } from '../combat/DiceResolver'
 
 // One atomic step at a time. The driver useEffect advances battleStep
 // sequentially; locked steps yield to animation callbacks.

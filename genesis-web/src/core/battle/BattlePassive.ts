@@ -1,10 +1,10 @@
 // Passive and status event dispatchers — fire* helpers that push effects into
 // the engine at the right moment in the battle loop. All pure functions; no React.
 
-import type { Unit }                                        from '../../core/types'
-import type { PassiveDef, StatusDef, EffectContext, SkillInstance } from '../../core/effects/types'
-import { isAlive }                                          from '../../core/unit'
-import { applyEffect }                                      from '../../core/effects/applyEffect'
+import type { Unit }                                        from '../types'
+import type { PassiveDef, StatusDef, EffectContext, SkillInstance } from '../effects/types'
+import { isAlive }                                          from '../unit'
+import { applyEffect }                                      from '../effects/applyEffect'
 import { snapshotToBattleState }                            from './BattleSnapshot'
 
 /** After a skill resolves, fire passive onHpThreshold effects whose threshold was crossed. */

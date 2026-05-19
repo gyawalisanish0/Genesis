@@ -19,22 +19,24 @@ export function rollD8Displacement(): number {
 /**
  * Cascade displacement until the unit lands on a tick with fewer than
  * TICK_MAX_OCCUPANCY occupants. The incoming unit (excludeId) is never
- * counted against the tick it is trying to join.
+ * counted against the tick it is trying to join. `minTick` clamps the
+ * result so a unit can never be displaced into the past — backward
+ * displacement would let the global clock travel back in time.
  */
 export function resolveTickDisplacement(
   targetTick: number,
   registered: ReadonlyMap<string, number>,
   excludeId:  string,
+  minTick:    number = 0,
 ): number {
-  let tick = targetTick
-  // Safety cap to prevent infinite loops in edge cases (e.g. every tick is full).
+  const floor = Math.max(0, minTick)
+  let tick = Math.max(targetTick, floor)
   const MAX_ITERATIONS = 64
   for (let i = 0; i < MAX_ITERATIONS; i++) {
     const occupants = countOccupants(tick, registered, excludeId)
     if (occupants < TICK_MAX_OCCUPANCY) return tick
     tick += rollD8Displacement()
-    // Tick positions must be non-negative.
-    if (tick < 0) tick = 0
+    if (tick < floor) tick = floor
   }
   return tick
 }
