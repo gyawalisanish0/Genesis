@@ -387,11 +387,8 @@ export class BattleEngine {
       this.runAttack(defender, originalCaster, counterSkill, snap, depth + 1)
       fireCounterCastEffects(defender, originalCaster, counterSkill, snap, currentTick)
       fireCounterTriggerEffects(defender, snap, this.passiveDefs, currentTick)
-      setTimeout(() => {
-        this.playerUnits = this.playerUnits.map(u => snap.get(u.id) ?? u)
-        this.enemies     = this.enemies.map(e => snap.get(e.id) ?? e)
-        this.notify()
-      }, DICE_RESULT_DISMISS_MS)
+      // snap is the same reference as pendingPlayerTurn.snap — runPlayerApplying
+      // will apply it at the correct time; no delayed re-apply here.
     }, 200)
 
     this.notify()
@@ -1365,11 +1362,8 @@ export class BattleEngine {
             this.runAttack(defender, originalCaster, counterSkill, snap, depth + 1)
             fireCounterCastEffects(defender, originalCaster, counterSkill, snap, currentTick)
             fireCounterTriggerEffects(defender, snap, this.passiveDefs, currentTick)
-            setTimeout(() => {
-              this.playerUnits = this.playerUnits.map(u => snap.get(u.id) ?? u)
-              this.enemies     = this.enemies.map(e => snap.get(e.id) ?? e)
-              this.notify()
-            }, DICE_RESULT_DISMISS_MS)
+            // snap is the same reference as pendingAITurn.snap — runEnemyApplying
+            // will apply it at the correct time; no delayed re-apply here.
           }, DICE_RESULT_DISMISS_MS)
         }
       }
