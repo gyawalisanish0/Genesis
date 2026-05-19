@@ -89,6 +89,9 @@ export const DUNGEON_ENCOUNTER_BANNER_MS   = 1200 // ms encounter telegraph bann
 // First-time hint toaster
 export const HINT_TOASTER_DURATION_MS = 5000  // ms the hint stays visible before auto-dismiss
 
+// Battle error toast
+export const BATTLE_ERROR_TOAST_MS = 15000  // ms error toast is shown before auto-navigating away
+
 // Insufficient-AP feedback
 export const AP_WARN_SHAKE_MS   = 380   // shake animation duration on tapped AP-short button
 export const AP_WARN_DISMISS_MS = 3000  // ms the insufficient-AP toast stays visible

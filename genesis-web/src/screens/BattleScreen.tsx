@@ -12,6 +12,7 @@ import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import { BattleArena } from '../components/BattleArena'
 import { HintToaster } from '../components/HintToaster'
 import { BattleProvider, useBattleScreen } from './BattleContext'
+import { BattleErrorToast } from './BattleErrorToast'
 import { BattleLogOverlay } from './BattleLogOverlay'
 import { ClashQteOverlay } from './ClashQteOverlay'
 import { TeamCollisionOverlay } from './TeamCollisionOverlay'
@@ -618,7 +619,7 @@ function TargetSelectOverlay() {
 
 // ── Battle layout ───────────────────────────────────────────────────────────
 function BattleLayout() {
-  const { arenaRef, isPaused, setPaused, isLoading, playerUnits, diceResult, skipDice, inspectingSkill, setInspectingSkill } = useBattleScreen()
+  const { arenaRef, isPaused, setPaused, isLoading, playerUnits, diceResult, skipDice, inspectingSkill, setInspectingSkill, battleError } = useBattleScreen()
   const navigate    = useNavigate()
   const lastBackRef = useRef(0)
   const createHandler = useScrollAwarePointer()
@@ -657,6 +658,12 @@ function BattleLayout() {
 
   return (
     <div className={styles.root}>
+      {battleError && (
+        <BattleErrorToast
+          message={battleError}
+          onLeave={() => navigate(SCREEN_REGISTRY[SCREEN_IDS.MAIN_MENU].path, { replace: true })}
+        />
+      )}
       {isPaused && <PauseOverlay />}
       {logOpen && <BattleLogOverlay onClose={() => setLogOpen(false)} />}
       {inspectingSkill && <SkillInfoOverlay skill={inspectingSkill} onClose={() => setInspectingSkill(null)} />}
