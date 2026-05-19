@@ -887,13 +887,10 @@ export class BattleEngine {
       return
     }
     this.notify()
-    this.cb.onClearTurn(() => {
-      if (this.step === 'enemy_applying') {
-        this.setStep('advance_tick')
-        this.notify()
-        this.drive()
-      }
-    })
+    this.cb.onClearTurn()
+    this.setStep('advance_tick')
+    this.notify()
+    this.drive()
   }
 
   // ── Step: player_applying ─────────────────────────────────────────────────────
