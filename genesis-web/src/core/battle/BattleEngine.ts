@@ -387,11 +387,8 @@ export class BattleEngine {
       this.runAttack(defender, originalCaster, counterSkill, snap, depth + 1)
       fireCounterCastEffects(defender, originalCaster, counterSkill, snap, currentTick)
       fireCounterTriggerEffects(defender, snap, this.passiveDefs, currentTick)
-      setTimeout(() => {
-        this.playerUnits = this.playerUnits.map(u => snap.get(u.id) ?? u)
-        this.enemies     = this.enemies.map(e => snap.get(e.id) ?? e)
-        this.notify()
-      }, DICE_RESULT_DISMISS_MS)
+      // snap is the same reference as pendingPlayerTurn.snap — runPlayerApplying
+      // will apply it at the correct time; no delayed re-apply here.
     }, 200)
 
     this.notify()
@@ -762,7 +759,10 @@ export class BattleEngine {
         if (this.step !== 'enemy_acting') return
         const execPlayers = this.playerUnits
         const execEnemies = this.enemies
-        const snap     = makeSnapshot(execPlayers, execEnemies)
+        const snap               = makeSnapshot(execPlayers, execEnemies)
+        const preStatusSnapshot  = new Map(
+          [...snap].map(([uid, u]) => [uid, new Set(u.statusSlots.map(s => s.id))])
+        )
         const thisTick = this.tickValue
 
         this.applySkillAPCost(firstAIUnit.id, skill.apCost, snap, thisTick)
@@ -782,13 +782,14 @@ export class BattleEngine {
         const aiEffectiveTu = getEffectiveTuCost(skill.tuCost, snap.get(firstAIUnit.id) ?? freshAIUnit)
 
         this.pendingAITurn = {
-          aiUnit:        freshAIUnit,
+          aiUnit:            freshAIUnit,
           snap,
-          effectiveTu:   aiEffectiveTu,
-          primaryTarget: target,
+          effectiveTu:       aiEffectiveTu,
+          primaryTarget:     target,
           primaryDamage,
           outcome,
-          isAlly:        freshAIUnit.isAlly,
+          isAlly:            freshAIUnit.isAlly,
+          preStatusSnapshot,
         }
         this.notify()
 
@@ -826,10 +827,11 @@ export class BattleEngine {
     if (!pending) return
     this.pendingAITurn = null
 
-    const { aiUnit, snap, effectiveTu, primaryTarget, isAlly: aiIsAlly } = pending
+    const { aiUnit, snap, effectiveTu, primaryTarget, isAlly: aiIsAlly, preStatusSnapshot } = pending
     const currentPlayers = this.playerUnits
     const currentEnemies = this.enemies
 
+    this.detectNewActivations(snap, preStatusSnapshot)
     this.playerUnits = this.playerUnits.map(u => snap.get(u.id) ?? u)
     this.enemies     = this.enemies.map(e => snap.get(e.id) ?? e)
 
@@ -878,6 +880,8 @@ export class BattleEngine {
       this.notify()
       this.cb.onPlayDeath(primaryVictim.defId, () => {
         this.cb.onClearTurn()
+        this.playPendingExpiryAnims(snap)
+        this.playPendingActivationAnims()
         if (this.step === 'enemy_applying') {
           this.setStep('advance_tick')
           this.notify()
@@ -887,13 +891,12 @@ export class BattleEngine {
       return
     }
     this.notify()
-    this.cb.onClearTurn(() => {
-      if (this.step === 'enemy_applying') {
-        this.setStep('advance_tick')
-        this.notify()
-        this.drive()
-      }
-    })
+    this.cb.onClearTurn()
+    this.playPendingExpiryAnims(snap)
+    this.playPendingActivationAnims()
+    this.setStep('advance_tick')
+    this.notify()
+    this.drive()
   }
 
   // ── Step: player_applying ─────────────────────────────────────────────────────
@@ -998,6 +1001,7 @@ export class BattleEngine {
     const { unit: skipTicked, expired: skipExpired } = tickStatusDurations(skipSnap.get(freshAIUnit.id)!)
     skipSnap.set(freshAIUnit.id, skipTicked)
     for (const slot of skipExpired) this.fireExpiryChain(freshAIUnit.defId, slot.id, skipSnap)
+    this.playPendingExpiryAnims(skipSnap)
     fireBattleTickIntervalPassives(
       this.globalBattleTick, skipSnap,
       this.passiveDefs,
@@ -1368,11 +1372,8 @@ export class BattleEngine {
             this.runAttack(defender, originalCaster, counterSkill, snap, depth + 1)
             fireCounterCastEffects(defender, originalCaster, counterSkill, snap, currentTick)
             fireCounterTriggerEffects(defender, snap, this.passiveDefs, currentTick)
-            setTimeout(() => {
-              this.playerUnits = this.playerUnits.map(u => snap.get(u.id) ?? u)
-              this.enemies     = this.enemies.map(e => snap.get(e.id) ?? e)
-              this.notify()
-            }, DICE_RESULT_DISMISS_MS)
+            // snap is the same reference as pendingAITurn.snap — runEnemyApplying
+            // will apply it at the correct time; no delayed re-apply here.
           }, DICE_RESULT_DISMISS_MS)
         }
       }

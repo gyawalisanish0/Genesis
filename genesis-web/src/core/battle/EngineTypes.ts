@@ -80,13 +80,14 @@ export interface PendingPlayerTurnData {
 }
 
 export interface PendingAITurnData {
-  aiUnit:        Unit
-  snap:          Map<string, Unit>
-  effectiveTu:   number
-  primaryTarget: Unit
-  primaryDamage: number
-  outcome:       DiceOutcome
-  isAlly:        boolean
+  aiUnit:             Unit
+  snap:               Map<string, Unit>
+  effectiveTu:        number
+  primaryTarget:      Unit
+  primaryDamage:      number
+  outcome:            DiceOutcome
+  isAlly:             boolean
+  preStatusSnapshot:  Map<string, Set<string>>
 }
 
 // ── Engine configuration ───────────────────────────────────────────────────────

@@ -148,7 +148,11 @@ export const BattleArena = forwardRef<BattleArenaHandle>(
         }
       },
       clearTurn(onDone) {
-        sceneRef.current?.clearTurn(onDone)
+        if (sceneRef.current) {
+          sceneRef.current.clearTurn(onDone)
+        } else {
+          onDone?.()
+        }
       },
       playDice(outcome, onDone) {
         if (sceneRef.current) {
