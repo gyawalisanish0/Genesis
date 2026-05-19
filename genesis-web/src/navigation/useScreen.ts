@@ -2,7 +2,7 @@
 // Provides: current screen config, safe-area insets, type-safe navigation,
 // and lifecycle hook registration (onEnter, onLeave, onBack).
 
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useScreenContext } from './ScreenContext'
 import { SCREEN_REGISTRY } from './screenRegistry'
@@ -28,10 +28,11 @@ export function useScreen(hooks?: ScreenLifecycleHooks): UseScreenResult {
     return () => { leave?.() }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Type-safe navigation — always go through the registry so paths stay in one place.
-  function navigateTo(id: ScreenId) {
+  // Stable reference: navigate is guaranteed stable by React Router, so this
+  // never changes identity across renders — safe as a useEffect dependency.
+  const navigateTo = useCallback((id: ScreenId) => {
     navigate(SCREEN_REGISTRY[id].path)
-  }
+  }, [navigate])
 
   return { screen, safeInsets, navigateTo }
 }
