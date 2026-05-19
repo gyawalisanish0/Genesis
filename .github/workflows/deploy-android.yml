@@ -51,7 +51,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       # 6. Android SDK — ubuntu-24.04 runners have the SDK pre-installed.
       #    Accept licences and install platform 35 + matching build-tools.
