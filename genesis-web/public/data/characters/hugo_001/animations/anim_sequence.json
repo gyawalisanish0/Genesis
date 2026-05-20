@@ -1,0 +1,37 @@
+{
+  "type": "ascii_sequence",
+  "defId": "hugo_001",
+  "states": {
+    "idle": {
+      "frameMs": 700,
+      "loop": true,
+      "breathPause": 2
+    },
+    "attack": {
+      "frameMs": 110,
+      "loop": false,
+      "returnTo": "idle",
+      "onFrame": {
+        "1": "onImpact"
+      }
+    },
+    "hurt": {
+      "frameMs": 90,
+      "loop": false,
+      "returnTo": "idle",
+      "queuesOn": [
+        "attack"
+      ]
+    },
+    "dodge": {
+      "frameMs": 100,
+      "loop": false,
+      "returnTo": "idle"
+    },
+    "death": {
+      "frameMs": 200,
+      "loop": false,
+      "terminal": true
+    }
+  }
+}
