@@ -1,16 +1,24 @@
-// AsciiArena — React wrapper for the ASCII animation engine.
-// Exposes identical BattleArenaHandle interface as the old BattleArena (Phaser),
-// so BattleContext and BattleEngine require zero changes.
+// AsciiArena — pure React renderer for the ASCII animation engine.
+//
+// Architecture:
+//   AsciiAnimEngine fires AnimSignals → this component subscribes → renders.
+//   No logic lives here. All display decisions (what to show, when to show it)
+//   are made by AsciiAnimEngine. React receives signals and renders them.
+//   Auto-dismiss timers for burst/feedback are the only exception — they are
+//   a display-layer concern (how long to show something on screen).
+//
+// The forwardRef exposes BattleArenaHandle by delegating every method directly
+// to the engine. BattleContext and BattleEngine require zero changes.
 
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState, useCallback } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import type { AnimationManifest, AnimationProjectileDef, AnimPhase } from '../core/types'
-import type { TurnDisplayData } from '../core/battle/EngineTypes'
+import type { TurnDisplayData } from '../ascii/types'
 import { AsciiAnimEngine } from '../ascii/AsciiAnimEngine'
-import type { AsciiArenaFrame } from '../ascii/types'
+import type { AsciiArenaFrame, AnimSignal } from '../ascii/types'
 import { SymbolFigure } from './SymbolFigure'
 import styles from './AsciiArena.module.css'
 
-// ── Re-export handle types so BattleContext imports stay unchanged ─────────────
+// ── Re-export handle types so BattleContext import path stays unchanged ────────
 
 export type { TurnDisplayData }
 
@@ -53,25 +61,7 @@ export interface BattleArenaHandle {
   hideTurnDisplay(): void
 }
 
-// ── Outcome → symbol mapping ─────────────────────────────────────────────────
-
-const OUTCOME_SYMBOL: Record<string, string> = {
-  hit:     '⚔',
-  boosted: '★',
-  evade:   '◎',
-  miss:    '✕',
-  fail:    '✕',
-}
-
-const OUTCOME_COLOR: Record<string, string> = {
-  hit:     '--accent-heal',
-  boosted: '--accent-gold',
-  evade:   '--accent-evasion',
-  miss:    '--text-muted',
-  fail:    '--text-muted',
-}
-
-// ── Generic palette (used when no AsciiManifest loaded) ──────────────────────
+// ── Generic palette (used until character-specific AsciiManifest loads) ───────
 
 const GENERIC_PALETTE: Record<string, string> = {
   box:      '--text-secondary',
@@ -83,36 +73,23 @@ const GENERIC_PALETTE: Record<string, string> = {
   base:     '--text-primary',
 }
 
-// ── Dice animation state ─────────────────────────────────────────────────────
+const BURST_DISMISS_MS    = 900
+const FEEDBACK_DISMISS_MS = 1200
 
-interface DiceState {
-  outcome: string
-  key:     number
-}
+// ── State shapes ──────────────────────────────────────────────────────────────
 
-// ── Feedback / outcome burst ─────────────────────────────────────────────────
+interface DiceState    { outcome: string; key: number }
+interface BurstState   { symbol: string;  colour: string; key: number }
+interface FeedbackState{ text: string;    colour: string; key: number }
 
-interface BurstState {
-  symbol:  string
-  colour:  string
-  key:     number
-}
-
-interface FeedbackState {
-  text:    string
-  colour:  string
-  key:     number
-}
-
-// ── HP bar helper ─────────────────────────────────────────────────────────────
+// ── HP bar ───────────────────────────────────────────────────────────────────
 
 function HpBar({ hp, maxHp }: { hp: number; maxHp: number }) {
-  const pct = maxHp > 0 ? Math.max(0, Math.min(1, hp / maxHp)) : 0
+  const pct    = maxHp > 0 ? Math.max(0, Math.min(1, hp / maxHp)) : 0
   const filled = Math.round(pct * 10)
-  const empty  = 10 - filled
   return (
     <span className={styles.hpBar}>
-      {'█'.repeat(filled)}{'░'.repeat(empty)}
+      {'█'.repeat(filled)}{'░'.repeat(10 - filled)}
       <span className={styles.hpNum}> {hp}/{maxHp}</span>
     </span>
   )
@@ -124,124 +101,122 @@ export const AsciiArena = forwardRef<BattleArenaHandle>(
   function AsciiArena(_props, ref) {
     const engineRef = useRef<AsciiAnimEngine | null>(null)
 
+    // ── Signal-driven display state (pure output, no logic) ─────────────────
     const [frame,       setFrame]       = useState<AsciiArenaFrame | null>(null)
     const [turnDisplay, setTurnDisplay] = useState<TurnDisplayData | null>(null)
     const [dice,        setDice]        = useState<DiceState | null>(null)
     const [burst,       setBurst]       = useState<BurstState | null>(null)
     const [feedback,    setFeedback]    = useState<FeedbackState | null>(null)
 
-    // Manifests loaded by engine; store palette per defId for SymbolFigure
-    const palettesRef = useRef<Map<string, Record<string, string>>>(new Map())
+    // Auto-dismiss refs (display-layer concern only)
+    const burstTimer    = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-    const clearBurstTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-    const clearFbTimer    = useRef<ReturnType<typeof setTimeout> | null>(null)
-
+    // ── Create engine, wire signal channel ──────────────────────────────────
     useEffect(() => {
       const engine = new AsciiAnimEngine()
       engineRef.current = engine
-      engine.onFrame((f) => setFrame(f))
+
+      engine.onSignal((signal: AnimSignal) => {
+        switch (signal.type) {
+          case 'frame':
+            setFrame(signal.frame)
+            break
+
+          case 'dice':
+            setDice({ outcome: signal.outcome, key: Date.now() })
+            break
+
+          case 'dice_clear':
+            setDice(null)
+            break
+
+          case 'burst':
+            if (burstTimer.current) clearTimeout(burstTimer.current)
+            setBurst({ symbol: signal.symbol, colour: signal.colour, key: Date.now() })
+            burstTimer.current = setTimeout(() => setBurst(null), BURST_DISMISS_MS)
+            break
+
+          case 'feedback':
+            if (feedbackTimer.current) clearTimeout(feedbackTimer.current)
+            setFeedback({ text: signal.text, colour: signal.colour, key: Date.now() })
+            feedbackTimer.current = setTimeout(() => setFeedback(null), FEEDBACK_DISMISS_MS)
+            break
+
+          case 'turn_show':
+            setTurnDisplay(signal.data)
+            break
+
+          case 'turn_hide':
+            setTurnDisplay(null)
+            break
+        }
+      })
+
       engine.start()
+
       return () => {
         engine.stop()
         engineRef.current = null
+        if (burstTimer.current)    clearTimeout(burstTimer.current)
+        if (feedbackTimer.current) clearTimeout(feedbackTimer.current)
       }
     }, [])
 
-    // Clear burst overlay after display
-    const showBurst = useCallback((symbol: string, colour: string) => {
-      if (clearBurstTimer.current) clearTimeout(clearBurstTimer.current)
-      setBurst({ symbol, colour, key: Date.now() })
-      clearBurstTimer.current = setTimeout(() => setBurst(null), 900)
-    }, [])
-
-    const showFeedback = useCallback((text: string, colour: string) => {
-      if (clearFbTimer.current) clearTimeout(clearFbTimer.current)
-      setFeedback({ text, colour, key: Date.now() })
-      clearFbTimer.current = setTimeout(() => setFeedback(null), 1200)
-    }, [])
-
+    // ── Forward handle → engine (zero logic in React) ───────────────────────
     useImperativeHandle(ref, () => ({
-      setTurnState(actingDefId, targetDefId, _am?, _tm?, _isDamaged?) {
-        engineRef.current?.setTurnState(actingDefId, targetDefId)
-        setBurst(null)
-        setFeedback(null)
+      setTurnState(actingDefId, targetDefId, am?, tm?, isDamaged?) {
+        engineRef.current?.setTurnState(actingDefId, targetDefId, am, tm, isDamaged)
       },
-
       clearTurn() {
         engineRef.current?.clearTurn()
-        setTurnDisplay(null)
       },
-
       playDice(outcome) {
-        setDice({ outcome, key: Date.now() })
+        engineRef.current?.playDice(outcome)
       },
-
       skipActiveDice() {
-        setDice(null)
+        engineRef.current?.skipActiveDice()
       },
-
-      playAttack(actingDefId, targetDefId, outcome, _damage, isMelee, _dashDx, _proj, feedbackText, feedbackColour) {
-        engineRef.current?.playAttack(actingDefId, targetDefId, outcome, isMelee)
-        const sym = OUTCOME_SYMBOL[outcome.toLowerCase()] ?? '•'
-        const col = OUTCOME_COLOR[outcome.toLowerCase()]  ?? '--text-muted'
-        showBurst(sym, col)
-        showFeedback(feedbackText, feedbackColour)
-        setDice(null)
+      playAttack(actingDefId, targetDefId, outcome, damage, isMelee, dashDx, projectile, feedbackText, feedbackColour, customSequence?) {
+        engineRef.current?.playAttack(actingDefId, targetDefId, outcome, damage, isMelee, dashDx, projectile, feedbackText, feedbackColour, customSequence)
       },
-
       playDeath(defId) {
         engineRef.current?.playDeath(defId)
       },
-
       showTurnDisplay(data) {
-        setTurnDisplay(data)
+        engineRef.current?.showTurnDisplay(data)
       },
-
       hideTurnDisplay() {
-        setTurnDisplay(null)
+        engineRef.current?.hideTurnDisplay()
       },
-    }), [showBurst, showFeedback])
+    }), [])
 
-    // ── Render ──────────────────────────────────────────────────────────────────
+    // ── Render (pure — no decisions, only signal-driven state) ──────────────
 
-    const actingPalette = palettesRef.current.get(frame?.acting?.defId ?? '') ?? GENERIC_PALETTE
-    const targetPalette = palettesRef.current.get(frame?.target?.defId ?? '') ?? GENERIC_PALETTE
-
-    const actingRarity = turnDisplay?.actor?.rarity ?? turnDisplay?.target?.rarity ?? 1
+    const actingRarity = turnDisplay?.actor?.rarity ?? 1
     const targetRarity = turnDisplay?.target?.rarity ?? 1
 
     return (
       <div className={styles.arena}>
 
-        {/* Turn display strip */}
         {turnDisplay && (
           <div className={styles.turnStrip}>
             {turnDisplay.actor && (
               <span className={styles.turnActor}>{turnDisplay.actor.name}</span>
             )}
             <span className={styles.turnSkill}>{turnDisplay.skillName}</span>
-            {turnDisplay.actor && (
-              <span className={styles.turnArrow}>→</span>
-            )}
+            {turnDisplay.actor && <span className={styles.turnArrow}>→</span>}
             <span className={styles.turnTarget}>{turnDisplay.target.name}</span>
           </div>
         )}
 
-        {/* Stage */}
         <div className={styles.stage}>
 
-          {/* Acting figure */}
           <div className={styles.figureWrap}>
-            {frame?.acting ? (
-              <SymbolFigure
-                frame={frame.acting.frame}
-                palette={actingPalette}
-                rarity={actingRarity}
-                flipped={false}
-              />
-            ) : (
-              <div className={styles.figureEmpty}>?</div>
-            )}
+            {frame?.acting
+              ? <SymbolFigure frame={frame.acting.frame} palette={GENERIC_PALETTE} rarity={actingRarity} />
+              : <div className={styles.figureEmpty}>?</div>
+            }
             {turnDisplay?.actor && (
               <div className={styles.figureInfo}>
                 <span className={styles.figureName}>{turnDisplay.actor.name}</span>
@@ -250,7 +225,6 @@ export const AsciiArena = forwardRef<BattleArenaHandle>(
             )}
           </div>
 
-          {/* Projectile */}
           {frame?.projectile?.visible && (
             <div
               className={styles.projectile}
@@ -260,18 +234,11 @@ export const AsciiArena = forwardRef<BattleArenaHandle>(
             </div>
           )}
 
-          {/* Target figure */}
           <div className={styles.figureWrap}>
-            {frame?.target ? (
-              <SymbolFigure
-                frame={frame.target.frame}
-                palette={targetPalette}
-                rarity={targetRarity}
-                flipped={true}
-              />
-            ) : (
-              <div className={styles.figureEmpty}>?</div>
-            )}
+            {frame?.target
+              ? <SymbolFigure frame={frame.target.frame} palette={GENERIC_PALETTE} rarity={targetRarity} flipped />
+              : <div className={styles.figureEmpty}>?</div>
+            }
             {turnDisplay?.target && (
               <div className={styles.figureInfo}>
                 <span className={styles.figureName}>{turnDisplay.target.name}</span>
@@ -281,33 +248,22 @@ export const AsciiArena = forwardRef<BattleArenaHandle>(
           </div>
         </div>
 
-        {/* Outcome burst overlay */}
         {burst && (
-          <div
-            key={burst.key}
-            className={styles.burst}
-            style={{ color: `var(${burst.colour})` }}
-          >
+          <div key={burst.key} className={styles.burst} style={{ color: `var(${burst.colour})` }}>
             {burst.symbol}
           </div>
         )}
 
-        {/* Feedback text */}
         {feedback && (
-          <div
-            key={feedback.key}
-            className={styles.feedback}
-            style={{ color: feedback.colour }}
-          >
+          <div key={feedback.key} className={styles.feedback} style={{ color: feedback.colour }}>
             {feedback.text}
           </div>
         )}
 
-        {/* Dice overlay */}
         {dice && (
           <div key={dice.key} className={styles.diceOverlay}>
             <span className={styles.diceFace}>
-              {OUTCOME_SYMBOL[dice.outcome.toLowerCase()] ?? '◈'}
+              {{ hit: '⚔', boosted: '★', evade: '◎', miss: '✕', fail: '✕' }[dice.outcome.toLowerCase()] ?? '◈'}
             </span>
             <span className={styles.diceLabel}>{dice.outcome.toUpperCase()}</span>
           </div>

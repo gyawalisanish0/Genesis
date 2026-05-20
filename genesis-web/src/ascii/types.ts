@@ -63,3 +63,20 @@ export interface AsciiArenaFrame {
   target: FigureAnimFrame | null
   projectile: ProjectileFrame | null
 }
+
+// ── Typed signal channel: engine → React (one-way, fire-and-forget) ──────────
+//
+// The engine fires signals; React subscribes and renders. No callbacks flow back.
+// React handles its own display cleanup (auto-dismiss timers on burst/feedback).
+
+import type { TurnDisplayData } from '../core/battle/EngineTypes'
+export type { TurnDisplayData }
+
+export type AnimSignal =
+  | { type: 'frame';       frame: AsciiArenaFrame }
+  | { type: 'dice';        outcome: string }
+  | { type: 'dice_clear' }
+  | { type: 'burst';       symbol: string; colour: string }
+  | { type: 'feedback';    text: string;   colour: string }
+  | { type: 'turn_show';   data: TurnDisplayData }
+  | { type: 'turn_hide' }
