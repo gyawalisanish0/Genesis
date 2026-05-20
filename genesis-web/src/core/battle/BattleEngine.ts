@@ -404,6 +404,14 @@ export class BattleEngine {
 
   resolveClash(winner: 'player' | 'enemy'): void {
     this.pendingClash = null
+    if (winner === 'player') {
+      const activeIds = new Set<string>()
+      for (const [id, tick] of this.registeredTicks) {
+        if (tick === this.tickValue) activeIds.add(id)
+      }
+      const actor = this.playerUnits.find(u => activeIds.has(u.id) && this.controlledIds.has(u.id) && isAlive(u)) ?? null
+      if (actor) this.showPlayerTurnUnits(actor)
+    }
     this.setStep(winner === 'player' ? 'player_turn' : 'enemy_telegraph')
     this.notify()
     this.drive()
@@ -563,10 +571,12 @@ export class BattleEngine {
       })
       winnerUs.forEach(u => this.cb.onNarrativeEmit({ type: 'clash_resolved', actorId: u.defId }))
       this.clashAnnounceWinner = winner
+      const clashWinActor = winner === 'player' ? (activeControlled[0] ?? null) : null
       this.setStep('clash_announcing')
       this.notify()
       this.clashAnnounceTimer = setTimeout(() => {
         const w = this.clashAnnounceWinner
+        if (w === 'player' && clashWinActor) this.showPlayerTurnUnits(clashWinActor)
         this.setStep(w === 'player' ? 'player_turn' : 'enemy_telegraph')
         this.notify()
         this.drive()
@@ -577,6 +587,7 @@ export class BattleEngine {
     if (activeControlled.length > 1) {
       const bySpeed = [...activeControlled].sort((a, b) => b.stats.speed - a.stats.speed)
       if (bySpeed[0].stats.speed !== bySpeed[1].stats.speed) {
+        this.showPlayerTurnUnits(bySpeed[0])
         this.setStep('player_turn')
         this.notify()
       } else {
@@ -628,6 +639,7 @@ export class BattleEngine {
         this.drive()
         return
       }
+      this.showPlayerTurnUnits(postTurnStart)
       this.setStep('player_turn')
       this.notify()
       return
@@ -1489,6 +1501,20 @@ export class BattleEngine {
     if (this.dismissTimer) clearTimeout(this.dismissTimer)
     this.cb.onShowTurnDisplay(d, dismissAfter)
     this.dismissTimer = setTimeout(() => this.cb.onHideTurnDisplay(), dismissAfter)
+  }
+
+  // Show the acting player + default target in the Phaser arena as soon as player_turn
+  // begins so the canvas is never blank while the player deliberates.
+  // React's selectSkill will call onSetTurnState again with the actual selected target.
+  private showPlayerTurnUnits(actor: Unit): void {
+    const firstEnemy = this.enemies.find(isAlive) ?? null
+    if (!firstEnemy) return
+    const actingMf = this.manifests.get(actor.defId) ?? null
+    const targetMf = this.manifests.get(firstEnemy.defId) ?? null
+    this.cb.onSetTurnState(actor.defId, firstEnemy.defId, actingMf, targetMf, {
+      acting: unitIsDamaged(actor, actingMf),
+      target: unitIsDamaged(firstEnemy, targetMf),
+    })
   }
 
   // ── Battle end ────────────────────────────────────────────────────────────────
