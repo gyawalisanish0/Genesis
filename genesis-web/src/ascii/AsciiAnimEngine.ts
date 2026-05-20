@@ -1,6 +1,13 @@
 // AsciiAnimEngine — rAF-driven ASCII animation orchestrator.
 // Pure TS: no React, no Phaser. Fires onFrame callbacks that React uses to setState.
 // Mirrors BattleEngine architecture: own timer loop, fire-and-forget model.
+//
+// Fire-and-forget contract (same as BattleEngine / BattleScene):
+//   Every command (setTurnState, playAttack, playDeath) increments `turnGen`.
+//   Any async load or onImpact callback that fires after turnGen changed is a
+//   no-op — the stale result is silently discarded. This matches the `turnVersion`
+//   guard in BattleScene.ts that prevents stale setTurnState callbacks from
+//   touching the wrong turn's animators.
 
 import { FigureAnimator } from './FigureAnimator'
 import { ProjectileAnimator } from './ProjectileAnimator'
@@ -14,19 +21,24 @@ import {
 // ── Engine ───────────────────────────────────────────────────────────────────
 
 export class AsciiAnimEngine {
-  private actingAnimator  = new FigureAnimator()
-  private targetAnimator  = new FigureAnimator()
-  private projectile      = new ProjectileAnimator()
+  private actingAnimator = new FigureAnimator()
+  private targetAnimator = new FigureAnimator()
+  private projectile     = new ProjectileAnimator()
 
   private actingDefId: string | null = null
   private targetDefId: string | null = null
+
+  // Monotonically increasing counter. Every setTurnState / clearTurn bumps it.
+  // Async loads and deferred callbacks capture the value at call time and
+  // compare before touching animators — stale results are no-ops.
+  private turnGen = 0
 
   private onFrameCallback: ((f: AsciiArenaFrame) => void) | null = null
 
   private rafHandle: number | null = null
   private lastTime  = 0
 
-  // ── Lifecycle ───────────────────────────────────────────────────────────────
+  // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   start(): void {
     if (this.rafHandle !== null) return
@@ -45,21 +57,25 @@ export class AsciiAnimEngine {
     this.onFrameCallback = cb
   }
 
-  // ── BattleArenaHandle-compatible commands ───────────────────────────────────
+  // ── BattleArenaHandle-compatible commands ─────────────────────────────────
 
   setTurnState(actingDefId: string, targetDefId: string): void {
+    this.turnGen++
+    const gen = this.turnGen
+
     this.actingDefId = actingDefId
     this.targetDefId = targetDefId
     this.actingAnimator.reset()
     this.targetAnimator.reset()
     this.projectile.cancel()
 
-    this.loadCharacterData(actingDefId, this.actingAnimator)
-    this.loadCharacterData(targetDefId, this.targetAnimator)
+    this.loadCharacterData(actingDefId, this.actingAnimator, gen)
+    this.loadCharacterData(targetDefId, this.targetAnimator, gen)
     this.emitFrame()
   }
 
   clearTurn(): void {
+    this.turnGen++
     this.actingDefId = null
     this.targetDefId = null
     this.actingAnimator.reset()
@@ -69,32 +85,37 @@ export class AsciiAnimEngine {
   }
 
   playAttack(
-    actingDefId:  string,
-    targetDefId:  string,
-    _outcome:     string,
-    _isMelee:     boolean,
+    actingDefId: string,
+    targetDefId: string,
+    _outcome:    string,
+    _isMelee:    boolean,
   ): void {
-    const isActing = actingDefId === this.actingDefId
-    const animator = isActing ? this.actingAnimator : this.targetAnimator
-    const hurtAnim = isActing ? this.targetAnimator  : this.actingAnimator
+    const gen = this.turnGen
 
-    // Pre-fetch attack frames lazily
-    this.ensureActionLoaded(actingDefId, 'attack', isActing ? this.actingAnimator : this.targetAnimator)
+    const isActing  = actingDefId === this.actingDefId
+    const animator  = isActing ? this.actingAnimator : this.targetAnimator
+    const hurtAnim  = isActing ? this.targetAnimator  : this.actingAnimator
+    const hurtDefId = isActing ? targetDefId           : actingDefId
+
+    this.ensureActionLoaded(actingDefId, 'attack', animator, gen)
 
     animator.playAttack(undefined, () => {
+      // Guard: skip if turn changed since this attack was fired
+      if (gen !== this.turnGen) return
       hurtAnim.playHurt()
-      this.ensureActionLoaded(targetDefId, 'hurt', isActing ? this.targetAnimator : this.actingAnimator)
+      this.ensureActionLoaded(hurtDefId, 'hurt', hurtAnim, gen)
     })
   }
 
   playDeath(defId: string): void {
+    const gen      = this.turnGen
     const isActing = defId === this.actingDefId
     const animator = isActing ? this.actingAnimator : this.targetAnimator
-    this.ensureActionLoaded(defId, 'death', animator)
+    this.ensureActionLoaded(defId, 'death', animator, gen)
     animator.playDeath()
   }
 
-  // ── Callback wiring ─────────────────────────────────────────────────────────
+  // ── rAF loop ──────────────────────────────────────────────────────────────
 
   private readonly loop = (time: number): void => {
     const dt = time - this.lastTime
@@ -131,31 +152,37 @@ export class AsciiAnimEngine {
     }
   }
 
-  // ── Lazy data loading ────────────────────────────────────────────────────────
+  // ── Lazy data loading ─────────────────────────────────────────────────────
 
-  private async loadCharacterData(defId: string, animator: FigureAnimator): Promise<void> {
-    const [manifest, sequence] = await Promise.all([
+  private async loadCharacterData(
+    defId:    string,
+    animator: FigureAnimator,
+    gen:      number,
+  ): Promise<void> {
+    const [_manifest, sequence] = await Promise.all([
       loadAsciiManifest(defId),
       loadAsciiSequence(defId),
     ])
+    if (gen !== this.turnGen) return  // stale — turn changed while loading
 
     if (sequence) animator.setSequence(sequence)
 
-    // Load idle frames immediately; other actions load on demand
     const idleFrames = await loadAsciiAction(defId, 'idle')
-    if (idleFrames) animator.setActionFrames('idle', idleFrames)
+    if (gen !== this.turnGen) return  // stale — check again after second await
 
+    if (idleFrames) animator.setActionFrames('idle', idleFrames)
     this.emitFrame()
   }
 
   private async ensureActionLoaded(
-    defId: string,
-    action: string,
+    defId:    string,
+    action:   string,
     animator: FigureAnimator,
+    gen:      number,
   ): Promise<void> {
     const frames = await loadAsciiAction(defId, action)
-    if (frames) {
-      animator.setActionFrames(action, frames)
-    }
+    if (gen !== this.turnGen) return  // stale — discard silently
+
+    if (frames) animator.setActionFrames(action, frames)
   }
 }
