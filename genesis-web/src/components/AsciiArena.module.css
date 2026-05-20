@@ -1,0 +1,197 @@
+/* AsciiArena — full-height arena container, pure CSS layout, no Phaser canvas */
+
+.arena {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-deep);
+  overflow: hidden;
+}
+
+/* ── Turn display strip ────────────────────────────────────────────────────── */
+
+.turnStrip {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--bg-elevated);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+
+.turnActor {
+  color: var(--accent-genesis);
+  font-weight: 600;
+}
+
+.turnSkill {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.turnArrow {
+  color: var(--text-muted);
+}
+
+.turnTarget {
+  color: var(--accent-danger);
+}
+
+/* ── Stage area ────────────────────────────────────────────────────────────── */
+
+.stage {
+  position: relative;
+  flex: 1;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 1rem 0.5rem;
+  gap: 0.5rem;
+}
+
+/* ── Figure panels ─────────────────────────────────────────────────────────── */
+
+.figureWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.figureEmpty {
+  font-size: 2rem;
+  color: var(--text-muted);
+  opacity: 0.3;
+}
+
+.figureInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.figureName {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.hpBar {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.55rem;
+  color: var(--accent-danger);
+}
+
+.hpNum {
+  color: var(--text-muted);
+  font-size: 0.5rem;
+}
+
+/* ── Projectile ────────────────────────────────────────────────────────────── */
+
+.projectile {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1rem;
+  color: var(--accent-heal);
+  pointer-events: none;
+  z-index: 10;
+  transition: left 0.05s linear;
+}
+
+/* ── Outcome burst ─────────────────────────────────────────────────────────── */
+
+.burst {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(1);
+  font-size: 2.5rem;
+  pointer-events: none;
+  z-index: 20;
+  animation: burstAnim 0.9s ease-out forwards;
+}
+
+@keyframes burstAnim {
+  0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+  30%  { transform: translate(-50%, -50%) scale(2);   opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+}
+
+/* ── Feedback text ─────────────────────────────────────────────────────────── */
+
+.feedback {
+  position: absolute;
+  bottom: 30%;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  pointer-events: none;
+  z-index: 20;
+  animation: feedbackAnim 1.2s ease-out forwards;
+}
+
+@keyframes feedbackAnim {
+  0%   { opacity: 0; transform: translateY(0.5rem); }
+  15%  { opacity: 1; transform: translateY(0); }
+  70%  { opacity: 1; transform: translateY(-0.5rem); }
+  100% { opacity: 0; transform: translateY(-1.5rem); }
+}
+
+/* ── Dice overlay ──────────────────────────────────────────────────────────── */
+
+.diceOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 30;
+  animation: diceIn 0.15s ease-out;
+}
+
+@keyframes diceIn {
+  from { opacity: 0; transform: scale(0.8); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.diceFace {
+  font-size: 3rem;
+  animation: diceSpin 0.4s ease-out;
+}
+
+@keyframes diceSpin {
+  0%   { transform: scale(0.3) rotate(-180deg); opacity: 0; }
+  60%  { transform: scale(1.3) rotate(10deg);   opacity: 1; }
+  100% { transform: scale(1)   rotate(0deg);    opacity: 1; }
+}
+
+.diceLabel {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--text-primary);
+  text-transform: uppercase;
+}

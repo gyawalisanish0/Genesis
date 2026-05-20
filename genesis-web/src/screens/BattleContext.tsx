@@ -22,7 +22,7 @@ import { registerStatusDef, clearStatusRegistry } from '../core/effects/statusRe
 import type { PassiveDef, StatusDef } from '../core/effects/types'
 import { NarrativeService } from '../services/NarrativeService'
 import { NarrativeUnits } from '../components/NarrativeLayer'
-import type { BattleArenaHandle } from '../components/BattleArena'
+import type { BattleArenaHandle } from '../components/AsciiArena'
 import type { HistoryEntry } from '../core/battleHistory'
 import { useGameStore } from '../core/GameContext'
 import { SCREEN_REGISTRY, SCREEN_IDS } from '../navigation/screenRegistry'

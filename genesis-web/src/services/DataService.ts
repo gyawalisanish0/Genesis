@@ -4,6 +4,7 @@
 // All callers receive typed data; Zod validation is deferred to Wave C.
 
 import type { CharacterDef, ModeDef, StageDef, MapDef, TilesetDef, AnimationManifest, AnimSequenceManifest } from '../core/types'
+import type { AsciiManifest, AsciiSequence, AsciiActionFrames } from '../ascii/types'
 import type { SkillDef, PassiveDef, StatusDef } from '../core/effects/types'
 import type { CharacterDialogueDef, LevelNarrativeDef } from '../core/narrative'
 
@@ -24,6 +25,9 @@ const cache = {
   tilesets:            new Map<string, TilesetDef>(),
   animationManifests:  new Map<string, AnimationManifest>(),
   animSequences:       new Map<string, AnimSequenceManifest | null>(),
+  asciiManifests:      new Map<string, AsciiManifest | null>(),
+  asciiSequences:      new Map<string, AsciiSequence | null>(),
+  asciiActions:        new Map<string, AsciiActionFrames | null>(),
 }
 
 // In-flight deduplication: store the pending promise so concurrent callers
@@ -263,6 +267,58 @@ export async function loadAnimSequenceManifest(defId: string): Promise<AnimSeque
   }
 }
 
+/**
+ * Load a character's ASCII animation manifest.
+ * Returns null silently when absent — characters without ASCII art use generic fallback.
+ */
+export async function loadAsciiManifest(defId: string): Promise<AsciiManifest | null> {
+  if (cache.asciiManifests.has(defId)) return cache.asciiManifests.get(defId) ?? null
+  try {
+    const raw = await fetchJson(`data/characters/${defId}/animations/animations.json`)
+    const def = raw as AsciiManifest
+    cache.asciiManifests.set(defId, def)
+    return def
+  } catch {
+    cache.asciiManifests.set(defId, null)
+    return null
+  }
+}
+
+/**
+ * Load a character's ASCII animation sequence (state machine + timing).
+ * Returns null silently when absent — engine falls back to DEFAULT_CONFIGS.
+ */
+export async function loadAsciiSequence(defId: string): Promise<AsciiSequence | null> {
+  if (cache.asciiSequences.has(defId)) return cache.asciiSequences.get(defId) ?? null
+  try {
+    const raw = await fetchJson(`data/characters/${defId}/animations/anim_sequence.json`)
+    const seq = raw as AsciiSequence
+    cache.asciiSequences.set(defId, seq)
+    return seq
+  } catch {
+    cache.asciiSequences.set(defId, null)
+    return null
+  }
+}
+
+/**
+ * Load frame data for a specific action (idle, attack, hurt, death, dodge, or skill ID).
+ * Returns null silently when absent — FigureAnimator falls back to generic frames.
+ */
+export async function loadAsciiAction(defId: string, action: string): Promise<AsciiActionFrames | null> {
+  const key = `${defId}/${action}`
+  if (cache.asciiActions.has(key)) return cache.asciiActions.get(key) ?? null
+  try {
+    const raw = await fetchJson(`data/characters/${defId}/animations/${action}_anim.json`)
+    const frames = raw as AsciiActionFrames
+    cache.asciiActions.set(key, frames)
+    return frames
+  } catch {
+    cache.asciiActions.set(key, null)
+    return null
+  }
+}
+
 /** Synchronous URL for a character's portrait PNG at the standard path. */
 export function characterPortraitUrl(defId: string): string {
   return `${BASE_NORMALIZED}images/characters/${defId}/portrait.png`
@@ -292,5 +348,8 @@ export function clearCache(): void {
   cache.tilesets.clear()
   cache.animationManifests.clear()
   cache.animSequences.clear()
+  cache.asciiManifests.clear()
+  cache.asciiSequences.clear()
+  cache.asciiActions.clear()
   inflight.characters.clear()
 }
