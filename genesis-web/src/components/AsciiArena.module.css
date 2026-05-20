@@ -90,15 +90,67 @@
   letter-spacing: 0.05em;
 }
 
-.hpBar {
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 0.55rem;
-  color: var(--accent-danger);
+/* ── HP + shield bar ──────────────────────────────────────────────────────── */
+
+.barOuter {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  width: 100%;
+  max-width: 6rem;
 }
 
-.hpNum {
-  color: var(--text-muted);
+.barTrack {
+  position: relative;
+  flex: 1;
+  height: 5px;
+  background: var(--bg-elevated);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.hpFill {
+  height: 100%;
+  background: var(--accent-danger);
+  border-radius: 2px;
+  transition: width var(--motion-bar);
+}
+
+/* Semi-transparent white shield overlay — controlled entirely by shieldHp from core */
+.shieldOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.45);
+  border-radius: 2px 0 0 2px;
+  border-right: 1px solid rgba(255, 255, 255, 0.7);
+  transition: width var(--motion-bar);
+  animation: shieldPulse 2s ease-in-out infinite;
+}
+
+@keyframes shieldPulse {
+  0%, 100% { opacity: 0.45; }
+  50%       { opacity: 0.75; }
+}
+
+.barLabel {
   font-size: 0.5rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.barMax {
+  color: var(--text-muted);
+}
+
+.shieldLabel {
+  font-size: 0.48rem;
+  color: rgba(255, 255, 255, 0.8);
+  white-space: nowrap;
+  flex-shrink: 0;
+  animation: shieldPulse 2s ease-in-out infinite;
 }
 
 /* ── Projectile ────────────────────────────────────────────────────────────── */

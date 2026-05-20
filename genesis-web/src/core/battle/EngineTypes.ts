@@ -17,6 +17,8 @@ export interface TurnDisplayUnitData {
   ap:          number
   maxAp:       number
   statusSlots: Array<{ id: string; name: string }>
+  /** Sum of all active shield HP values on this unit. 0 when no shield is active. */
+  shieldHp:    number
 }
 
 export interface TurnDisplayData {

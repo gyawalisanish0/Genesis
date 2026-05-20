@@ -271,6 +271,7 @@ export class BattleEngine {
         ap:          postTarget.ap,
         maxAp:       postTarget.maxAp,
         statusSlots: postTarget.statusSlots,
+        shieldHp:    this.sumShieldHp(postTarget.statusSlots),
       },
       isAlly: true,
     })
@@ -749,6 +750,7 @@ export class BattleEngine {
             ap:          freshAIUnit.ap,
             maxAp:       freshAIUnit.maxAp,
             statusSlots: freshAIUnit.statusSlots,
+            shieldHp:    this.sumShieldHp(freshAIUnit.statusSlots),
           },
           skillName:  skill.name,
           tuCost:     skill.tuCost,
@@ -763,6 +765,7 @@ export class BattleEngine {
             ap:          target.ap,
             maxAp:       target.maxAp,
             statusSlots: target.statusSlots,
+            shieldHp:    this.sumShieldHp(target.statusSlots),
           },
           isAlly: freshAIUnit.isAlly,
         },
@@ -1534,6 +1537,14 @@ export class BattleEngine {
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────────
+
+  // Sum all active shield HP values on a unit's status slots.
+  // Multiple shield statuses are additive (e.g. stacked buffs).
+  private sumShieldHp(slots: import('../types').StatusEffect[]): number {
+    return slots
+      .filter(s => typeof s.payload?.shieldHp === 'number' && (s.payload.shieldHp as number) > 0)
+      .reduce((sum, s) => sum + (s.payload.shieldHp as number), 0)
+  }
 
   private getActivePlayerUnit(): Unit | null {
     const activeIds = new Set<string>()

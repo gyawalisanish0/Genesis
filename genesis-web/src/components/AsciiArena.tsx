@@ -22,17 +22,6 @@ import styles from './AsciiArena.module.css'
 
 export type { TurnDisplayData }
 
-export interface TurnDisplayUnitData {
-  name:        string
-  className:   string
-  rarity:      number
-  hp:          number
-  maxHp:       number
-  ap:          number
-  maxAp:       number
-  statusSlots: Array<{ id: string; name: string }>
-}
-
 export interface BattleArenaHandle {
   setTurnState(
     actingDefId:    string,
@@ -82,16 +71,41 @@ interface DiceState    { outcome: string; key: number }
 interface BurstState   { symbol: string;  colour: string; key: number }
 interface FeedbackState{ text: string;    colour: string; key: number }
 
-// ── HP bar ───────────────────────────────────────────────────────────────────
+// ── HP + shield bar ──────────────────────────────────────────────────────────
+//
+// The bar renders HP as a CSS fill. When shieldHp > 0, a semi-transparent
+// white overlay sits on top of the left portion, showing how much of the
+// unit's max HP is currently shielded. Width = shieldHp / maxHp clamped 0..1.
+// A pulse animation keeps the overlay visually alive without distracting.
 
-function HpBar({ hp, maxHp }: { hp: number; maxHp: number }) {
-  const pct    = maxHp > 0 ? Math.max(0, Math.min(1, hp / maxHp)) : 0
-  const filled = Math.round(pct * 10)
+interface HpBarProps {
+  hp:       number
+  maxHp:    number
+  shieldHp: number
+}
+
+function HpBar({ hp, maxHp, shieldHp }: HpBarProps) {
+  const hpPct     = maxHp > 0 ? Math.max(0, Math.min(1, hp / maxHp))       : 0
+  const shieldPct = maxHp > 0 ? Math.max(0, Math.min(1, shieldHp / maxHp)) : 0
+
   return (
-    <span className={styles.hpBar}>
-      {'█'.repeat(filled)}{'░'.repeat(10 - filled)}
-      <span className={styles.hpNum}> {hp}/{maxHp}</span>
-    </span>
+    <div className={styles.barOuter}>
+      <div className={styles.barTrack}>
+        {/* HP fill */}
+        <div className={styles.hpFill} style={{ width: `${hpPct * 100}%` }} />
+        {/* Shield overlay — semi-transparent white, pulsing, core-driven */}
+        {shieldPct > 0 && (
+          <div
+            className={styles.shieldOverlay}
+            style={{ width: `${shieldPct * 100}%` }}
+          />
+        )}
+      </div>
+      <span className={styles.barLabel}>{hp}<span className={styles.barMax}>/{maxHp}</span></span>
+      {shieldHp > 0 && (
+        <span className={styles.shieldLabel}>🛡 {shieldHp}</span>
+      )}
+    </div>
   )
 }
 
@@ -193,8 +207,10 @@ export const AsciiArena = forwardRef<BattleArenaHandle>(
 
     // ── Render (pure — no decisions, only signal-driven state) ──────────────
 
-    const actingRarity = turnDisplay?.actor?.rarity ?? 1
-    const targetRarity = turnDisplay?.target?.rarity ?? 1
+    const actingRarity  = turnDisplay?.actor?.rarity  ?? 1
+    const targetRarity  = turnDisplay?.target?.rarity ?? 1
+    const actingShield  = turnDisplay?.actor?.shieldHp  ?? 0
+    const targetShield  = turnDisplay?.target?.shieldHp ?? 0
 
     return (
       <div className={styles.arena}>
@@ -220,7 +236,11 @@ export const AsciiArena = forwardRef<BattleArenaHandle>(
             {turnDisplay?.actor && (
               <div className={styles.figureInfo}>
                 <span className={styles.figureName}>{turnDisplay.actor.name}</span>
-                <HpBar hp={turnDisplay.actor.hp} maxHp={turnDisplay.actor.maxHp} />
+                <HpBar
+                  hp={turnDisplay.actor.hp}
+                  maxHp={turnDisplay.actor.maxHp}
+                  shieldHp={actingShield}
+                />
               </div>
             )}
           </div>
@@ -242,7 +262,11 @@ export const AsciiArena = forwardRef<BattleArenaHandle>(
             {turnDisplay?.target && (
               <div className={styles.figureInfo}>
                 <span className={styles.figureName}>{turnDisplay.target.name}</span>
-                <HpBar hp={turnDisplay.target.hp} maxHp={turnDisplay.target.maxHp} />
+                <HpBar
+                  hp={turnDisplay.target.hp}
+                  maxHp={turnDisplay.target.maxHp}
+                  shieldHp={targetShield}
+                />
               </div>
             )}
           </div>
