@@ -31,3 +31,21 @@
 
 .xp { height: 0.25rem; }   /* 4 dp */
 .xp .fill { background: var(--accent-genesis); }
+
+/* Shield overlay — semi-transparent white, core-driven via shieldHp prop */
+.shieldOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.45);
+  border-right: 1px solid rgba(255, 255, 255, 0.7);
+  transition: width var(--motion-bar);
+  animation: shieldPulse 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes shieldPulse {
+  0%, 100% { opacity: 0.45; }
+  50%       { opacity: 0.8; }
+}

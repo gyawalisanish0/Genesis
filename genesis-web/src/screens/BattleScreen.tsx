@@ -288,6 +288,11 @@ function LeaderChipBar() {
 function PortraitPanel() {
   const { turnNumber, tickValue, leader } = useBattleScreen()
   if (!leader) return null
+
+  const leaderShieldHp = leader.statusSlots
+    .filter(s => typeof s.payload?.shieldHp === 'number' && (s.payload.shieldHp as number) > 0)
+    .reduce((sum, s) => sum + (s.payload.shieldHp as number), 0)
+
   return (
     <div className={styles.portrait}>
       <span className={styles.turnLabel}>Turn {turnNumber}</span>
@@ -308,7 +313,7 @@ function PortraitPanel() {
             <span className={styles.barLabel}>HP</span>
             <span className={styles.barValue}>{leader.hp}/{leader.maxHp}</span>
           </div>
-          <ResourceBar variant="hp" value={leader.hp} max={leader.maxHp} />
+          <ResourceBar variant="hp" value={leader.hp} max={leader.maxHp} shieldHp={leaderShieldHp} />
         </div>
         <div className={styles.barRow}>
           <div className={styles.barHeader}>
