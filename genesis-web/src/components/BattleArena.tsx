@@ -1,11 +1,8 @@
 // BattleArena — React wrapper for the Phaser BattleScene.
 //
 // Mounts a Phaser Game instance into the container div.
-// Exposes an imperative handle so BattleContext can trigger unit display (Stage 2)
-// and drive phase-gated animations (Stage 3+).
-//
-// React owns all battle interaction — Phaser input is disabled entirely.
-// The battle log lives in BattleLogOverlay (React), not in the canvas.
+// All animation methods are fire-and-forget: the engine drives its own timing
+// via ANIM_TIMEOUT_MS rather than waiting for Phaser callbacks.
 
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 import Phaser from 'phaser'
@@ -47,9 +44,9 @@ export interface BattleArenaHandle {
     targetManifest?: AnimationManifest | null,
     isDamaged?:      { acting: boolean; target: boolean },
   ): void
-  clearTurn(onDone?: () => void): void
-  // Stage 3 — phase-gated: React awaits onDone before advancing
-  playDice(outcome: string, onDone: () => void): void
+  clearTurn(): void
+  // Stage 3 — fire-and-forget: engine uses ANIM_TIMEOUT_MS, not animation callbacks
+  playDice(outcome: string): void
   skipActiveDice(): void
   playAttack(
     actingDefId:     string,
@@ -61,11 +58,10 @@ export interface BattleArenaHandle {
     projectile:      AnimationProjectileDef | null,
     feedbackText:    string,
     feedbackColour:  string,
-    onDone:          () => void,
     customSequence?: AnimPhase[],
   ): void
-  // Stage 4 — death collapse (phase-gated: clearTurn should be called inside onDone)
-  playDeath(defId: string, onDone: () => void): void
+  // Stage 4 — fire-and-forget: engine uses ANIM_TIMEOUT_MS after calling this
+  playDeath(defId: string): void
   // Stage 5 — turn display overlay (fire-and-forget; BattleContext drives timing)
   showTurnDisplay(data: TurnDisplayData): void
   hideTurnDisplay(): void
@@ -147,36 +143,20 @@ export const BattleArena = forwardRef<BattleArenaHandle>(
           pendingTurnState.current = [actingDefId, targetDefId, actingManifest, targetManifest, isDamaged]
         }
       },
-      clearTurn(onDone) {
-        if (sceneRef.current) {
-          sceneRef.current.clearTurn(onDone)
-        } else {
-          onDone?.()
-        }
+      clearTurn() {
+        sceneRef.current?.clearTurn()
       },
-      playDice(outcome, onDone) {
-        if (sceneRef.current) {
-          sceneRef.current.playDice(outcome, onDone)
-        } else {
-          onDone()
-        }
+      playDice(outcome) {
+        sceneRef.current?.playDice(outcome)
       },
       skipActiveDice() {
         sceneRef.current?.skipActiveDice()
       },
-      playAttack(actingDefId, targetDefId, outcome, damage, isMelee, dashDx, projectile, feedbackText, feedbackColour, onDone, customSequence) {
-        if (sceneRef.current) {
-          sceneRef.current.playAttack(actingDefId, targetDefId, outcome, damage, isMelee, dashDx, projectile, feedbackText, feedbackColour, onDone, customSequence)
-        } else {
-          onDone()
-        }
+      playAttack(actingDefId, targetDefId, outcome, damage, isMelee, dashDx, projectile, feedbackText, feedbackColour, customSequence) {
+        sceneRef.current?.playAttack(actingDefId, targetDefId, outcome, damage, isMelee, dashDx, projectile, feedbackText, feedbackColour, customSequence)
       },
-      playDeath(defId, onDone) {
-        if (sceneRef.current) {
-          sceneRef.current.playDeath(defId, onDone)
-        } else {
-          onDone()
-        }
+      playDeath(defId) {
+        sceneRef.current?.playDeath(defId)
       },
       showTurnDisplay(data) {
         sceneRef.current?.showTurnDisplay(data)

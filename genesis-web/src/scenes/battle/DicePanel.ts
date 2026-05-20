@@ -5,7 +5,7 @@
 // creates a "slowing reel" feel that builds tension as the outcome approaches.
 //
 // The panel slides in from 16 px above its resting position before spinning begins.
-// Calls onDone after the hold period so React can advance the phase.
+// Fire-and-forget: the engine uses ANIM_TIMEOUT_MS rather than waiting for the animation.
 
 import Phaser from 'phaser'
 import { tokenToHex } from '../BattleScene'
@@ -38,16 +38,14 @@ export class DicePanel {
   private panel:       Phaser.GameObjects.Container | null = null
   private spinTimer:   Phaser.Time.TimerEvent | null = null
   private holdTimer:   Phaser.Time.TimerEvent | null = null
-  private pendingDone: (() => void) | null = null
 
   constructor(scene: Phaser.Scene, topInset = 0) {
     this.scene    = scene
     this.topInset = topInset
   }
 
-  spin(outcome: string, onDone: () => void): void {
+  spin(outcome: string): void {
     this.destroy()
-    this.pendingDone = onDone
     const { width, height } = this.scene.scale
     const cx = Math.floor(width / 2)
     const cy = Math.floor(this.topInset + (height - this.topInset) * 0.27)
@@ -78,10 +76,9 @@ export class DicePanel {
     })
   }
 
-  // Skip the animation: cancel timers, fire onDone immediately.
+  // Skip the animation early — purely visual speed-up, engine is already timed out.
   skip(): void {
-    if (!this.pendingDone) return
-    this.fire()
+    this.destroy()
   }
 
   // ── Private helpers ────────────────────────────────────────────────────────
@@ -131,14 +128,7 @@ export class DicePanel {
       duration: 220,
       ease: 'Back.easeOut',
     })
-    this.holdTimer = this.scene.time.delayedCall(HOLD_MS, () => this.fire())
-  }
-
-  private fire(): void {
-    const cb = this.pendingDone
-    this.pendingDone = null
-    this.destroy()
-    cb?.()
+    this.holdTimer = this.scene.time.delayedCall(HOLD_MS, () => this.destroy())
   }
 
   destroy(): void {

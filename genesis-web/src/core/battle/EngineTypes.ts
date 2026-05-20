@@ -115,8 +115,8 @@ export interface BattleEngineCallbacks {
     targetMf:    AnimationManifest | null,
     isDamaged:   { acting: boolean; target: boolean },
   ): void
-  onClearTurn(onDone?: () => void): void
-  onPlayDice(outcome: DiceOutcome, onDone: () => void): void
+  onClearTurn(): void
+  onPlayDice(outcome: DiceOutcome): void
   onPlayAttack(
     actingDefId:    string,
     targetDefId:    string,
@@ -127,10 +127,9 @@ export interface BattleEngineCallbacks {
     projectile:     AnimationProjectileDef | null,
     label:          string,
     colour:         string,
-    onDone:         () => void,
     seq?:           AnimPhase[],
   ): void
-  onPlayDeath(defId: string, onDone: () => void): void
+  onPlayDeath(defId: string): void
   onShowTurnDisplay(data: TurnDisplayData, dismissAfter?: number): void
   onHideTurnDisplay(): void
   // Dice overlay

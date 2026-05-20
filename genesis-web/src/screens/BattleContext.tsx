@@ -252,17 +252,17 @@ export function BattleProvider({ children }: Props) {
       onSetTurnState(actingDefId, targetDefId, actingMf, targetMf, isDamaged) {
         safe(() => arenaRef.current?.setTurnState(actingDefId, targetDefId, actingMf ?? undefined, targetMf ?? undefined, isDamaged))
       },
-      onClearTurn(onDone) {
-        safe(() => arenaRef.current?.clearTurn(onDone))
+      onClearTurn() {
+        safe(() => arenaRef.current?.clearTurn())
       },
-      onPlayDice(outcome, onDone) {
-        safe(() => arenaRef.current?.playDice(outcome, onDone))
+      onPlayDice(outcome) {
+        safe(() => arenaRef.current?.playDice(outcome))
       },
-      onPlayAttack(actingDefId, targetDefId, outcome, damage, isMelee, dashDx, projectile, label, colour, onDone, seq) {
-        safe(() => arenaRef.current?.playAttack(actingDefId, targetDefId, outcome, damage, isMelee, dashDx, projectile, label, colour, onDone, seq))
+      onPlayAttack(actingDefId, targetDefId, outcome, damage, isMelee, dashDx, projectile, label, colour, seq) {
+        safe(() => arenaRef.current?.playAttack(actingDefId, targetDefId, outcome, damage, isMelee, dashDx, projectile, label, colour, seq))
       },
-      onPlayDeath(defId, onDone) {
-        safe(() => arenaRef.current?.playDeath(defId, onDone))
+      onPlayDeath(defId) {
+        safe(() => arenaRef.current?.playDeath(defId))
       },
       onShowTurnDisplay(data, dismissAfter) {
         safe(() => showTurnDisplay(data, dismissAfter))
