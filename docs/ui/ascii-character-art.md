@@ -257,52 +257,73 @@ canonical reference used when authoring those files.
 
 ### Hugo Rekrot — ANBOT Nanite Warrior (Rarity 4 · `◈`)
 
-Silhouette: symmetrical, armored plate lines (`═`), nanite particles (`·`)
-orbit at rest. Arms reshape per skill — blade for Nanites Slash (`⚔`),
-mass consolidation (`▓▓`) for Hammer Bash. Death fragments the structure.
-Primal Awareness adds `∿` wave overlay when active.
+**Design rule: ANBOT is hidden.** Hugo wears a tactical outfit. ANBOT is a thin
+nanite layer underneath it — an undergarment, not surface armour. The ASCII reads
+as a lean tactical operator: box-drawing lines form vest structure and gear rack,
+no block fills. The nanite layer is invisible except at two points:
+
+- `·` at the chest collar row — nanites running under the fabric, just visible at the seam
+- `·═══·` on the attack impact row — nanites briefly surfacing at the strike point, then retracting
+
+Skills extend outward from the hidden base: blade (`⚔`) for Nanites Slash, hammer
+mass for Hammer Bash. Death leaves only the crown gem (`◈`) and dispersing `·`
+particles — ANBOT offline with the suit.
 
 ```
-IDLE-1           IDLE-2           IDLE-3
-   ·◈·             ··◈··            ·◈·
-  ═╪═╪═           ═╪═╪═            ═╪═╪═
-  ╠·║·╣           ╠ ║ ╣            ╠·║·╣
- ╱╚═╦═╝╲         ╱╚═╦═╝╲          ╱╚═╦═╝╲
-  ║   ║            ║   ║            ║   ║
- ═╧═ ═╧═          ═╧═ ═╧═         ═╧═ ═╧═
-  ·   ·                             ·   ·
+IDLE                          IDLE (breath — crown shifts)
+   ·◆◈◆·                        ·◆◈◆·
+  ╔══╧══╗                       ╔══╧══╗
+  ║◉   ◉║                       ║◉   ◉║
+  ╚══╤══╝                       ╚══╤══╝
+ ╔═╪═══╪═╗                     ╔═╪═══╪═╗
+ ║ ║·  ║ ║     ← ANBOT hint    ║ ║·  ║ ║
+ ╠═╪═══╪═╣                     ╠═╪═══╪═╣
+ ║ ║   ║ ║                     ║ ║   ║ ║
+═╬═╝   ╚═╬═                   ═╬═╝   ╚═╬═
+   ║     ║                        ║     ║
+  ═╩═   ═╩═                     ═╩═   ═╩═
 
-ATTACK-1 (coil)  ATTACK-2 (strike) ATTACK-3 (recover)
-   ◈               ◈                ·◈·
-  ═╪═╗            ═╪═╪═══⚔         ═╪═╪═
-  ╠ ║╗╣           ╠ ║              ╠·║·╣
- ╱╚═╦╝           ╱╚═╦═╝╲          ╱╚═╦═╝╲
-  ║   ║             ║               ║   ║
- ═╧═ ═╧═          ═╧═             ═╧═ ═╧═
+ATTACK (windup)   ATTACK (impact)        ATTACK (followthrough)
+   ·◆◈◆·             ·◆◈◆·                  ·◆◈◆·
+  ╔══╧══╗            ╔══╧══╗                ╔══╧══╗
+  ║◉   ◉║            ║◉   ◉║                ║◉   ◉║
+  ╚══╤══╝            ╚══╤══╝                ╚══╤══╝
+ ╔═╪═══╪═╗          ╔═╪═══╪═╗·═══·         ╔═╪═══╪═╗═·
+ ║ ║·  ║ ║          ║ ║·  ╠══·             ║ ║·  ╠═
+ ╠═╪═══╪═╣          ╠═╪═══╪═╣              ╠═╪═══╪═╣
+ ║ ║   ║ ║          ║ ║   ║ ║              ║ ║   ║ ║
+═╬═╝   ╚═╬═        ═╬═╝   ╚═╬═            ═╬═╝   ╚═╬═
+   ║     ║             ║     ║               ║     ║
+  ═╩═   ═╩═           ═╩═   ═╩═             ═╩═   ═╩═
 
-HURT-1           HURT-2
-   ◈               ·◈·
- ·═╪═╪═·          ═╪═╪═
-  ╠!║!╣           ╠ ║ ╣
-╲╚═╦═╝           ╱╚═╦═╝╲
-  ║   ║            ║   ║
- ═╧═ ═╧═          ═╧═ ═╧═
+HURT (recoil — body left, ! impact)    HURT (recovery)
+  ·◆◈◆·                                   ·◆◈◆·
+ ╔══╧══╗                                  ╔══╧══╗
+ ║◉  !◉║                                  ║◉   ◉║
+ ╚══╤══╝                                  ╚══╤══╝
+╔═╪═══╪═╗                                ╔═╪═══╪═╗
+║!║·  ║ ║                                ║ ║·  ║ ║
+╠═╪═══╪═╣                                ╠═╪═══╪═╣
+║ ║   ║ ║                                ║ ║   ║ ║
 
-DEATH-1          DEATH-2          DEATH-3          DEATH-4
-   ◈              ◈·               ·◈·              · · ·
-  ═╪═╪═          ·═╪═·             ·═·              · ◈ ·
-  ╠ ║ ╣╲         ╠ ║╲             ·║·              · · ·
- ╱╚═╦═╝         ╱╚═╦·             ╦·
-  ║   ║           ║
- ═╧═  ╲          ═╧═
+DEATH-1 (stagger)   DEATH-2 (fallen horizontal)   DEATH-3 (remnant)
+   ·◆◈◆·
+  ╔══╧══╗           ╔══╧══╗
+  ║◉   ·║          ═╔╩═════╩╗═                ╔══╧══╗
+  ╚══╤══╝╲         ═╠═╪═══╪═╣═              ═╩═════╩═
+ ╔═╪═══╪═╗╲
+ ║ ║·  ║  ╲           ·   ·   ·              ·  ◈  ·
+ ╠═╪═══╪═╲
+ ║ ║   ╲
 
-PRIMAL AWARENESS (passive overlay on idle)
- ∿◈∿             ∿·◈·∿
- ═╪═╪═            ═╪═╪═
- ╠∿║∿╣            ╠ ║ ╣
-╱╚═╦═╝╲          ╱╚═╦═╝╲
-∿║   ║∿           ∿║ ║∿
-═╧═ ═╧═           ═╧═ ═╧═
+PRIMAL AWARENESS (passive overlay — ∿ wave on idle)
+ ∿·◆◈◆·∿
+  ╔══╧══╗
+  ║◉   ◉║
+  ╚══╤══╝
+ ╔═╪═══╪═╗
+ ∿║ ║·  ║ ║∿
+ ╠═╪═══╪═╣
 ```
 
 ---
