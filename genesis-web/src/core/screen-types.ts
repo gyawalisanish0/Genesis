@@ -3,6 +3,7 @@
 
 export type ScreenId =
   | 'splash'
+  | 'dream'
   | 'main-menu'
   | 'pre-battle'
   | 'battle'

@@ -6,6 +6,7 @@ import { initFullScreen }                                  from './services/Disp
 
 import { NarrativeLayer }     from './components/NarrativeLayer'
 import { SplashScreen }       from './screens/SplashScreen'
+import { DreamScreen }        from './screens/DreamScreen'
 import { MainMenuScreen }     from './screens/MainMenuScreen'
 import { RosterScreen }       from './screens/RosterScreen'
 import { PreBattleScreen }    from './screens/PreBattleScreen'
@@ -44,6 +45,7 @@ export default function App() {
             <Routes>
               <Route path="/"              element={<Navigate to="/splash" replace />} />
               <Route path="/splash"        element={<SplashScreen />} />
+              <Route path="/dream"         element={<DreamScreen />} />
               <Route path="/main-menu"     element={<MainMenuScreen />} />
               <Route path="/roster"        element={<RosterScreen />} />
               <Route path="/pre-battle"    element={<PreBattleScreen />} />

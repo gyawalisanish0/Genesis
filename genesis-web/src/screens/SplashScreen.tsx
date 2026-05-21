@@ -13,6 +13,7 @@ import {
   loadCharacterDialogue, loadCampaignIndex, loadStageDef,
   loadLevelNarrative,
 } from '../services/DataService'
+import { DREAM_SEEN_KEY } from './DreamScreen'
 import { NarrativeService }  from '../services/NarrativeService'
 import { ResolutionService } from '../services/ResolutionService'
 import styles from './SplashScreen.module.css'
@@ -54,10 +55,11 @@ function isBrowserTab(): boolean {
 
 export function SplashScreen() {
   const { navigateTo } = useScreen()
-  const [progress, setProgress] = useState(0)
-  const [error, setError] = useState<string | null>(null)
-  const [done, setDone] = useState(false)
+  const [progress,     setProgress]     = useState(0)
+  const [error,        setError]        = useState<string | null>(null)
+  const [done,         setDone]         = useState(false)
   const [readyToEnter, setReadyToEnter] = useState(false)
+  const [destination,  setDestination]  = useState<typeof SCREEN_IDS.DREAM | typeof SCREEN_IDS.MAIN_MENU>(SCREEN_IDS.MAIN_MENU)
 
   useEffect(() => {
     Promise.all([
@@ -66,12 +68,16 @@ export function SplashScreen() {
     ])
       .then(() => {
         setDone(true)
+        const dest = localStorage.getItem(DREAM_SEEN_KEY)
+          ? SCREEN_IDS.MAIN_MENU
+          : SCREEN_IDS.DREAM
+        setDestination(dest)
         if (isBrowserTab()) {
           // Hold navigation — first tap fires requestFullscreen (via DisplayService listener)
-          // then navigates to main menu on the same gesture.
+          // then navigates on the same gesture.
           setReadyToEnter(true)
         } else {
-          setTimeout(() => navigateTo(SCREEN_IDS.MAIN_MENU), 400)
+          setTimeout(() => navigateTo(dest), 400)
         }
       })
       .catch((err: unknown) => {
@@ -84,7 +90,7 @@ export function SplashScreen() {
     <ScreenShell>
       <div
         className={styles.root}
-        onPointerDown={readyToEnter ? () => navigateTo(SCREEN_IDS.MAIN_MENU) : undefined}
+        onPointerDown={readyToEnter ? () => navigateTo(destination) : undefined}
       >
         <div className={styles.stars} aria-hidden />
 
