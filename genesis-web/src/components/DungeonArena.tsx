@@ -207,8 +207,8 @@ function DungeonArena({ bgColor }, ref) {
 
       cells.push(
         <div key={key} className={styles.cell} onPointerDown={() => handleCellTap(tx, ty)}>
-          <div className={styles.tileWrapper}>
-            <pre className={styles.tilePattern} style={{ color: art.color }}>
+          <div className={styles.tileWrapper} style={{ backgroundColor: art.color }}>
+            <pre className={styles.tilePattern}>
               {art.pattern.join('\n')}
             </pre>
           </div>
