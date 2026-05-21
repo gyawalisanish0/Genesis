@@ -17,6 +17,15 @@ in ways neither the Creator nor the player understands yet. The threat
 on Mars and the dream are connected. The demo is chapter one of
 something that began before the player pressed play.
 
+**The dream is a hook, not an explanation.** The player should walk
+away feeling specifically found — not randomly stumbled upon — with
+no framework to explain why. That gap is intentional. The Commander's
+significance is never stated in the demo. It is never hinted at
+directly. It is felt, buried under the immediate urgency of Mars, and
+left unresolved. Players who want to know why will keep playing.
+
+The answer exists in the lore. The demo does not give it.
+
 ---
 
 ## Character Creation
@@ -180,9 +189,9 @@ Stats and skill kits for each: TBD during character design phase.
 
 | Stage | Name | Grid | Patrols | New enemies |
 |---|---|---|---|---|
-| `stage_001` | The Outpost | 8×8 | 2 | Netrolume grunt |
-| `stage_002` | TBD | 10×10 | 4 | + Netrolume elite |
-| `stage_003` | TBD | 12×12 | 6 | + Kiragen combatant + controller |
+| `stage_001` | The Outpost | 12×20 | 2 | Netrolume grunt |
+| `stage_002` | TBD | 14×22 | 4 | + Netrolume elite |
+| `stage_003` | TBD | 16×24 | 6 | + Kiragen combatant + controller |
 
 Objective across all stages: reach the exit.
 Escalation: bigger maps, more patrols, new enemy types per stage.

@@ -1,0 +1,149 @@
+/* DreamScreen — pure black cinematic, no game chrome */
+
+.screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ── Dialogue card ─────────────────────────────────────────────────────────── */
+
+.dialogue {
+  width: 100%;
+  padding: 1.25rem 1.5rem 2.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  min-height: 9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* ── Speaker chip ──────────────────────────────────────────────────────────── */
+
+.chip {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+/* Creator: diffuse, sourceless — wider spacing, muted */
+.chip.creator {
+  color: var(--text-muted);
+  letter-spacing: 0.35em;
+}
+
+/* Player: grounded, localized — standard weight */
+.chip.player {
+  color: var(--text-primary);
+  letter-spacing: 0.12em;
+}
+
+/* ── Dialogue text ─────────────────────────────────────────────────────────── */
+
+.text {
+  font-size: 0.88rem;
+  line-height: 1.55;
+  min-height: 2.75rem;
+  margin: 0;
+}
+
+/* Creator: thoughts arriving from far away — dimmer, italic */
+.text.creator {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Player: immediate, first-person — full brightness */
+.text.player {
+  color: var(--text-primary);
+}
+
+/* ── Typewriter cursor ─────────────────────────────────────────────────────── */
+
+.cursor {
+  display: inline-block;
+  width: 0.45em;
+  height: 0.85em;
+  background: var(--text-muted);
+  margin-left: 0.1em;
+  vertical-align: -0.1em;
+  animation: blink 0.75s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* ── Name input ────────────────────────────────────────────────────────────── */
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.25rem 0;
+}
+
+.nameInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--text-primary);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  padding: 0.15rem 0;
+  outline: none;
+  caret-color: var(--text-primary);
+}
+
+.nameInput::placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.confirmBtn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0.2rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.confirmBtn:hover {
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+/* ── Tap hint ──────────────────────────────────────────────────────────────── */
+
+.hint {
+  font-size: 0.52rem;
+  color: var(--text-muted);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-align: right;
+  margin-top: 0.25rem;
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}

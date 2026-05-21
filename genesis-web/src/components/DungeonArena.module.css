@@ -1,12 +1,101 @@
+/* DungeonArena — React ASCII grid renderer, martian surface.
+   Each tile is a 32-char × 32-row ASCII art block. Font 0.5rem / line-height 0.6
+   makes each char pixel ~4.8 × 4.8 px → 153.6 px block, scaled down via
+   CSS transform to fit the cell. --tile-scale is set inline by DungeonArena.tsx. */
+
 .arena {
   flex: 1;
   position: relative;
   overflow: hidden;
-  background: #0a0a14;
+  background: #1a0a05;
 }
 
-.arena canvas {
+.grid {
+  display: grid;
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Cells ─────────────────────────────────────────────────────────────────── */
+
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.cellHidden {
+  background: #000;
+}
+
+/* ── Tile art layer — 8×4 ASCII pattern at micro font ─────────────────────── */
+
+.tileWrapper {
   position: absolute;
   inset: 0;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.tilePattern {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.5rem;       /* 8px — 32 chars × 4.8px = 153.6px block */
+  line-height: 0.6;        /* unitless — makes char pixels square (4.8 × 4.8px) */
+  margin: 0;
+  padding: 0;
+  white-space: pre;
+  flex-shrink: 0;
+  transform: scale(var(--tile-scale, 0.195));
+  transform-origin: center center;
+}
+
+/* ── Entity / party layer (foreground character) ───────────────────────────── */
+
+.entity,
+.party {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 1;
+  /* Dark halo so the marker reads clearly over any tile pattern */
+  text-shadow:
+    0 0 4px #000,
+    0 0 8px rgba(0, 0, 0, 0.9);
+}
+
+/* Entity colour tokens */
+.party  { color: var(--accent-genesis); }
+.enemy  { color: var(--accent-danger);  }
+.chest  { color: var(--accent-gold);    }
+.exit   { color: var(--accent-heal);    }
+.npc    { color: var(--text-secondary); }
+
+/* Greyscale — entity out of sight range */
+.gray {
+  filter: grayscale(1);
+  opacity: 0.5;
+}
+
+/* Wave phase — selectable enemies breathe */
+.wave {
+  animation: wavePulse 0.7s ease-in-out infinite alternate;
+}
+
+@keyframes wavePulse {
+  from { opacity: 0.65; transform: scale(0.88); }
+  to   { opacity: 1.00; transform: scale(1.18); }
 }

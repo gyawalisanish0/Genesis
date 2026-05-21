@@ -18,13 +18,20 @@ First playable character in Genesis.
 
 ## ANBOT — Advance Nano Based Omni Tech
 
-Hugo does not fight directly. He fights through ANBOT — a nanite-based battle
-suit of his own invention. The suit wraps him completely and reshapes on the fly,
-forming weapons, shields, and evasion structures from a living mass of nanites.
+Hugo does not fight directly. He fights through ANBOT — a nanite-based system
+of his own invention. ANBOT is not a suit worn over the body. It is a thin
+layer of nanites worn as an undergarment, beneath the tactical outfit Hugo
+actually wears into the field.
 
-ANBOT is inspired by the same principle as venom symbiosis: the suit and the
-wearer act as one. Hugo's commands are instant — there is no interface, no
-delay. The nanites respond to intent.
+The nanite layer is invisible at rest. When Hugo acts, ANBOT extends outward
+from that hidden base — reshaping into a blade, consolidating into a hammer
+mass, distributing into a shield shell. The weapons and defences emerge from
+beneath the outfit and retract when the action is done. What you see in combat
+is not the suit. It is what the suit reaches out with.
+
+ANBOT and Hugo act as one: no interface, no delay, no gesture. The nanites
+respond to intent. This is the same principle as venom symbiosis — the system
+and the wearer are not separate things.
 
 ANBOT was drafted at the military contracting firm where Hugo first worked after
 graduation. He walked away from the firm — and from the people who wanted to
@@ -35,9 +42,17 @@ inside the Sekkarian Defense Force.
 
 ## Appearance
 
-Humanoid. Carries both human and Sekkar traits. When ANBOT is active the suit
-envelops him — the surface shifts and extends as needed. The visual identity
-of the suit versus the man beneath is part of ongoing character design.
+Humanoid. Carries both human and Sekkar traits. He wears a tactical outfit
+in the field — the ANBOT nanite layer sits underneath it, as underwear. The
+outfit is what you see. ANBOT is what acts.
+
+In combat, nanite extensions emerge from beneath the outfit as needed: a blade
+forming from the forearm, a hammer consolidating at the fist, a shield shell
+spreading from the chest. When the action completes they retract. The tactical
+outfit shows no seams — the nanites pass through at the molecular level.
+
+The visual identity is intentionally understated: Hugo looks like a tactical
+operator, not a powered-armour unit. The danger is invisible until it isn't.
 
 Sekkars carry scale skin along their backs. Whether Hugo inherits this fully
 or partially as a hybrid is still being defined visually.

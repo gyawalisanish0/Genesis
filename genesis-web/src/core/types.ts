@@ -244,16 +244,21 @@ export interface MapDef {
 
 // ── Tileset ────────────────────────────────────────────────────────────────────
 
+// Tile visual definition — color is required; patterns are optional JSON overrides.
+// When patterns are absent, dungeonTileArt.ts generates them computationally.
+// Keys in `patterns` are rotation degrees as strings: '0' | '90' | '180' | '270'
+export interface AsciiTileDef {
+  color:     string                           // CSS hex colour
+  pattern?:  string[]                         // fixed override (non-rotated tile)
+  patterns?: Record<string, string[]>         // per-rotation override
+}
+
 export interface TilesetDef {
-  type:       'tileset'
-  key:        string
-  sourceSize: number    // native resolution of each PNG (e.g. 1024 for 1024×1024)
-  bgColor?:   string    // CSS hex color for the Phaser canvas + container background
-  // Maps TileTypeDef.id → PNG filename under public/images/tilesets/{key}/
-  tiles:      Record<string, string>
-  // Tile type ids planned but not yet asset-ready. Listed here for documentation;
-  // the engine never tries to load these — they fall back to colored rects silently.
-  pending?:   string[]
+  type:     'tileset'
+  key:      string
+  bgColor?: string
+  // Maps TileTypeDef.id → ASCII visual definition
+  tiles:    Record<string, AsciiTileDef>
 }
 
 export interface PlayerUnitsDef {
