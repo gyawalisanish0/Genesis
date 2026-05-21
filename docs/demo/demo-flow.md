@@ -180,9 +180,9 @@ Stats and skill kits for each: TBD during character design phase.
 
 | Stage | Name | Grid | Patrols | New enemies |
 |---|---|---|---|---|
-| `stage_001` | The Outpost | 8×8 | 2 | Netrolume grunt |
-| `stage_002` | TBD | 10×10 | 4 | + Netrolume elite |
-| `stage_003` | TBD | 12×12 | 6 | + Kiragen combatant + controller |
+| `stage_001` | The Outpost | 12×20 | 2 | Netrolume grunt |
+| `stage_002` | TBD | 14×22 | 4 | + Netrolume elite |
+| `stage_003` | TBD | 16×24 | 6 | + Kiragen combatant + controller |
 
 Objective across all stages: reach the exit.
 Escalation: bigger maps, more patrols, new enemy types per stage.
