@@ -1,5 +1,15 @@
 # ASCII Character Art — Frame-by-Frame Animation Spec
 
+> **The ASCII art is diegetic.** It is not a style choice — it is the
+> Commander's perception of reality. The Commander is an OMEGA-tier
+> consciousness. Higher consciousness perceives lower consciousness in
+> simplified form, the way a human perceives an ant: pattern, structure,
+> signal — not full resolution. The battle is real. The characters are
+> real. The Commander sees them as Unicode symbol structures because that
+> is what OMEGA perception does to lower-order reality.
+>
+> Full lore: `docs/lore/perception-tiers.md`
+
 Characters are drawn in a **32 × 32 grid** of Unicode symbols. Color derives
 from Unicode block membership — the art itself carries its color identity,
 no markup required. Motion (translate, scale, rotate) is CSS layered on top

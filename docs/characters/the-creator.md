@@ -121,6 +121,28 @@ he doesn't fully know he's doing.
 
 ---
 
+## Perception Tier
+
+The Creator is Tier 0 in the perception hierarchy — above OMEGA,
+above mortal consciousness, above any framework that exists in the
+game world. He does not observe the universe; he is what the
+universe is made of.
+
+When he reaches down toward an OMEGA consciousness — the Commander,
+Einstein, others — what arrives is fragments. Not because he is
+withholding. Because full Tier 0 signal cannot compress into
+OMEGA-readable form without catastrophic loss. The chaos in his
+speech is transmission loss as much as personality.
+
+The Commander perceives the battle world as ASCII — compressed
+symbol, pattern, structure. The Creator perceives the Commander
+the same way: a faint signal, a tiny blip of consciousness that
+happened to look back. Remarkably small. Remarkably interesting.
+
+Full hierarchy: `docs/lore/perception-tiers.md`
+
+---
+
 ## Design Notes
 
 - **Never write him as omniscient in tone** — he knows everything but
