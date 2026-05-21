@@ -1,8 +1,8 @@
 import {
   forwardRef, useImperativeHandle, useReducer, useRef, useCallback,
 } from 'react'
-import type { MapDef, TilesetDef, EntityDef, InteractableEntityDef } from '../core/types'
-import { getTileArt, type TileColorKey } from './dungeonTileArt'
+import type { MapDef, TilesetDef, AsciiTileDef, EntityDef, InteractableEntityDef } from '../core/types'
+import { getTileArt }                                   from './dungeonTileArt'
 import { DUNGEON_MOVE_ANIM_MS, DUNGEON_PATROL_ANIM_MS } from '../core/constants'
 import styles from './DungeonArena.module.css'
 
@@ -25,17 +25,22 @@ export interface DungeonArenaHandle {
   setTapCallback(cb: DungeonTapCallback | null): void
 }
 
-// ── Tile class lookup (type-safe CSS module access) ───────────────────────────
+// ── Tile art resolution ───────────────────────────────────────────────────────
 
-const TILE_CLASS: Record<TileColorKey, string> = {
-  floor:  styles.floor,
-  hill:   styles.hill,
-  crater: styles.crater,
-  rift:   styles.rift,
-  edge:   styles.edge,
+function resolveTileArt(
+  tileset: TilesetDef | null,
+  tileId:  string,
+  rotation: number,
+): { char: string; color: string } {
+  const entry: AsciiTileDef | undefined = tileset?.tiles[tileId]
+  if (!entry) return getTileArt(tileId, rotation)
+  const char = 'chars' in entry
+    ? (entry.chars[String(rotation)] ?? entry.chars['0'] ?? '?')
+    : entry.char
+  return { char, color: entry.color }
 }
 
-// ── Entity char + class ───────────────────────────────────────────────────────
+// ── Entity char + CSS class ───────────────────────────────────────────────────
 
 function entityChar(def: EntityDef): string {
   switch (def.type) {
@@ -65,6 +70,7 @@ function DungeonArena({ bgColor }, ref) {
   const [, bump] = useReducer((n: number) => n + 1, 0)
 
   const mapRef        = useRef<MapDef | null>(null)
+  const tilesetRef    = useRef<TilesetDef | null>(null)
   const revealedRef   = useRef<Set<string>>(new Set())
   const entityPosRef  = useRef<Record<string, { x: number; y: number }>>({})
   const entityVisRef  = useRef<Record<string, boolean>>({})
@@ -77,8 +83,9 @@ function DungeonArena({ bgColor }, ref) {
   const rerender = useCallback(() => bump(), [])
 
   useImperativeHandle(ref, () => ({
-    loadMap(mapDef) {
+    loadMap(mapDef, tilesetDef) {
       mapRef.current        = mapDef
+      tilesetRef.current    = tilesetDef ?? null
       revealedRef.current   = new Set()
       entityPosRef.current  = {}
       entityVisRef.current  = {}
@@ -160,7 +167,7 @@ function DungeonArena({ bgColor }, ref) {
     return <div className={styles.arena} style={{ backgroundColor: bgColor ?? '#1a0a05' }} />
   }
 
-  // Cell → entity lookup (visible entities only)
+  // Build cell → entity lookup (visible entities only)
   const cellEntity: Record<string, string> = {}
   for (const [id, pos] of Object.entries(entityPosRef.current)) {
     if (entityVisRef.current[id]) cellEntity[`${pos.x},${pos.y}`] = id
@@ -181,7 +188,7 @@ function DungeonArena({ bgColor }, ref) {
 
       const tileCode = map.tiles[ty]?.[tx] ?? 0
       const tileDef  = map.tileTypes[String(tileCode)]
-      const art      = getTileArt(tileDef?.id ?? 'floor', tileDef?.rotation)
+      const art      = resolveTileArt(tilesetRef.current, tileDef?.id ?? 'floor', tileDef?.rotation ?? 0)
 
       const isParty   = party?.x === tx && party?.y === ty
       const entityId  = isParty ? undefined : cellEntity[key]
@@ -191,7 +198,7 @@ function DungeonArena({ bgColor }, ref) {
 
       cells.push(
         <div key={key} className={styles.cell} onPointerDown={() => handleCellTap(tx, ty)}>
-          <span className={`${styles.tile} ${TILE_CLASS[art.colorKey]}`}>{art.char}</span>
+          <span className={styles.tile} style={{ color: art.color }}>{art.char}</span>
           {isParty && <span className={styles.party}>◈</span>}
           {entityDef && (
             <span className={[

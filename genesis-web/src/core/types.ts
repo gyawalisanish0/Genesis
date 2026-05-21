@@ -244,16 +244,27 @@ export interface MapDef {
 
 // ── Tileset ────────────────────────────────────────────────────────────────────
 
+// Non-rotational tile: single char + color
+export interface AsciiFixedTile {
+  char:  string
+  color: string   // CSS hex colour
+}
+
+// Rotational tile: per-rotation char map + shared color
+// Keys are the rotation in degrees as a string: '0' | '90' | '180' | '270'
+export interface AsciiRotatedTile {
+  chars: Record<string, string>
+  color: string
+}
+
+export type AsciiTileDef = AsciiFixedTile | AsciiRotatedTile
+
 export interface TilesetDef {
-  type:       'tileset'
-  key:        string
-  sourceSize: number    // native resolution of each PNG (e.g. 1024 for 1024×1024)
-  bgColor?:   string    // CSS hex color for the Phaser canvas + container background
-  // Maps TileTypeDef.id → PNG filename under public/images/tilesets/{key}/
-  tiles:      Record<string, string>
-  // Tile type ids planned but not yet asset-ready. Listed here for documentation;
-  // the engine never tries to load these — they fall back to colored rects silently.
-  pending?:   string[]
+  type:     'tileset'
+  key:      string
+  bgColor?: string
+  // Maps TileTypeDef.id → ASCII visual definition
+  tiles:    Record<string, AsciiTileDef>
 }
 
 export interface PlayerUnitsDef {

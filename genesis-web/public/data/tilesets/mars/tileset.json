@@ -1,15 +1,27 @@
 {
   "type": "tileset",
   "key": "mars",
-  "sourceSize": 1024,
   "bgColor": "#1a0a05",
+
   "tiles": {
-    "floor":          "mars_floor.png",
-    "rift":           "mars_rift.png",
-    "edge":           "mars_edge.png",
-    "surface_corner": "mars_rift_corner.png",
-    "rift_corner":    "mars_surface_corner.png",
-    "hill":           "mars_hill.png",
-    "crater":         "mars_crater.png"
+    "floor":   { "char": "·", "color": "#5a2412" },
+    "hill":    { "char": "▓", "color": "#a85c28" },
+    "crater":  { "char": "◎", "color": "#d07838" },
+    "rift":    { "char": "═", "color": "#2d0a06" },
+
+    "edge": {
+      "chars": { "0": "│", "90": "─", "180": "│", "270": "─" },
+      "color": "#8c4820"
+    },
+
+    "surface_corner": {
+      "chars": { "0": "╔", "90": "╗", "180": "╚", "270": "╝" },
+      "color": "#8c4820"
+    },
+
+    "rift_corner": {
+      "chars": { "0": "╔", "90": "╗", "180": "╝", "270": "╚" },
+      "color": "#3d1408"
+    }
   }
 }

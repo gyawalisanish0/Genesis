@@ -29,7 +29,7 @@
   background: #000;
 }
 
-/* ── Tile layer (background character) ────────────────────────────────────── */
+/* ── Tile layer (background character — color set inline from tileset data) ── */
 
 .tile {
   font-family: 'Courier New', Courier, monospace;
@@ -42,13 +42,6 @@
   justify-content: center;
   pointer-events: none;
 }
-
-/* Mars tile palette */
-.floor  { color: #5a2a14; }
-.hill   { color: #8b4513; }
-.crater { color: #c06020; }
-.rift   { color: #3d1008; }
-.edge   { color: #7a3820; }
 
 /* ── Entity / party layer (foreground character) ───────────────────────────── */
 
@@ -74,7 +67,7 @@
 .exit   { color: var(--accent-heal);    }
 .npc    { color: var(--text-secondary); }
 
-/* Greyscale — enemy out of sight range */
+/* Greyscale — entity out of sight range */
 .gray {
   filter: grayscale(1);
   opacity: 0.5;

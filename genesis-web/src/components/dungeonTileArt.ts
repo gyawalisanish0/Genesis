@@ -1,11 +1,10 @@
-// ASCII tile art for the dungeon arena.
-// Maps tile type id + optional rotation → char + color key.
-
-export type TileColorKey = 'floor' | 'hill' | 'crater' | 'rift' | 'edge'
+// Fallback ASCII tile art — used when no tileset is loaded.
+// Mirrors the structure of AsciiTileDef in core/types.ts but resolved
+// to a concrete { char, color } for immediate use in the renderer.
 
 export interface TileArt {
-  char:     string
-  colorKey: TileColorKey
+  char:  string
+  color: string   // inline CSS colour
 }
 
 const EDGE_CHARS: Record<number, string> = {
@@ -16,36 +15,30 @@ const EDGE_CHARS: Record<number, string> = {
 }
 
 const SURFACE_CORNER_CHARS: Record<number, string> = {
-  0:   '╔',
-  90:  '╗',
-  180: '╚',
-  270: '╝',
+  0: '╔', 90: '╗', 180: '╚', 270: '╝',
 }
 
 const RIFT_CORNER_CHARS: Record<number, string> = {
-  0:   '╔',
-  90:  '╗',
-  180: '╝',
-  270: '╚',
+  0: '╔', 90: '╗', 180: '╝', 270: '╚',
 }
 
 export function getTileArt(tileId: string, rotation = 0): TileArt {
   switch (tileId) {
     case 'floor':
-      return { char: '·',                                  colorKey: 'floor'  }
+      return { char: '·',                                     color: '#5a2412' }
     case 'hill':
-      return { char: '▓',                                  colorKey: 'hill'   }
+      return { char: '▓',                                     color: '#a85c28' }
     case 'crater':
-      return { char: '◎',                                  colorKey: 'crater' }
+      return { char: '◎',                                     color: '#d07838' }
     case 'rift':
-      return { char: '═',                                  colorKey: 'rift'   }
+      return { char: '═',                                     color: '#2d0a06' }
     case 'edge':
-      return { char: EDGE_CHARS[rotation] ?? '─',          colorKey: 'edge'   }
+      return { char: EDGE_CHARS[rotation] ?? '─',             color: '#8c4820' }
     case 'surface_corner':
-      return { char: SURFACE_CORNER_CHARS[rotation] ?? '╔', colorKey: 'edge'  }
+      return { char: SURFACE_CORNER_CHARS[rotation] ?? '╔',   color: '#8c4820' }
     case 'rift_corner':
-      return { char: RIFT_CORNER_CHARS[rotation] ?? '╔',   colorKey: 'rift'  }
+      return { char: RIFT_CORNER_CHARS[rotation] ?? '╔',      color: '#3d1408' }
     default:
-      return { char: ' ',                                  colorKey: 'floor'  }
+      return { char: ' ',                                     color: '#5a2412' }
   }
 }
