@@ -211,7 +211,19 @@ export class FigureAnimator {
 
   getCurrentFrame(): string[] {
     const frames = this.framesFor(this.state, this.currentSkillId)
-    return frames[this.frameIndex] ?? GENERIC_IDLE[0]
+    const frame  = frames[this.frameIndex] ?? GENERIC_IDLE[0]
+    return FigureAnimator.padToHeight(frame)
+  }
+
+  // Feet-anchor: pad empty rows at the top so all frames share a common
+  // ground line regardless of how many rows each character's art uses.
+  private static readonly TARGET_HEIGHT = 16
+  private static readonly EMPTY_ROW     = ' '.repeat(32)
+
+  private static padToHeight(frame: string[]): string[] {
+    if (frame.length >= FigureAnimator.TARGET_HEIGHT) return frame
+    const pad = Array(FigureAnimator.TARGET_HEIGHT - frame.length).fill(FigureAnimator.EMPTY_ROW)
+    return [...pad, ...frame]
   }
 
   getCurrentState(): string {
