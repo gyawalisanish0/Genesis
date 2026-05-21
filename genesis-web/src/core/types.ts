@@ -244,20 +244,14 @@ export interface MapDef {
 
 // ── Tileset ────────────────────────────────────────────────────────────────────
 
-// Each tile is an 8-char × 4-row ASCII art pattern rendered at ~6px font.
-export interface AsciiFixedTile {
-  pattern: string[]                        // 4 strings, each 8 chars wide
-  color:   string                          // CSS hex colour
+// Tile visual definition — color is required; patterns are optional JSON overrides.
+// When patterns are absent, dungeonTileArt.ts generates them computationally.
+// Keys in `patterns` are rotation degrees as strings: '0' | '90' | '180' | '270'
+export interface AsciiTileDef {
+  color:     string                           // CSS hex colour
+  pattern?:  string[]                         // fixed override (non-rotated tile)
+  patterns?: Record<string, string[]>         // per-rotation override
 }
-
-// Rotational tile: per-rotation pattern + shared color.
-// Keys are rotation in degrees as strings: '0' | '90' | '180' | '270'
-export interface AsciiRotatedTile {
-  patterns: Record<string, string[]>
-  color:    string
-}
-
-export type AsciiTileDef = AsciiFixedTile | AsciiRotatedTile
 
 export interface TilesetDef {
   type:     'tileset'

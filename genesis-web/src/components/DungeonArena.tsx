@@ -1,7 +1,7 @@
 import {
   forwardRef, useImperativeHandle, useReducer, useRef, useCallback,
 } from 'react'
-import type { MapDef, TilesetDef, AsciiTileDef, EntityDef, InteractableEntityDef } from '../core/types'
+import type { MapDef, TilesetDef, EntityDef, InteractableEntityDef } from '../core/types'
 import { getTileArt }                                   from './dungeonTileArt'
 import { DUNGEON_MOVE_ANIM_MS, DUNGEON_PATROL_ANIM_MS } from '../core/constants'
 import styles from './DungeonArena.module.css'
@@ -25,6 +25,9 @@ export interface DungeonArenaHandle {
   setTapCallback(cb: DungeonTapCallback | null): void
 }
 
+// 32 chars × (0.5rem font / line-height 0.6) = 32 × 4.8px = 153.6px block
+const BLOCK_SIZE_PX = 153.6
+
 // ── Tile art resolution ───────────────────────────────────────────────────────
 
 function resolveTileArt(
@@ -32,12 +35,18 @@ function resolveTileArt(
   tileId:   string,
   rotation: number,
 ): { pattern: string[]; color: string } {
-  const entry: AsciiTileDef | undefined = tileset?.tiles[tileId]
-  if (!entry) return getTileArt(tileId, rotation)
-  const pattern = 'patterns' in entry
-    ? (entry.patterns[String(rotation)] ?? entry.patterns['0'])
-    : entry.pattern
-  return { pattern: pattern ?? getTileArt(tileId, rotation).pattern, color: entry.color }
+  const fallback = getTileArt(tileId, rotation)
+  const entry    = tileset?.tiles[tileId]
+  if (!entry) return fallback
+  let pattern: string[]
+  if (entry.patterns) {
+    pattern = entry.patterns[String(rotation)] ?? entry.patterns['0'] ?? fallback.pattern
+  } else if (entry.pattern) {
+    pattern = entry.pattern
+  } else {
+    pattern = fallback.pattern
+  }
+  return { pattern, color: entry.color }
 }
 
 // ── Entity char + CSS class ───────────────────────────────────────────────────
@@ -219,8 +228,14 @@ function DungeonArena({ bgColor }, ref) {
     }
   }
 
+  const cellPx    = 360 / map.grid.cols
+  const tileScale = (cellPx / BLOCK_SIZE_PX).toFixed(4)
+
   return (
-    <div className={styles.arena} style={{ backgroundColor: bgColor ?? '#1a0a05' }}>
+    <div
+      className={styles.arena}
+      style={{ backgroundColor: bgColor ?? '#1a0a05', '--tile-scale': tileScale } as React.CSSProperties}
+    >
       <div
         className={styles.grid}
         style={{

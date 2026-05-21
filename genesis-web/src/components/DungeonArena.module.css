@@ -1,5 +1,7 @@
 /* DungeonArena — React ASCII grid renderer, martian surface.
-   Each tile is an 8-char × 4-row ASCII art block at ~6px (0.38rem) font. */
+   Each tile is a 32-char × 32-row ASCII art block. Font 0.5rem / line-height 0.6
+   makes each char pixel ~4.8 × 4.8 px → 153.6 px block, scaled down via
+   CSS transform to fit the cell. --tile-scale is set inline by DungeonArena.tsx. */
 
 .arena {
   flex: 1;
@@ -43,14 +45,15 @@
 }
 
 .tilePattern {
-  /* ~6px font: fits 8 Courier chars in a ~30px cell width */
   font-family: 'Courier New', Courier, monospace;
-  font-size: 0.38rem;
-  line-height: 1.1;
+  font-size: 0.5rem;       /* 8px — 32 chars × 4.8px = 153.6px block */
+  line-height: 0.6;        /* unitless — makes char pixels square (4.8 × 4.8px) */
   margin: 0;
   padding: 0;
   white-space: pre;
   flex-shrink: 0;
+  transform: scale(var(--tile-scale, 0.195));
+  transform-origin: center center;
 }
 
 /* ── Entity / party layer (foreground character) ───────────────────────────── */
