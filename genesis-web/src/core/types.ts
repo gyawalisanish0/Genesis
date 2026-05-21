@@ -244,17 +244,17 @@ export interface MapDef {
 
 // ── Tileset ────────────────────────────────────────────────────────────────────
 
-// Non-rotational tile: single char + color
+// Each tile is an 8-char × 4-row ASCII art pattern rendered at ~6px font.
 export interface AsciiFixedTile {
-  char:  string
-  color: string   // CSS hex colour
+  pattern: string[]                        // 4 strings, each 8 chars wide
+  color:   string                          // CSS hex colour
 }
 
-// Rotational tile: per-rotation char map + shared color
-// Keys are the rotation in degrees as a string: '0' | '90' | '180' | '270'
+// Rotational tile: per-rotation pattern + shared color.
+// Keys are rotation in degrees as strings: '0' | '90' | '180' | '270'
 export interface AsciiRotatedTile {
-  chars: Record<string, string>
-  color: string
+  patterns: Record<string, string[]>
+  color:    string
 }
 
 export type AsciiTileDef = AsciiFixedTile | AsciiRotatedTile

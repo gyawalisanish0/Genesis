@@ -28,16 +28,16 @@ export interface DungeonArenaHandle {
 // ── Tile art resolution ───────────────────────────────────────────────────────
 
 function resolveTileArt(
-  tileset: TilesetDef | null,
-  tileId:  string,
+  tileset:  TilesetDef | null,
+  tileId:   string,
   rotation: number,
-): { char: string; color: string } {
+): { pattern: string[]; color: string } {
   const entry: AsciiTileDef | undefined = tileset?.tiles[tileId]
   if (!entry) return getTileArt(tileId, rotation)
-  const char = 'chars' in entry
-    ? (entry.chars[String(rotation)] ?? entry.chars['0'] ?? '?')
-    : entry.char
-  return { char, color: entry.color }
+  const pattern = 'patterns' in entry
+    ? (entry.patterns[String(rotation)] ?? entry.patterns['0'])
+    : entry.pattern
+  return { pattern: pattern ?? getTileArt(tileId, rotation).pattern, color: entry.color }
 }
 
 // ── Entity char + CSS class ───────────────────────────────────────────────────
@@ -198,7 +198,11 @@ function DungeonArena({ bgColor }, ref) {
 
       cells.push(
         <div key={key} className={styles.cell} onPointerDown={() => handleCellTap(tx, ty)}>
-          <span className={styles.tile} style={{ color: art.color }}>{art.char}</span>
+          <div className={styles.tileWrapper}>
+            <pre className={styles.tilePattern} style={{ color: art.color }}>
+              {art.pattern.join('\n')}
+            </pre>
+          </div>
           {isParty && <span className={styles.party}>◈</span>}
           {entityDef && (
             <span className={[

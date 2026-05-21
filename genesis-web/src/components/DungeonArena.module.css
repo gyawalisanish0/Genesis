@@ -1,4 +1,5 @@
-/* DungeonArena — React ASCII grid renderer, martian surface */
+/* DungeonArena — React ASCII grid renderer, martian surface.
+   Each tile is an 8-char × 4-row ASCII art block at ~6px (0.38rem) font. */
 
 .arena {
   flex: 1;
@@ -29,18 +30,27 @@
   background: #000;
 }
 
-/* ── Tile layer (background character — color set inline from tileset data) ── */
+/* ── Tile art layer — 8×4 ASCII pattern at micro font ─────────────────────── */
 
-.tile {
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 0.65rem;
-  line-height: 1;
+.tileWrapper {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   pointer-events: none;
+}
+
+.tilePattern {
+  /* ~6px font: fits 8 Courier chars in a ~30px cell width */
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.38rem;
+  line-height: 1.1;
+  margin: 0;
+  padding: 0;
+  white-space: pre;
+  flex-shrink: 0;
 }
 
 /* ── Entity / party layer (foreground character) ───────────────────────────── */
@@ -58,6 +68,10 @@
   justify-content: center;
   pointer-events: none;
   z-index: 1;
+  /* Dark halo so the marker reads clearly over any tile pattern */
+  text-shadow:
+    0 0 4px #000,
+    0 0 8px rgba(0, 0, 0, 0.9);
 }
 
 /* Entity colour tokens */
