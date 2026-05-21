@@ -85,6 +85,52 @@
   50%       { opacity: 0; }
 }
 
+/* ── Name input ────────────────────────────────────────────────────────────── */
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.25rem 0;
+}
+
+.nameInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--text-primary);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  padding: 0.15rem 0;
+  outline: none;
+  caret-color: var(--text-primary);
+}
+
+.nameInput::placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.confirmBtn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0.2rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.confirmBtn:hover {
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
 /* ── Tap hint ──────────────────────────────────────────────────────────────── */
 
 .hint {

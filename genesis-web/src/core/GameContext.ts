@@ -21,6 +21,9 @@ interface GameStore {
   currentEncounterEnemies:  string[]    // defIds set by DungeonContext before navigating to battle
   returnScreen:             ScreenId | null  // screen to return to after BattleResultScreen
 
+  // Commander identity — set in dream sequence, used by KALI and briefing screens
+  commanderName: string
+
   // Persisted preferences
   settings: AppSettings
 
@@ -33,6 +36,7 @@ interface GameStore {
   setDungeonState(state: DungeonState | null): void
   setCurrentEncounterEnemies(ids: string[]): void
   setReturnScreen(screen: ScreenId | null): void
+  setCommanderName(name: string): void
   updateSetting<K extends keyof AppSettings>(key: K, value: AppSettings[K]): void
   resetBattle(): void
 }
@@ -46,6 +50,7 @@ export const useGameStore = create<GameStore>((set) => ({
   dungeonState:             null,
   currentEncounterEnemies:  [],
   returnScreen:             null,
+  commanderName:            '',
   settings:                 { ...DEFAULT_SETTINGS },
 
   setSelectedMode:    (mode)    => set({ selectedMode: mode }),
@@ -57,6 +62,7 @@ export const useGameStore = create<GameStore>((set) => ({
   setDungeonState:            (state)  => set({ dungeonState: state }),
   setCurrentEncounterEnemies: (ids)    => set({ currentEncounterEnemies: ids }),
   setReturnScreen:            (screen) => set({ returnScreen: screen }),
+  setCommanderName:           (name)   => set({ commanderName: name }),
 
   updateSetting: (key, value) =>
     set((s) => ({ settings: { ...s.settings, [key]: value } })),
