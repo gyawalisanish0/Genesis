@@ -1,7 +1,7 @@
 // FigureAnimator — per-unit ASCII animation state machine.
 // Driven by AsciiAnimEngine.update(dt); no rAF calls of its own.
 
-import type { AsciiManifest, AsciiSequence, AsciiStateConfig, AsciiActionFrames } from './types'
+import type { AsciiSequence, AsciiStateConfig, AsciiActionFrames } from './types'
 
 // ── Default configs (used when no sequence JSON is present) ─────────────────
 

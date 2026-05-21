@@ -13,7 +13,7 @@
 
 import { FigureAnimator } from './FigureAnimator'
 import { ProjectileAnimator } from './ProjectileAnimator'
-import type { AnimSignal, AsciiArenaFrame, FigureAnimFrame, TurnDisplayData } from './types'
+import type { AnimSignal, FigureAnimFrame, TurnDisplayData } from './types'
 import {
   loadAsciiManifest,
   loadAsciiSequence,
