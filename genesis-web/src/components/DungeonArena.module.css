@@ -1,7 +1,7 @@
 /* DungeonArena — React ASCII grid renderer, martian surface.
-   Each tile is a 32-char × 32-row ASCII art block. Font 0.5rem / line-height 0.6
-   makes each char pixel ~4.8 × 4.8 px → 153.6 px block, scaled down via
-   CSS transform to fit the cell. --tile-scale is set inline by DungeonArena.tsx. */
+   Camera: grid is absolute-positioned, top:50% left:50% inside overflow:hidden arena.
+   transform: translate(-camX, -camY) keeps the party tile centered at all times.
+   Each tile is 48×48 px; the 32×32 ASCII block scales to fit via --tile-scale. */
 
 .arena {
   flex: 1;
@@ -12,8 +12,11 @@
 
 .grid {
   display: grid;
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  /* transform is set inline: translate(-camX, -camY) to center party */
+  transition: transform 180ms ease-out;
 }
 
 /* ── Cells ─────────────────────────────────────────────────────────────────── */

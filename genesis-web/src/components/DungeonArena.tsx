@@ -27,6 +27,9 @@ export interface DungeonArenaHandle {
 
 // 32 chars × (0.5rem font / line-height 0.6) = 32 × 4.8px = 153.6px block
 const BLOCK_SIZE_PX = 153.6
+// Fixed cell size — 7.5 tiles across 360dp; tile scale = 48/153.6 ≈ 0.3125
+const CELL_PX    = 48
+const TILE_SCALE = (CELL_PX / BLOCK_SIZE_PX).toFixed(4)
 
 // ── Tile art resolution ───────────────────────────────────────────────────────
 
@@ -228,19 +231,23 @@ function DungeonArena({ bgColor }, ref) {
     }
   }
 
-  const cellPx    = 360 / map.grid.cols
-  const tileScale = (cellPx / BLOCK_SIZE_PX).toFixed(4)
+  // Camera: offset so party tile lands at arena center (top:50% left:50%)
+  const camX = party ? party.x * CELL_PX + CELL_PX / 2 : (map.grid.cols * CELL_PX) / 2
+  const camY = party ? party.y * CELL_PX + CELL_PX / 2 : (map.grid.rows * CELL_PX) / 2
 
   return (
     <div
       className={styles.arena}
-      style={{ backgroundColor: bgColor ?? '#1a0a05', '--tile-scale': tileScale } as React.CSSProperties}
+      style={{ backgroundColor: bgColor ?? '#1a0a05', '--tile-scale': TILE_SCALE } as React.CSSProperties}
     >
       <div
         className={styles.grid}
         style={{
-          gridTemplateColumns: `repeat(${map.grid.cols}, 1fr)`,
-          gridTemplateRows:    `repeat(${map.grid.rows}, 1fr)`,
+          width:               `${map.grid.cols * CELL_PX}px`,
+          height:              `${map.grid.rows * CELL_PX}px`,
+          gridTemplateColumns: `repeat(${map.grid.cols}, ${CELL_PX}px)`,
+          gridTemplateRows:    `repeat(${map.grid.rows}, ${CELL_PX}px)`,
+          transform:           `translate(${-camX}px, ${-camY}px)`,
         }}
       >
         {cells}
