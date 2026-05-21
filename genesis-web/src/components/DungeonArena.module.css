@@ -1,12 +1,91 @@
+/* DungeonArena — React ASCII grid renderer, martian surface */
+
 .arena {
   flex: 1;
   position: relative;
   overflow: hidden;
-  background: #0a0a14;
+  background: #1a0a05;
 }
 
-.arena canvas {
+.grid {
+  display: grid;
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Cells ─────────────────────────────────────────────────────────────────── */
+
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.cellHidden {
+  background: #000;
+}
+
+/* ── Tile layer (background character) ────────────────────────────────────── */
+
+.tile {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.65rem;
+  line-height: 1;
   position: absolute;
   inset: 0;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/* Mars tile palette */
+.floor  { color: #5a2a14; }
+.hill   { color: #8b4513; }
+.crater { color: #c06020; }
+.rift   { color: #3d1008; }
+.edge   { color: #7a3820; }
+
+/* ── Entity / party layer (foreground character) ───────────────────────────── */
+
+.entity,
+.party {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Entity colour tokens */
+.party  { color: var(--accent-genesis); }
+.enemy  { color: var(--accent-danger);  }
+.chest  { color: var(--accent-gold);    }
+.exit   { color: var(--accent-heal);    }
+.npc    { color: var(--text-secondary); }
+
+/* Greyscale — enemy out of sight range */
+.gray {
+  filter: grayscale(1);
+  opacity: 0.5;
+}
+
+/* Wave phase — selectable enemies breathe */
+.wave {
+  animation: wavePulse 0.7s ease-in-out infinite alternate;
+}
+
+@keyframes wavePulse {
+  from { opacity: 0.65; transform: scale(0.88); }
+  to   { opacity: 1.00; transform: scale(1.18); }
 }
