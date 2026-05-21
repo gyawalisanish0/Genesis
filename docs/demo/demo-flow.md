@@ -17,6 +17,15 @@ in ways neither the Creator nor the player understands yet. The threat
 on Mars and the dream are connected. The demo is chapter one of
 something that began before the player pressed play.
 
+**The dream is a hook, not an explanation.** The player should walk
+away feeling specifically found — not randomly stumbled upon — with
+no framework to explain why. That gap is intentional. The Commander's
+significance is never stated in the demo. It is never hinted at
+directly. It is felt, buried under the immediate urgency of Mars, and
+left unresolved. Players who want to know why will keep playing.
+
+The answer exists in the lore. The demo does not give it.
+
 ---
 
 ## Character Creation
