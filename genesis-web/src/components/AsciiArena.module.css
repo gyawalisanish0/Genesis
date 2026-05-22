@@ -60,7 +60,16 @@
   gap: 0.5rem;
 }
 
-/* ── Figure panels ─────────────────────────────────────────────────────────── */
+/* ── Figure scaler — wrapper sized to the true display dimensions ──────────── */
+
+.figureScaler {
+  width:  calc(153.6px * var(--figure-scale, 1));
+  height: calc(128px   * var(--figure-scale, 1));
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+
 
 .figureWrap {
   display: flex;

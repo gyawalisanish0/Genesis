@@ -10,7 +10,7 @@
 // The forwardRef exposes BattleArenaHandle by delegating every method directly
 // to the engine. BattleContext and BattleEngine require zero changes.
 
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState, useCallback } from 'react'
 import type { AnimationManifest, AnimationProjectileDef, AnimPhase } from '../core/types'
 import type { TurnDisplayData } from '../ascii/types'
 import { AsciiAnimEngine } from '../ascii/AsciiAnimEngine'
@@ -65,6 +65,11 @@ const GENERIC_PALETTE: Record<string, string> = {
 const BURST_DISMISS_MS    = 900
 const FEEDBACK_DISMISS_MS = 1200
 
+// Natural figure block size at 0.5rem font / line-height 1:
+//   32 chars × ~4.8px = 153.6px wide, 16 rows × 8px = 128px tall
+const FIGURE_W_PX = 153.6
+const FIGURE_H_PX = 128
+
 // ── State shapes ──────────────────────────────────────────────────────────────
 
 interface DiceState    { outcome: string; key: number }
@@ -114,6 +119,27 @@ function HpBar({ hp, maxHp, shieldHp }: HpBarProps) {
 export const AsciiArena = forwardRef<BattleArenaHandle>(
   function AsciiArena(_props, ref) {
     const engineRef = useRef<AsciiAnimEngine | null>(null)
+    const stageRef  = useRef<HTMLDivElement>(null)
+
+    // ── Figure scale — fit 153.6×128 block into available stage space ───────
+    const [figureScale, setFigureScale] = useState(1)
+
+    const updateScale = useCallback((width: number, height: number) => {
+      const availW = Math.max(1, (width  - 24) / 2)  // 2 figures, 0.5rem padding+gap
+      const availH = Math.max(1,  height - 72)        // 1rem*2 padding + ~40px info
+      setFigureScale(Math.min(availW / FIGURE_W_PX, availH / FIGURE_H_PX, 2))
+    }, [])
+
+    useEffect(() => {
+      const el = stageRef.current
+      if (!el) return
+      const obs = new ResizeObserver(([entry]) => {
+        const { width, height } = entry.contentRect
+        updateScale(width, height)
+      })
+      obs.observe(el)
+      return () => obs.disconnect()
+    }, [updateScale])
 
     // ── Signal-driven display state (pure output, no logic) ─────────────────
     const [frame,       setFrame]       = useState<AsciiArenaFrame | null>(null)
@@ -226,13 +252,19 @@ export const AsciiArena = forwardRef<BattleArenaHandle>(
           </div>
         )}
 
-        <div className={styles.stage}>
+        <div
+          ref={stageRef}
+          className={styles.stage}
+          style={{ '--figure-scale': figureScale } as React.CSSProperties}
+        >
 
           <div className={styles.figureWrap}>
-            {frame?.acting
-              ? <SymbolFigure frame={frame.acting.frame} palette={GENERIC_PALETTE} rarity={actingRarity} />
-              : <div className={styles.figureEmpty}>?</div>
-            }
+            <div className={styles.figureScaler}>
+              {frame?.acting
+                ? <SymbolFigure frame={frame.acting.frame} palette={GENERIC_PALETTE} rarity={actingRarity} />
+                : <div className={styles.figureEmpty}>?</div>
+              }
+            </div>
             {turnDisplay?.actor && (
               <div className={styles.figureInfo}>
                 <span className={styles.figureName}>{turnDisplay.actor.name}</span>
@@ -255,10 +287,12 @@ export const AsciiArena = forwardRef<BattleArenaHandle>(
           )}
 
           <div className={styles.figureWrap}>
-            {frame?.target
-              ? <SymbolFigure frame={frame.target.frame} palette={GENERIC_PALETTE} rarity={targetRarity} flipped />
-              : <div className={styles.figureEmpty}>?</div>
-            }
+            <div className={styles.figureScaler}>
+              {frame?.target
+                ? <SymbolFigure frame={frame.target.frame} palette={GENERIC_PALETTE} rarity={targetRarity} flipped />
+                : <div className={styles.figureEmpty}>?</div>
+              }
+            </div>
             {turnDisplay?.target && (
               <div className={styles.figureInfo}>
                 <span className={styles.figureName}>{turnDisplay.target.name}</span>
