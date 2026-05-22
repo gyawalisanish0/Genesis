@@ -98,6 +98,7 @@ export class BattleEngine {
   private applyTimer:          ReturnType<typeof setTimeout> | null
   private playerApplyTimer:    ReturnType<typeof setTimeout> | null
   private attackTimer:         ReturnType<typeof setTimeout> | null
+  private pendingAttackCb:     (() => void) | null
   private clashAnnounceTimer:  ReturnType<typeof setTimeout> | null
   private diceTimer:           ReturnType<typeof setTimeout> | null
   private dismissTimer:        ReturnType<typeof setTimeout> | null
@@ -148,6 +149,7 @@ export class BattleEngine {
     this.applyTimer         = null
     this.playerApplyTimer   = null
     this.attackTimer        = null
+    this.pendingAttackCb    = null
     this.clashAnnounceTimer = null
     this.diceTimer          = null
     this.dismissTimer       = null
@@ -295,7 +297,8 @@ export class BattleEngine {
 
     this.cb.onPlayDice(outcome)
     if (this.attackTimer) clearTimeout(this.attackTimer)
-    this.attackTimer = setTimeout(() => {
+    this.pendingAttackCb = () => {
+      this.pendingAttackCb = null
       this.cb.onPlayAttack(
         actor.defId, primaryTarget.defId, outcome, primaryDamage, isMelee, dashDx,
         projectile, buildOutcomeLabel(outcome), outcomeColour(outcome),
@@ -306,7 +309,8 @@ export class BattleEngine {
         this.setStep('player_applying')
         this.drive()
       }, ANIM_TIMEOUT_MS)
-    }, DICE_RESULT_DISMISS_MS)
+    }
+    this.attackTimer = setTimeout(this.pendingAttackCb, DICE_RESULT_DISMISS_MS)
   }
 
   skipTurn(): void {
@@ -401,6 +405,14 @@ export class BattleEngine {
   skipCounter(): void {
     this.pendingCounterDecision = null
     this.notify()
+  }
+
+  skipDiceAnim(): void {
+    if (!this.pendingAttackCb) return
+    if (this.attackTimer) { clearTimeout(this.attackTimer); this.attackTimer = null }
+    const cb = this.pendingAttackCb
+    this.pendingAttackCb = null
+    cb()
   }
 
   resolveClash(winner: 'player' | 'enemy'): void {
@@ -818,7 +830,8 @@ export class BattleEngine {
 
         this.cb.onPlayDice(outcome)
         if (this.attackTimer) clearTimeout(this.attackTimer)
-        this.attackTimer = setTimeout(() => {
+        this.pendingAttackCb = () => {
+          this.pendingAttackCb = null
           this.cb.onPlayAttack(
             freshAIUnit.defId, target.defId, outcome, primaryDamage, aiIsMelee, aiDashDx,
             aiProjectile, buildOutcomeLabel(outcome), outcomeColour(outcome),
@@ -832,7 +845,8 @@ export class BattleEngine {
               this.drive()
             }
           }, ANIM_TIMEOUT_MS)
-        }, DICE_RESULT_DISMISS_MS)
+        }
+        this.attackTimer = setTimeout(this.pendingAttackCb, DICE_RESULT_DISMISS_MS)
       }, inputMs)
 
     }, remainingDice + thinkDelay)

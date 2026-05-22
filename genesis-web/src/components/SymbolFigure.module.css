@@ -9,6 +9,8 @@
   color: var(--text-primary);
   user-select: none;
   pointer-events: none;
+  transform: scale(var(--figure-scale, 1));
+  transform-origin: top left;
 }
 
 .row {

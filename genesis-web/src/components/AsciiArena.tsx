@@ -10,7 +10,7 @@
 // The forwardRef exposes BattleArenaHandle by delegating every method directly
 // to the engine. BattleContext and BattleEngine require zero changes.
 
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState, useCallback } from 'react'
 import type { AnimationManifest, AnimationProjectileDef, AnimPhase } from '../core/types'
 import type { TurnDisplayData } from '../ascii/types'
 import { AsciiAnimEngine } from '../ascii/AsciiAnimEngine'
@@ -65,6 +65,21 @@ const GENERIC_PALETTE: Record<string, string> = {
 const BURST_DISMISS_MS    = 900
 const FEEDBACK_DISMISS_MS = 1200
 
+// ── Dice roll animation ───────────────────────────────────────────────────────
+// The outcome is known immediately but hidden during a 1200ms flicker phase.
+// Interval starts at 60ms and slows (quadratic ease) to ~220ms as it approaches
+// DICE_ROLL_DURATION_MS, simulating a die losing momentum before stopping.
+const DICE_ROLL_DURATION_MS = 800
+const DICE_ROLL_OUTCOMES    = ['Hit', 'Evade', 'Boosted', 'Fail', 'Miss'] as const
+const DICE_SYMBOL: Record<string, string> = {
+  hit: '⚔', boosted: '★', evade: '◎', miss: '✕', fail: '✕',
+}
+
+// Natural figure block size at 0.5rem font / line-height 1:
+//   32 chars × ~4.8px = 153.6px wide, 16 rows × 8px = 128px tall
+const FIGURE_W_PX = 153.6
+const FIGURE_H_PX = 128
+
 // ── State shapes ──────────────────────────────────────────────────────────────
 
 interface DiceState    { outcome: string; key: number }
@@ -114,6 +129,27 @@ function HpBar({ hp, maxHp, shieldHp }: HpBarProps) {
 export const AsciiArena = forwardRef<BattleArenaHandle>(
   function AsciiArena(_props, ref) {
     const engineRef = useRef<AsciiAnimEngine | null>(null)
+    const stageRef  = useRef<HTMLDivElement>(null)
+
+    // ── Figure scale — fit 153.6×128 block into available stage space ───────
+    const [figureScale, setFigureScale] = useState(1)
+
+    const updateScale = useCallback((width: number, height: number) => {
+      const availW = Math.max(1, (width  - 24) / 2)  // 2 figures, 0.5rem padding+gap
+      const availH = Math.max(1,  height - 72)        // 1rem*2 padding + ~40px info
+      setFigureScale(Math.min(availW / FIGURE_W_PX, availH / FIGURE_H_PX, 2))
+    }, [])
+
+    useEffect(() => {
+      const el = stageRef.current
+      if (!el) return
+      const obs = new ResizeObserver(([entry]) => {
+        const { width, height } = entry.contentRect
+        updateScale(width, height)
+      })
+      obs.observe(el)
+      return () => obs.disconnect()
+    }, [updateScale])
 
     // ── Signal-driven display state (pure output, no logic) ─────────────────
     const [frame,       setFrame]       = useState<AsciiArenaFrame | null>(null)
@@ -121,6 +157,30 @@ export const AsciiArena = forwardRef<BattleArenaHandle>(
     const [dice,        setDice]        = useState<DiceState | null>(null)
     const [burst,       setBurst]       = useState<BurstState | null>(null)
     const [feedback,    setFeedback]    = useState<FeedbackState | null>(null)
+
+    // Dice roll — display label cycles randomly until roll completes, then snaps to real outcome
+    const [diceDisplay, setDiceDisplay] = useState<string | null>(null)
+    const rollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    useEffect(() => {
+      if (rollTimerRef.current) clearTimeout(rollTimerRef.current)
+      if (!dice) { setDiceDisplay(null); return }
+
+      const startTime = Date.now()
+      setDiceDisplay(DICE_ROLL_OUTCOMES[Math.floor(Math.random() * DICE_ROLL_OUTCOMES.length)])
+
+      const tick = () => {
+        const elapsed = Date.now() - startTime
+        if (elapsed >= DICE_ROLL_DURATION_MS) { setDiceDisplay(dice.outcome); return }
+        setDiceDisplay(DICE_ROLL_OUTCOMES[Math.floor(Math.random() * DICE_ROLL_OUTCOMES.length)])
+        const progress = elapsed / DICE_ROLL_DURATION_MS
+        const delay = Math.round(60 + progress * progress * 160)
+        rollTimerRef.current = setTimeout(tick, delay)
+      }
+
+      rollTimerRef.current = setTimeout(tick, 60)
+      return () => { if (rollTimerRef.current) clearTimeout(rollTimerRef.current) }
+    }, [dice])
 
     // Auto-dismiss refs (display-layer concern only)
     const burstTimer    = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -226,13 +286,19 @@ export const AsciiArena = forwardRef<BattleArenaHandle>(
           </div>
         )}
 
-        <div className={styles.stage}>
+        <div
+          ref={stageRef}
+          className={styles.stage}
+          style={{ '--figure-scale': figureScale } as React.CSSProperties}
+        >
 
           <div className={styles.figureWrap}>
-            {frame?.acting
-              ? <SymbolFigure frame={frame.acting.frame} palette={GENERIC_PALETTE} rarity={actingRarity} />
-              : <div className={styles.figureEmpty}>?</div>
-            }
+            <div className={styles.figureScaler}>
+              {frame?.acting
+                ? <SymbolFigure frame={frame.acting.frame} palette={GENERIC_PALETTE} rarity={actingRarity} />
+                : <div className={styles.figureEmpty}>?</div>
+              }
+            </div>
             {turnDisplay?.actor && (
               <div className={styles.figureInfo}>
                 <span className={styles.figureName}>{turnDisplay.actor.name}</span>
@@ -255,10 +321,12 @@ export const AsciiArena = forwardRef<BattleArenaHandle>(
           )}
 
           <div className={styles.figureWrap}>
-            {frame?.target
-              ? <SymbolFigure frame={frame.target.frame} palette={GENERIC_PALETTE} rarity={targetRarity} flipped />
-              : <div className={styles.figureEmpty}>?</div>
-            }
+            <div className={styles.figureScaler}>
+              {frame?.target
+                ? <SymbolFigure frame={frame.target.frame} palette={GENERIC_PALETTE} rarity={targetRarity} flipped />
+                : <div className={styles.figureEmpty}>?</div>
+              }
+            </div>
             {turnDisplay?.target && (
               <div className={styles.figureInfo}>
                 <span className={styles.figureName}>{turnDisplay.target.name}</span>
@@ -284,12 +352,12 @@ export const AsciiArena = forwardRef<BattleArenaHandle>(
           </div>
         )}
 
-        {dice && (
-          <div key={dice.key} className={styles.diceOverlay}>
+        {dice && diceDisplay && (
+          <div key={dice.key} className={`${styles.diceOverlay} ${diceDisplay === dice.outcome ? styles.diceRevealed : styles.diceRolling}`}>
             <span className={styles.diceFace}>
-              {{ hit: '⚔', boosted: '★', evade: '◎', miss: '✕', fail: '✕' }[dice.outcome.toLowerCase()] ?? '◈'}
+              {DICE_SYMBOL[diceDisplay.toLowerCase()] ?? '◈'}
             </span>
-            <span className={styles.diceLabel}>{dice.outcome.toUpperCase()}</span>
+            <span className={styles.diceLabel}>{diceDisplay.toUpperCase()}</span>
           </div>
         )}
       </div>

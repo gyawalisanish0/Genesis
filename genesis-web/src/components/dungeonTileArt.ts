@@ -172,7 +172,7 @@ const RIFT_CORNER_PATTERNS: Record<number, string[]> = {
 export function getTileArt(tileId: string, rotation = 0): TileArt {
   switch (tileId) {
     case 'floor':
-      return { pattern: FLOOR_PATTERN,  color: '#7a3418' }
+      return { pattern: FLOOR_PATTERN,  color: '#9a4820' }
     case 'hill':
       return { pattern: HILL_PATTERN,   color: '#a85c28' }
     case 'crater':
@@ -186,6 +186,6 @@ export function getTileArt(tileId: string, rotation = 0): TileArt {
     case 'rift_corner':
       return { pattern: RIFT_CORNER_PATTERNS[rotation] ?? RIFT_CORNER_PATTERNS[0],       color: '#3d1408' }
     default:
-      return { pattern: FLOOR_PATTERN,  color: '#7a3418' }
+      return { pattern: FLOOR_PATTERN,  color: '#9a4820' }
   }
 }
