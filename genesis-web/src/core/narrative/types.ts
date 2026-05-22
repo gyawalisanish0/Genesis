@@ -15,6 +15,7 @@ export interface NarrativeTrigger {
 
 export type NarrativeAnimation =
   | { type: 'dialogue' }
+  | { type: 'creator_dialogue' }
   | { type: 'screen_flash'; colour: string; duration?: number }
   | { type: 'portrait_fly'; speakerId: string; side?: 'left' | 'right'; duration?: number }
   | { type: 'floating_text'; text: string; colour?: string }

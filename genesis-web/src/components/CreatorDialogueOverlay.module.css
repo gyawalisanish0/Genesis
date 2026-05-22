@@ -1,0 +1,114 @@
+/* CreatorDialogueOverlay — dot-field narrative system for Creator speech */
+
+.overlay {
+  /* Creator colour palette — defined once, used throughout this component */
+  --creator-dot-field:  #130f1e;  /* background dots — barely above --bg-deep */
+  --creator-dot-char:   #140d22;  /* dot chars in text position — invisible against field */
+  --creator-label:      #2e1f4a;  /* dim purple — label before text forms */
+  --creator-flicker:    #6644aa;  /* mid purple — noise/flicker state */
+  --creator-done:       #c8b8ff;  /* ethereal lavender — fully revealed Creator text */
+
+  position: absolute;
+  inset: 0;
+  background: var(--bg-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+/* Background dot grid — fills the entire screen with dim · characters */
+.dotField {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0.75rem;
+  font-family: monospace;
+  font-size: 0.625rem;
+  line-height: 1.6;
+  color: var(--creator-dot-field);
+  pointer-events: none;
+  overflow: hidden;
+  white-space: pre;
+  user-select: none;
+}
+
+/* Creator text block — centered, appears above the midline */
+.creatorBlock {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 0 1.5rem;
+  max-width: 20rem;
+  animation: creatorFadeIn 0.3s ease-out both;
+}
+
+.creatorLabel {
+  font-family: monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.25em;
+  color: var(--creator-label);
+  margin-bottom: 1.75rem;
+  text-transform: uppercase;
+}
+
+.creatorText {
+  margin: 0;
+  font-family: monospace;
+  font-size: 0.875rem;
+  line-height: 2;
+  letter-spacing: 0.04em;
+}
+
+/* Per-character states */
+.charDot {
+  color: var(--creator-dot-char);
+  transition: color 0.04s;
+}
+
+.charFlicker {
+  color: var(--creator-flicker);
+  transition: color 0.04s;
+}
+
+.charDone {
+  color: var(--creator-done);
+  transition: color 0.06s ease-out;
+}
+
+/* Player response — typewriter at the bottom, left-aligned */
+.playerBlock {
+  position: absolute;
+  bottom: 18%;
+  left: 2rem;
+  right: 2rem;
+  margin: 0;
+  font-family: monospace;
+  font-size: 0.75rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  text-align: left;
+  z-index: 1;
+}
+
+/* Blinking text cursor */
+.cursor {
+  display: inline-block;
+  width: 0.45em;
+  height: 0.08em;
+  background: var(--text-secondary);
+  margin-left: 0.1em;
+  vertical-align: middle;
+  animation: cursorBlink 1s step-end infinite;
+}
+
+@keyframes creatorFadeIn {
+  from { opacity: 0; transform: translateY(0.5rem); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}

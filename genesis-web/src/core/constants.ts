@@ -107,6 +107,11 @@ export const NARRATIVE_FLASH_MS      = 600   // screen-flash animation duration
 export const NARRATIVE_FLY_MS        = 350   // portrait fly-in animation duration
 export const NARRATIVE_FLOAT_MS      = 1200  // floating-text rise + fade duration
 
+// Creator dialogue — dot-field coalesce animation
+export const CREATOR_DOT_TICK_MS        = 40  // animation frame interval ms
+export const CREATOR_DOT_FLICKER        = 5   // noise frames before letter snaps into place
+export const CREATOR_DOT_CHARS_PER_TICK = 3   // characters that begin revealing each tick
+
 // Default app settings
 export const DEFAULT_SETTINGS: AppSettings = {
   musicVolume:       0.75,
