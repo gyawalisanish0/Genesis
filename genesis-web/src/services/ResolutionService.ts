@@ -1,13 +1,7 @@
-// ResolutionService — manages canvas rendering quality tier.
-//
-// Three tiers map to different Phaser canvas DPR multipliers:
-//   High   → devicePixelRatio (up to 3×) — sharpest, most GPU load
-//   Medium → ~60% of DPR          — balanced
-//   Low    → 1× (no scaling)       — maximum compatibility / performance
-//
-// Tier is determined once at startup via an rAF benchmark and persisted to
-// localStorage. During battle, ResolutionAdaptor can promote the tier one
-// step if sustained high FPS is detected (takes effect next battle).
+// ResolutionService — device quality tier via rAF FPS benchmark.
+// Sets data-quality attribute on documentElement so CSS can gate
+// expensive effects (particles, blur, animation density) per tier.
+// Tier persists to localStorage; stepUp() promotes one level.
 
 import type { QualityTier } from '../core/types'
 import {
@@ -23,15 +17,6 @@ type TierListener = (tier: QualityTier) => void
 
 let _tier: QualityTier = 'Medium'
 const _listeners = new Set<TierListener>()
-
-function dprForTier(tier: QualityTier): number {
-  const dpr = window.devicePixelRatio || 1
-  switch (tier) {
-    case 'High':   return Math.min(Math.round(dpr), 3)
-    case 'Medium': return Math.max(1, Math.round(dpr * 0.6))
-    case 'Low':    return 1
-  }
-}
 
 function applyCSS(tier: QualityTier): void {
   document.documentElement.dataset.quality = tier.toLowerCase()
@@ -64,9 +49,7 @@ function tierFromFPS(fps: number): QualityTier {
 
 export const ResolutionService = {
   get currentTier(): QualityTier { return _tier },
-  get currentDPR():  number      { return dprForTier(_tier) },
 
-  // Run once at app startup (SplashScreen). Loads persisted tier or benchmarks.
   async detectTier(): Promise<void> {
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved && (VALID_TIERS as string[]).includes(saved)) {
@@ -87,8 +70,6 @@ export const ResolutionService = {
     _listeners.forEach((l) => l(_tier))
   },
 
-  // Promote one step if not already at High. Persists and notifies.
-  // The new tier takes effect the next time a Phaser game instance is created.
   stepUp(): void {
     const next: QualityTier =
       _tier === 'Low' ? 'Medium' :

@@ -130,7 +130,7 @@ same pattern:
 |---|---|
 | Language | TypeScript 6.x |
 | UI Framework | React 19 + React Router v7 |
-| Game Canvas | Phaser 3 (battle rendering only) |
+| Sound Engine | Phaser 3 (audio only — headless, no canvas) |
 | Build Tool | Vite 8 |
 | State | Zustand 5 |
 | Schema Validation | Zod 4 |
@@ -178,8 +178,8 @@ Genesis/
 │   │   │   │       └── tileset.json   # TilesetDef — sourceSize, tiles map, pending stubs
 │   │   │   └── modes/            # story.json, ranked.json
 │   │   └── images/               # 3x PNG assets (primary density)
-│   │       └── tilesets/         # Tile art — one subfolder per tileset key
-│   │           └── mars/         # 1024×1024 individual PNGs: mars_floor.png, …
+│   │       └── tilesets/         # (reserved — mars tiles are ASCII, no PNGs needed)
+│   ├── audio/                    # Sound files — {key}.webm + {key}.mp3 pairs
 │   └── src/
 │       ├── core/                 # Pure TS game logic — zero UI imports
 │       │   ├── types.ts          # StatBlockDef, CharacterDef, SkillDef, Unit, ModeDef, AppSettings, BattleResult, QualityTier, TilesetDef, AuraDef, AnimationStateDef, AnimationProjectileDef, AnimationManifest, AnimPhase, AnimSequenceManifest
@@ -222,7 +222,8 @@ Genesis/
 │       │   ├── DataService.ts    # JSON loader: loadCharacter, loadCharacterSkillDefs, loadMode, loadCharacterWithSkills, loadCharacterDialogue, loadLevelNarrative, loadTilesetDef, loadAnimationManifest, loadAnimSequenceManifest (all cached; loadAnimationManifest and loadAnimSequenceManifest return null silently when absent); characterPortraitUrl(defId) and characterStatusIconUrl(defId, iconKey) — synchronous URL helpers (no fetch)
 │       │   ├── DisplayService.ts # Full-screen + StatusBar: Capacitor StatusBar.hide() on native; Fullscreen API on web
 │       │   ├── NarrativeService.ts # Global narrative bus: emit(), play(), subscribe(), subscribeDirect(), registerEntries(), unregisterEntries(), getAllEntries()
-│       │   ├── ResolutionService.ts # Quality tier: rAF benchmark → High/Medium/Low; localStorage persistence; stepUp(); subscribe()
+│       │   ├── ResolutionService.ts # Quality tier: rAF FPS benchmark → High/Medium/Low; sets data-quality on documentElement for CSS gates; localStorage persistence; stepUp(); subscribe()
+│       │   ├── SoundService.ts   # Phaser headless audio engine: init(), playSfx(key), playMusic(key), stopMusic(), setSfxVolume(v), setMusicVolume(v); audio files at public/audio/{key}.webm|mp3; keys registered in SFX_KEYS / MUSIC_KEYS arrays
 │       │   └── __tests__/
 │       ├── utils/
 │       │   ├── useScrollAwarePointer.ts  # Tap / hold / scroll gesture discriminator (pointer-delta based)
@@ -241,7 +242,7 @@ Genesis/
 │       │   ├── PreBattleStepTeam.tsx     # Step 1 — character roster pick (1–2 units)
 │       │   ├── PreBattleStepItems.tsx    # Step 2 — equipment slots (stub)
 │       │   ├── BattleScreen.tsx          # Battle layout: timeline strip, arena, BATTLE LOG button, portrait col, action grid, overlays; tap-to-skip dice hotzone; player-turn action grid pulse
-│       │   ├── BattleContext.tsx         # Screen-local context: arenaRef, phase, units, log, timeline, DiceResult, inspectingSkill, skipDice, endBattle navigation, tick displacement at start, phase-gated arena animations, sequential AI timing; loads AnimationManifests per defId and passes them through setTurnState/playAttack
+│       │   ├── BattleContext.tsx         # Screen-local context: arenaRef, phase, units, log, timeline, DiceResult, inspectingSkill, skipDice, endBattle navigation, tick displacement at start, phase-gated arena animations, sequential AI timing; drives AsciiArena via BattleArenaHandle ref
 │       │   ├── BattleLogOverlay.tsx      # Slide-up battle log history panel; opened by BATTLE LOG button; closed by ✕, backdrop tap, or back button; auto-scrolls to latest entry
 │       │   ├── BattleLogOverlay.module.css
 │       │   ├── DiceResultOverlay.module.css
@@ -254,30 +255,21 @@ Genesis/
 │       │   ├── BattleResultScreen.tsx    # Victory/defeat banner, rewards, unit results, battle stats
 │       │   ├── RosterScreen.tsx          # Character grid with class + rarity + name filters
 │       │   └── SettingsScreen.tsx        # Audio / display / notification / account settings
-│       ├── scenes/               # Phaser 3 scenes — no React imports
-│       │   ├── BattleScene.ts    # Stages 2–7 orchestrator: unit stage, dice/attack/feedback, particles/shake/death, turn display; between-turn pause (BETWEEN_TURN_PAUSE_MS); re-exports tokenToHex
-│       │   └── battle/           # BattleScene helper modules (one concern each)
-│       │       ├── tokens.ts         # tokenToHex + tokenToInt — CSS token → Phaser hex/int; extracted to break circular dep chain
-│       │       ├── TurnDisplayPanel.ts # Turn info overlay: actor (enemy-only), skill, target with HP/AP bars; slides in from top of canvas; exports TURN_PANEL_RESERVE = 200
-│       │       ├── UnitStage.ts      # Acting + target figure containers; slide, flash, dodge, collapse; owns actingAura + targetAura AuraPanels; exposes getActingContainer/getTargetContainer
-│       │       ├── AnimationPlayer.ts # Per-figure sprite frame loop: frameKey/framePath helpers, play/stop/isPlaying; drives Phaser.Time.TimerEvent
-│       │       ├── AnimationResolver.ts # Attack animation fallback chain: skill-damaged → skill → tag-mapped-damaged → tag-mapped → null
-│       │       ├── SequenceTypes.ts      # Re-exports AnimPhase from core/types; defines SequenceContext (runtime data threaded through phase execution)
-│       │       ├── SequenceRunner.ts     # Executes AnimPhase[] sequences: sequential, parallel, branch, skip; handles all phase types including impact FX and feedback
-│       │       ├── DefaultSequences.ts   # Builds default AnimPhase[] for melee (shove) and ranged (projectile) attacks; adds parallel(damageNumber, feedback) after contact
-│       │       ├── AuraPanel.ts      # Scene-root radial glow: white Canvas2D gradient texture, tint=hue, scale=radius, update-listener position sync; show/hide/stop lifecycle
-│       │       ├── DicePanel.ts      # Die face spin → outcome landing animation; topInset keeps dice in content zone; skip() cancels timers and fires onDone immediately
-│       │       ├── ProjectilePanel.ts # Scene-root image tweened from caster to target; onImpact fires on arrival; battle_orb fallback texture; used by SequenceRunner
-│       │       ├── FeedbackPanel.ts  # Two rising-text layers: show() for outcome label (spawns above figure centre), showDamageNumber() for damage value (spawns below); fired in parallel by the sequence
-│       │       ├── ParticleEmitter.ts # One-shot burst effects per outcome; runtime-generated texture
-│       │       └── ResolutionAdaptor.ts # FPS monitor: 1-s interval; promotes quality tier after QUALITY_STEP_UP_CHECKS consecutive ≥58fps checks
+│       ├── ascii/                # Pure-TS ASCII animation engine — no React, no Phaser
+│       │   ├── AsciiAnimEngine.ts    # BattleArenaHandle command dispatcher → AnimSignal stream → React re-render
+│       │   ├── FigureAnimator.ts     # Per-figure frame-loop: idle, attack, hurt, dodge, death state machine
+│       │   ├── ProjectileAnimator.ts # Ranged attack projectile arc animation
+│       │   └── types.ts              # AnimSignal, AsciiArenaFrame, AsciiManifest, AsciiSequence, AsciiStateConfig, AsciiActionFrames
 │       ├── components/           # Reusable React widgets
 │       │   ├── PrimaryButton.tsx         # Variants: primary / secondary / danger / ghost
 │       │   ├── ResourceBar.tsx           # Animated HP / AP / XP bar (400ms tween)
 │       │   ├── UnitPortrait.tsx          # Portrait circle: rarity-coloured border, 4 sizes, greyscale option
 │       │   ├── PagedGrid.tsx             # Generic paged grid: cols×rows, pointer swipe, arrows, dots, page counter
-│       │   ├── BattleArena.tsx           # Phaser wrapper; BattleArenaHandle ref (setTurnState, playDice, playAttack, playFeedback, playDeath, showTurnDisplay, hideTurnDisplay, skipActiveDice); exports TurnDisplayData type; no addLog — log is in BattleLogOverlay
-│       │   ├── BattleArena.module.css    # flex: 1 container; canvas position: absolute inset: 0; Scale.NONE — no inline style conflict
+│       │   ├── AsciiArena.tsx            # React battle arena: exposes BattleArenaHandle ref; delegates to AsciiAnimEngine; renders acting/target ASCII figures, dice, feedback, turn display — no Phaser canvas
+│       │   ├── AsciiArena.module.css
+│       │   ├── DungeonArena.tsx          # React dungeon grid: forwardRef DungeonArenaHandle (loadMap, setPartyTile, revealTiles, setEntityPosition, setEntityVisible, setEntityGreyscale, removeEntity, activateWavePhase, deactivateWavePhase, setTapCallback); follow camera — party always centered; 48px fixed cells; 32×32 ASCII tile blocks scaled via CSS transform
+│       │   ├── DungeonArena.module.css
+│       │   ├── dungeonTileArt.ts         # Fallback 32×32 ASCII tile pattern generator (seeded hash); used when tileset JSON is absent
 │       │   ├── NarrativeLayer.tsx        # Global narrative overlay (mounted in App.tsx); exports NarrativeUnits registry
 │       │   ├── NarrativeDialogueOverlay.tsx  # Dialogue box: portrait + nameplate + typewriter text
 │       │   ├── NarrativeScreenFlash.tsx  # Full-screen colour burst animation
@@ -292,8 +284,7 @@ Genesis/
 │       └── main.tsx              # Vite entry: registerBuiltins() → React root
 ```
 
-> **`scenes/`** hosts Phaser 3 scenes. `BattleScene.ts` (Stage 1) is live — canvas mounts in `BattleArena.tsx` inside `BattleScreen`. Attack playback is driven by `SequenceRunner`, which executes `AnimPhase[]` sequences sourced from `anim_sequence.json` overrides or `DefaultSequences` fallbacks.
-> Art assets slot in at `public/images/characters/{defId}/idle.png` — zero architecture change required (see `docs/mechanics/phaser-arena.md`).
+> Both renderers are pure React + CSS — no Phaser canvas. **`AsciiArena`** drives battles via `AsciiAnimEngine` (pure TS state machine). **`DungeonArena`** renders the dungeon grid with a follow camera (party always centered, 48px cells, 32×32 ASCII tile blocks). **`SoundService`** runs Phaser in `HEADLESS` mode as the sole audio engine — audio files live in `public/audio/`.
 
 ---
 
@@ -301,7 +292,7 @@ Genesis/
 
 ### Layer Ordering (no circular imports)
 ```
-core → services → components/scenes → screens → App
+core → ascii → services → components → screens → App
 ```
 Each layer may only import from layers to its left.
 
@@ -309,6 +300,11 @@ Each layer may only import from layers to its left.
 - **Zero UI imports** — no React, no Phaser, no Capacitor
 - Pure TypeScript functions and interfaces
 - Unit is an **immutable value object** — mutation functions return a new object
+
+### `ascii/`
+- Pure TypeScript — no React, no Phaser, no Capacitor
+- `AsciiAnimEngine` is the battle animation state machine; receives `BattleArenaHandle` commands, emits `AnimSignal` to React
+- `FigureAnimator` drives per-figure frame loops (idle, attack, hurt, dodge, death)
 
 ### `services/`
 - No React imports
@@ -318,6 +314,7 @@ Each layer may only import from layers to its left.
   if (Capacitor.isNativePlatform()) { /* native-only code */ }
   ```
 - Accessed as module-level singletons
+- **`SoundService`** — the only module that touches Phaser; runs `Phaser.HEADLESS` for audio only. Call `SoundService.init()` once in `App.tsx`. Register audio keys in `SFX_KEYS` / `MUSIC_KEYS` arrays; files at `public/audio/{key}.webm|mp3`.
 - **`DataService` path construction** — `import.meta.env.BASE_URL` must be
   normalized to always end with `/` before concatenating data paths. Vite's
   `--base` flag (used in GitHub Pages CI) produces `/RepoName` without a
@@ -328,18 +325,8 @@ Each layer may only import from layers to its left.
   // fetch: `${BASE_NORMALIZED}data/characters/...`
   ```
 
-### `scenes/`
-- Phaser 3 scenes only — no React imports
-- Communicates back to React via `onDone` callbacks passed into `playDice` / `playAttack` / `playDeath`
-- **`BattleScene`** is unit-agnostic — receives `actingDefId` / `targetDefId`, never assumes player/enemy roles
-- Helper modules live in `scenes/battle/` (one concern per file, all receive `scene: Phaser.Scene`)
-- React wrapper is `BattleArena.tsx`; `BattleContext` holds the `arenaRef` and calls handle methods directly
-- **Canvas never resizes in response to React UI panels** — `Phaser.Scale.NONE` is used; the `ResizeObserver` in `BattleArena.tsx` calls `game.scale.resize(w, h)` for genuine container size changes only
-- **TurnDisplayPanel lives inside the canvas** (Stage 5) — overlaid at the top via `showTurnDisplay` / `hideTurnDisplay` handle methods; the canvas area is a fixed-size container and React panels do not push it
-- Full spec: `docs/mechanics/phaser-arena.md`
-
 ### `components/`
-- React + CSS Modules only — no Phaser
+- React + CSS Modules only
 - Communicate upward via props/callbacks — never reach into parent state directly
 
 ### `screens/`
@@ -352,7 +339,7 @@ Each layer may only import from layers to its left.
 ## Input Handling
 
 - **Menus / screens**: standard React `onPointerDown` handlers (via `useScrollAwarePointer`)
-- **Battle canvas**: Phaser input system (`this.input.on('pointerdown', ...)`) — planned; not yet wired
+- **Battle arena**: standard React `onPointerDown` on the `AsciiArena` container
 - **Back button — native (Android/iOS)**: Capacitor `App.addListener('backButton', …)` in `ScreenProvider`, dispatches to `backButtonRegistry`. One listener, never re-registered.
 - **Back button — web browser**: `popstate` capture-phase listener in `ScreenProvider` intercepts browser back before React Router. `useBackButton` pushes a URL-stable sentinel (`window.history.pushState(null, '')` at the current hash) so no `hashchange` fires; only `popstate` fires and is intercepted cleanly.
 - **Back button in battle**: `useBackButton` registers a strict bounded pause loop — back → pause, back → resume. No navigation escape via back; only the LEAVE BATTLE button in the pause menu exits. Guards: skip during load, 300 ms debounce, functional `setPaused(prev => !prev)` to avoid stale closure.
@@ -760,8 +747,8 @@ Use the `AskUserQuestion` tool with targeted multiple-choice options. Good quest
 ## What Claude Should Never Do
 
 - Import React, Phaser, or Capacitor inside `core/`
-- Import Phaser inside `components/` or `screens/`
-- Import React inside `scenes/`
+- Import Phaser anywhere except `SoundService.ts` — it is the sole Phaser consumer
+- Import React inside `ascii/`
 - Hardcode colour values — use CSS custom properties from `tokens.css`
 - Hardcode safe-area inset values — use `env(safe-area-inset-*)` or `var(--safe-*)`
 - Set layout properties via React `style` prop when they belong in a CSS module
