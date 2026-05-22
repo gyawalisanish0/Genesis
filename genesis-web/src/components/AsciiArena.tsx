@@ -321,9 +321,9 @@ export const AsciiArena = forwardRef<BattleArenaHandle>(
           )}
 
           <div className={styles.figureWrap}>
-            <div className={styles.figureScaler}>
+            <div className={`${styles.figureScaler} ${styles.figureScalerFlipped}`}>
               {frame?.target
-                ? <SymbolFigure frame={frame.target.frame} palette={GENERIC_PALETTE} rarity={targetRarity} flipped />
+                ? <SymbolFigure frame={frame.target.frame} palette={GENERIC_PALETTE} rarity={targetRarity} />
                 : <div className={styles.figureEmpty}>?</div>
               }
             </div>

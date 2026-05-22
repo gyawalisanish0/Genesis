@@ -69,6 +69,13 @@
   flex-shrink: 0;
 }
 
+/* Flip the target figure at the wrapper level so the <pre>'s own scale
+   transform (transform-origin: top left) is preserved unmodified. */
+.figureScalerFlipped {
+  transform: scaleX(-1);
+  transform-origin: center center;
+}
+
 
 
 .figureWrap {

@@ -8,7 +8,6 @@ interface Props {
   frame:   string[]
   palette: Record<string, string>   // paletteKey → CSS token e.g. '--accent-heal'
   rarity:  number
-  flipped?: boolean
 }
 
 // ── Unicode range → palette key ──────────────────────────────────────────────
@@ -80,13 +79,12 @@ function renderRow(
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function SymbolFigure({ frame, palette, rarity, flipped }: Props) {
+export function SymbolFigure({ frame, palette, rarity }: Props) {
   const rarityVar = `--rarity-${rarity}`
 
   return (
     <pre
       className={styles.figure}
-      style={flipped ? { transform: 'scaleX(-1)' } : undefined}
       aria-hidden="true"
     >
       {frame.map((row, rowIdx) => (
