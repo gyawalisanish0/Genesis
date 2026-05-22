@@ -69,7 +69,7 @@ const FEEDBACK_DISMISS_MS = 1200
 // The outcome is known immediately but hidden during a 1200ms flicker phase.
 // Interval starts at 60ms and slows (quadratic ease) to ~220ms as it approaches
 // DICE_ROLL_DURATION_MS, simulating a die losing momentum before stopping.
-const DICE_ROLL_DURATION_MS = 1200
+const DICE_ROLL_DURATION_MS = 800
 const DICE_ROLL_OUTCOMES    = ['Hit', 'Evade', 'Boosted', 'Fail', 'Miss'] as const
 const DICE_SYMBOL: Record<string, string> = {
   hit: '⚔', boosted: '★', evade: '◎', miss: '✕', fail: '✕',
