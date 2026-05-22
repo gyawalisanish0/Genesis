@@ -51,7 +51,7 @@
   font-family: 'Courier New', Courier, monospace;
   font-size: 0.5rem;       /* 8px — 32 chars × 4.8px = 153.6px block */
   line-height: 0.6;        /* unitless — makes char pixels square (4.8 × 4.8px) */
-  color: #f0c8a0;
+  color: #000000;
   margin: 0;
   padding: 0;
   white-space: pre;

@@ -172,20 +172,20 @@ const RIFT_CORNER_PATTERNS: Record<number, string[]> = {
 export function getTileArt(tileId: string, rotation = 0): TileArt {
   switch (tileId) {
     case 'floor':
-      return { pattern: FLOOR_PATTERN,  color: '#9a4820' }
+      return { pattern: FLOOR_PATTERN,  color: '#cc7040' }
     case 'hill':
-      return { pattern: HILL_PATTERN,   color: '#a85c28' }
+      return { pattern: HILL_PATTERN,   color: '#cc7040' }
     case 'crater':
-      return { pattern: CRATER_PATTERN, color: '#d07838' }
+      return { pattern: CRATER_PATTERN, color: '#cc7040' }
     case 'rift':
-      return { pattern: RIFT_PATTERN,   color: '#2d0a06' }
+      return { pattern: RIFT_PATTERN,   color: '#cc7040' }
     case 'edge':
-      return { pattern: EDGE_PATTERNS[rotation] ?? EDGE_PATTERNS[0],   color: '#8c4820' }
+      return { pattern: EDGE_PATTERNS[rotation] ?? EDGE_PATTERNS[0],   color: '#cc7040' }
     case 'surface_corner':
-      return { pattern: SURFACE_CORNER_PATTERNS[rotation] ?? SURFACE_CORNER_PATTERNS[0], color: '#8c4820' }
+      return { pattern: SURFACE_CORNER_PATTERNS[rotation] ?? SURFACE_CORNER_PATTERNS[0], color: '#cc7040' }
     case 'rift_corner':
-      return { pattern: RIFT_CORNER_PATTERNS[rotation] ?? RIFT_CORNER_PATTERNS[0],       color: '#3d1408' }
+      return { pattern: RIFT_CORNER_PATTERNS[rotation] ?? RIFT_CORNER_PATTERNS[0],       color: '#cc7040' }
     default:
-      return { pattern: FLOOR_PATTERN,  color: '#9a4820' }
+      return { pattern: FLOOR_PATTERN,  color: '#cc7040' }
   }
 }
