@@ -65,6 +65,16 @@ const GENERIC_PALETTE: Record<string, string> = {
 const BURST_DISMISS_MS    = 900
 const FEEDBACK_DISMISS_MS = 1200
 
+// ── Dice roll animation ───────────────────────────────────────────────────────
+// The outcome is known immediately but hidden during a 1200ms flicker phase.
+// Interval starts at 60ms and slows (quadratic ease) to ~220ms as it approaches
+// DICE_ROLL_DURATION_MS, simulating a die losing momentum before stopping.
+const DICE_ROLL_DURATION_MS = 1200
+const DICE_ROLL_OUTCOMES    = ['Hit', 'Evade', 'Boosted', 'Fail', 'Miss'] as const
+const DICE_SYMBOL: Record<string, string> = {
+  hit: '⚔', boosted: '★', evade: '◎', miss: '✕', fail: '✕',
+}
+
 // Natural figure block size at 0.5rem font / line-height 1:
 //   32 chars × ~4.8px = 153.6px wide, 16 rows × 8px = 128px tall
 const FIGURE_W_PX = 153.6
@@ -147,6 +157,30 @@ export const AsciiArena = forwardRef<BattleArenaHandle>(
     const [dice,        setDice]        = useState<DiceState | null>(null)
     const [burst,       setBurst]       = useState<BurstState | null>(null)
     const [feedback,    setFeedback]    = useState<FeedbackState | null>(null)
+
+    // Dice roll — display label cycles randomly until roll completes, then snaps to real outcome
+    const [diceDisplay, setDiceDisplay] = useState<string | null>(null)
+    const rollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    useEffect(() => {
+      if (rollTimerRef.current) clearTimeout(rollTimerRef.current)
+      if (!dice) { setDiceDisplay(null); return }
+
+      const startTime = Date.now()
+      setDiceDisplay(DICE_ROLL_OUTCOMES[Math.floor(Math.random() * DICE_ROLL_OUTCOMES.length)])
+
+      const tick = () => {
+        const elapsed = Date.now() - startTime
+        if (elapsed >= DICE_ROLL_DURATION_MS) { setDiceDisplay(dice.outcome); return }
+        setDiceDisplay(DICE_ROLL_OUTCOMES[Math.floor(Math.random() * DICE_ROLL_OUTCOMES.length)])
+        const progress = elapsed / DICE_ROLL_DURATION_MS
+        const delay = Math.round(60 + progress * progress * 160)
+        rollTimerRef.current = setTimeout(tick, delay)
+      }
+
+      rollTimerRef.current = setTimeout(tick, 60)
+      return () => { if (rollTimerRef.current) clearTimeout(rollTimerRef.current) }
+    }, [dice])
 
     // Auto-dismiss refs (display-layer concern only)
     const burstTimer    = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -318,12 +352,12 @@ export const AsciiArena = forwardRef<BattleArenaHandle>(
           </div>
         )}
 
-        {dice && (
-          <div key={dice.key} className={styles.diceOverlay}>
+        {dice && diceDisplay && (
+          <div key={dice.key} className={`${styles.diceOverlay} ${diceDisplay === dice.outcome ? styles.diceRevealed : styles.diceRolling}`}>
             <span className={styles.diceFace}>
-              {{ hit: '⚔', boosted: '★', evade: '◎', miss: '✕', fail: '✕' }[dice.outcome.toLowerCase()] ?? '◈'}
+              {DICE_SYMBOL[diceDisplay.toLowerCase()] ?? '◈'}
             </span>
-            <span className={styles.diceLabel}>{dice.outcome.toUpperCase()}</span>
+            <span className={styles.diceLabel}>{diceDisplay.toUpperCase()}</span>
           </div>
         )}
       </div>

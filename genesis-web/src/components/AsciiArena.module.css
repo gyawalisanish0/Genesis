@@ -237,15 +237,22 @@
   to   { opacity: 1; transform: scale(1); }
 }
 
-.diceFace {
-  font-size: 3rem;
-  animation: diceSpin 0.4s ease-out;
+/* Rolling phase — label flickers rapidly; dim colour signals uncertainty */
+.diceRolling .diceFace  { opacity: 0.65; }
+.diceRolling .diceLabel { color: var(--text-muted); letter-spacing: 0.3em; }
+
+/* Revealed phase — full colour + pop animation to signal the result has landed */
+.diceRevealed .diceFace  { animation: diceReveal 0.25s ease-out; }
+.diceRevealed .diceLabel { color: var(--text-primary); }
+
+@keyframes diceReveal {
+  0%   { transform: scale(0.7); opacity: 0.5; }
+  60%  { transform: scale(1.25); opacity: 1; }
+  100% { transform: scale(1);   opacity: 1; }
 }
 
-@keyframes diceSpin {
-  0%   { transform: scale(0.3) rotate(-180deg); opacity: 0; }
-  60%  { transform: scale(1.3) rotate(10deg);   opacity: 1; }
-  100% { transform: scale(1)   rotate(0deg);    opacity: 1; }
+.diceFace {
+  font-size: 3rem;
 }
 
 .diceLabel {
@@ -255,4 +262,5 @@
   letter-spacing: 0.2em;
   color: var(--text-primary);
   text-transform: uppercase;
+  transition: color 0.1s;
 }
