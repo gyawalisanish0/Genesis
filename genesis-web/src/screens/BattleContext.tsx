@@ -240,6 +240,7 @@ export function BattleProvider({ children }: Props) {
     if (diceTimerRef.current) { clearTimeout(diceTimerRef.current); diceTimerRef.current = null }
     setDiceResult(null)
     arenaRef.current?.skipActiveDice()
+    engineRef.current?.skipDiceAnim()
   }, [])
 
   // ── Engine callbacks ───────────────────────────────────────────────────────
