@@ -5,9 +5,11 @@ import { DICE_BASE_PROBABILITIES } from '../constants'
 export type DiceProbabilities = Record<keyof typeof DICE_BASE_PROBABILITIES, number>
 
 // Convert Precision stat + skill base_chance into a final multiplier.
+// precision=50 is the balanced baseline (finalChance=1.0 → 50/50 good/bad split).
+// Above 50 tips toward good outcomes; below 50 tips toward bad.
 // Result can exceed 1.0 (no cap here — the shift handles scaling).
 export function calculateFinalChance(precision: number, baseChance: number): number {
-  return (precision / 100) * baseChance
+  return (precision / 50) * baseChance
 }
 
 // Shift the base dice probability table by the final chance multiplier.

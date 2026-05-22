@@ -14,6 +14,8 @@ import { createUnit }       from '../core/unit'
 import {
   DUNGEON_DEFAULT_VISUAL_RANGE,
   DUNGEON_REVEAL_RADIUS,
+  DUNGEON_ENCOUNTER_PAUSE_MS,
+  DUNGEON_SPOT_FLASH_MS,
   DUNGEON_ENCOUNTER_BANNER_MS,
 } from '../core/constants'
 
@@ -256,8 +258,13 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
       checkTriggers(nx, ny)
       advanceEnemyPatrols(() => {
         clearTimeout(watchdog)
-        moveQueueRef.current = false
-        checkWavePhase()
+        // Brief pause so patrols visually settle before encounter check fires.
+        // Movement stays locked during this window; checkWavePhase releases it
+        // or passes the lock to launchBattle if an encounter triggers.
+        setTimeout(() => {
+          moveQueueRef.current = false
+          checkWavePhase()
+        }, DUNGEON_ENCOUNTER_PAUSE_MS)
       })
     })
   }, [phase])
@@ -402,7 +409,13 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
     if (visible[0].narrativeId) NarrativeService.play(visible[0].narrativeId)
 
     if (visible.length === 1) {
-      launchBattle(visible[0])
+      const enemy = visible[0]
+      moveQueueRef.current = true
+      arenaRef.current?.activateWavePhase([enemy.entityId])
+      setTimeout(() => {
+        arenaRef.current?.deactivateWavePhase()
+        launchBattle(enemy)
+      }, DUNGEON_SPOT_FLASH_MS)
     } else {
       setWaveEnemies(visible)
       setPhase('wave')

@@ -2,14 +2,19 @@ import { describe, it, expect } from 'vitest'
 import { calculateFinalChance, shiftProbabilities } from '../combat/HitChanceEvaluator'
 
 describe('calculateFinalChance', () => {
-  it('multiplies precision fraction by baseChance', () => {
-    expect(calculateFinalChance(100, 1.0)).toBeCloseTo(1.0)
-    expect(calculateFinalChance(50, 1.0)).toBeCloseTo(0.5)
-    expect(calculateFinalChance(80, 0.9)).toBeCloseTo(0.72)
+  it('precision=50 is the balanced baseline (finalChance=1.0)', () => {
+    expect(calculateFinalChance(50, 1.0)).toBeCloseTo(1.0)
+    expect(calculateFinalChance(100, 1.0)).toBeCloseTo(2.0)
+    expect(calculateFinalChance(25, 1.0)).toBeCloseTo(0.5)
+  })
+
+  it('scales by baseChance', () => {
+    expect(calculateFinalChance(50, 0.8)).toBeCloseTo(0.8)
+    expect(calculateFinalChance(80, 0.9)).toBeCloseTo(1.44)
   })
 
   it('can exceed 1.0 for high precision', () => {
-    expect(calculateFinalChance(150, 1.0)).toBeCloseTo(1.5)
+    expect(calculateFinalChance(75, 1.0)).toBeCloseTo(1.5)
   })
 })
 
