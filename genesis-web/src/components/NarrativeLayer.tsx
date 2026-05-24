@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { NarrativeService }            from '../services/NarrativeService'
 import { resolveByEvent, resolveById } from '../core/narrative'
 import { NarrativeDialogueOverlay }    from './NarrativeDialogueOverlay'
+import { CreatorDialogueOverlay }      from './CreatorDialogueOverlay'
 import { NarrativeScreenFlash }        from './NarrativeScreenFlash'
 import { NarrativePortraitFlyIn }      from './NarrativePortraitFlyIn'
 import { NarrativeFloatingText }       from './NarrativeFloatingText'
@@ -90,7 +91,9 @@ export function NarrativeLayer() {
 
   // Freeze the battle for the duration of any dialogue animation.
   // Cleanup fires the instant currentEntry clears → instant resume.
-  const hasDialogue = currentEntry?.animations.some((a) => a.type === 'dialogue') ?? false
+  const hasDialogue = currentEntry?.animations.some(
+    (a) => a.type === 'dialogue' || a.type === 'creator_dialogue'
+  ) ?? false
   useEffect(() => {
     if (!hasDialogue) return
     NarrativeService._signalPause()
@@ -111,6 +114,14 @@ export function NarrativeLayer() {
                 key={`dialogue-${i}`}
                 entry={currentEntry}
                 units={activeUnits}
+                onDismiss={onAnimationDone}
+              />
+            )
+          case 'creator_dialogue':
+            return (
+              <CreatorDialogueOverlay
+                key={`creator-${i}`}
+                entry={currentEntry}
                 onDismiss={onAnimationDone}
               />
             )

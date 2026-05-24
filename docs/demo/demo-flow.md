@@ -42,7 +42,8 @@ immediately after — the world snaps into focus.
 | Commander name | Set after the dream — KALI uses it from this point forward |
 | Fleet name | Shown on briefing screens, alarm UI, deployment orders |
 
-The Creator never learns the name in the demo. That may matter later.
+The Creator asks for the Commander's name in the dream, uses it once,
+and the dream ends. Why he wanted it is not answered in the demo.
 
 ---
 

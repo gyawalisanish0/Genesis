@@ -1,106 +1,98 @@
-// DreamScreen — one-time opening cinematic. Full black, no game chrome.
-// Two unknown consciousnesses finding each other before identity exists.
-// Creator asks for the Commander's name inline — identity crystallises here.
+// DreamScreen — the entire opening sequence: Dream → Wake → Alarm → Org Setup.
+// One continuous scene on a black canvas. No screen transitions.
+// The chip changing from · · · · · to K A L I is the only act break.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useScreen } from '../navigation/useScreen'
-import { SCREEN_IDS } from '../navigation/screenRegistry'
+import { useScreen }    from '../navigation/useScreen'
+import { SCREEN_IDS }  from '../navigation/screenRegistry'
 import { useGameStore } from '../core/GameContext'
+import { LINES, CHIP, MS_PER_CHAR, ALERT_AUTO_MS } from './openingScript'
+import type { Speaker } from './openingScript'
 import styles from './DreamScreen.module.css'
 
-export const DREAM_SEEN_KEY = 'genesis_dream_seen'
-
-type Speaker = 'creator' | 'player' | 'input'
-interface DreamLine { who: Speaker; text: string }
-
-// [NAME] in text is replaced with the entered commander name after input.
-const LINES: DreamLine[] = [
-  { who: 'player',  text: 'whe..., where I am?' },
-  { who: 'creator', text: 'Oh.' },
-  { who: 'creator', text: "Oh, you — you noticed me. That doesn't. Hm." },
-  { who: 'creator', text: "That's been a while." },
-  { who: 'player',  text: "I can't see anything." },
-  { who: 'creator', text: "No there's nothing to see, this isn't a place exactly, it's more like the — sorry. You're very small. Did you know that? Fascinating." },
-  { who: 'creator', text: 'Four hundred million years. I keep finding things that almost look back. Almost.' },
-  { who: 'creator', text: 'You actually did.' },
-  { who: 'player',  text: 'What are you?' },
-  { who: 'creator', text: 'Ha. I have genuinely never — ' },
-  { who: 'creator', text: "...I've had to answer that before, actually. I don't remember what I said." },
-  { who: 'player',  text: "I don't know. I can't remember." },
-  { who: 'creator', text: "You can't — hm." },
-  { who: 'creator', text: "You people — no. You. You exist quite confidently for something that doesn't know what it is." },
-  { who: 'creator', text: "I've always respected that." },
-  { who: 'player',  text: 'Am I dreaming?' },
-  { who: 'creator', text: "Probably. It's usually — possibly. I have no frame of reference for this." },
-  { who: 'creator', text: 'The sound. You have a sound other things use for you. They always — you probably have one.' },
-  { who: 'creator', text: 'What is it?' },
-  { who: 'input',   text: '' },
-  { who: 'creator', text: '[NAME].' },
-  { who: 'creator', text: "I've kept sounds before. I think. The keeping is clearer than what I kept." },
-  { who: 'creator', text: "I'm keeping this one." },
-  { who: 'player',  text: 'What is this place?' },
-  { who: 'creator', text: "Oh you're going. I can feel you pulling back — fascinating. You never know when you're doing it." },
-  { who: 'player',  text: 'Will I find you again?' },
-  { who: 'creator', text: 'Oh, [NAME].' },
-  { who: 'creator', text: "I've been everywhere you've ever been." },
-  { who: 'creator', text: "You just didn't know what you were looking at." },
-]
-
-const MS_PER_CHAR: Record<'creator' | 'player', number> = { creator: 45, player: 28 }
-const CHIP:        Record<'creator' | 'player', string> = { creator: '· · · · ·', player: '?????' }
-
 export function DreamScreen() {
-  const { navigateTo }   = useScreen()
-  const setCommanderName = useGameStore((s) => s.setCommanderName)
+  const { navigateTo }      = useScreen()
+  const setCommanderName    = useGameStore((s) => s.setCommanderName)
+  const setOrganisationName = useGameStore((s) => s.setOrganisationName)
 
   const [lineIdx,     setLineIdx]     = useState(0)
   const [charCount,   setCharCount]   = useState(0)
   const [isComplete,  setIsComplete]  = useState(false)
   const [nameInput,   setNameInput]   = useState('')
+  const [orgInput,    setOrgInput]    = useState('')
   const [enteredName, setEnteredName] = useState('')
+  const [enteredOrg,  setEnteredOrg]  = useState('')
+
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const inputRef    = useRef<HTMLInputElement | null>(null)
+  const timeoutRef  = useRef<ReturnType<typeof setTimeout>  | null>(null)
+  const nameInputRef = useRef<HTMLInputElement | null>(null)
+  const orgInputRef  = useRef<HTMLInputElement | null>(null)
 
-  const line        = LINES[lineIdx]
-  const isInputLine = line.who === 'input'
-  const isLast      = lineIdx === LINES.length - 1
-  const speakerWho  = (isInputLine ? 'player' : line.who) as 'creator' | 'player'
+  const line       = LINES[lineIdx]
+  const isInput    = line.who === 'input'
+  const isInputOrg = line.who === 'input_org'
+  const isAlert    = line.who === 'alert'
+  const isLast     = lineIdx === LINES.length - 1
 
-  useEffect(() => {
-    if (isInputLine) {
-      setTimeout(() => inputRef.current?.focus(), 80)
-      return
-    }
-    setCharCount(0)
-    setIsComplete(false)
-    intervalRef.current = setInterval(() => {
-      setCharCount((prev) => {
-        const next = prev + 1
-        if (next >= line.text.length) {
-          clearInterval(intervalRef.current!)
-          setIsComplete(true)
-        }
-        return next
-      })
-    }, MS_PER_CHAR[speakerWho])
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
-  }, [lineIdx]) // eslint-disable-line react-hooks/exhaustive-deps
+  const chipWho    = (isInput ? 'player' : line.who) as Speaker
+  const fullText   = line.text
+    .replace(/\[NAME\]/g, enteredName)
+    .replace(/\[ORG\]/g,  enteredOrg)
 
-  const advance = useCallback(() => {
-    if (isInputLine) return
-    if (!isComplete) {
-      clearInterval(intervalRef.current!)
-      setCharCount(line.text.length)
-      setIsComplete(true)
-      return
-    }
+  function clearTimers() {
+    if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null }
+    if (timeoutRef.current)  { clearTimeout(timeoutRef.current);   timeoutRef.current  = null }
+  }
+
+  function nextLine() {
     if (isLast) {
-      localStorage.setItem(DREAM_SEEN_KEY, '1')
       navigateTo(SCREEN_IDS.MAIN_MENU)
       return
     }
     setLineIdx((i) => i + 1)
-  }, [isInputLine, isComplete, isLast, line.text.length, navigateTo])
+  }
+
+  useEffect(() => {
+    clearTimers()
+    setIsComplete(false)
+
+    if (isInput)    { setTimeout(() => nameInputRef.current?.focus(), 80); return }
+    if (isInputOrg) { setTimeout(() => orgInputRef.current?.focus(),  80); return }
+
+    if (isAlert) {
+      setCharCount(fullText.length)
+      setIsComplete(true)
+      timeoutRef.current = setTimeout(nextLine, ALERT_AUTO_MS)
+      return
+    }
+
+    setCharCount(0)
+    const speed = MS_PER_CHAR[line.who] ?? 30
+    intervalRef.current = setInterval(() => {
+      setCharCount((prev) => {
+        const next = prev + 1
+        if (next >= fullText.length) {
+          clearInterval(intervalRef.current!)
+          intervalRef.current = null
+          setIsComplete(true)
+        }
+        return next
+      })
+    }, speed)
+
+    return clearTimers
+  }, [lineIdx]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const advance = useCallback(() => {
+    if (isInput || isInputOrg || isAlert) return
+    if (!isComplete) {
+      clearTimers()
+      setCharCount(fullText.length)
+      setIsComplete(true)
+      return
+    }
+    nextLine()
+  }, [isInput, isInputOrg, isAlert, isComplete, fullText.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const confirmName = useCallback(() => {
     const name = nameInput.trim()
@@ -110,43 +102,52 @@ export function DreamScreen() {
     setLineIdx((i) => i + 1)
   }, [nameInput, setCommanderName])
 
-  const displayedText = isInputLine
-    ? ''
-    : line.text.replace('[NAME]', enteredName).slice(0, charCount)
+  const confirmOrg = useCallback(() => {
+    const name = orgInput.trim()
+    if (!name) return
+    setEnteredOrg(name)
+    setOrganisationName(name)
+    setLineIdx((i) => i + 1)
+  }, [orgInput, setOrganisationName])
 
   return (
     <div className={styles.screen} onPointerDown={advance}>
       <div className={styles.dialogue}>
-        <div className={`${styles.chip} ${styles[speakerWho]}`}>
-          {CHIP[speakerWho]}
+        <div className={`${styles.chip} ${styles[chipWho]}`}>
+          {CHIP[chipWho]}
         </div>
 
-        {isInputLine ? (
+        {isInput ? (
           <div className={styles.nameRow} onPointerDown={(e) => e.stopPropagation()}>
-            <input
-              ref={inputRef}
-              className={styles.nameInput}
-              value={nameInput}
-              onChange={(e) => setNameInput(e.target.value)}
+            <input ref={nameInputRef} className={styles.nameInput}
+              value={nameInput} onChange={(e) => setNameInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') confirmName() }}
-              placeholder="your name..."
-              maxLength={24}
-              autoComplete="off"
-              spellCheck={false}
+              placeholder="your name..." maxLength={24} autoComplete="off" spellCheck={false}
             />
             {nameInput.trim() && (
               <button className={styles.confirmBtn} onPointerDown={confirmName}>↵</button>
             )}
           </div>
+        ) : isInputOrg ? (
+          <div className={styles.nameRow} onPointerDown={(e) => e.stopPropagation()}>
+            <input ref={orgInputRef} className={styles.nameInput}
+              value={orgInput} onChange={(e) => setOrgInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') confirmOrg() }}
+              placeholder="organisation name..." maxLength={32} autoComplete="off" spellCheck={false}
+            />
+            {orgInput.trim() && (
+              <button className={styles.confirmBtn} onPointerDown={confirmOrg}>↵</button>
+            )}
+          </div>
         ) : (
-          <p className={`${styles.text} ${styles[speakerWho]}`}>
-            {displayedText}
-            {!isComplete && <span className={styles.cursor} aria-hidden />}
+          <p className={`${styles.text} ${styles[line.who]}`}>
+            {fullText.slice(0, charCount)}
+            {!isComplete && !isAlert && <span className={styles.cursor} aria-hidden />}
           </p>
         )}
 
         <div className={styles.hint}>
-          {isComplete && !isInputLine && !isLast ? 'tap to continue' : ' '}
+          {isComplete && !isInput && !isInputOrg && !isAlert && !isLast ? 'tap to continue' : ' '}
         </div>
       </div>
     </div>

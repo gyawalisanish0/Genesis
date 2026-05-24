@@ -48,6 +48,25 @@
   letter-spacing: 0.12em;
 }
 
+/* KALI: system identifier — info-blue, evenly spaced */
+.chip.kali {
+  color: var(--accent-info);
+  letter-spacing: 0.35em;
+}
+
+/* Commander: minimal prompt — has identity now */
+.chip.commander {
+  color: var(--text-primary);
+  letter-spacing: 0.1em;
+}
+
+/* Alert: interrupt — danger red, snaps in */
+.chip.alert {
+  color: var(--accent-danger);
+  letter-spacing: 0.2em;
+  animation: alertSnap 0.35s ease-out;
+}
+
 /* ── Dialogue text ─────────────────────────────────────────────────────────── */
 
 .text {
@@ -66,6 +85,20 @@
 /* Player: immediate, first-person — full brightness */
 .text.player {
   color: var(--text-primary);
+}
+
+/* KALI: crisp, non-italic — every word exact */
+.text.kali      { color: var(--text-primary); }
+
+/* Commander: slightly dimmer — still processing */
+.text.commander { color: var(--text-secondary); }
+
+/* Alert: red, full weight, snaps in */
+.text.alert {
+  color: var(--accent-danger);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  animation: alertSnap 0.25s ease-out;
 }
 
 /* ── Typewriter cursor ─────────────────────────────────────────────────────── */
@@ -146,4 +179,9 @@
 @keyframes fadeIn {
   from { opacity: 0; }
   to   { opacity: 1; }
+}
+
+@keyframes alertSnap {
+  from { opacity: 0; transform: translateY(-0.25rem); }
+  to   { opacity: 1; transform: translateY(0); }
 }

@@ -13,7 +13,6 @@ import {
   loadCharacterDialogue, loadCampaignIndex, loadStageDef,
   loadLevelNarrative,
 } from '../services/DataService'
-import { DREAM_SEEN_KEY } from './DreamScreen'
 import { NarrativeService }  from '../services/NarrativeService'
 import { ResolutionService } from '../services/ResolutionService'
 import styles from './SplashScreen.module.css'
@@ -68,10 +67,7 @@ export function SplashScreen() {
     ])
       .then(() => {
         setDone(true)
-        const dest = localStorage.getItem(DREAM_SEEN_KEY)
-          ? SCREEN_IDS.MAIN_MENU
-          : SCREEN_IDS.DREAM
-        setDestination(dest)
+        setDestination(SCREEN_IDS.DREAM)
         if (isBrowserTab()) {
           // Hold navigation — first tap fires requestFullscreen (via DisplayService listener)
           // then navigates on the same gesture.

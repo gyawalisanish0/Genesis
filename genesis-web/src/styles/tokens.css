@@ -5,36 +5,36 @@
 
 :root {
   /* ── Backgrounds ──────────────────────────────────────────────────────── */
-  --bg-deep:     #0a0a14;           /* root background, darkest layer       */
-  --bg-panel:    #12122a;           /* cards, panels, drawers               */
-  --bg-card:     #1c1c3a;           /* interactive card surfaces             */
-  --bg-elevated: #26264a;           /* buttons, focused states               */
-  --bg-overlay:  rgba(0, 0, 0, 0.8);/* modal backdrop                       */
+  --bg-deep:     #000000;           /* root background, darkest layer       */
+  --bg-panel:    #0e0e0e;           /* cards, panels, drawers               */
+  --bg-card:     #1a1a1a;           /* interactive card surfaces             */
+  --bg-elevated: #282828;           /* buttons, focused states               */
+  --bg-overlay:  rgba(0, 0, 0, 0.88);/* modal backdrop                      */
 
   /* ── Accent ──────────────────────────────────────────────────────────── */
-  --accent-genesis: #8b5cf6;  /* primary brand, active states, timeline     */
-  --accent-gold:    #f59e0b;  /* boosted outcome, rarity 5 / Master         */
-  --accent-silver:  #c8e6ff;  /* hyper mode aura, neon silver energy        */
-  --accent-info:    #3b82f6;  /* AP bar, information                        */
-  --accent-heal:    #10b981;  /* healing, positive buffs                    */
-  --accent-warn:    #f97316;  /* tumbling outcome, guard up                 */
-  --accent-danger:  #ef4444;  /* HP bar, damage numbers, death, defeat      */
-  --accent-evasion: #06b6d4;  /* evasion outcome, dodge                     */
+  --accent-genesis: #e8e8e8;  /* primary brand, active states, timeline     */
+  --accent-gold:    #d8d8d8;  /* boosted outcome, rarity 5 / Master         */
+  --accent-silver:  #c4c4c4;  /* hyper mode aura, neon silver energy        */
+  --accent-info:    #a0a0a0;  /* AP bar, information                        */
+  --accent-heal:    #b8b8b8;  /* healing, positive buffs                    */
+  --accent-warn:    #707070;  /* tumbling outcome, guard up                 */
+  --accent-danger:  #ffffff;  /* HP bar, damage numbers, death, defeat      */
+  --accent-evasion: #888888;  /* evasion outcome, dodge                     */
 
   /* ── Text ────────────────────────────────────────────────────────────── */
-  --text-primary:    #f1f0ff;  /* body text, labels                         */
-  --text-secondary:  #9b8ec4;  /* subtitles, metadata                       */
-  --text-muted:      #5c5480;  /* disabled, placeholder                     */
-  --text-on-accent:  #ffffff;  /* text on coloured buttons / filled badges  */
+  --text-primary:    #f0f0f0;  /* body text, labels                         */
+  --text-secondary:  #888888;  /* subtitles, metadata                       */
+  --text-muted:      #484848;  /* disabled, placeholder                     */
+  --text-on-accent:  #000000;  /* text on white buttons / filled badges     */
 
-  /* ── Rarity colours ──────────────────────────────────────────────────── */
-  --rarity-1: #6b7280;  /* Normal  */
-  --rarity-2: #10b981;  /* Advance */
-  --rarity-3: #3b82f6;  /* Super   */
-  --rarity-4: #8b5cf6;  /* Epic    */
-  --rarity-5: #f59e0b;  /* Master  */
-  --rarity-6: #f97316;  /* Legend  */
-  /* Rarity 7 (OMEGA) is a gradient — apply inline: linear-gradient(135deg, #8b5cf6, #f59e0b) */
+  /* ── Rarity colours — brightness scale, higher rarity = brighter ──────── */
+  --rarity-1: #585858;  /* Normal  */
+  --rarity-2: #787878;  /* Advance */
+  --rarity-3: #989898;  /* Super   */
+  --rarity-4: #b8b8b8;  /* Epic    */
+  --rarity-5: #d8d8d8;  /* Master  */
+  --rarity-6: #f0f0f0;  /* Legend  */
+  /* Rarity 7 (OMEGA) is a gradient — apply inline: linear-gradient(135deg, #ffffff, #888888) */
 
   /* ── Typography ──────────────────────────────────────────────────────── */
   --font-sans: 'Nunito', system-ui, -apple-system, sans-serif;
