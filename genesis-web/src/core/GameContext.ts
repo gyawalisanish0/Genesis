@@ -22,7 +22,8 @@ interface GameStore {
   returnScreen:             ScreenId | null  // screen to return to after BattleResultScreen
 
   // Commander identity — set in dream sequence, used by KALI and briefing screens
-  commanderName: string
+  commanderName:  string
+  organisationName: string
 
   // Persisted preferences
   settings: AppSettings
@@ -37,6 +38,7 @@ interface GameStore {
   setCurrentEncounterEnemies(ids: string[]): void
   setReturnScreen(screen: ScreenId | null): void
   setCommanderName(name: string): void
+  setOrganisationName(name: string): void
   updateSetting<K extends keyof AppSettings>(key: K, value: AppSettings[K]): void
   resetBattle(): void
 }
@@ -51,6 +53,7 @@ export const useGameStore = create<GameStore>((set) => ({
   currentEncounterEnemies:  [],
   returnScreen:             null,
   commanderName:            '',
+  organisationName:         '',
   settings:                 { ...DEFAULT_SETTINGS },
 
   setSelectedMode:    (mode)    => set({ selectedMode: mode }),
@@ -63,6 +66,7 @@ export const useGameStore = create<GameStore>((set) => ({
   setCurrentEncounterEnemies: (ids)    => set({ currentEncounterEnemies: ids }),
   setReturnScreen:            (screen) => set({ returnScreen: screen }),
   setCommanderName:           (name)   => set({ commanderName: name }),
+  setOrganisationName:        (name)   => set({ organisationName: name }),
 
   updateSetting: (key, value) =>
     set((s) => ({ settings: { ...s.settings, [key]: value } })),

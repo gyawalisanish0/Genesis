@@ -80,7 +80,7 @@ export function WakeScreen() {
   }
 
   function nextLine() {
-    if (isLast) { navigateTo(SCREEN_IDS.MAIN_MENU); return }
+    if (isLast) { navigateTo(SCREEN_IDS.ORG_SETUP); return }
     setLineIdx((i) => i + 1)
   }
 
