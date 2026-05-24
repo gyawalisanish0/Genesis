@@ -10,8 +10,6 @@ import { LINES, CHIP, MS_PER_CHAR, ALERT_AUTO_MS } from './openingScript'
 import type { Speaker } from './openingScript'
 import styles from './DreamScreen.module.css'
 
-export const DREAM_SEEN_KEY = 'genesis_dream_seen'
-
 export function DreamScreen() {
   const { navigateTo }      = useScreen()
   const setCommanderName    = useGameStore((s) => s.setCommanderName)
@@ -48,7 +46,6 @@ export function DreamScreen() {
 
   function nextLine() {
     if (isLast) {
-      localStorage.setItem(DREAM_SEEN_KEY, '1')
       navigateTo(SCREEN_IDS.MAIN_MENU)
       return
     }
