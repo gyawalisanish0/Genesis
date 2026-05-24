@@ -93,7 +93,7 @@ export function CreatorDialogueOverlay({ entry, onDismiss }: Props) {
   const activeLine = pickActiveLine(entry, lineIndex)
   const isPlayer   = activeLine?.speakerId === PLAYER_ID
   const creatorText = !isPlayer ? (activeLine?.text ?? '') : ''
-  const { chars, allDone } = computeChars(creatorText, tick)
+  const { chars } = computeChars(creatorText, tick)
 
   // Keep advanceRef current so timer callbacks never see stale lineIndex.
   advanceRef.current = () => {
