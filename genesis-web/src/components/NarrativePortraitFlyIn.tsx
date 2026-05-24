@@ -32,7 +32,7 @@ export function NarrativePortraitFlyIn({ speakerId, side = 'left', duration = NA
       style={{ '--fly-duration': `${duration}ms` } as React.CSSProperties}
       aria-hidden
     >
-      <UnitPortrait name={speaker.name} rarity={speaker.rarity} size="xl" />
+      <UnitPortrait name={speaker.name} rarity={speaker.rarity} size="xl" defId={speaker.defId} />
     </div>
   )
 }

@@ -106,7 +106,7 @@ export function NarrativeDialogueOverlay({ entry, units, onDismiss }: Props) {
     <div className={styles.overlay} onPointerDown={handleTap} role="dialog" aria-live="polite">
       <div className={styles.box}>
         <div className={styles.portrait}>
-          <UnitPortrait name={speakerName} rarity={rarity} size="lg" />
+          <UnitPortrait name={speakerName} rarity={rarity} size="lg" defId={speaker?.defId} />
         </div>
         <div className={styles.content}>
           <div className={styles.nameplate} style={{ color: nameColor }}>
