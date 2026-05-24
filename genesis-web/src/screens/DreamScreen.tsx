@@ -96,7 +96,7 @@ export function DreamScreen() {
     }
     if (isLast) {
       localStorage.setItem(DREAM_SEEN_KEY, '1')
-      navigateTo(SCREEN_IDS.MAIN_MENU)
+      navigateTo(SCREEN_IDS.WAKE)
       return
     }
     setLineIdx((i) => i + 1)

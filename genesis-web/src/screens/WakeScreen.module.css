@@ -1,0 +1,118 @@
+/* WakeScreen — KALI wake + alarm. Same black canvas as DreamScreen,
+   but KALI's voice is crisp and direct — the opposite of the Creator. */
+
+.screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ── Dialogue card ─────────────────────────────────────────────────────────── */
+
+.dialogue {
+  width: 100%;
+  padding: 1.25rem 1.5rem 2.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  min-height: 9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* ── Speaker chip ──────────────────────────────────────────────────────────── */
+
+.chip {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+}
+
+/* KALI: precise, system-like — medium brightness, evenly spaced */
+.chip.kali {
+  color: var(--accent-info);
+  letter-spacing: 0.35em;
+}
+
+/* Commander: minimal — just a prompt symbol */
+.chip.commander {
+  color: var(--text-primary);
+  letter-spacing: 0.1em;
+}
+
+/* Alert: immediate, red — not a speaker, an interrupt */
+.chip.alert {
+  color: var(--accent-danger);
+  letter-spacing: 0.2em;
+  animation: alertPulse 0.6s ease-out;
+}
+
+/* ── Dialogue text ─────────────────────────────────────────────────────────── */
+
+.text {
+  font-size: 0.88rem;
+  line-height: 1.55;
+  min-height: 2.75rem;
+  margin: 0;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+/* KALI: crisp, non-italic — every word exact */
+.text.kali {
+  color: var(--text-primary);
+}
+
+/* Commander: slightly dimmer — still waking, still processing */
+.text.commander {
+  color: var(--text-secondary);
+}
+
+/* Alert: red, no cursor, appears full */
+.text.alert {
+  color: var(--accent-danger);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  animation: alertPulse 0.4s ease-out;
+}
+
+/* ── Typewriter cursor ─────────────────────────────────────────────────────── */
+
+.cursor {
+  display: inline-block;
+  width: 0.45em;
+  height: 0.85em;
+  background: var(--text-muted);
+  margin-left: 0.1em;
+  vertical-align: -0.1em;
+  animation: blink 0.75s step-end infinite;
+}
+
+/* ── Tap hint ──────────────────────────────────────────────────────────────── */
+
+.hint {
+  font-size: 0.52rem;
+  color: var(--text-muted);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-align: right;
+  margin-top: 0.25rem;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+@keyframes alertPulse {
+  0%   { opacity: 0; transform: translateY(-0.2rem); }
+  100% { opacity: 1; transform: translateY(0); }
+}
