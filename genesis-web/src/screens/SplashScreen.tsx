@@ -73,7 +73,7 @@ export function SplashScreen() {
           // then navigates on the same gesture.
           setReadyToEnter(true)
         } else {
-          setTimeout(() => navigateTo(dest), 400)
+          setTimeout(() => navigateTo(SCREEN_IDS.DREAM), 400)
         }
       })
       .catch((err: unknown) => {
