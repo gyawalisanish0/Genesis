@@ -81,6 +81,11 @@
   animation: alertSnap 0.35s ease-out;
 }
 
+/* Narration: ambient inner voice — no chip */
+.chip.narration {
+  display: none;
+}
+
 /* ── Dialogue text ─────────────────────────────────────────────────────────── */
 
 .text {
@@ -117,6 +122,14 @@
   font-weight: 600;
   letter-spacing: 0.05em;
   animation: alertSnap 0.25s ease-out;
+}
+
+/* Narration: environmental / psychological prose — italic, set apart */
+.text.narration {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 0.88rem;
+  line-height: 1.7;
 }
 
 /* ── Typewriter cursor ─────────────────────────────────────────────────────── */
@@ -247,6 +260,7 @@
 .screen.wake .text.kali      { color: #1a1a1a; font-style: normal; }
 .screen.wake .text.commander { color: #444; }
 .screen.wake .text.alert     { color: var(--accent-danger); }
+.screen.wake .text.narration { color: rgba(0, 0, 0, 0.45); }
 
 .screen.wake .cursor { background: #888; }
 

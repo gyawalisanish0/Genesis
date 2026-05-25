@@ -10,6 +10,7 @@ export type Speaker =
   | 'input'      // inline name input field
   | 'input_org'  // inline organisation input field
   | 'act_break'  // invisible marker — triggers dream→wake flash transition
+  | 'narration'  // ambient scene description — no chip, italic, commander's inner voice
 
 export interface OpeningLine {
   who:  Speaker
@@ -25,6 +26,7 @@ export const CHIP: Record<Speaker, string> = {
   input:     '?????',
   input_org: 'K A L I',
   act_break: '',
+  narration: '',
 }
 
 export const MS_PER_CHAR: Partial<Record<Speaker, number>> = {
@@ -32,6 +34,7 @@ export const MS_PER_CHAR: Partial<Record<Speaker, number>> = {
   player:    28,
   kali:      22,
   commander: 30,
+  narration: 38,
 }
 
 export const ALERT_AUTO_MS = 1400
@@ -72,7 +75,10 @@ export const LINES: OpeningLine[] = [
 
   // ── Act 2 — The Wake ─────────────────────────────────────────────────────
 
-  { who: 'act_break', text: '' },
+  { who: 'act_break',  text: '' },
+  { who: 'narration', text: 'The ceiling. Grey polymer — the hairline crack you have memorised without meaning to.' },
+  { who: 'narration', text: 'Recycled air. The hum of it. The pale blue of the terminal across the bay.' },
+  { who: 'narration', text: 'Something enormous was here a moment ago. It left when you opened your eyes. You can still feel the shape of it.' },
   { who: 'kali',      text: '[NAME]. Good morning.' },
   { who: 'kali',      text: 'Current time: 06:14:22. You have been asleep for 4 hours, 51 minutes.' },
   { who: 'commander', text: '...KALI.' },
@@ -95,6 +101,8 @@ export const LINES: OpeningLine[] = [
   { who: 'kali',      text: '01:23:09.' },
   { who: 'kali',      text: 'Two seconds after my logs went dark.' },
   { who: 'commander', text: '...' },
+  { who: 'narration', text: '01:23:07 — her logs go dark. 01:23:09 — something arrives on Mars.' },
+  { who: 'narration', text: 'Two seconds. You stopped believing in coincidences a long time ago.' },
   { who: 'kali',      text: 'Hugo Rekrot is already in the briefing room. Your team is standing by.' },
   { who: 'kali',      text: 'Ready when you are, [NAME].' },
 
