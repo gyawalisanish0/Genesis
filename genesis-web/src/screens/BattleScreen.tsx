@@ -286,7 +286,7 @@ function PortraitPanel() {
         <div className={styles.portraitCircle}>
           <AsciiPortrait defId={leader.defId} />
         </div>
-        <span className={styles.lvlBadge}>{leader.className} ★{leader.rarity}</span>
+        <span className={styles.lvlBadge}>{leader.name} ★{leader.rarity}</span>
         <div className={styles.barRow}>
           <div className={styles.barHeader}>
             <span className={styles.barLabel}>HP</span>
