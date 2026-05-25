@@ -26,7 +26,7 @@ export function PreBattleStepItems() {
       <div className={styles.unitList}>
         {selectedTeam.map((unit) => (
           <div key={unit.id} className={styles.unitRow}>
-            <UnitPortrait name={unit.name} rarity={unit.rarity} size="sm" />
+            <UnitPortrait name={unit.name} rarity={unit.rarity} size="sm" defId={unit.id} />
             <div className={styles.unitInfo}>
               <span className={styles.unitName}>{unit.name}</span>
               <div className={styles.slotRow}>

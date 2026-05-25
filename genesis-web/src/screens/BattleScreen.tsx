@@ -29,7 +29,8 @@ import { ResourceBar } from '../components/ResourceBar'
 import { StatusChipBar } from '../components/StatusChipBar'
 import type { StatusChipData } from '../components/StatusChipBar'
 import type { Unit } from '../core/types'
-import { characterPortraitUrl, characterStatusIconUrl } from '../services/DataService'
+import { characterStatusIconUrl } from '../services/DataService'
+import { AsciiPortrait } from '../components/AsciiPortrait'
 import styles from './BattleScreen.module.css'
 
 // ── Status chip helpers ──────────────────────────────────────────────────────
@@ -69,32 +70,18 @@ function tickToTop(tick: number, maxTick: number): number {
 // ── Timeline marker (SVG portrait + HP arc ring) ────────────────────────────
 interface TimelineMarkerProps {
   name:        string
-  defId:       string
   isAlly:      boolean
   hpFraction:  number   // 0–1; drives arc fill length
 }
 
-function TimelineMarker({ defId, isAlly, hpFraction }: TimelineMarkerProps) {
+function TimelineMarker({ isAlly, hpFraction }: TimelineMarkerProps) {
   const circ      = 2 * Math.PI * 10
   const ringColor = isAlly ? 'var(--accent-info)' : 'var(--accent-danger)'
-  const clipId    = `tm-clip-${defId}`
 
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden>
-      <defs>
-        <clipPath id={clipId}>
-          <circle cx="12" cy="12" r="9" />
-        </clipPath>
-      </defs>
       {/* Portrait background */}
       <circle cx="12" cy="12" r="9" fill="var(--bg-card)" />
-      {/* Portrait image — clipped to circle; falls back to initial below */}
-      <image
-        href={characterPortraitUrl(defId)}
-        x="3" y="3" width="18" height="18"
-        clipPath={`url(#${clipId})`}
-        preserveAspectRatio="xMidYMid slice"
-      />
       {/* HP track — always full ring, dim */}
       <circle cx="12" cy="12" r="10" fill="none"
         stroke="var(--bg-elevated)" strokeWidth="2" />
@@ -233,7 +220,7 @@ function BattleTimeline() {
             className={`${styles.marker} ${styles.markerGhost}`}
             style={{ top: tickToTop(entry.tick, scrollBounds.max) }}
           >
-            <TimelineMarker name={entry.name} defId={entry.defId} isAlly={entry.isAlly} hpFraction={0} />
+            <TimelineMarker name={entry.name} isAlly={entry.isAlly} hpFraction={0} />
           </div>
         ))}
         {/* Live unit markers */}
@@ -251,9 +238,7 @@ function BattleTimeline() {
               style={{ top: stackedTop(unit.id, unit.tickPosition) }}
             >
               <TimelineMarker
-                name={unit.name}
-                defId={unit.defId}
-                isAlly={unit.isAlly}
+                name={unit.name}                isAlly={unit.isAlly}
                 hpFraction={unit.maxHp > 0 ? unit.hp / unit.maxHp : 0}
               />
               {chips.length > 0 && (
@@ -299,13 +284,7 @@ function PortraitPanel() {
       <span className={styles.tickLabel}>Tick: {tickValue}</span>
       <div className={`${styles.unitEntry} ${styles.unitEntryActive}`}>
         <div className={styles.portraitCircle}>
-          <span className={styles.portraitInitial}>{leader.name.charAt(0)}</span>
-          <img
-            src={characterPortraitUrl(leader.defId)}
-            alt=""
-            className={styles.portraitImg}
-            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
-          />
+          <AsciiPortrait defId={leader.defId} />
         </div>
         <span className={styles.lvlBadge}>{leader.className} ★{leader.rarity}</span>
         <div className={styles.barRow}>

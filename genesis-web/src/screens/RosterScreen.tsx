@@ -9,7 +9,7 @@ import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import { UnitPortrait } from '../components/UnitPortrait'
 import { PagedGrid } from '../components/PagedGrid'
 import { useRosterData } from '../hooks/useRosterData'
-import { characterPortraitUrl } from '../services/DataService'
+
 import styles from './RosterScreen.module.css'
 
 const CLASSES  = ['All', 'Hunter', 'Ranger', 'Caster', 'Warrior', 'Enchanter', 'Guardian']
@@ -101,7 +101,7 @@ export function RosterScreen() {
                   className={styles.card}
                   onPointerDown={createHandler({ onTap: () => {} })}
                 >
-                  <UnitPortrait name={char.name} rarity={char.rarity} size="sm" imageUrl={characterPortraitUrl(char.id)} />
+                  <UnitPortrait name={char.name} rarity={char.rarity} size="sm" defId={char.id} />
                   <span className={styles.cardName}>{char.name}</span>
                   <span className={styles.cardClass}>{char.className}</span>
                   <span className={styles.cardRarity}>{'★'.repeat(char.rarity)}</span>
