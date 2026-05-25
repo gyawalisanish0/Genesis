@@ -1,6 +1,5 @@
 // Opening sequence script — Dream → Wake → Org Setup.
-// All three acts play as one continuous scene on a black canvas.
-// The chip changing from · · · · · to K A L I is the only transition.
+// Dream act: black canvas. Wake act: white canvas (flash transition between).
 
 export type Speaker =
   | 'creator'    // ??? — cosmic, chaotic, italic
@@ -10,6 +9,7 @@ export type Speaker =
   | 'alert'      // ! ! ! ! ! — instant, auto-advance, no tap
   | 'input'      // inline name input field
   | 'input_org'  // inline organisation input field
+  | 'act_break'  // invisible marker — triggers dream→wake flash transition
 
 export interface OpeningLine {
   who:  Speaker
@@ -24,6 +24,7 @@ export const CHIP: Record<Speaker, string> = {
   alert:     '! ! ! ! !',
   input:     '?????',
   input_org: 'K A L I',
+  act_break: '',
 }
 
 export const MS_PER_CHAR: Partial<Record<Speaker, number>> = {
@@ -71,6 +72,7 @@ export const LINES: OpeningLine[] = [
 
   // ── Act 2 — The Wake ─────────────────────────────────────────────────────
 
+  { who: 'act_break', text: '' },
   { who: 'kali',      text: '[NAME]. Good morning.' },
   { who: 'kali',      text: 'Current time: 06:14:22. You have been asleep for 4 hours, 51 minutes.' },
   { who: 'commander', text: '...KALI.' },

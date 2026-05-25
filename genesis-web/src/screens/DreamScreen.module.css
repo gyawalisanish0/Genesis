@@ -203,3 +203,69 @@
   from { opacity: 0; transform: translateY(-0.25rem); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ── Dream → Wake transition ───────────────────────────────────────────────── */
+
+.wakeFlash {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: #fff;
+  pointer-events: none;
+  animation: wakeFlash 0.95s ease-out forwards;
+}
+
+@keyframes wakeFlash {
+  0%   { opacity: 0; }
+  25%  { opacity: 1; }
+  100% { opacity: 1; }
+}
+
+/* ── Wake phase — white canvas, dark text ──────────────────────────────────── */
+
+.screen.wake {
+  background: #f5f5f0;
+}
+
+.screen.wake::before {
+  background: radial-gradient(ellipse 70% 50% at 50% 20%, #eaeaf2 0%, #f5f5f0 65%);
+}
+
+.screen.wake .dialogue {
+  background: rgba(245, 245, 240, 0.95);
+  border-top-color: rgba(0, 0, 0, 0.08);
+}
+
+.screen.wake .chip {
+  border-bottom-color: rgba(0, 0, 0, 0.06);
+}
+
+.screen.wake .chip.kali      { color: var(--accent-info); }
+.screen.wake .chip.commander { color: #1a1a1a; }
+.screen.wake .chip.alert     { color: var(--accent-danger); border-bottom-color: rgba(180, 20, 20, 0.1); }
+
+.screen.wake .text.kali      { color: #1a1a1a; font-style: normal; }
+.screen.wake .text.commander { color: #444; }
+.screen.wake .text.alert     { color: var(--accent-danger); }
+
+.screen.wake .cursor { background: #888; }
+
+.screen.wake .hint { color: rgba(0, 0, 0, 0.3); }
+
+.screen.wake .nameInput {
+  color: #1a1a1a;
+  border-bottom-color: rgba(0, 0, 0, 0.2);
+  caret-color: #1a1a1a;
+}
+
+.screen.wake .nameInput::placeholder { color: rgba(0, 0, 0, 0.35); }
+
+.screen.wake .confirmBtn {
+  color: rgba(0, 0, 0, 0.45);
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+.screen.wake .confirmBtn:hover {
+  color: #1a1a1a;
+  border-color: rgba(0, 0, 0, 0.4);
+}
