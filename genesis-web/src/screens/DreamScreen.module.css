@@ -1,4 +1,4 @@
-/* DreamScreen — pure black cinematic, no game chrome */
+/* DreamScreen — visual novel layout, text only, no portraits */
 
 .screen {
   position: relative;
@@ -13,91 +13,109 @@
   -webkit-user-select: none;
 }
 
-/* ── Dialogue card ─────────────────────────────────────────────────────────── */
-
-.dialogue {
-  width: 100%;
-  padding: 1.25rem 1.5rem 2.75rem;
-  background: rgba(255, 255, 255, 0.03);
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
-  min-height: 9rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+/* Subtle ambient depth in the upper zone */
+.screen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 70% 50% at 50% 20%, #0b0b14 0%, #000 65%);
+  pointer-events: none;
 }
 
-/* ── Speaker chip ──────────────────────────────────────────────────────────── */
+/* ── Dialogue panel ────────────────────────────────────────────────────────── */
+
+.dialogue {
+  position: relative;
+  width: 100%;
+  padding: 1.25rem 1.75rem 3rem;
+  background: rgba(8, 8, 12, 0.92);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  min-height: 11rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ── Speaker name row ──────────────────────────────────────────────────────── */
 
 .chip {
   font-family: 'Courier New', Courier, monospace;
-  font-size: 0.6rem;
-  font-weight: 600;
+  font-size: 0.62rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.18em;
+  padding-bottom: 0.6rem;
+  margin-bottom: 0.65rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-/* Creator: diffuse, sourceless — wider spacing, muted */
+/* Creator: diffuse, sourceless */
 .chip.creator {
   color: var(--text-muted);
-  letter-spacing: 0.35em;
+  letter-spacing: 0.4em;
 }
 
-/* Player: grounded, localized — standard weight */
+/* Player: grounded */
 .chip.player {
+  color: var(--text-secondary);
+  letter-spacing: 0.18em;
+}
+
+/* KALI: system identifier */
+.chip.kali {
+  color: var(--accent-info);
+  letter-spacing: 0.4em;
+}
+
+/* Commander: has identity now */
+.chip.commander {
   color: var(--text-primary);
   letter-spacing: 0.12em;
 }
 
-/* KALI: system identifier — info-blue, evenly spaced */
-.chip.kali {
-  color: var(--accent-info);
-  letter-spacing: 0.35em;
-}
-
-/* Commander: minimal prompt — has identity now */
-.chip.commander {
-  color: var(--text-primary);
-  letter-spacing: 0.1em;
-}
-
-/* Alert: interrupt — danger red, snaps in */
+/* Alert: interrupt */
 .chip.alert {
   color: var(--accent-danger);
-  letter-spacing: 0.2em;
+  letter-spacing: 0.25em;
+  border-bottom-color: rgba(255, 80, 80, 0.12);
   animation: alertSnap 0.35s ease-out;
 }
 
 /* ── Dialogue text ─────────────────────────────────────────────────────────── */
 
 .text {
-  font-size: 0.88rem;
-  line-height: 1.55;
-  min-height: 2.75rem;
+  font-size: 0.92rem;
+  line-height: 1.65;
+  min-height: 3rem;
   margin: 0;
 }
 
-/* Creator: thoughts arriving from far away — dimmer, italic */
+/* Creator: thoughts arriving from far — dimmer, italic */
 .text.creator {
   color: var(--text-secondary);
   font-style: italic;
 }
 
-/* Player: immediate, first-person — full brightness */
+/* Player: immediate */
 .text.player {
   color: var(--text-primary);
 }
 
-/* KALI: crisp, non-italic — every word exact */
-.text.kali      { color: var(--text-primary); }
+/* KALI: exact */
+.text.kali {
+  color: var(--text-primary);
+}
 
-/* Commander: slightly dimmer — still processing */
-.text.commander { color: var(--text-secondary); }
+/* Commander: still processing */
+.text.commander {
+  color: var(--text-secondary);
+}
 
-/* Alert: red, full weight, snaps in */
+/* Alert */
 .text.alert {
   color: var(--accent-danger);
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   animation: alertSnap 0.25s ease-out;
 }
 
@@ -124,7 +142,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  min-height: 2.75rem;
+  min-height: 3rem;
   padding: 0.25rem 0;
 }
 
@@ -132,11 +150,11 @@
   flex: 1;
   background: transparent;
   border: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
   color: var(--text-primary);
   font-family: 'Courier New', Courier, monospace;
-  font-size: 0.88rem;
-  line-height: 1.55;
+  font-size: 0.92rem;
+  line-height: 1.65;
   padding: 0.15rem 0;
   outline: none;
   caret-color: var(--text-primary);
@@ -172,7 +190,7 @@
   letter-spacing: 0.2em;
   text-transform: uppercase;
   text-align: right;
-  margin-top: 0.25rem;
+  margin-top: 0.75rem;
   animation: fadeIn 0.5s ease-out;
 }
 
