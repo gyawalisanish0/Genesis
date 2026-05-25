@@ -32,23 +32,27 @@
   background: var(--accent-genesis);
   color: var(--text-on-accent);
   height: 3.5rem;  /* 56 dp */
+  box-shadow: var(--glow-genesis);
 }
 
 .secondary {
   background: var(--bg-elevated);
   color: var(--text-primary);
   height: 3.5rem;
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  box-shadow: var(--glow-subtle);
 }
 
 .danger {
   background: var(--accent-danger);
   color: var(--text-on-accent);
   height: 3.5rem;
+  box-shadow: var(--glow-danger);
 }
 
 .ghost {
   background: transparent;
   color: var(--text-secondary);
   height: 3rem;  /* 48 dp */
-  border: 1px solid var(--bg-elevated);
+  border: 1px solid rgba(0, 229, 255, 0.25);
 }

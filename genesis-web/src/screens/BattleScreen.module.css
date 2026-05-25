@@ -295,13 +295,14 @@
   height: 6.25rem;
   border-radius: 50%;
   background: var(--bg-elevated);
-  border: 3px solid var(--accent-genesis);
+  border: 2px solid var(--accent-genesis);
   display: flex;
   align-items: center;
   justify-content: center;
   align-self: center;
   overflow: hidden;
   container-type: size;
+  box-shadow: var(--glow-genesis), inset 0 0 20px rgba(0,229,255,0.06);
 }
 
 .lvlBadge {

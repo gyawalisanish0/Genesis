@@ -9,9 +9,9 @@
       "priority": 20,
       "animations": [{ "type": "dialogue" }],
       "lines": [
-        { "speakerId": "hugo_001",  "text": "This outpost shouldn't be this quiet." },
-        { "speakerId": "husty_001", "text": "Something's wrong. I can feel it." },
-        { "speakerId": "hugo_001",  "text": "Stay sharp. We move together." }
+        { "speakerId": "hugo_001",  "text": "Outpost Sierra-7. Garrison of forty. I'm reading zero." },
+        { "speakerId": "husty_001", "text": "I reviewed the patrol logs before we landed. Last entry: seventy-one hours ago." },
+        { "speakerId": "hugo_001",  "text": "Stay close. Room by room." }
       ]
     },
     {
@@ -20,8 +20,8 @@
       "sequence": true,
       "animations": [{ "type": "dialogue" }],
       "lines": [
-        { "speakerId": "husty_001", "text": "Tap the arrows to move. One tile at a time." },
-        { "speakerId": "hugo_001",  "text": "Watch the fog. Don't walk blind." }
+        { "speakerId": "husty_001", "text": "Tap the arrows to move. One tile per action. Fog lifts as you advance." },
+        { "speakerId": "hugo_001",  "text": "Fog means unknowns. Don't rush." }
       ]
     },
     {
@@ -30,8 +30,8 @@
       "sequence": true,
       "animations": [{ "type": "dialogue" }],
       "lines": [
-        { "speakerId": "husty_001", "text": "Guard ahead. If they see us — we fight." },
-        { "speakerId": "hugo_001",  "text": "Stay out of their line of sight." }
+        { "speakerId": "husty_001", "text": "Patrol ahead. I've already mapped their detection radius. Two safe corridors." },
+        { "speakerId": "hugo_001",  "text": "If they spot us we hold ground. No retreating in a corridor." }
       ]
     },
     {
@@ -43,22 +43,22 @@
       ]
     },
     {
+      "narrativeId": "stage_001_first_chest",
+      "once": true,
+      "animations": [
+        { "type": "floating_text", "text": "SUPPLIES FOUND", "colour": "var(--accent-gold)" }
+      ]
+    },
+    {
       "narrativeId": "stage_001_elder_greeting",
       "once": true,
       "sequence": true,
       "priority": 10,
       "animations": [{ "type": "dialogue" }],
       "lines": [
-        { "speakerId": "hugo_001",  "text": "Elder — what happened here?" },
-        { "speakerId": "hugo_001",  "text": "The garrison fell three nights ago. Something old came through the eastern pass." },
-        { "speakerId": "husty_001", "text": "The exit is north. We need to move." }
-      ]
-    },
-    {
-      "narrativeId": "stage_001_first_chest",
-      "once": true,
-      "animations": [
-        { "type": "floating_text", "text": "SUPPLIES FOUND", "colour": "var(--accent-gold)" }
+        { "speakerId": "hugo_001",  "text": "What happened here?" },
+        { "speakerId": "husty_001", "text": "Residual energy signatures are inconsistent with Netrolume standard equipment. Whatever came through the eastern pass — it wasn't a grunt squad." },
+        { "speakerId": "hugo_001",  "text": "We file the report after we're out. Move." }
       ]
     },
     {
@@ -68,8 +68,8 @@
       "priority": 20,
       "animations": [{ "type": "dialogue" }],
       "lines": [
-        { "speakerId": "husty_001", "text": "There's the pass. We made it." },
-        { "speakerId": "hugo_001",  "text": "This is just the beginning." }
+        { "speakerId": "husty_001", "text": "Exit confirmed. All units accounted for." },
+        { "speakerId": "hugo_001",  "text": "Stage clear. We push deeper." }
       ]
     }
   ]
