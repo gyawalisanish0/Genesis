@@ -6,6 +6,7 @@ export type Speaker =
   | 'player'     // ????? — confused, first-person
   | 'kali'       // K A L I — precise, clinical
   | 'commander'  // > — has identity now, gives orders
+  | 'celan'      // C E L A N — Sekkarian Defence Force, Fleet 13
   | 'alert'      // ! ! ! ! ! — instant, auto-advance, no tap
   | 'input'      // inline name input field
   | 'input_org'  // inline organisation input field
@@ -22,6 +23,7 @@ export const CHIP: Record<Speaker, string> = {
   player:    '?????',
   kali:      'K A L I',
   commander: '>',
+  celan:     'C E L A N',
   alert:     '! ! ! ! !',
   input:     '?????',
   input_org: 'K A L I',
@@ -87,20 +89,13 @@ export const LINES: OpeningLine[] = [
   { who: 'kali',       text: 'I have the biological record. Not the experience.' },
   { who: 'kali',       text: "The mind doesn't file reports." },
   { who: 'commander',  text: "No. It doesn't." },
-  { who: 'kali',       text: 'Daily status. Fleet readiness: nominal. No outstanding orders. Mars monitoring flagged two low-frequency signals overnight — within normal range.' },
-  { who: 'commander',  text: 'Standard Netrolume drift?' },
-  { who: 'kali',       text: 'Consistent with ambient movement patterns. Filed low-priority.' },
-  { who: 'commander',  text: 'Fine.' },
+  { who: 'kali',       text: 'Daily status. Fleet readiness: nominal. No outstanding orders.' },
 
-  // ── Act 3 — The Alarm ────────────────────────────────────────────────────
+  // ── Act 3 — Celan arrives ────────────────────────────────────────────────
 
-  { who: 'alert',      text: 'PRIORITY BURST — SEKKARIAN DEFENCE FORCE' },
-  { who: 'kali',       text: 'Incoming from Commander Celan, Fleet 13. Flagged urgent.' },
-  { who: 'commander',  text: 'Put it through.' },
-  { who: 'kali',       text: "Celan's assessment: the Mars signals are not ambient drift. Sector 7-Alpha — deliberate staging, not passive movement." },
-  { who: 'kali',       text: "His words: 'The Netrolume don't position like that unless someone is directing them.'" },
-  { who: 'commander',  text: 'Someone.' },
-  { who: 'kali',       text: 'Celan believes a third party is orchestrating their deployment. Origin: extrasolar. No identification yet.' },
+  { who: 'narration',  text: 'Footsteps in the corridor. Fast.' },
+  { who: 'celan',      text: "Something isn't right on Mars." },
+  { who: 'celan',      text: "I've already sent my best members for intel." },
   { who: 'commander',  text: '...' },
   { who: 'kali',       text: 'Hugo Rekrot is already in the briefing room. Your team is standing by.' },
   { who: 'kali',       text: 'Ready when you are, [NAME].' },

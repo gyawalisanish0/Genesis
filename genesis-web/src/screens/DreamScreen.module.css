@@ -73,6 +73,12 @@
   letter-spacing: 0.12em;
 }
 
+/* Celan: Sekkarian Defence Force — gold authority */
+.chip.celan {
+  color: var(--accent-gold);
+  letter-spacing: 0.4em;
+}
+
 /* Alert: interrupt */
 .chip.alert {
   color: var(--accent-danger);
@@ -114,6 +120,11 @@
 /* Commander: still processing */
 .text.commander {
   color: var(--text-secondary);
+}
+
+/* Celan */
+.text.celan {
+  color: var(--text-primary);
 }
 
 /* Alert */
@@ -255,10 +266,12 @@
 
 .screen.wake .chip.kali      { color: var(--accent-info); }
 .screen.wake .chip.commander { color: #1a1a1a; }
+.screen.wake .chip.celan     { color: var(--accent-gold); }
 .screen.wake .chip.alert     { color: var(--accent-danger); border-bottom-color: rgba(180, 20, 20, 0.1); }
 
 .screen.wake .text.kali      { color: #1a1a1a; font-style: normal; }
 .screen.wake .text.commander { color: #444; }
+.screen.wake .text.celan     { color: #1a1a1a; }
 .screen.wake .text.alert     { color: var(--accent-danger); }
 .screen.wake .text.narration { color: rgba(0, 0, 0, 0.45); }
 
