@@ -53,9 +53,9 @@ She tells the Commander what they need to know.
 ## Narrative Role
 
 - **Act 2** — first voice after the dream, grounds the Commander
-  in reality, greets them by name
-- **Act 3** — delivers the alarm, Mars threat briefing
-- **Act 4** — assists with team preparation and deployment
+  in reality, greets them by name; delivers daily status and the EMP
+  data-loss report; Celan arrives and delivers the Mars intel directly
+- **Act 3** — assists with team preparation and deployment
 - **During campaign** — status updates, mission intel, comms
   between Commander and deployed team
 
