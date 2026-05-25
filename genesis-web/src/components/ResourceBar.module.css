@@ -24,10 +24,10 @@
 
 /* Variant heights and fill colours */
 .hp { height: 0.5rem; }    /* 8 dp */
-.hp .fill { background: var(--accent-danger); }
+.hp .fill { background: var(--accent-danger); box-shadow: var(--glow-danger); }
 
 .ap { height: 0.375rem; }  /* 6 dp */
-.ap .fill { background: var(--accent-info); }
+.ap .fill { background: var(--accent-info); box-shadow: var(--glow-info); }
 
 .xp { height: 0.25rem; }   /* 4 dp */
 .xp .fill { background: var(--accent-genesis); }

@@ -1,40 +1,48 @@
 /* Genesis Design System — CSS custom properties
- * Matches docs/ui/00_design_system.md exactly.
+ * Tron / Cyber-Blue neon palette.
  * Import once in main.tsx; use variables everywhere else.
  */
 
 :root {
   /* ── Backgrounds ──────────────────────────────────────────────────────── */
-  --bg-deep:     #000000;           /* root background, darkest layer       */
-  --bg-panel:    #0e0e0e;           /* cards, panels, drawers               */
-  --bg-card:     #1a1a1a;           /* interactive card surfaces             */
-  --bg-elevated: #282828;           /* buttons, focused states               */
-  --bg-overlay:  rgba(0, 0, 0, 0.88);/* modal backdrop                      */
+  --bg-deep:     #020c14;                    /* root background              */
+  --bg-panel:    #061422;                    /* cards, panels, drawers       */
+  --bg-card:     #0a1d30;                    /* interactive card surfaces    */
+  --bg-elevated: #0f2840;                    /* buttons, focused states      */
+  --bg-overlay:  rgba(2, 12, 20, 0.92);      /* modal backdrop               */
 
   /* ── Accent ──────────────────────────────────────────────────────────── */
-  --accent-genesis: #e8e8e8;  /* primary brand, active states, timeline     */
-  --accent-gold:    #d8d8d8;  /* boosted outcome, rarity 5 / Master         */
-  --accent-silver:  #c4c4c4;  /* hyper mode aura, neon silver energy        */
-  --accent-info:    #a0a0a0;  /* AP bar, information                        */
-  --accent-heal:    #b8b8b8;  /* healing, positive buffs                    */
-  --accent-warn:    #707070;  /* tumbling outcome, guard up                 */
-  --accent-danger:  #ffffff;  /* HP bar, damage numbers, death, defeat      */
-  --accent-evasion: #888888;  /* evasion outcome, dodge                     */
+  --accent-genesis: #00e5ff;  /* electric cyan — selection, Roll button       */
+  --accent-gold:    #ffe100;  /* neon yellow-gold — boosted outcome           */
+  --accent-silver:  #a0e8ff;  /* icy blue — hyper mode aura                  */
+  --accent-info:    #0099ff;  /* electric blue — AP bar, information          */
+  --accent-heal:    #00ff9f;  /* neon green-cyan — healing, positive buffs    */
+  --accent-warn:    #ff8c00;  /* neon amber — tumbling outcome, guard up      */
+  --accent-danger:  #ff2257;  /* neon red-pink — HP bar, damage, defeat       */
+  --accent-evasion: #bf00ff;  /* neon purple — evasion outcome, dodge         */
+
+  /* ── Glow (box-shadow / text-shadow) ────────────────────────────────── */
+  --glow-genesis: 0 0 8px rgba(0,229,255,0.7),  0 0 24px rgba(0,229,255,0.25);
+  --glow-danger:  0 0 8px rgba(255,34,87,0.65), 0 0 16px rgba(255,34,87,0.2);
+  --glow-info:    0 0 8px rgba(0,153,255,0.65), 0 0 16px rgba(0,153,255,0.2);
+  --glow-gold:    0 0 8px rgba(255,225,0,0.65), 0 0 16px rgba(255,225,0,0.2);
+  --glow-heal:    0 0 8px rgba(0,255,159,0.65), 0 0 16px rgba(0,255,159,0.2);
+  --glow-subtle:  0 0 6px rgba(0,229,255,0.18);
 
   /* ── Text ────────────────────────────────────────────────────────────── */
-  --text-primary:    #f0f0f0;  /* body text, labels                         */
-  --text-secondary:  #888888;  /* subtitles, metadata                       */
-  --text-muted:      #484848;  /* disabled, placeholder                     */
-  --text-on-accent:  #000000;  /* text on white buttons / filled badges     */
+  --text-primary:    #d8f0ff;  /* near-white with cyan tint                  */
+  --text-secondary:  #5a9dc0;  /* muted cyan-blue                            */
+  --text-muted:      #1e4060;  /* disabled, placeholder                      */
+  --text-on-accent:  #020c14;  /* dark text on bright neon buttons           */
 
-  /* ── Rarity colours — brightness scale, higher rarity = brighter ──────── */
-  --rarity-1: #585858;  /* Normal  */
-  --rarity-2: #787878;  /* Advance */
-  --rarity-3: #989898;  /* Super   */
-  --rarity-4: #b8b8b8;  /* Epic    */
-  --rarity-5: #d8d8d8;  /* Master  */
-  --rarity-6: #f0f0f0;  /* Legend  */
-  /* Rarity 7 (OMEGA) is a gradient — apply inline: linear-gradient(135deg, #ffffff, #888888) */
+  /* ── Rarity colours — neon scale, higher rarity = more vivid ──────────── */
+  --rarity-1: #4a7a9b;  /* Normal  — muted blue-grey */
+  --rarity-2: #00d084;  /* Advance — neon green      */
+  --rarity-3: #00aaff;  /* Super   — neon blue       */
+  --rarity-4: #aa44ff;  /* Epic    — neon purple     */
+  --rarity-5: #ff8c00;  /* Master  — neon amber      */
+  --rarity-6: #ff2257;  /* Legend  — neon red        */
+  /* Rarity 7 (OMEGA) gradient — apply inline: linear-gradient(135deg, #00e5ff, #bf00ff) */
 
   /* ── Typography ──────────────────────────────────────────────────────── */
   --font-sans: 'Nunito', system-ui, -apple-system, sans-serif;
