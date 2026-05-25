@@ -85,9 +85,10 @@ export const DUNGEON_REVEAL_RADIUS         = 2    // fog-of-war reveal radius ar
 export const DUNGEON_MOVE_ANIM_MS          = 180  // ms per tile movement tween
 export const DUNGEON_PATROL_ANIM_MS        = 200  // ms per tile for enemy patrol step
 export const DUNGEON_WAVE_VIGNETTE_OPACITY = 0.65 // overlay opacity during wave phase
-export const DUNGEON_ENCOUNTER_PAUSE_MS    = 350  // pause after patrols settle before encounter check fires
-export const DUNGEON_SPOT_FLASH_MS         = 500  // ms enemy pulses on-grid before encounter banner appears
-export const DUNGEON_ENCOUNTER_BANNER_MS   = 1200 // ms encounter telegraph banner is held before navigating to battle
+export const DUNGEON_ENCOUNTER_PAUSE_MS    = 350   // pause after patrols settle before encounter check fires
+export const DUNGEON_SPOT_FLASH_MS         = 2000  // ms enemy shakes on-grid (spotted phase)
+export const DUNGEON_ENCOUNTER_FLASH_MS    = 1000  // ms rapid white-flash overlay before navigating to battle
+export const DUNGEON_ENCOUNTER_BANNER_MS   = 1200  // ms encounter telegraph banner (wave phase)
 
 // First-time hint toaster
 export const HINT_TOASTER_DURATION_MS = 5000  // ms the hint stays visible before auto-dismiss

@@ -16,7 +16,7 @@ import {
   DUNGEON_REVEAL_RADIUS,
   DUNGEON_ENCOUNTER_PAUSE_MS,
   DUNGEON_SPOT_FLASH_MS,
-  DUNGEON_ENCOUNTER_BANNER_MS,
+  DUNGEON_ENCOUNTER_FLASH_MS,
 } from '../core/constants'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -34,9 +34,8 @@ interface DungeonContextValue {
   // Party leader summary — shown in the persistent HP pill so the player can
   // see at a glance whose perspective is on screen.
   partyLeader:      { name: string; hp: number; maxHp: number } | null
-  // Telegraph banner: short label shown before navigating into battle so the
-  // encounter feels intentional. Null while exploring/in wave UI.
-  encounterBanner:  string | null
+  // True during the rapid white-flash overlay that plays before battle launches.
+  encounterFlashing: boolean
   // Non-null when one or more tile textures failed to load. Cleared once the
   // ErrorToaster auto-dismisses; set to the same message string on each new
   // map load that has failures.
@@ -78,7 +77,7 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
   const [entityPositions, setEntityPositions] = useState<Record<string, { x: number; y: number }>>({})
   const [defeatedEntityIds, setDefeatedEntityIds] = useState<Set<string>>(new Set())
   const [waveEnemies, setWaveEnemies] = useState<EnemyEntityDef[]>([])
-  const [encounterBanner, setEncounterBanner] = useState<string | null>(null)
+  const [encounterFlashing, setEncounterFlashing] = useState(false)
   const [partyLeader, setPartyLeader]   = useState<{ name: string; hp: number; maxHp: number } | null>(null)
   const [tilesetError, setTilesetError] = useState<string | null>(null)
   const [bgColor,      setBgColor]      = useState<string | null>(null)
@@ -259,12 +258,9 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
       advanceEnemyPatrols(() => {
         clearTimeout(watchdog)
         // Brief pause so patrols visually settle before encounter check fires.
-        // Movement stays locked during this window; checkWavePhase releases it
-        // or passes the lock to launchBattle if an encounter triggers.
-        setTimeout(() => {
-          moveQueueRef.current = false
-          checkWavePhase()
-        }, DUNGEON_ENCOUNTER_PAUSE_MS)
+        // checkWavePhase owns the lock from here: it releases it if clear,
+        // or keeps it held through the entire spotted→flash→battle sequence.
+        setTimeout(checkWavePhase, DUNGEON_ENCOUNTER_PAUSE_MS)
       })
     })
   }, [phase])
@@ -403,20 +399,30 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
         return Math.max(Math.abs(pos.x - party.x), Math.abs(pos.y - party.y)) <= range
       })
 
-    if (visible.length === 0) return
+    if (visible.length === 0) {
+      moveQueueRef.current = false  // no encounter — unlock movement
+      return
+    }
 
     // Fire spotted narrative for first enemy
     if (visible[0].narrativeId) NarrativeService.play(visible[0].narrativeId)
 
     if (visible.length === 1) {
       const enemy = visible[0]
-      moveQueueRef.current = true
-      arenaRef.current?.activateWavePhase([enemy.entityId])
+      // moveQueueRef stays true — locked through the entire spotted→flash→battle sequence.
+      // Phase 1: enemy shakes on the grid for DUNGEON_SPOT_FLASH_MS (2 s)
+      arenaRef.current?.spotEntity(enemy.entityId)
       setTimeout(() => {
-        arenaRef.current?.deactivateWavePhase()
-        launchBattle(enemy)
+        arenaRef.current?.unspotEntity(enemy.entityId)
+        // Phase 2: rapid white screen flashes for DUNGEON_ENCOUNTER_FLASH_MS (1 s)
+        setEncounterFlashing(true)
+        setTimeout(() => {
+          setEncounterFlashing(false)
+          launchBattle(enemy)
+        }, DUNGEON_ENCOUNTER_FLASH_MS)
       }, DUNGEON_SPOT_FLASH_MS)
     } else {
+      moveQueueRef.current = false  // wave phase — phase gate blocks moves; queue lock not needed
       setWaveEnemies(visible)
       setPhase('wave')
       arenaRef.current?.activateWavePhase(visible.map((e) => e.entityId))
@@ -463,15 +469,8 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
     setCurrentEncounterEnemies([enemy.defId])
     setReturnScreen(SCREEN_IDS.DUNGEON)
 
-    // Telegraph the encounter for a brief moment so the transition feels
-    // intentional rather than abrupt.
-    const enemyName = enemy.defId.replace(/_/g, ' ').toUpperCase()
-    setEncounterBanner(enemyName)
     setPhase('transitioning')
-    setTimeout(() => {
-      setEncounterBanner(null)
-      navigateTo(SCREEN_IDS.BATTLE)
-    }, DUNGEON_ENCOUNTER_BANNER_MS)
+    navigateTo(SCREEN_IDS.BATTLE)
   }
 
   // ── Resume after battle ────────────────────────────────────────────────────
@@ -513,7 +512,7 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
 
   const value: DungeonContextValue = {
     stageDef, mapDef, phase, partyTile, entityPositions,
-    defeatedEntityIds, waveEnemies, partyLeader, encounterBanner, tilesetError, bgColor,
+    defeatedEntityIds, waveEnemies, partyLeader, encounterFlashing, tilesetError, bgColor,
     openChest, arenaRef, moveParty, selectWaveEnemy, collectChest,
   }
 

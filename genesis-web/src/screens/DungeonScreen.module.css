@@ -223,9 +223,30 @@
   50%      { box-shadow: 0 0 0 0.25rem rgba(239, 68, 68, 0.25); }
 }
 
-/* Encounter telegraph banner — sliding overlay shown after a wave is selected
- * but before navigating to the BATTLE screen. Tells the player who they're
- * about to fight. */
+/* Encounter flash — rapid white bursts (Pokémon GBA style) before battle.
+ * Mounts after the 2 s spotted-shake phase; unmounts when battle screen loads. */
+.encounterFlash {
+  position: absolute;
+  inset: 0;
+  z-index: 70;
+  pointer-events: none;
+  background: #fff;
+  animation: encounterFlash 1s linear forwards;
+}
+
+@keyframes encounterFlash {
+  0%   { opacity: 0; }
+  10%  { opacity: 1; }
+  22%  { opacity: 0; }
+  36%  { opacity: 1; }
+  50%  { opacity: 0; }
+  64%  { opacity: 1; }
+  78%  { opacity: 0; }
+  88%  { opacity: 1; }
+  100% { opacity: 1; }
+}
+
+/* Encounter telegraph banner — kept for potential wave-phase future use */
 .encounterBanner {
   position: absolute;
   inset: 0;
