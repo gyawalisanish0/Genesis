@@ -89,22 +89,16 @@ export const LINES: OpeningLine[] = [
   { who: 'kali',       text: 'I have the biological record. Not the experience.' },
   { who: 'kali',       text: "The mind doesn't file reports." },
   { who: 'commander',  text: "No. It doesn't." },
-  { who: 'kali',       text: 'Daily status. Fleet readiness: nominal. No outstanding orders.' },
+  { who: 'kali',       text: 'Daily status. Fleet readiness: nominal.' },
+  { who: 'kali',       text: 'An electromagnetic pulse hit the sector relay overnight. Several fleet data servers are down. Some records were lost.' },
+  { who: 'kali',       text: 'I need your organisation designation back on record.' },
+  { who: 'input_org',  text: '' },
+  { who: 'kali',       text: 'Confirmed. [ORG] — logged.' },
+  { who: 'kali',       text: 'No outstanding orders.' },
 
   // ── Act 3 — Celan arrives ────────────────────────────────────────────────
 
   { who: 'narration',  text: 'Footsteps in the corridor. Fast.' },
   { who: 'celan',      text: "Something isn't right on Mars." },
   { who: 'celan',      text: "I've already sent my best members for intel." },
-  { who: 'commander',  text: '...' },
-  { who: 'kali',       text: 'Hugo Rekrot is already in the briefing room. Your team is standing by.' },
-  { who: 'kali',       text: 'Ready when you are, [NAME].' },
-
-  // ── Act 4 — Organisation setup ───────────────────────────────────────────
-
-  { who: 'kali',       text: 'One more thing before I log the deployment order.' },
-  { who: 'kali',       text: 'I need your organisation designation on record.' },
-  { who: 'input_org',  text: '' },
-  { who: 'kali',       text: 'Confirmed. [ORG] — logged.' },
-  { who: 'kali',       text: 'Deployment order is live, [NAME].' },
 ]
