@@ -8,8 +8,8 @@
       "animations": [{ "type": "dialogue" }],
       "lines": [
         { "speakerId": "hugo_001", "text": "Mars doesn't forgive mistakes. Neither do I." },
-        { "speakerId": "hugo_001", "text": "I've broken stronger things than this." },
-        { "speakerId": "hugo_001", "text": "Let's make this quick. I have work to get back to." }
+        { "speakerId": "hugo_001", "text": "I've held worse ground than this." },
+        { "speakerId": "hugo_001", "text": "Positions. Now." }
       ]
     },
     {
@@ -21,7 +21,7 @@
       ],
       "lines": [
         { "speakerId": "hugo_001", "text": "Stress fracture. Right where I calculated." },
-        { "speakerId": "hugo_001", "text": "Everything breaks eventually." },
+        { "speakerId": "hugo_001", "text": "Everything breaks. I just find the point." },
         { "speakerId": "hugo_001", "text": "Hold still." }
       ]
     },
@@ -46,6 +46,19 @@
       ],
       "lines": [
         { "speakerId": "hugo_001", "text": "Mass wins." }
+      ]
+    },
+    {
+      "narrativeId": "hugo_001_low_hp",
+      "trigger": { "event": "unit_low_hp", "actorId": "hugo_001", "chance": 0.75 },
+      "once": true,
+      "animations": [
+        { "type": "screen_flash", "colour": "var(--accent-danger)", "duration": 400 },
+        { "type": "dialogue" }
+      ],
+      "lines": [
+        { "speakerId": "hugo_001", "text": "Suit's taking structural damage. I can still hold." },
+        { "speakerId": "hugo_001", "text": "I've patched worse in the field." }
       ]
     },
     {
