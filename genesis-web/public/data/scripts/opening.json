@@ -52,6 +52,7 @@
     { "kind": "dialogue", "who": "narration", "text": "Corridor. You move fast." },
     { "kind": "dialogue", "who": "commander", "text": "What's wrong with my eyes..." },
     { "kind": "dialogue", "who": "narration", "text": "Control room. Screens everywhere. Everyone already at their stations." },
+    { "kind": "dialogue", "who": "kali",      "text": "Sekkarian Defence Force has gone dark. No response across all channels. Could be the same surge." },
     { "kind": "dialogue", "who": "narration", "text": "The door." },
     { "kind": "dialogue", "who": "celan",     "text": "Something isn't right on Mars." },
     { "kind": "dialogue", "who": "commander", "text": "..." }
