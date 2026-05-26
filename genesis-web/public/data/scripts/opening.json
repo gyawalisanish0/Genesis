@@ -27,6 +27,7 @@
     { "kind": "dialogue", "who": "creator", "text": "I've kept sounds before. I think. The keeping is clearer than what I kept." },
     { "kind": "dialogue", "who": "creator", "text": "I'm keeping this one." },
     { "kind": "dialogue", "who": "player",  "text": "What is this place?" },
+    { "kind": "dialogue", "who": "creator", "text": "You wouldn't have a word for it." },
     { "kind": "dialogue", "who": "creator", "text": "Oh you're going. I can feel you pulling back — fascinating. You never know when you're doing it." },
     { "kind": "dialogue", "who": "player",  "text": "Will I find you again?" },
     { "kind": "dialogue", "who": "creator", "text": "Oh, [NAME]." },
