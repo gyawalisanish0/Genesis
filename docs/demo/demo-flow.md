@@ -91,7 +91,13 @@ double meaning in mind — they must hold up to retrospection.
 
 **Screen: Commander's quarters / command deck.**
 
-The Commander wakes. Talks to **KALI** to get bearings.
+White flash. The Commander wakes. Three ambient narration beats ground
+the scene — the ceiling, the recycled air, the shape of something that
+was just here and is now gone.
+
+KALI greets the Commander by name. Vital stats, sleep duration, cortisol
+elevated. The Commander acknowledges the dream; KALI has the biological
+record but not the experience.
 
 > **KALI** — Kinetic Autonomous Learning Intelligence, v1.1.2
 > Developed by Kognitive Tech Limited
@@ -104,19 +110,37 @@ Every word is the right word. She does not speculate — she reports.
 She does not comfort — she informs. Not cold, just exact.
 A deliberate contrast to the Creator's chaos.
 
-The dream sits uneasily but there is no time to process it.
-KALI has no record of the dream. It did not happen in any system
-she can see.
+KALI delivers the daily status. Fleet readiness nominal. An EMP hit
+the sector relay overnight — several data servers are down, some
+records lost. She needs the Commander's organisation designation back
+on record. The Commander enters it.
+
+Footsteps in the corridor. Fast.
+
+**Celan** enters in person. Commander Celan, Fleet 13, Sekkarian
+Defence Force. He tells the Commander something isn't right on Mars.
+He has already sent his best members for intel — Hugo's team.
+
+The Commander's response: `...`
+
+The opening sequence ends here. The game begins.
 
 ---
 
-## Act 3 — The Alarm
+## Act 3 — Preparation
 
-**Sudden alert.**
+**After the opening sequence.**
 
-KALI reports a threat detected on Mars. The threat is an **intergalactic
-faction** — an organised force with reach beyond the solar system.
-Their presence on Mars is deliberate, not accidental.
+The Commander assembles and briefs the team. This is the pre-battle
+wizard moment — team composition, mission parameters.
+
+The deployed team are the playable characters in the dungeon.
+Their names, classes, and personalities are defined in the character
+roster.
+
+The threat on Mars is an **intergalactic faction** — an organised
+force with reach beyond the solar system. Their presence is
+deliberate, not accidental.
 
 Their name, motivation, and connection to the Creator's dream are
 intentionally withheld in the demo. Details are revealed progressively
@@ -128,17 +152,7 @@ his team.
 
 ---
 
-## Act 4 — Preparation
-
-The Commander assembles and briefs the team. This is the pre-battle
-wizard moment — team composition, mission parameters.
-
-The deployed team are the playable characters in the dungeon.
-Their names, classes, and personalities: TBD by designer.
-
----
-
-## Act 5 — Mars Campaign
+## Act 4 — Mars Campaign
 
 **3 dungeon stages on Mars.**
 
@@ -235,8 +249,7 @@ Escalation: bigger maps, more patrols, new enemy types per stage.
 
 ## Technical Notes
 
-- Commander name and fleet name stored in player profile / GameContext
-- The Creator's dream sequence uses the narrative layer (`NarrativeService.play`)
-- `blocking: true` on dream entries — full screen, no input during cutscene
-- Character creation screen needed before SplashScreen navigates to main menu
+- Commander name and organisation name entered during the opening sequence and stored in GameContext
+- The opening sequence uses `VisualNovelCanvas` with `public/data/scripts/opening.json` — not the narrative layer
+- `DreamScreen.tsx` is a thin wrapper: `<VisualNovelCanvas scriptId="opening" onComplete={→main-menu} />`
 - Deployed team defined in `stage.playerUnits` per stage JSON

@@ -20,7 +20,7 @@ export function DungeonScreen() {
 function DungeonLayout() {
   const { navigateTo } = useScreen()
   useBackButton(() => navigateTo(SCREEN_IDS.CAMPAIGN))
-  const { arenaRef, phase, stageDef, encounterBanner, mapDef, defeatedEntityIds, partyLeader, tilesetError, bgColor, openChest, collectChest } = useDungeonScreen()
+  const { arenaRef, phase, stageDef, encounterFlashing, mapDef, defeatedEntityIds, partyLeader, tilesetError, bgColor, openChest, collectChest } = useDungeonScreen()
 
   // Compute enemy progress (defeated / total) so the player can see how close
   // they are to clearing the stage at a glance.
@@ -43,7 +43,7 @@ function DungeonLayout() {
         {phase === 'wave'      && <WavePhaseUI />}
         {phase === 'loading'   && <LoadingOverlay />}
         {partyLeader           && <PartyHpPill leader={partyLeader} />}
-        {encounterBanner       && <EncounterBanner enemyName={encounterBanner} />}
+        {encounterFlashing     && <div className={styles.encounterFlash} aria-hidden />}
         {phase === 'exploring' && (
           <HintToaster id="dungeon-move" message="Tap arrows to move. Step on enemies to engage." />
         )}
@@ -67,15 +67,6 @@ function PartyHpPill({ leader }: { leader: { name: string; hp: number; maxHp: nu
         <div className={styles.hpBarFill} style={{ width: `${fraction * 100}%` }} />
       </div>
       <span className={styles.hpValue}>{leader.hp}/{leader.maxHp}</span>
-    </div>
-  )
-}
-
-function EncounterBanner({ enemyName }: { enemyName: string }) {
-  return (
-    <div className={styles.encounterBanner}>
-      <span className={styles.encounterTitle}>ENCOUNTER!</span>
-      <span className={styles.encounterEnemy}>{enemyName}</span>
     </div>
   )
 }

@@ -1,0 +1,227 @@
+/* VisualNovelCanvas — full-screen, text centred, dark/light phase */
+
+.canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.canvas::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 70% 50% at 50% 30%, #0b0b14 0%, #000 65%);
+  pointer-events: none;
+}
+
+/* ── Content block ───────────────────────────────────────────────────────── */
+
+.content {
+  position: relative;
+  width: 100%;
+  max-width: 26rem;
+  padding: 0 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+/* ── Speaker chip ────────────────────────────────────────────────────────── */
+
+.chip {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+  color: var(--text-muted);
+}
+
+.chip.creator   { color: var(--text-muted);    letter-spacing: 0.4em;  }
+.chip.player    { color: var(--text-secondary); letter-spacing: 0.18em; }
+.chip.kali      { color: var(--accent-info);    letter-spacing: 0.4em;  }
+.chip.commander { color: var(--text-primary);   letter-spacing: 0.12em; }
+.chip.celan     { color: var(--accent-gold);    letter-spacing: 0.4em;  }
+.chip.alert     { color: var(--accent-danger);  letter-spacing: 0.25em; animation: alertSnap 0.35s ease-out; }
+
+/* ── Dialogue text ───────────────────────────────────────────────────────── */
+
+.text {
+  font-size: 1rem;
+  line-height: 1.75;
+  min-height: 3.5rem;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.text.creator   { color: var(--text-secondary); font-style: italic; }
+.text.player    { color: var(--text-primary);   }
+.text.kali      { color: var(--text-primary);   }
+.text.commander { color: var(--text-secondary); }
+.text.celan     { color: var(--text-primary);   }
+.text.narration { color: var(--text-muted); font-style: italic; font-size: 0.9rem; }
+.text.alert     { color: var(--accent-danger); font-weight: 600; animation: alertSnap 0.25s ease-out; }
+
+/* ── Text effects ────────────────────────────────────────────────────────── */
+
+.text.shake { animation: textShake 0.45s ease-in-out; }
+.text.pulse { animation: textPulse 1.6s ease-in-out infinite; }
+.text.glow  { animation: textGlow  1.6s ease-in-out infinite; }
+.text.dim   { opacity: 0.5; }
+
+@keyframes textShake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-3px); }
+  40%       { transform: translateX(3px); }
+  60%       { transform: translateX(-2px); }
+  80%       { transform: translateX(2px); }
+}
+
+@keyframes textPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+@keyframes textGlow {
+  0%, 100% { text-shadow: none; }
+  50%       { text-shadow: 0 0 14px rgba(255, 255, 255, 0.55); }
+}
+
+/* ── Cursor ──────────────────────────────────────────────────────────────── */
+
+.cursor {
+  display: inline-block;
+  width: 0.45em;
+  height: 0.85em;
+  background: var(--text-muted);
+  margin-left: 0.1em;
+  vertical-align: -0.1em;
+  animation: blink 0.75s step-end infinite;
+}
+
+/* ── Input ───────────────────────────────────────────────────────────────── */
+
+.inputRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 3.5rem;
+  width: 100%;
+  justify-content: center;
+}
+
+.nameInput {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-primary);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1rem;
+  line-height: 1.75;
+  padding: 0.15rem 0;
+  outline: none;
+  caret-color: var(--text-primary);
+  text-align: center;
+  min-width: 10rem;
+}
+
+.nameInput::placeholder { color: var(--text-muted); font-style: italic; }
+
+.confirmBtn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0.2rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.confirmBtn:hover { color: var(--text-primary); border-color: rgba(255, 255, 255, 0.35); }
+
+/* ── Hint ────────────────────────────────────────────────────────────────── */
+
+.hint {
+  font-size: 0.52rem;
+  color: var(--text-muted);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-top: 1.5rem;
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* ── Flash transition ────────────────────────────────────────────────────── */
+
+.flash {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: #fff;
+  pointer-events: none;
+  animation: wakeFlash 0.95s ease-out forwards;
+}
+
+/* ── Light canvas (wake phase) ───────────────────────────────────────────── */
+
+.canvas.light { background: #f5f5f0; }
+
+.canvas.light::before {
+  background: radial-gradient(ellipse 70% 50% at 50% 30%, #eaeaf2 0%, #f5f5f0 65%);
+}
+
+.canvas.light .chip.kali      { color: var(--accent-info);   }
+.canvas.light .chip.commander { color: #1a1a1a;              }
+.canvas.light .chip.celan     { color: var(--accent-gold);   }
+.canvas.light .chip.alert     { color: var(--accent-danger); }
+
+.canvas.light .text.kali      { color: #1a1a1a; font-style: normal; }
+.canvas.light .text.commander { color: #444;    }
+.canvas.light .text.celan     { color: #1a1a1a; }
+.canvas.light .text.narration { color: rgba(0, 0, 0, 0.45); }
+.canvas.light .text.alert     { color: var(--accent-danger); }
+
+.canvas.light .cursor { background: #888; }
+.canvas.light .hint   { color: rgba(0, 0, 0, 0.3); }
+
+.canvas.light .nameInput {
+  color: #1a1a1a;
+  border-bottom-color: rgba(0, 0, 0, 0.2);
+  caret-color: #1a1a1a;
+}
+
+.canvas.light .nameInput::placeholder { color: rgba(0, 0, 0, 0.35); }
+.canvas.light .confirmBtn             { color: rgba(0, 0, 0, 0.45); border-color: rgba(0, 0, 0, 0.15); }
+.canvas.light .confirmBtn:hover       { color: #1a1a1a; border-color: rgba(0, 0, 0, 0.4); }
+
+/* ── Keyframes ───────────────────────────────────────────────────────────── */
+
+@keyframes wakeFlash {
+  0%   { opacity: 0; }
+  25%  { opacity: 1; }
+  100% { opacity: 1; }
+}
+
+@keyframes alertSnap {
+  from { opacity: 0; transform: translateY(-0.25rem); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}

@@ -3,7 +3,7 @@
 // Layer rules: no React imports; Capacitor platform check guards native paths.
 // All callers receive typed data; Zod validation is deferred to Wave C.
 
-import type { CharacterDef, ModeDef, StageDef, MapDef, TilesetDef, AnimationManifest, AnimSequenceManifest } from '../core/types'
+import type { CharacterDef, ModeDef, StageDef, MapDef, TilesetDef, AnimationManifest, AnimSequenceManifest, VNScriptDef } from '../core/types'
 import type { AsciiManifest, AsciiSequence, AsciiActionFrames } from '../ascii/types'
 import type { SkillDef, PassiveDef, StatusDef } from '../core/effects/types'
 import type { CharacterDialogueDef, LevelNarrativeDef } from '../core/narrative'
@@ -13,6 +13,7 @@ import type { CharacterDialogueDef, LevelNarrativeDef } from '../core/narrative'
 const cache = {
   characterIndex:      null as string[] | null,
   campaignIndex:       null as string[] | null,
+  vnScripts:           new Map<string, VNScriptDef>(),
   characters:          new Map<string, CharacterDef>(),
   characterSkills:     new Map<string, SkillDef[]>(),
   passives:            new Map<string, PassiveDef>(),
@@ -333,9 +334,19 @@ export function characterStatusIconUrl(defId: string, iconKey: string): string {
 }
 
 /** Test utility — clears all cached data between test cases. */
+export async function loadVNScript(scriptId: string): Promise<VNScriptDef> {
+  const cached = cache.vnScripts.get(scriptId)
+  if (cached) return cached
+  const raw  = await fetchJson(`data/scripts/${scriptId}.json`)
+  const data = raw as VNScriptDef
+  cache.vnScripts.set(scriptId, data)
+  return data
+}
+
 export function clearCache(): void {
   cache.characterIndex = null
   cache.campaignIndex  = null
+  cache.vnScripts.clear()
   cache.characters.clear()
   cache.characterSkills.clear()
   cache.passives.clear()

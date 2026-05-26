@@ -22,6 +22,8 @@ export interface DungeonArenaHandle {
   removeEntity(entityId: string): void
   activateWavePhase(selectableEntityIds: string[]): void
   deactivateWavePhase(): void
+  spotEntity(entityId: string): void
+  unspotEntity(entityId: string): void
   setTapCallback(cb: DungeonTapCallback | null): void
 }
 
@@ -89,6 +91,7 @@ function DungeonArena({ bgColor }, ref) {
   const entityGrayRef = useRef<Record<string, boolean>>({})
   const entityDefsRef = useRef<Record<string, EntityDef>>({})
   const waveRef       = useRef<Set<string>>(new Set())
+  const spottedRef    = useRef<Set<string>>(new Set())
   const partyRef      = useRef<{ x: number; y: number } | null>(null)
   const tapRef        = useRef<DungeonTapCallback | null>(null)
 
@@ -159,6 +162,16 @@ function DungeonArena({ bgColor }, ref) {
       waveRef.current = new Set()
       rerender()
     },
+    spotEntity(entityId) {
+      spottedRef.current = new Set([...spottedRef.current, entityId])
+      rerender()
+    },
+    unspotEntity(entityId) {
+      const next = new Set(spottedRef.current)
+      next.delete(entityId)
+      spottedRef.current = next
+      rerender()
+    },
     setTapCallback(cb) { tapRef.current = cb },
   }))
 
@@ -202,11 +215,12 @@ function DungeonArena({ bgColor }, ref) {
       const tileDef  = map.tileTypes[String(tileCode)]
       const art      = resolveTileArt(tilesetRef.current, tileDef?.id ?? 'floor', tileDef?.rotation ?? 0)
 
-      const isParty   = party?.x === tx && party?.y === ty
-      const entityId  = isParty ? undefined : cellEntity[key]
-      const entityDef = entityId ? entityDefsRef.current[entityId] : null
-      const isWave    = entityId ? waveRef.current.has(entityId) : false
-      const isGray    = entityId ? !!entityGrayRef.current[entityId] : false
+      const isParty    = party?.x === tx && party?.y === ty
+      const entityId   = isParty ? undefined : cellEntity[key]
+      const entityDef  = entityId ? entityDefsRef.current[entityId] : null
+      const isWave     = entityId ? waveRef.current.has(entityId) : false
+      const isGray     = entityId ? !!entityGrayRef.current[entityId] : false
+      const isSpotted  = entityId ? spottedRef.current.has(entityId) : false
 
       cells.push(
         <div key={key} className={styles.cell} onPointerDown={() => handleCellTap(tx, ty)}>
@@ -220,8 +234,9 @@ function DungeonArena({ bgColor }, ref) {
             <span className={[
               styles.entity,
               entityColorClass(entityDef),
-              isWave ? styles.wave : '',
-              isGray ? styles.gray : '',
+              isWave    ? styles.wave    : '',
+              isGray    ? styles.gray    : '',
+              isSpotted ? styles.spotted : '',
             ].filter(Boolean).join(' ')}>
               {entityChar(entityDef)}
             </span>

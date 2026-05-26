@@ -182,7 +182,7 @@ Genesis/
 │   ├── audio/                    # Sound files — {key}.webm + {key}.mp3 pairs
 │   └── src/
 │       ├── core/                 # Pure TS game logic — zero UI imports
-│       │   ├── types.ts          # StatBlockDef, CharacterDef, SkillDef, Unit, ModeDef, AppSettings, BattleResult, QualityTier, TilesetDef, AuraDef, AnimationStateDef, AnimationProjectileDef, AnimationManifest, AnimPhase, AnimSequenceManifest
+│       │   ├── types.ts          # StatBlockDef, CharacterDef, SkillDef, Unit, ModeDef, AppSettings, BattleResult, QualityTier, TilesetDef, AuraDef, AnimationStateDef, AnimationProjectileDef, AnimationManifest, AnimPhase, AnimSequenceManifest, VNScriptDef, VNLine, VNDialogueLine, VNInputLine, VNTransitionLine, VNPauseLine, VNSpeaker, VNEffect, VNSpeed
 │       │   ├── constants.ts      # All numeric constants: tick ranges, dice params, timing thresholds, BETWEEN_TURN_PAUSE_MS, NARRATIVE_* timings, QUALITY_* thresholds, DUNGEON_ENCOUNTER_BANNER_MS, HINT_TOASTER_DURATION_MS, HINT_STORAGE_PREFIX
 │       │   ├── screen-types.ts   # ScreenId, ScreenConfig, SafeAreaMode, ScreenLifecycleHooks
 │       │   ├── unit.ts           # Immutable Unit factory + mutation helpers (createUnit, takeDamage, healUnit, incrementActionCount, …)
@@ -219,7 +219,7 @@ Genesis/
 │       │   ├── backButtonRegistry.ts  # Module-level singleton: register/unregister/invoke one handler at a time
 │       │   └── useBackButton.ts       # Hook: registers handler, pushes URL-sentinel for web popstate interception
 │       ├── services/             # Side-effectful singletons; Capacitor allowed
-│       │   ├── DataService.ts    # JSON loader: loadCharacter, loadCharacterSkillDefs, loadMode, loadCharacterWithSkills, loadCharacterDialogue, loadLevelNarrative, loadTilesetDef, loadAnimationManifest, loadAnimSequenceManifest (all cached; loadAnimationManifest and loadAnimSequenceManifest return null silently when absent); characterPortraitUrl(defId) and characterStatusIconUrl(defId, iconKey) — synchronous URL helpers (no fetch)
+│       │   ├── DataService.ts    # JSON loader: loadCharacter, loadCharacterSkillDefs, loadMode, loadCharacterWithSkills, loadCharacterDialogue, loadLevelNarrative, loadTilesetDef, loadAnimationManifest, loadAnimSequenceManifest, loadVNScript(scriptId) (all cached; loadAnimationManifest and loadAnimSequenceManifest return null silently when absent); characterPortraitUrl(defId) and characterStatusIconUrl(defId, iconKey) — synchronous URL helpers (no fetch)
 │       │   ├── DisplayService.ts # Full-screen + StatusBar: Capacitor StatusBar.hide() on native; Fullscreen API on web
 │       │   ├── NarrativeService.ts # Global narrative bus: emit(), play(), subscribe(), subscribeDirect(), registerEntries(), unregisterEntries(), getAllEntries()
 │       │   ├── ResolutionService.ts # Quality tier: rAF FPS benchmark → High/Medium/Low; sets data-quality on documentElement for CSS gates; localStorage persistence; stepUp(); subscribe()
@@ -229,9 +229,11 @@ Genesis/
 │       │   ├── useScrollAwarePointer.ts  # Tap / hold / scroll gesture discriminator (pointer-delta based)
 │       │   └── useViewportScale.ts       # portrait: scale=w/360; landscape: scale=min(w/360,h/640); innerHeight=h/scale; updates on resize/orientationchange/visualViewport
 │       ├── hooks/                # Shared React hooks (data fetching, UI state)
-│       │   └── useRosterData.ts          # Loads character index + all CharacterDef via DataService (cached)
+│       │   ├── useRosterData.ts          # Loads character index + all CharacterDef via DataService (cached)
+│       │   └── useVNPlayer.ts            # VN script player: typewriter, speed/effect/sfx/autoAdvance, transitions, inputs, canvas phase
 │       ├── screens/              # React screen components (one .tsx + one .module.css each)
 │       │   ├── SplashScreen.tsx          # Real DataService preload (characters + campaign + narrative) → auto-navigate to main menu
+│       │   ├── DreamScreen.tsx           # 9-line wrapper — renders <VisualNovelCanvas scriptId="opening" onComplete={→main-menu} />; no logic
 │       │   ├── MainMenuScreen.tsx        # PLAY / ROSTER / SETTINGS nav; quit confirm on back
 │       │   ├── CampaignScreen.tsx        # Stage select + unlocking; primary game flow for public demo
 │       │   ├── DungeonScreen.tsx         # Turn-based dungeon exploration; stage objective pill, party HP pill, encounter banner, HintToaster hints
@@ -276,7 +278,9 @@ Genesis/
 │       │   ├── NarrativePortraitFlyIn.tsx # Character portrait slides in from left/right
 │       │   ├── NarrativeFloatingText.tsx # Floating impact text (e.g. "CRITICAL!")
 │       │   ├── HintToaster.tsx           # One-shot contextual hint chip; localStorage-backed; auto-dismiss + tap-dismiss
-│       │   └── HintToaster.module.css
+│       │   ├── HintToaster.module.css
+│       │   ├── VisualNovelCanvas.tsx     # Full-screen VN player: loads VNScriptDef via DataService, delegates to useVNPlayer; renders dark/light canvas, speaker chips, typewriter text, name input, white-flash transition
+│       │   └── VisualNovelCanvas.module.css
 │       ├── styles/
 │       │   └── tokens.css        # Full design-token set (colours, typography, spacing, radius, motion, safe-area, --app-scale)
 │       ├── App.tsx               # Transform-scale viewport + HashRouter + ScreenProvider + 7-route declaration
@@ -490,6 +494,7 @@ public/data/campaign/{stageId}/stage.json      # StageDef (playerUnits, moveRang
 public/data/campaign/{stageId}/map.json        # MapDef (tilemap, entities, wavePhase, fogOfWar, tilesetKey?)
 public/data/campaign/{stageId}/narrative.json  # LevelNarrativeDef — dungeon-specific story beats + cutscenes
 public/data/tilesets/{key}/tileset.json        # TilesetDef — sourceSize, tiles (id→PNG), optional pending stubs
+public/data/scripts/{scriptId}.json            # VNScriptDef — visual novel script (e.g. opening.json)
 public/images/characters/{id}/portrait.png     # Character portrait — HUD panel, timeline markers, roster, pre-battle, result screen
 public/images/characters/{id}/{state_key}/     # Animation frames — 0.png, 1.png … (0-indexed); state_key matches animations.json
 public/images/characters/{id}/UI/Status/{key}.png  # Status/passive chip icons — key matches StatusDef.ui.chip.icon
