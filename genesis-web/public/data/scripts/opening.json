@@ -49,7 +49,10 @@
     { "kind": "dialogue", "who": "kali",      "text": "Your organisation designation — I need it back." },
     { "kind": "input",    "inputKey": "organisationName", "placeholder": "organisation name..." },
     { "kind": "dialogue", "who": "kali",      "text": "[ORG]. Logged." },
-    { "kind": "dialogue", "who": "narration", "text": "Footsteps in the corridor. Fast." },
+    { "kind": "dialogue", "who": "narration", "text": "Corridor. You move fast." },
+    { "kind": "dialogue", "who": "commander", "text": "What's wrong with my eyes..." },
+    { "kind": "dialogue", "who": "narration", "text": "Control room. Screens everywhere. Everyone already at their stations." },
+    { "kind": "dialogue", "who": "narration", "text": "The door." },
     { "kind": "dialogue", "who": "celan",     "text": "Something isn't right on Mars." },
     { "kind": "dialogue", "who": "commander", "text": "..." }
 
