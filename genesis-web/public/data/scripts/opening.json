@@ -55,7 +55,10 @@
     { "kind": "dialogue", "who": "kali",      "text": "Sekkarian Defence Force has gone dark. No response across all channels. Could be the same surge." },
     { "kind": "dialogue", "who": "narration", "text": "The door." },
     { "kind": "dialogue", "who": "celan",     "text": "Something isn't right on Mars." },
-    { "kind": "dialogue", "who": "commander", "text": "..." }
+    { "kind": "dialogue", "who": "commander", "text": "What? How? This is strange and—" },
+    { "kind": "dialogue", "who": "celan",     "text": "I've already sent my best crew. Hours ago." },
+    { "kind": "dialogue", "who": "celan",     "text": "Can I have a communicator?" },
+    { "kind": "dialogue", "who": "commander", "text": "Sure." }
 
   ]
 }
