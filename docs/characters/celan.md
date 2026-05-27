@@ -39,12 +39,23 @@ has already moved past whatever they were about to say.
 
 No ceremony. No preamble. He trusts people to keep up.
 
+Sharp wit — but always on topic. He does not go out of his way to be
+funny. The humour surfaces naturally mid-sentence, usually the driest
+possible observation about whatever is happening, and then he moves on
+without waiting for a reaction. It lands because it is accurate, not
+because he performed it.
+
+He is authoritative the same way — not loud, not heavy. Just the person
+in the room who has already decided what happens next.
+
 ---
 
 ## Voice
 
 Short sentences. Gets to the point before the point is obvious.
 Interrupts when the moment calls for it. Asks directly for what he needs.
+Occasionally lands a dry line in the middle of something serious —
+never breaks stride.
 
 **Examples from the opening:**
 
