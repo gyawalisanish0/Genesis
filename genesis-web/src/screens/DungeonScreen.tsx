@@ -2,7 +2,7 @@ import { ScreenShell }     from '../navigation/ScreenShell'
 import { useScreen }       from '../navigation/useScreen'
 import { SCREEN_IDS }      from '../navigation/screenRegistry'
 import { useBackButton }   from '../input/useBackButton'
-import { DungeonProvider, useDungeonScreen } from './DungeonContext'
+import { DungeonProvider, useDungeonScreen, type EnemyParty } from './DungeonContext'
 import { DungeonArena }    from '../components/DungeonArena'
 import { HintToaster }     from '../components/HintToaster'
 import { ErrorToaster }    from '../components/ErrorToaster'
@@ -48,7 +48,7 @@ function DungeonLayout() {
           <HintToaster id="dungeon-move" message="Tap arrows to move. Step on enemies to engage." />
         )}
         {phase === 'wave' && (
-          <HintToaster id="dungeon-wave" message="Multiple foes spotted — tap one to engage." />
+          <HintToaster id="dungeon-wave" message="Multiple groups in range — tap one to engage." />
         )}
         <ErrorToaster message={tilesetError} />
         {openChest && <ChestOverlay chest={openChest} onCollect={collectChest} />}
@@ -108,23 +108,34 @@ function DPad() {
 }
 
 function WavePhaseUI() {
-  const { waveEnemies, selectWaveEnemy } = useDungeonScreen()
+  const { waveParties, selectWaveParty } = useDungeonScreen()
   return (
     <div className={styles.waveUi}>
-      <p className={styles.waveLabel}>TAP AN ENEMY TO ENGAGE</p>
+      <p className={styles.waveLabel}>TAP A GROUP TO ENGAGE</p>
       <div className={styles.waveList}>
-        {waveEnemies.map((e) => (
+        {waveParties.map((p) => (
           <button
-            key={e.entityId}
+            key={p.partyId}
             className={styles.waveBtn}
-            onPointerDown={() => selectWaveEnemy(e.entityId)}
+            onPointerDown={() => selectWaveParty(p.partyId)}
           >
-            {e.defId.replace('_', ' ').toUpperCase()}
+            {formatPartyLabel(p)}
           </button>
         ))}
       </div>
     </div>
   )
+}
+
+function formatPartyLabel(party: { members: { defId: string }[] }): string {
+  const counts = new Map<string, number>()
+  for (const m of party.members) {
+    const label = m.defId.replace(/_\d+$/, '').replace(/_/g, ' ').toUpperCase()
+    counts.set(label, (counts.get(label) ?? 0) + 1)
+  }
+  return [...counts.entries()]
+    .map(([label, n]) => (n > 1 ? `${n}× ${label}` : label))
+    .join(' + ')
 }
 
 function LoadingOverlay() {

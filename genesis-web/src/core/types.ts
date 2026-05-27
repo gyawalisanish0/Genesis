@@ -184,6 +184,7 @@ export interface EnemyEntityDef extends EntityBase {
   defId:       string
   patrol:      { x: number; y: number }[]
   visualRange?: number
+  partyId?:    string
 }
 
 export interface NpcEntityDef extends EntityBase {

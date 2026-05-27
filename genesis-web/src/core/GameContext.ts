@@ -17,9 +17,10 @@ interface GameStore {
   battleResult:  BattleResult | null
 
   // Campaign / dungeon
-  dungeonState:             DungeonState | null
-  currentEncounterEnemies:  string[]    // defIds set by DungeonContext before navigating to battle
-  returnScreen:             ScreenId | null  // screen to return to after BattleResultScreen
+  dungeonState:              DungeonState | null
+  currentEncounterEnemies:   string[]  // defIds — consumed by BattleContext to load characters
+  currentEncounterEntityIds: string[]  // entityIds — consumed by DungeonContext to mark party defeated
+  returnScreen:              ScreenId | null  // screen to return to after BattleResultScreen
 
   // Commander identity — set in dream sequence, used by KALI and briefing screens
   commanderName:  string
@@ -36,6 +37,7 @@ interface GameStore {
   setBattleResult(result: BattleResult): void
   setDungeonState(state: DungeonState | null): void
   setCurrentEncounterEnemies(ids: string[]): void
+  setCurrentEncounterEntityIds(ids: string[]): void
   setReturnScreen(screen: ScreenId | null): void
   setCommanderName(name: string): void
   setOrganisationName(name: string): void
@@ -44,14 +46,15 @@ interface GameStore {
 }
 
 export const useGameStore = create<GameStore>((set) => ({
-  selectedMode:             null,
-  selectedTeam:             [],
-  selectedTeamIds:          [],
-  enemies:                  [],
-  battleResult:             null,
-  dungeonState:             null,
-  currentEncounterEnemies:  [],
-  returnScreen:             null,
+  selectedMode:              null,
+  selectedTeam:              [],
+  selectedTeamIds:           [],
+  enemies:                   [],
+  battleResult:              null,
+  dungeonState:              null,
+  currentEncounterEnemies:   [],
+  currentEncounterEntityIds: [],
+  returnScreen:              null,
   commanderName:            '',
   organisationName:         '',
   settings:                 { ...DEFAULT_SETTINGS },
@@ -62,9 +65,10 @@ export const useGameStore = create<GameStore>((set) => ({
   setEnemies:         (enemies) => set({ enemies }),
   setBattleResult:    (result)  => set({ battleResult: result }),
 
-  setDungeonState:            (state)  => set({ dungeonState: state }),
-  setCurrentEncounterEnemies: (ids)    => set({ currentEncounterEnemies: ids }),
-  setReturnScreen:            (screen) => set({ returnScreen: screen }),
+  setDungeonState:               (state)  => set({ dungeonState: state }),
+  setCurrentEncounterEnemies:    (ids)    => set({ currentEncounterEnemies: ids }),
+  setCurrentEncounterEntityIds:  (ids)    => set({ currentEncounterEntityIds: ids }),
+  setReturnScreen:               (screen) => set({ returnScreen: screen }),
   setCommanderName:           (name)   => set({ commanderName: name }),
   setOrganisationName:        (name)   => set({ organisationName: name }),
 

@@ -47,6 +47,7 @@
         { "x": 9,  "y": 4 }
       ],
       "visualRange": 1,
+      "partyId": "party_001",
       "narrativeId": "stage_003_guard_spotted"
     },
 
@@ -62,6 +63,7 @@
         { "x": 13, "y": 5 }
       ],
       "visualRange": 1,
+      "partyId": "party_001",
       "narrativeId": "stage_003_guard_spotted"
     },
 
@@ -77,6 +79,7 @@
         { "x": 6, "y": 3 }
       ],
       "visualRange": 1,
+      "partyId": "party_001",
       "narrativeId": "stage_003_guard_spotted"
     },
 
@@ -92,6 +95,7 @@
         { "x": 5, "y": 9  }
       ],
       "visualRange": 1,
+      "partyId": "party_002",
       "narrativeId": "stage_003_guard_spotted"
     },
 
@@ -107,6 +111,7 @@
         { "x": 1, "y": 14 }
       ],
       "visualRange": 1,
+      "partyId": "party_002",
       "narrativeId": "stage_003_guard_spotted"
     },
 
@@ -122,6 +127,7 @@
         { "x": 7,  "y": 12 }
       ],
       "visualRange": 1,
+      "partyId": "party_002",
       "narrativeId": "stage_003_guard_spotted"
     },
 
@@ -135,6 +141,7 @@
         { "x": 13, "y": 11 }
       ],
       "visualRange": 1,
+      "partyId": "party_002",
       "narrativeId": "stage_003_guard_spotted"
     },
 
