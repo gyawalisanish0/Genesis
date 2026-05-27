@@ -115,7 +115,7 @@ See `docs/demo/demo-flow.md` for the full character creation flow.
 |---|---|---|
 | Hugo | 21 | 31 |
 | Lisa Rekrot | TBD | TBD |
-| Celan | TBD | TBD |
+| Celan | 45 SK (~47 Earth) | ~55 SK (~57 Earth) |
 | Zorin | TBD | TBD |
 | Luka | TBD (~late teens, youngest) | TBD |
 | Arina | TBD | TBD |
