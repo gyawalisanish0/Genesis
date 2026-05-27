@@ -83,7 +83,7 @@ Locked: Celan, Zorin, Luka, Dyson, Morter, Arina, Husty, Lisa, Voltas.
 
 ---
 
-### 2109 — The Game *(demo / first stage)*
+### 2109 — Arc 02: Unknown Relay *(demo / first stage)*
 *Hugo is 31. Mars deployment under the Commander.*
 
 **What's locked:**
@@ -142,4 +142,4 @@ See `docs/demo/demo-flow.md` for the full character creation flow.
 |---|---|---|---|
 | Arc 01 — First Contact | 2099 | Sekkarian Defense Force | Written |
 | Arc 02 – ? — Fleet Years | 2099–2109 | Sekkarian Defense Force | TBD |
-| The Game — Mars | 2109 | Commander's fleet | TBD |
+| Arc 03 — Unknown Relay | 2109 | Commander's fleet | In progress |
