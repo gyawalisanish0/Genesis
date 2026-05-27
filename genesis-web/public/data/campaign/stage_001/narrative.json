@@ -13,7 +13,8 @@
         { "speakerId": "celan_001",  "text": "Hugo, are you there?" },
         { "speakerId": "hugo_001",   "text": "Just landed. Strong radio signal nearby." },
         { "speakerId": "celan_001",  "text": "Report anything, ASAP." },
-        { "speakerId": "hugo_001",   "text": "Husty, ready? Navigation is down. I think we should explore." },
+        { "speakerId": "hugo_001",   "text": "Husty, ready?" },
+        { "speakerId": "husty_001",  "text": "Navigation is not working properly. I think we should explore." },
         { "speakerId": "tara_001",   "text": "Let's go then." }
       ]
     },
