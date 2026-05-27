@@ -180,7 +180,7 @@ Stats and skill kits for each: TBD during character design phase.
 | Stage | Name | Grid | Patrols | New enemies |
 |---|---|---|---|---|
 | `stage_001` | Threat | 12×20 | 2 | Netrolume grunt |
-| `stage_002` | TBD | 14×22 | 4 | + Netrolume elite |
+| `stage_002` | Nostalgia | 18×14 | 4 | + Kiragen combatant |
 | `stage_003` | TBD | 16×24 | 6 | + Kiragen combatant + controller |
 
 Objective across all stages: reach the exit.
