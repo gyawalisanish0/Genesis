@@ -69,6 +69,34 @@ ranges rather than exact figures:
 
 ---
 
+## Current Timeline Anchor
+
+| Calendar | Year |
+|---|---|
+| Earth (AD) | 2100 |
+| Sekkar (SK) | ~5324 |
+
+This is the reference point for the demo. All character birth years are
+recorded against this anchor so age is always derivable rather than hardcoded.
+
+**Deriving age at current timeline:**
+```
+age (SK) = 5324 − birth year (SK)
+age (Earth) = 2100 − birth year (Earth)
+```
+
+**Writing convention for character docs:**
+
+Use birth year, not age:
+
+> *Born: SK 5264 / Earth ~2037*
+> *(60 SK years old at current timeline — ≈ 63 Earth years)*
+
+Age stated in parentheses is a convenience note only. The birth year is the
+canonical fact.
+
+---
+
 ## Notes
 
 - The Sekkarian calendar has no documented month system yet — days and years
