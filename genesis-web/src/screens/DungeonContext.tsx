@@ -369,8 +369,20 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
       const curIdx  = patrol.findIndex((p) => p.x === cur.x && p.y === cur.y)
       const nextIdx = (curIdx + 1) % patrol.length
       const next    = patrol[nextIdx]
-      newPositions[enemy.entityId] = next
 
+      const tileBlocked    = !isTilePassable(map, next.x, next.y)
+      const partyBlocking  = partyRef.current?.x === next.x && partyRef.current?.y === next.y
+      const entityBlocking = Object.entries(newPositions).some(
+        ([id, pos]) => id !== enemy.entityId && pos.x === next.x && pos.y === next.y,
+      )
+
+      if (tileBlocked || partyBlocking || entityBlocking) {
+        pending--
+        if (pending === 0) finish()
+        continue
+      }
+
+      newPositions[enemy.entityId] = next
       arenaRef.current?.setEntityPosition(enemy.entityId, next.x, next.y, true, () => {
         pending--
         if (pending === 0) finish()
