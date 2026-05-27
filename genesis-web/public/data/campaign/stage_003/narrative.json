@@ -1,0 +1,39 @@
+{
+  "type": "narrative",
+  "levelId": "stage_003",
+  "entries": [
+
+    {
+      "narrativeId": "stage_003_intro",
+      "once": true,
+      "sequence": true,
+      "blocking": true,
+      "priority": 20,
+      "animations": [{ "type": "dialogue" }],
+      "lines": [
+        { "speakerId": "hugo_001", "text": "TBD" }
+      ]
+    },
+
+    {
+      "narrativeId": "stage_003_guard_spotted",
+      "once": false,
+      "animations": [
+        { "type": "screen_flash", "colour": "var(--accent-danger)", "duration": 400 },
+        { "type": "floating_text", "text": "SPOTTED!", "colour": "var(--accent-danger)" }
+      ]
+    },
+
+    {
+      "narrativeId": "stage_003_exit_reached",
+      "once": true,
+      "sequence": true,
+      "priority": 20,
+      "animations": [{ "type": "dialogue" }],
+      "lines": [
+        { "speakerId": "hugo_001", "text": "TBD" }
+      ]
+    }
+
+  ]
+}
