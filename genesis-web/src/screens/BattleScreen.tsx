@@ -32,6 +32,7 @@ import type { StatusChipData } from '../components/StatusChipBar'
 import type { Unit } from '../core/types'
 import { characterStatusIconUrl } from '../services/DataService'
 import { AsciiPortrait } from '../components/AsciiPortrait'
+import type { TurnDisplayUnitData } from '../components/AsciiArena'
 import styles from './BattleScreen.module.css'
 
 // ── Status chip helpers ──────────────────────────────────────────────────────
@@ -654,13 +655,35 @@ function TargetSelectOverlay() {
 
 // ── Battle layout ───────────────────────────────────────────────────────────
 function BattleLayout() {
-  const { arenaRef, isPaused, setPaused, isLoading, playerUnits, diceResult, skipDice, inspectingSkill, setInspectingSkill, battleError } = useBattleScreen()
+  const { arenaRef, isPaused, setPaused, isLoading, playerUnits, diceResult, skipDice, inspectingSkill, setInspectingSkill, battleError, leader, getChipDef, suppressedChipIds } = useBattleScreen()
   const navigate    = useNavigate()
   const lastBackRef = useRef(0)
   const createHandler = useScrollAwarePointer()
   const [logOpen, setLogOpen] = useState(false)
   const [inspectingChip, setInspectingChip] = useState<StatusChipData | null>(null)
   useScreen()
+
+  // Live player figure info — mirrors portrait panel data in the acting arena column.
+  const playerFigureInfo = useMemo<TurnDisplayUnitData | undefined>(() => {
+    if (!leader) return undefined
+    const shieldHp = leader.statusSlots
+      .filter(s => typeof s.payload?.shieldHp === 'number' && (s.payload.shieldHp as number) > 0)
+      .reduce((sum, s) => sum + (s.payload.shieldHp as number), 0)
+    return {
+      name:              leader.name,
+      className:         leader.className,
+      rarity:            leader.rarity,
+      hp:                leader.hp,
+      maxHp:             leader.maxHp,
+      ap:                leader.ap,
+      maxAp:             leader.maxAp,
+      secondaryResource: leader.secondaryResource,
+      statusSlots:       leader.statusSlots
+        .filter(s => !suppressedChipIds.has(s.id))
+        .map(s => ({ id: s.id, name: s.name, stacks: s.stacks, duration: s.duration })),
+      shieldHp,
+    }
+  }, [leader, suppressedChipIds])
 
   // Redirect silently to pre-battle if no team was confirmed (direct URL access, etc.).
   useEffect(() => {
@@ -717,7 +740,12 @@ function BattleLayout() {
       <BattleTimeline />
       <div className={styles.main}>
         <div className={styles.arenaWrap}>
-          <BattleArena ref={arenaRef} />
+          <BattleArena
+            ref={arenaRef}
+            playerFigureInfo={playerFigureInfo}
+            resolveChip={getChipDef}
+            onChipTap={setInspectingChip}
+          />
           {diceResult && (
             <button
               className={styles.diceSkipHotzone}

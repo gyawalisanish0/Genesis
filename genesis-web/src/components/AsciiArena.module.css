@@ -55,8 +55,8 @@
   flex: 1;
   display: flex;
   justify-content: space-around;
-  align-items: center;
-  padding: 1rem 0.5rem;
+  align-items: flex-start;
+  padding: 0.75rem 0.5rem 0.5rem;
   gap: 0.5rem;
 }
 
@@ -76,13 +76,11 @@
   transform-origin: center center;
 }
 
-
-
 .figureWrap {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
   flex: 1;
 }
 
@@ -92,49 +90,43 @@
   opacity: 0.3;
 }
 
+/* ── Figure info panel (below figure) ─────────────────────────────────────── */
+
 .figureInfo {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 0.2rem;
+  width: 90%;
+  max-width: 9rem;
 }
 
 .figureName {
   font-size: 0.65rem;
-  color: var(--text-secondary);
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-/* ── Secondary resource bar ───────────────────────────────────────────────── */
-/* Thin horizontal bar above arena figure; only rendered when value > 0.      */
-
-.secBarTrack {
-  width: 80%;
-  max-width: 6rem;
-  height: 4px;
-  background: var(--bg-elevated);
-  border-radius: 2px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
   overflow: hidden;
-  flex-shrink: 0;
+  text-overflow: ellipsis;
+  text-align: center;
 }
 
-.secBarFill {
-  height: 100%;
-  background: var(--accent-info);
-  border-radius: 2px;
-  transition: width var(--motion-bar);
-  box-shadow: 0 0 4px var(--accent-info);
-}
+/* ── Bar rows (HP / AP / SP) ───────────────────────────────────────────────── */
 
-/* ── HP + shield bar ──────────────────────────────────────────────────────── */
-
-.barOuter {
+.barRow {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  width: 100%;
-  max-width: 6rem;
+  gap: 0.2rem;
+}
+
+.barRowLabel {
+  font-size: 0.5rem;
+  color: var(--text-muted);
+  width: 1rem;
+  text-align: right;
+  flex-shrink: 0;
+  letter-spacing: 0.03em;
 }
 
 .barTrack {
@@ -146,6 +138,15 @@
   overflow: hidden;
 }
 
+.barValue {
+  font-size: 0.5rem;
+  color: var(--text-secondary);
+  width: 1.5rem;
+  text-align: left;
+  flex-shrink: 0;
+}
+
+/* HP fill — red */
 .hpFill {
   height: 100%;
   background: var(--accent-danger);
@@ -153,7 +154,7 @@
   transition: width var(--motion-bar);
 }
 
-/* Semi-transparent white shield overlay — controlled entirely by shieldHp from core */
+/* Shield overlay — semi-transparent white pulse, core-driven */
 .shieldOverlay {
   position: absolute;
   top: 0;
@@ -171,23 +172,60 @@
   50%       { opacity: 0.75; }
 }
 
-.barLabel {
-  font-size: 0.5rem;
-  color: var(--text-primary);
-  white-space: nowrap;
-  flex-shrink: 0;
+/* AP fill — blue */
+.apFill {
+  height: 100%;
+  background: var(--accent-info);
+  border-radius: 2px;
+  transition: width var(--motion-bar);
 }
 
-.barMax {
-  color: var(--text-muted);
+/* Secondary resource fill — same blue, dimmer to distinguish from AP */
+.secFill {
+  height: 100%;
+  background: var(--accent-info);
+  border-radius: 2px;
+  opacity: 0.65;
+  box-shadow: 0 0 3px var(--accent-info);
+  transition: width var(--motion-bar);
 }
 
-.shieldLabel {
-  font-size: 0.48rem;
-  color: rgba(255, 255, 255, 0.8);
-  white-space: nowrap;
+/* ── Status chip dots ──────────────────────────────────────────────────────── */
+
+.chipDots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  justify-content: center;
+  margin-top: 0.1rem;
+}
+
+/* Square chip dot — shows ASCII center character or first letter of label */
+.chipDot {
+  width:  1.25rem;
+  height: 1.25rem;
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--chip-colour, var(--accent-genesis)) 12%, var(--bg-elevated));
+  border: 1px solid color-mix(in srgb, var(--chip-colour, var(--accent-genesis)) 40%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
   flex-shrink: 0;
-  animation: shieldPulse 2s ease-in-out infinite;
+  transition: background var(--motion-button);
+}
+
+.chipDot:active {
+  background: color-mix(in srgb, var(--chip-colour, var(--accent-genesis)) 25%, var(--bg-elevated));
+}
+
+.chipDotSymbol {
+  font-family: 'Courier New', monospace;
+  font-size: 0.55rem;
+  line-height: 1;
+  color: var(--chip-colour, var(--accent-genesis));
+  text-shadow: 0 0 4px var(--chip-colour, var(--accent-genesis));
+  pointer-events: none;
 }
 
 /* ── Projectile ────────────────────────────────────────────────────────────── */

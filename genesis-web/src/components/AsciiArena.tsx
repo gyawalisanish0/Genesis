@@ -11,16 +11,17 @@
 // to the engine. BattleContext and BattleEngine require zero changes.
 
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, useCallback } from 'react'
-import type { AnimationManifest, AnimationProjectileDef, AnimPhase } from '../core/types'
-import type { TurnDisplayData } from '../ascii/types'
+import type { AnimationManifest, AnimationProjectileDef, AnimPhase, StatusChipDef } from '../core/types'
+import type { TurnDisplayData, TurnDisplayUnitData } from '../ascii/types'
 import { AsciiAnimEngine } from '../ascii/AsciiAnimEngine'
 import type { AsciiArenaFrame, AnimSignal } from '../ascii/types'
 import { SymbolFigure } from './SymbolFigure'
+import type { StatusChipData } from './StatusChipBar'
 import styles from './AsciiArena.module.css'
 
 // ── Re-export handle types so BattleContext import path stays unchanged ────────
 
-export type { TurnDisplayData }
+export type { TurnDisplayData, TurnDisplayUnitData }
 
 export interface BattleArenaHandle {
   setTurnState(
@@ -50,6 +51,17 @@ export interface BattleArenaHandle {
   hideTurnDisplay(): void
 }
 
+// ── Props ─────────────────────────────────────────────────────────────────────
+
+interface AsciiArenaProps {
+  /** Live leader data shown in the acting column when actor === null (player turn). */
+  playerFigureInfo?: TurnDisplayUnitData
+  /** Resolves StatusChipDef for a given status ID — passed from BattleScreen. */
+  resolveChip?:      (id: string) => StatusChipDef | null
+  /** Called when a chip dot in the figure info is tapped. */
+  onChipTap?:        (chip: StatusChipData) => void
+}
+
 // ── Generic palette (used until character-specific AsciiManifest loads) ───────
 
 const GENERIC_PALETTE: Record<string, string> = {
@@ -66,9 +78,6 @@ const BURST_DISMISS_MS    = 900
 const FEEDBACK_DISMISS_MS = 1200
 
 // ── Dice roll animation ───────────────────────────────────────────────────────
-// The outcome is known immediately but hidden during a 1200ms flicker phase.
-// Interval starts at 60ms and slows (quadratic ease) to ~220ms as it approaches
-// DICE_ROLL_DURATION_MS, simulating a die losing momentum before stopping.
 const DICE_ROLL_DURATION_MS = 800
 const DICE_ROLL_OUTCOMES    = ['Hit', 'Evade', 'Boosted', 'Fail', 'Miss'] as const
 const DICE_SYMBOL: Record<string, string> = {
@@ -86,57 +95,117 @@ interface DiceState    { outcome: string; key: number }
 interface BurstState   { symbol: string;  colour: string; key: number }
 interface FeedbackState{ text: string;    colour: string; key: number }
 
-// ── Secondary resource bar ───────────────────────────────────────────────────
-//
-// Thin horizontal bar shown above each arena figure when that unit has a
-// non-zero secondaryResource (0–100). Colour: --accent-info (dark blue).
-// Hidden entirely when value is 0 or absent — the bar must not be a permanent
-// fixture; it signals an active mechanic (e.g. tactical scan, hyper gauge).
+// ── Chip dot — compact tappable status indicator ──────────────────────────────
 
-interface SecondaryBarProps { value: number }
+interface ChipDotProps {
+  colour:  string
+  ascii?:  string[]
+  label:   string
+  onTap:   () => void
+}
 
-function SecondaryBar({ value }: SecondaryBarProps) {
-  const pct = Math.max(0, Math.min(100, value))
+function extractAsciiCenter(ascii: string[]): string {
+  const mid = ascii[Math.floor(ascii.length / 2)] ?? ascii[0] ?? ''
+  return [...mid][Math.floor([...mid].length / 2)] ?? '◈'
+}
+
+function ChipDot({ colour, ascii, label, onTap }: ChipDotProps) {
   return (
-    <div className={styles.secBarTrack}>
-      <div className={styles.secBarFill} style={{ width: `${pct}%` }} />
+    <div
+      className={styles.chipDot}
+      style={{ '--chip-colour': colour } as React.CSSProperties}
+      onPointerDown={(e) => { e.stopPropagation(); onTap() }}
+    >
+      <span className={styles.chipDotSymbol}>
+        {ascii ? extractAsciiCenter(ascii) : label[0]}
+      </span>
     </div>
   )
 }
 
-// ── HP + shield bar ──────────────────────────────────────────────────────────
-//
-// The bar renders HP as a CSS fill. When shieldHp > 0, a semi-transparent
-// white overlay sits on top of the left portion, showing how much of the
-// unit's max HP is currently shielded. Width = shieldHp / maxHp clamped 0..1.
-// A pulse animation keeps the overlay visually alive without distracting.
+// ── Figure info panel — name, bars, chips ─────────────────────────────────────
 
-interface HpBarProps {
-  hp:       number
-  maxHp:    number
-  shieldHp: number
+interface FigureInfoPanelProps {
+  data:         TurnDisplayUnitData
+  resolveChip?: (id: string) => StatusChipDef | null
+  onChipTap?:   (chip: StatusChipData) => void
 }
 
-function HpBar({ hp, maxHp, shieldHp }: HpBarProps) {
-  const hpPct     = maxHp > 0 ? Math.max(0, Math.min(1, hp / maxHp))       : 0
-  const shieldPct = maxHp > 0 ? Math.max(0, Math.min(1, shieldHp / maxHp)) : 0
+function FigureInfoPanel({ data, resolveChip, onChipTap }: FigureInfoPanelProps) {
+  const hpPct      = data.maxHp > 0 ? Math.max(0, Math.min(1, data.hp / data.maxHp)) : 0
+  const apPct      = data.maxAp > 0 ? Math.max(0, Math.min(1, data.ap / data.maxAp)) : 0
+  const shieldPct  = data.maxHp > 0 ? Math.max(0, Math.min(1, data.shieldHp / data.maxHp)) : 0
+  const secPct     = Math.max(0, Math.min(100, data.secondaryResource))
+  const rarityVar  = `var(--rarity-${Math.max(1, Math.min(6, data.rarity))})`
+
+  const resolvedChips = resolveChip && onChipTap
+    ? data.statusSlots.flatMap(slot => {
+        const def = resolveChip(slot.id)
+        if (!def) return []
+        return [{ slot, def }]
+      })
+    : []
 
   return (
-    <div className={styles.barOuter}>
-      <div className={styles.barTrack}>
-        {/* HP fill */}
-        <div className={styles.hpFill} style={{ width: `${hpPct * 100}%` }} />
-        {/* Shield overlay — semi-transparent white, pulsing, core-driven */}
-        {shieldPct > 0 && (
-          <div
-            className={styles.shieldOverlay}
-            style={{ width: `${shieldPct * 100}%` }}
-          />
-        )}
+    <div className={styles.figureInfo}>
+      <span className={styles.figureName} style={{ color: rarityVar }}>
+        {data.name}
+      </span>
+
+      {/* HP */}
+      <div className={styles.barRow}>
+        <span className={styles.barRowLabel}>HP</span>
+        <div className={styles.barTrack}>
+          <div className={styles.hpFill} style={{ width: `${hpPct * 100}%` }} />
+          {shieldPct > 0 && (
+            <div className={styles.shieldOverlay} style={{ width: `${shieldPct * 100}%` }} />
+          )}
+        </div>
+        <span className={styles.barValue}>{data.hp}</span>
       </div>
-      <span className={styles.barLabel}>{hp}<span className={styles.barMax}>/{maxHp}</span></span>
-      {shieldHp > 0 && (
-        <span className={styles.shieldLabel}>🛡 {shieldHp}</span>
+
+      {/* AP */}
+      <div className={styles.barRow}>
+        <span className={styles.barRowLabel}>AP</span>
+        <div className={styles.barTrack}>
+          <div className={styles.apFill} style={{ width: `${apPct * 100}%` }} />
+        </div>
+        <span className={styles.barValue}>{data.ap}</span>
+      </div>
+
+      {/* Secondary resource — only shown when non-zero */}
+      {secPct > 0 && (
+        <div className={styles.barRow}>
+          <span className={styles.barRowLabel}>SP</span>
+          <div className={styles.barTrack}>
+            <div className={styles.secFill} style={{ width: `${secPct}%` }} />
+          </div>
+          <span className={styles.barValue}>{Math.round(secPct)}</span>
+        </div>
+      )}
+
+      {/* Status chip dots */}
+      {resolvedChips.length > 0 && (
+        <div className={styles.chipDots}>
+          {resolvedChips.map(({ slot, def }) => (
+            <ChipDot
+              key={slot.id}
+              colour={def.colour}
+              ascii={def.ascii}
+              label={def.label}
+              onTap={() => onChipTap!({
+                slotId:          slot.id,
+                label:           def.label,
+                colour:          def.colour,
+                durationDisplay: def.durationDisplay,
+                duration:        slot.duration,
+                ascii:           def.ascii,
+                description:     def.description,
+                portraitGlow:    def.portraitGlow,
+              })}
+            />
+          ))}
+        </div>
       )}
     </div>
   )
@@ -144,17 +213,20 @@ function HpBar({ hp, maxHp, shieldHp }: HpBarProps) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export const AsciiArena = forwardRef<BattleArenaHandle>(
-  function AsciiArena(_props, ref) {
+export const AsciiArena = forwardRef<BattleArenaHandle, AsciiArenaProps>(
+  function AsciiArena({ playerFigureInfo, resolveChip, onChipTap }, ref) {
     const engineRef = useRef<AsciiAnimEngine | null>(null)
     const stageRef  = useRef<HTMLDivElement>(null)
 
     // ── Figure scale — fit 153.6×128 block into available stage space ───────
     const [figureScale, setFigureScale] = useState(1)
 
+    // Info panel is ~100px: name 12px + 3 bar rows (8px each) + gaps + chips
+    const INFO_H_PX = 100
+
     const updateScale = useCallback((width: number, height: number) => {
-      const availW = Math.max(1, (width  - 24) / 2)  // 2 figures, 0.5rem padding+gap
-      const availH = Math.max(1,  height - 72)        // 1rem*2 padding + ~40px info
+      const availW = Math.max(1, (width  - 24) / 2)
+      const availH = Math.max(1,  height - INFO_H_PX)
       setFigureScale(Math.min(availW / FIGURE_W_PX, availH / FIGURE_H_PX, 2))
     }, [])
 
@@ -285,10 +357,12 @@ export const AsciiArena = forwardRef<BattleArenaHandle>(
 
     // ── Render (pure — no decisions, only signal-driven state) ──────────────
 
-    const actingRarity  = turnDisplay?.actor?.rarity  ?? 1
-    const targetRarity  = turnDisplay?.target?.rarity ?? 1
-    const actingShield  = turnDisplay?.actor?.shieldHp  ?? 0
-    const targetShield  = turnDisplay?.target?.shieldHp ?? 0
+    const actingRarity = turnDisplay?.actor?.rarity ?? (playerFigureInfo?.rarity ?? 1)
+    const targetRarity = turnDisplay?.target?.rarity ?? 1
+
+    // Acting column info: use actor snapshot (enemy turn) or live player data (player turn)
+    const actingInfo   = turnDisplay?.actor ?? playerFigureInfo ?? null
+    const targetInfo   = turnDisplay?.target ?? null
 
     return (
       <div className={styles.arena}>
@@ -310,25 +384,20 @@ export const AsciiArena = forwardRef<BattleArenaHandle>(
           style={{ '--figure-scale': figureScale } as React.CSSProperties}
         >
 
+          {/* ── Acting figure (left) ── */}
           <div className={styles.figureWrap}>
-            {(turnDisplay?.actingSecondaryResource ?? 0) > 0 && (
-              <SecondaryBar value={turnDisplay!.actingSecondaryResource!} />
-            )}
             <div className={styles.figureScaler}>
               {frame?.acting
                 ? <SymbolFigure frame={frame.acting.frame} palette={GENERIC_PALETTE} rarity={actingRarity} />
                 : <div className={styles.figureEmpty}>?</div>
               }
             </div>
-            {turnDisplay?.actor && (
-              <div className={styles.figureInfo}>
-                <span className={styles.figureName}>{turnDisplay.actor.name}</span>
-                <HpBar
-                  hp={turnDisplay.actor.hp}
-                  maxHp={turnDisplay.actor.maxHp}
-                  shieldHp={actingShield}
-                />
-              </div>
+            {actingInfo && (
+              <FigureInfoPanel
+                data={actingInfo}
+                resolveChip={resolveChip}
+                onChipTap={onChipTap}
+              />
             )}
           </div>
 
@@ -341,25 +410,20 @@ export const AsciiArena = forwardRef<BattleArenaHandle>(
             </div>
           )}
 
+          {/* ── Target figure (right, flipped) ── */}
           <div className={styles.figureWrap}>
-            {(turnDisplay?.targetSecondaryResource ?? 0) > 0 && (
-              <SecondaryBar value={turnDisplay!.targetSecondaryResource!} />
-            )}
             <div className={`${styles.figureScaler} ${styles.figureScalerFlipped}`}>
               {frame?.target
                 ? <SymbolFigure frame={frame.target.frame} palette={GENERIC_PALETTE} rarity={targetRarity} />
                 : <div className={styles.figureEmpty}>?</div>
               }
             </div>
-            {turnDisplay?.target && (
-              <div className={styles.figureInfo}>
-                <span className={styles.figureName}>{turnDisplay.target.name}</span>
-                <HpBar
-                  hp={turnDisplay.target.hp}
-                  maxHp={turnDisplay.target.maxHp}
-                  shieldHp={targetShield}
-                />
-              </div>
+            {targetInfo && (
+              <FigureInfoPanel
+                data={targetInfo}
+                resolveChip={resolveChip}
+                onChipTap={onChipTap}
+              />
             )}
           </div>
         </div>

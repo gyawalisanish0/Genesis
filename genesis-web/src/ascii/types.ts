@@ -69,8 +69,8 @@ export interface AsciiArenaFrame {
 // The engine fires signals; React subscribes and renders. No callbacks flow back.
 // React handles its own display cleanup (auto-dismiss timers on burst/feedback).
 
-import type { TurnDisplayData } from '../core/battle/EngineTypes'
-export type { TurnDisplayData }
+import type { TurnDisplayData, TurnDisplayUnitData } from '../core/battle/EngineTypes'
+export type { TurnDisplayData, TurnDisplayUnitData }
 
 export type AnimSignal =
   | { type: 'frame';       frame: AsciiArenaFrame }

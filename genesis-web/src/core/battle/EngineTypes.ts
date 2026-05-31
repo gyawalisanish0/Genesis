@@ -9,16 +9,18 @@ import type { BattleStep } from './BattleStepMachine'
 // ── Overlay / display types ────────────────────────────────────────────────────
 
 export interface TurnDisplayUnitData {
-  name:        string
-  className:   string
-  rarity:      number
-  hp:          number
-  maxHp:       number
-  ap:          number
-  maxAp:       number
-  statusSlots: Array<{ id: string; name: string }>
+  name:              string
+  className:         string
+  rarity:            number
+  hp:                number
+  maxHp:             number
+  ap:                number
+  maxAp:             number
+  /** 0–100; drives secondary resource bar in arena figure info panel. */
+  secondaryResource: number
+  statusSlots:       Array<{ id: string; name: string; stacks: number; duration: number }>
   /** Sum of all active shield HP values on this unit. 0 when no shield is active. */
-  shieldHp:    number
+  shieldHp:          number
 }
 
 export interface TurnDisplayData {
@@ -29,10 +31,6 @@ export interface TurnDisplayData {
   skillLevel: number
   target:     TurnDisplayUnitData
   isAlly:     boolean  // true = player attacking; drives accent colour
-  /** 0–100; drives secondary resource bar above acting figure in arena. Absent = no bar. */
-  actingSecondaryResource?: number
-  /** 0–100; drives secondary resource bar above target figure in arena. Absent = no bar. */
-  targetSecondaryResource?: number
 }
 
 // ── Log + history ──────────────────────────────────────────────────────────────
