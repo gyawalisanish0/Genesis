@@ -12,6 +12,7 @@ import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import { AsciiArena as BattleArena } from '../components/AsciiArena'
 import { HintToaster } from '../components/HintToaster'
 import { BattleProvider, useBattleScreen } from './BattleContext'
+import { CharacterMechWidget }             from './CharacterMechWidget'
 import { BattleErrorToast } from './BattleErrorToast'
 import { BattleLogOverlay } from './BattleLogOverlay'
 import { ClashQteOverlay } from './ClashQteOverlay'
@@ -687,6 +688,7 @@ function BattleLayout() {
           <div className={styles.portraitCol}>
             <RollButton />
             <PortraitPanel />
+            <CharacterMechWidget />
           </div>
           <ActionGrid />
         </div>
