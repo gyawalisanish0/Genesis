@@ -126,17 +126,17 @@ function ChipDot({ colour, ascii, label, onTap }: ChipDotProps) {
 // ── Figure info panel — name, bars, chips ─────────────────────────────────────
 
 interface FigureInfoPanelProps {
-  data:         TurnDisplayUnitData
-  resolveChip?: (id: string) => StatusChipDef | null
-  onChipTap?:   (chip: StatusChipData) => void
+  data:          TurnDisplayUnitData
+  factionColour: string
+  resolveChip?:  (id: string) => StatusChipDef | null
+  onChipTap?:    (chip: StatusChipData) => void
 }
 
-function FigureInfoPanel({ data, resolveChip, onChipTap }: FigureInfoPanelProps) {
+function FigureInfoPanel({ data, factionColour, resolveChip, onChipTap }: FigureInfoPanelProps) {
   const hpPct      = data.maxHp > 0 ? Math.max(0, Math.min(1, data.hp / data.maxHp)) : 0
   const apPct      = data.maxAp > 0 ? Math.max(0, Math.min(1, data.ap / data.maxAp)) : 0
   const shieldPct  = data.maxHp > 0 ? Math.max(0, Math.min(1, data.shieldHp / data.maxHp)) : 0
   const secPct     = Math.max(0, Math.min(100, data.secondaryResource))
-  const rarityVar  = `var(--rarity-${Math.max(1, Math.min(6, data.rarity))})`
 
   const resolvedChips = resolveChip && onChipTap
     ? data.statusSlots.flatMap(slot => {
@@ -148,7 +148,7 @@ function FigureInfoPanel({ data, resolveChip, onChipTap }: FigureInfoPanelProps)
 
   return (
     <div className={styles.figureInfo}>
-      <span className={styles.figureName} style={{ color: rarityVar }}>
+      <span className={styles.figureName} style={{ color: factionColour }}>
         {data.name}
       </span>
 
@@ -361,8 +361,17 @@ export const AsciiArena = forwardRef<BattleArenaHandle, AsciiArenaProps>(
     const targetRarity = turnDisplay?.target?.rarity ?? 1
 
     // Acting column info: use actor snapshot (enemy turn) or live player data (player turn)
-    const actingInfo   = turnDisplay?.actor ?? playerFigureInfo ?? null
-    const targetInfo   = turnDisplay?.target ?? null
+    const actingInfo = turnDisplay?.actor ?? playerFigureInfo ?? null
+    const targetInfo = turnDisplay?.target ?? null
+
+    // Faction colours — ally (player / allied AI) = heal green, enemy = danger red.
+    // isAlly: true  → acting unit is on the player's side, target is an enemy.
+    // isAlly: false → acting unit is an enemy, target is on the player's side.
+    const isAlly         = turnDisplay?.isAlly !== false  // default ally when idle
+    const allyColour     = 'var(--accent-heal)'
+    const enemyColour    = 'var(--accent-danger)'
+    const actingColour   = isAlly ? allyColour  : enemyColour
+    const targetColour   = isAlly ? enemyColour : allyColour
 
     return (
       <div className={styles.arena}>
@@ -370,11 +379,15 @@ export const AsciiArena = forwardRef<BattleArenaHandle, AsciiArenaProps>(
         {turnDisplay && (
           <div className={styles.turnStrip}>
             {turnDisplay.actor && (
-              <span className={styles.turnActor}>{turnDisplay.actor.name}</span>
+              <span className={styles.turnActor} style={{ color: actingColour }}>
+                {turnDisplay.actor.name}
+              </span>
             )}
             <span className={styles.turnSkill}>{turnDisplay.skillName}</span>
             {turnDisplay.actor && <span className={styles.turnArrow}>→</span>}
-            <span className={styles.turnTarget}>{turnDisplay.target.name}</span>
+            <span className={styles.turnTarget} style={{ color: targetColour }}>
+              {turnDisplay.target.name}
+            </span>
           </div>
         )}
 
@@ -395,6 +408,7 @@ export const AsciiArena = forwardRef<BattleArenaHandle, AsciiArenaProps>(
             {actingInfo && (
               <FigureInfoPanel
                 data={actingInfo}
+                factionColour={actingColour}
                 resolveChip={resolveChip}
                 onChipTap={onChipTap}
               />
@@ -421,6 +435,7 @@ export const AsciiArena = forwardRef<BattleArenaHandle, AsciiArenaProps>(
             {targetInfo && (
               <FigureInfoPanel
                 data={targetInfo}
+                factionColour={targetColour}
                 resolveChip={resolveChip}
                 onChipTap={onChipTap}
               />

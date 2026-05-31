@@ -31,8 +31,8 @@
 }
 
 .turnActor {
-  color: var(--accent-genesis);
   font-weight: 600;
+  /* colour set inline via isAlly: ally=accent-heal, enemy=accent-danger */
 }
 
 .turnSkill {
@@ -45,7 +45,7 @@
 }
 
 .turnTarget {
-  color: var(--accent-danger);
+  /* colour set inline via isAlly: ally=accent-danger, enemy=accent-heal */
 }
 
 /* ── Stage area ────────────────────────────────────────────────────────────── */
