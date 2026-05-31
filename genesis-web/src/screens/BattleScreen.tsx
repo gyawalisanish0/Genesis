@@ -12,6 +12,7 @@ import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import { AsciiArena as BattleArena } from '../components/AsciiArena'
 import { HintToaster } from '../components/HintToaster'
 import { BattleProvider, useBattleScreen } from './BattleContext'
+import { StatusInfoOverlay }               from './StatusInfoOverlay'
 import { BattleErrorToast } from './BattleErrorToast'
 import { BattleLogOverlay } from './BattleLogOverlay'
 import { ClashQteOverlay } from './ClashQteOverlay'
@@ -52,6 +53,9 @@ function buildChips(
       // For indefinite statuses (no fixed duration), fall back to showing stacks.
       duration:        slot.duration > 0 ? slot.duration : slot.stacks,
       iconUrl:         chip.icon ? characterStatusIconUrl(unit.defId, chip.icon) : undefined,
+      ascii:           chip.ascii,
+      description:     chip.description,
+      portraitGlow:    chip.portraitGlow,
     }]
   })
 }
@@ -253,14 +257,14 @@ function BattleTimeline() {
 }
 
 // ── Status chip bar (leader) ─────────────────────────────────────────────────
-function LeaderChipBar() {
+function LeaderChipBar({ onTap }: { onTap: (chip: StatusChipData) => void }) {
   const { leader, getChipDef, suppressedChipIds } = useBattleScreen()
   if (!leader) return null
   const chips = buildChips(leader, getChipDef, suppressedChipIds)
   if (!chips.length) return null
   return (
     <div className={styles.statusSlots}>
-      <StatusChipBar chips={chips} size="full" />
+      <StatusChipBar chips={chips} size="full" onTap={onTap} />
     </div>
   )
 }
@@ -271,19 +275,31 @@ function LeaderChipBar() {
 // 'single' (one HUD slot); a future 'all' mode could swap which leader is shown
 // per active tick, but only ever one slot is rendered here.
 function PortraitPanel() {
-  const { turnNumber, tickValue, leader } = useBattleScreen()
+  const { turnNumber, tickValue, leader, getChipDef, suppressedChipIds } = useBattleScreen()
   if (!leader) return null
 
   const leaderShieldHp = leader.statusSlots
     .filter(s => typeof s.payload?.shieldHp === 'number' && (s.payload.shieldHp as number) > 0)
     .reduce((sum, s) => sum + (s.payload.shieldHp as number), 0)
 
+  // Portrait glow: first active chip with portraitGlow=true drives the ring colour.
+  const glowColour = leader.statusSlots.reduce<string | null>((found, slot) => {
+    if (found || suppressedChipIds.has(slot.id)) return found
+    const chip = getChipDef(slot.id)
+    return chip?.portraitGlow ? chip.colour : found
+  }, null)
+
+  const portraitGlowStyle = glowColour ? {
+    borderColor: glowColour,
+    boxShadow:   `0 0 8px ${glowColour}, 0 0 20px ${glowColour}55, inset 0 0 14px ${glowColour}18`,
+  } : undefined
+
   return (
     <div className={styles.portrait}>
       <span className={styles.turnLabel}>Turn {turnNumber}</span>
       <span className={styles.tickLabel}>Tick: {tickValue}</span>
       <div className={`${styles.unitEntry} ${styles.unitEntryActive}`}>
-        <div className={styles.portraitCircle}>
+        <div className={styles.portraitCircle} style={portraitGlowStyle}>
           <AsciiPortrait defId={leader.defId} />
         </div>
         <span className={styles.lvlBadge}>{leader.name} ★{leader.rarity}</span>
@@ -608,6 +624,7 @@ function BattleLayout() {
   const lastBackRef = useRef(0)
   const createHandler = useScrollAwarePointer()
   const [logOpen, setLogOpen] = useState(false)
+  const [inspectingChip, setInspectingChip] = useState<StatusChipData | null>(null)
   useScreen()
 
   // Redirect silently to pre-battle if no team was confirmed (direct URL access, etc.).
@@ -626,6 +643,7 @@ function BattleLayout() {
     if (now - lastBackRef.current < BACK_DEBOUNCE_MS) return
     lastBackRef.current = now
     if (inspectingSkill) { setInspectingSkill(null); return }
+    if (inspectingChip)  { setInspectingChip(null);  return }
     if (logOpen) { setLogOpen(false); return }
     setPaused((prev) => !prev)
   })
@@ -651,6 +669,7 @@ function BattleLayout() {
       {isPaused && <PauseOverlay />}
       {logOpen && <BattleLogOverlay onClose={() => setLogOpen(false)} />}
       {inspectingSkill && <SkillInfoOverlay skill={inspectingSkill} onClose={() => setInspectingSkill(null)} />}
+      {inspectingChip  && <StatusInfoOverlay chip={inspectingChip} onClose={() => setInspectingChip(null)} />}
       <CounterPromptOverlay />
       <TargetSelectOverlay />
       <ClashQteOverlay />
@@ -682,7 +701,7 @@ function BattleLayout() {
             BATTLE LOG
           </button>
         </div>
-        <LeaderChipBar />
+        <LeaderChipBar onTap={setInspectingChip} />
         <div className={styles.bottom}>
           <div className={styles.portraitCol}>
             <RollButton />

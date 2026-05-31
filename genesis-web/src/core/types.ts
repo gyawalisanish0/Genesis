@@ -371,8 +371,14 @@ export interface StatusChipDef {
   colour:          string
   durationDisplay: 'ticks' | 'turns' | 'fade' | 'none'
   // Passive/status logo key. Resolves to images/characters/{defId}/UI/Status/{icon}.png
-  // 'psv_logo' = passive icon. Reserved — not yet rendered by StatusChipBar.
+  // 'psv_logo' = passive icon. Shown inside the chip square when the PNG loads.
   icon?:           string
+  /** 3-line ASCII art logo rendered inside the chip square. Each entry = one row. */
+  ascii?:          string[]
+  /** Shown in the chip detail popup when the player taps the chip. */
+  description?:    string
+  /** When true, applies the chip colour as a glow ring on the portrait circle. */
+  portraitGlow?:   boolean
 }
 
 // ── Animation sequence phases ─────────────────────────────────────────────────

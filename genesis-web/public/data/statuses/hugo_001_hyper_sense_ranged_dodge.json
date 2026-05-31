@@ -10,7 +10,9 @@
     "chip": {
       "label":           "DODGE",
       "colour":          "var(--accent-evasion)",
-      "durationDisplay": "ticks"
+      "durationDisplay": "ticks",
+      "ascii":           ["◂┃▸", "◂◉▸", "◂┃▸"],
+      "description":     "ANBOT's Sekkar receptors are amplified against ranged attacks — 30% dodge chance per stack, consuming a stack on success."
     }
   },
   "dodgeConfig": {

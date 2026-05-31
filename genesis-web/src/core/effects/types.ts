@@ -372,6 +372,9 @@ export interface StatusDef {
       colour:          string
       durationDisplay: 'ticks' | 'turns' | 'fade' | 'none'
       icon?:           string
+      ascii?:          string[]
+      description?:    string
+      portraitGlow?:   boolean
     }
   }
   tags?:      string[]
