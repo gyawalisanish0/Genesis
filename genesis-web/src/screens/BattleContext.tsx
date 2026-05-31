@@ -23,6 +23,7 @@ import type { PassiveDef, StatusDef } from '../core/effects/types'
 import { NarrativeService } from '../services/NarrativeService'
 import { NarrativeUnits } from '../components/NarrativeLayer'
 import type { BattleArenaHandle } from '../components/AsciiArena'
+import type { StatusChipData } from '../components/StatusChipBar'
 import type { HistoryEntry } from '../core/battleHistory'
 import { useGameStore } from '../core/GameContext'
 import { SCREEN_REGISTRY, SCREEN_IDS } from '../navigation/screenRegistry'
@@ -87,6 +88,8 @@ interface BattleContextValue {
   skipDice:        () => void
   inspectingSkill:    SkillInstance | null
   setInspectingSkill: (skill: SkillInstance | null) => void
+  inspectingChip:     StatusChipData | null
+  setInspectingChip:  (chip: StatusChipData | null) => void
 }
 
 const BattleContext = createContext<BattleContextValue | null>(null)
@@ -136,7 +139,8 @@ export function BattleProvider({ children }: Props) {
   const [isPaused, setPaused]               = useState(false)
   const [narrativePaused, setNarrativePaused] = useState(false)
   const [inspectingSkill, setInspectingSkillState] = useState<SkillInstance | null>(null)
-  const [diceResult, setDiceResult]         = useState<DiceResult | null>(null)
+  const [inspectingChip, setInspectingChip]        = useState<StatusChipData | null>(null)
+  const [diceResult, setDiceResult]                = useState<DiceResult | null>(null)
 
   // ── Refs for arena and misc ────────────────────────────────────────────────
   const arenaRef        = useRef<BattleArenaHandle>(null)
@@ -683,6 +687,7 @@ export function BattleProvider({ children }: Props) {
       setPhase, appendLog, selectSkill, selectTarget, toggleGrid, setPaused,
       skipDice,
       inspectingSkill, setInspectingSkill,
+      inspectingChip,  setInspectingChip,
     }}>
       {children}
     </BattleContext.Provider>

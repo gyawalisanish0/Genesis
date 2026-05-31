@@ -107,7 +107,7 @@ const STACK_OFFSET_PX = 8
 
 // ── Timeline strip ──────────────────────────────────────────────────────────
 function BattleTimeline() {
-  const { tickValue, playerUnits, enemies, activeUnitIds, scrollBounds, historyEntries, getChipDef, suppressedChipIds } = useBattleScreen()
+  const { tickValue, playerUnits, enemies, activeUnitIds, scrollBounds, historyEntries, getChipDef, suppressedChipIds, setInspectingChip } = useBattleScreen()
   const containerRef = useRef<HTMLDivElement>(null)
 
   const trackHeight = (scrollBounds.max - scrollBounds.min) * TIMELINE_PX_PER_TICK
@@ -247,7 +247,7 @@ function BattleTimeline() {
                 hpFraction={unit.maxHp > 0 ? unit.hp / unit.maxHp : 0}
               />
               {chips.length > 0 && (
-                <StatusChipBar chips={chips} size="compact" />
+                <StatusChipBar chips={chips} size="compact" onTap={setInspectingChip} />
               )}
             </div>
           )
@@ -312,30 +312,35 @@ function PortraitPanel() {
             <AsciiPortrait defId={leader.defId} />
           </div>
           {leader.secondaryResource > 0 && (
-            <svg
-              className={styles.secondaryArc}
-              viewBox="0 0 110 110"
-              aria-hidden="true"
-            >
-              {/* Track ring */}
-              <circle
-                cx="55" cy="55" r={ARC_R}
-                fill="none"
-                strokeWidth="3"
-                stroke="var(--bg-elevated)"
-              />
-              {/* Fill arc — starts at top (−90°) */}
-              <circle
-                cx="55" cy="55" r={ARC_R}
-                fill="none"
-                strokeWidth="3"
-                stroke="var(--accent-info)"
-                strokeLinecap="round"
-                strokeDasharray={`${secDash} ${ARC_CIRC}`}
-                transform="rotate(-90 55 55)"
-                style={{ filter: 'drop-shadow(0 0 3px var(--accent-info))' }}
-              />
-            </svg>
+            <>
+              <svg
+                className={styles.secondaryArc}
+                viewBox="0 0 110 110"
+                aria-hidden="true"
+              >
+                {/* Track ring */}
+                <circle
+                  cx="55" cy="55" r={ARC_R}
+                  fill="none"
+                  strokeWidth="3"
+                  stroke="var(--bg-elevated)"
+                />
+                {/* Fill arc — starts at top (−90°) */}
+                <circle
+                  cx="55" cy="55" r={ARC_R}
+                  fill="none"
+                  strokeWidth="3"
+                  stroke="var(--accent-info)"
+                  strokeLinecap="round"
+                  strokeDasharray={`${secDash} ${ARC_CIRC}`}
+                  transform="rotate(-90 55 55)"
+                  style={{ filter: 'drop-shadow(0 0 3px var(--accent-info))' }}
+                />
+              </svg>
+              <span className={styles.secondaryLabel}>
+                {Math.round(leader.secondaryResource)}
+              </span>
+            </>
           )}
         </div>
         <span className={styles.lvlBadge}>{leader.name} ★{leader.rarity}</span>
@@ -610,7 +615,7 @@ function CounterPromptOverlay() {
 // Centered modal — only shown when 2+ enemies are alive for a single-target skill.
 // Auto-confirms if enemies die while the picker is open and only 1 remains.
 function TargetSelectOverlay() {
-  const { showTargetPicker, enemies, selectedSkill, selectTarget, selectSkill } = useBattleScreen()
+  const { showTargetPicker, enemies, selectedSkill, selectTarget, selectSkill, getChipDef, suppressedChipIds, setInspectingChip } = useBattleScreen()
   const createHandler = useScrollAwarePointer()
 
   const aliveEnemies = enemies.filter(isAlive)
@@ -637,16 +642,30 @@ function TargetSelectOverlay() {
           </button>
         </div>
         <div className={styles.targetPickerList}>
-          {aliveEnemies.map((enemy) => (
-            <button
-              key={enemy.id}
-              className={styles.targetPickerRow}
-              onPointerDown={createHandler({ onTap: () => selectTarget(enemy) })}
-            >
-              <span className={styles.targetPickerName}>{enemy.name}</span>
-              <span className={styles.targetPickerHp}>{enemy.hp}/{enemy.maxHp} HP</span>
-            </button>
-          ))}
+          {aliveEnemies.map((enemy) => {
+            const hpPct  = enemy.maxHp > 0 ? Math.max(0, Math.min(1, enemy.hp / enemy.maxHp)) : 0
+            const chips  = buildChips(enemy, getChipDef, suppressedChipIds)
+            return (
+              <button
+                key={enemy.id}
+                className={styles.targetPickerRow}
+                onPointerDown={createHandler({ onTap: () => selectTarget(enemy) })}
+              >
+                <div className={styles.targetPickerInfo}>
+                  <div className={styles.targetPickerTopRow}>
+                    <span className={styles.targetPickerName}>{enemy.name}</span>
+                    <span className={styles.targetPickerHpText}>{enemy.hp}/{enemy.maxHp}</span>
+                  </div>
+                  <div className={styles.targetPickerBarTrack}>
+                    <div className={styles.targetPickerHpFill} style={{ width: `${hpPct * 100}%` }} />
+                  </div>
+                  {chips.length > 0 && (
+                    <StatusChipBar chips={chips} size="compact" onTap={setInspectingChip} />
+                  )}
+                </div>
+              </button>
+            )
+          })}
         </div>
       </div>
     </div>
@@ -655,12 +674,11 @@ function TargetSelectOverlay() {
 
 // ── Battle layout ───────────────────────────────────────────────────────────
 function BattleLayout() {
-  const { arenaRef, isPaused, setPaused, isLoading, playerUnits, diceResult, skipDice, inspectingSkill, setInspectingSkill, battleError, leader, getChipDef, suppressedChipIds } = useBattleScreen()
+  const { arenaRef, isPaused, setPaused, isLoading, playerUnits, diceResult, skipDice, inspectingSkill, setInspectingSkill, battleError, leader, getChipDef, suppressedChipIds, inspectingChip, setInspectingChip } = useBattleScreen()
   const navigate    = useNavigate()
   const lastBackRef = useRef(0)
   const createHandler = useScrollAwarePointer()
   const [logOpen, setLogOpen] = useState(false)
-  const [inspectingChip, setInspectingChip] = useState<StatusChipData | null>(null)
   useScreen()
 
   // Live player figure info — mirrors portrait panel data in the acting arena column.
