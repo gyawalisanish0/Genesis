@@ -71,6 +71,10 @@ const handle: EffectHandler<ApplyStatusEffect> = (effect, ctx) => {
     if (def.hyperModeTrigger) payload.hyperModeTrigger = true
     if (def.hyperModeConfig)  payload.hyperModeConfig  = def.hyperModeConfig
 
+    // Secondary threshold config — copied so BattleEngine can resolve dodge/deflect/crit
+    // bonuses based on secondaryResource level without any hardcoded status ID checks.
+    if (def.secondaryThresholdConfig) payload.secondaryThresholdConfig = def.secondaryThresholdConfig
+
     // Stun flag — BattleContext prevents all skill execution when true.
     if (def.tags?.includes('stun')) payload.stunned = true
 

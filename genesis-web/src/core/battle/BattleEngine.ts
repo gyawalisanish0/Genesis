@@ -30,7 +30,7 @@ import { applyEffect } from '../effects/applyEffect'
 import { getCachedSkill } from '../engines/skill/SkillInstance'
 import { makeHistoryEntry } from '../battleHistory'
 import { makeSnapshot, snapshotToBattleState } from './BattleSnapshot'
-import { resolveIncomingDodge, makeShieldedBattleState, isHyperModeActive, getEffectiveTuCost, readCritConfig } from './BattleDamage'
+import { resolveIncomingDodge, makeShieldedBattleState, isHyperModeActive, getEffectiveTuCost, readCritConfig, resolveIncomingDeflect } from './BattleDamage'
 import {
   fireHpThresholdPassives, fireStatusExpiry, fireOpponentActionEffects,
   fireCounterTriggerEffects, fireCounterCastEffects, fireOnApSpent,
@@ -1293,6 +1293,13 @@ export class BattleEngine {
         const targetCurrent = snap.get(target.id) ?? target
         battle.setUnit(takeDamage(targetCurrent, critAmount))
         this.appendLog({ text: `★ CRITICAL! +${critAmount} bonus damage`, colour: 'var(--accent-gold)' })
+      }
+
+      const deflectHp = resolveIncomingDeflect(target, targetHpBefore, snap)
+      if (deflectHp > 0) {
+        const targetCurrent = snap.get(target.id) ?? target
+        snap.set(target.id, { ...targetCurrent, hp: Math.min(targetCurrent.maxHp, targetCurrent.hp + deflectHp) })
+        this.appendLog({ text: `◈ DEFLECT! ${targetCurrent.name} restores ${deflectHp} HP`, colour: 'var(--accent-info)' })
       }
     }
 
