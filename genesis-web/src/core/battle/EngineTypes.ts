@@ -29,6 +29,10 @@ export interface TurnDisplayData {
   skillLevel: number
   target:     TurnDisplayUnitData
   isAlly:     boolean  // true = player attacking; drives accent colour
+  /** 0–100; drives secondary resource bar above acting figure in arena. Absent = no bar. */
+  actingSecondaryResource?: number
+  /** 0–100; drives secondary resource bar above target figure in arena. Absent = no bar. */
+  targetSecondaryResource?: number
 }
 
 // ── Log + history ──────────────────────────────────────────────────────────────

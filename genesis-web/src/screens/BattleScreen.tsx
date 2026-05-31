@@ -294,13 +294,48 @@ function PortraitPanel() {
     boxShadow:   `0 0 8px ${glowColour}, 0 0 20px ${glowColour}55, inset 0 0 14px ${glowColour}18`,
   } : undefined
 
+  // SVG arc ring: r=52 inside a 110×110 viewBox so the stroke sits just outside
+  // the 100dp portrait circle. strokeDasharray uses circumference = 2π×52 ≈ 326.7.
+  const ARC_R           = 52
+  const ARC_CIRC        = 2 * Math.PI * ARC_R
+  const secPct          = Math.max(0, Math.min(100, leader.secondaryResource)) / 100
+  const secDash         = secPct * ARC_CIRC
+
   return (
     <div className={styles.portrait}>
       <span className={styles.turnLabel}>Turn {turnNumber}</span>
       <span className={styles.tickLabel}>Tick: {tickValue}</span>
       <div className={`${styles.unitEntry} ${styles.unitEntryActive}`}>
-        <div className={styles.portraitCircle} style={portraitGlowStyle}>
-          <AsciiPortrait defId={leader.defId} />
+        <div className={styles.portraitWrap}>
+          <div className={styles.portraitCircle} style={portraitGlowStyle}>
+            <AsciiPortrait defId={leader.defId} />
+          </div>
+          {leader.secondaryResource > 0 && (
+            <svg
+              className={styles.secondaryArc}
+              viewBox="0 0 110 110"
+              aria-hidden="true"
+            >
+              {/* Track ring */}
+              <circle
+                cx="55" cy="55" r={ARC_R}
+                fill="none"
+                strokeWidth="3"
+                stroke="var(--bg-elevated)"
+              />
+              {/* Fill arc — starts at top (−90°) */}
+              <circle
+                cx="55" cy="55" r={ARC_R}
+                fill="none"
+                strokeWidth="3"
+                stroke="var(--accent-info)"
+                strokeLinecap="round"
+                strokeDasharray={`${secDash} ${ARC_CIRC}`}
+                transform="rotate(-90 55 55)"
+                style={{ filter: 'drop-shadow(0 0 3px var(--accent-info))' }}
+              />
+            </svg>
+          )}
         </div>
         <span className={styles.lvlBadge}>{leader.name} ★{leader.rarity}</span>
         <div className={styles.barRow}>

@@ -275,7 +275,9 @@ export class BattleEngine {
         statusSlots: postTarget.statusSlots,
         shieldHp:    this.sumShieldHp(postTarget.statusSlots),
       },
-      isAlly: true,
+      isAlly:                   true,
+      actingSecondaryResource:  actor.secondaryResource,
+      targetSecondaryResource:  postTarget.secondaryResource,
     })
 
     this.pendingPlayerTurn = {
@@ -779,7 +781,9 @@ export class BattleEngine {
             statusSlots: target.statusSlots,
             shieldHp:    this.sumShieldHp(target.statusSlots),
           },
-          isAlly: freshAIUnit.isAlly,
+          isAlly:                   freshAIUnit.isAlly,
+          actingSecondaryResource:  freshAIUnit.secondaryResource,
+          targetSecondaryResource:  target.secondaryResource,
         },
         inputMs + DICE_RESULT_DISMISS_MS,
       )

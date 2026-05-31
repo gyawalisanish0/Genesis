@@ -106,6 +106,27 @@
   letter-spacing: 0.05em;
 }
 
+/* ── Secondary resource bar ───────────────────────────────────────────────── */
+/* Thin horizontal bar above arena figure; only rendered when value > 0.      */
+
+.secBarTrack {
+  width: 80%;
+  max-width: 6rem;
+  height: 4px;
+  background: var(--bg-elevated);
+  border-radius: 2px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.secBarFill {
+  height: 100%;
+  background: var(--accent-info);
+  border-radius: 2px;
+  transition: width var(--motion-bar);
+  box-shadow: 0 0 4px var(--accent-info);
+}
+
 /* ── HP + shield bar ──────────────────────────────────────────────────────── */
 
 .barOuter {

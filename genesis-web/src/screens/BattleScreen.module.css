@@ -290,6 +290,28 @@
 .turnLabel { font-size: var(--t-micro-size); color: var(--text-secondary); }
 .tickLabel { font-size: var(--t-micro-size); color: var(--text-muted); }
 
+/* Wrapper that holds the portrait circle and the SVG arc ring overlay */
+.portraitWrap {
+  position: relative;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* SVG arc ring — sized slightly larger than the portrait so it wraps outside */
+.secondaryArc {
+  position: absolute;
+  /* 110/100 = 1.1× the portrait size so the arc r=52 clears the 50dp radius */
+  width: calc(6.25rem * 1.1);
+  height: calc(6.25rem * 1.1);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  overflow: visible;
+}
+
 .portraitCircle {
   width: 6.25rem;  /* 100 dp */
   height: 6.25rem;
@@ -299,7 +321,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  align-self: center;
   overflow: hidden;
   container-type: size;
   box-shadow: var(--glow-genesis), inset 0 0 20px rgba(0,229,255,0.06);

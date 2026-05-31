@@ -86,6 +86,24 @@ interface DiceState    { outcome: string; key: number }
 interface BurstState   { symbol: string;  colour: string; key: number }
 interface FeedbackState{ text: string;    colour: string; key: number }
 
+// ── Secondary resource bar ───────────────────────────────────────────────────
+//
+// Thin horizontal bar shown above each arena figure when that unit has a
+// non-zero secondaryResource (0–100). Colour: --accent-info (dark blue).
+// Hidden entirely when value is 0 or absent — the bar must not be a permanent
+// fixture; it signals an active mechanic (e.g. tactical scan, hyper gauge).
+
+interface SecondaryBarProps { value: number }
+
+function SecondaryBar({ value }: SecondaryBarProps) {
+  const pct = Math.max(0, Math.min(100, value))
+  return (
+    <div className={styles.secBarTrack}>
+      <div className={styles.secBarFill} style={{ width: `${pct}%` }} />
+    </div>
+  )
+}
+
 // ── HP + shield bar ──────────────────────────────────────────────────────────
 //
 // The bar renders HP as a CSS fill. When shieldHp > 0, a semi-transparent
@@ -293,6 +311,9 @@ export const AsciiArena = forwardRef<BattleArenaHandle>(
         >
 
           <div className={styles.figureWrap}>
+            {(turnDisplay?.actingSecondaryResource ?? 0) > 0 && (
+              <SecondaryBar value={turnDisplay!.actingSecondaryResource!} />
+            )}
             <div className={styles.figureScaler}>
               {frame?.acting
                 ? <SymbolFigure frame={frame.acting.frame} palette={GENERIC_PALETTE} rarity={actingRarity} />
@@ -321,6 +342,9 @@ export const AsciiArena = forwardRef<BattleArenaHandle>(
           )}
 
           <div className={styles.figureWrap}>
+            {(turnDisplay?.targetSecondaryResource ?? 0) > 0 && (
+              <SecondaryBar value={turnDisplay!.targetSecondaryResource!} />
+            )}
             <div className={`${styles.figureScaler} ${styles.figureScalerFlipped}`}>
               {frame?.target
                 ? <SymbolFigure frame={frame.target.frame} palette={GENERIC_PALETTE} rarity={targetRarity} />
