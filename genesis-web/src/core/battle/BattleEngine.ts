@@ -277,7 +277,7 @@ export class BattleEngine {
         shieldHp:          this.sumShieldHp(postTarget.statusSlots),
       },
       isAlly: true,
-    })
+    }, DICE_RESULT_DISMISS_MS + ANIM_TIMEOUT_MS)
 
     this.pendingPlayerTurn = {
       snap,
@@ -784,7 +784,7 @@ export class BattleEngine {
           },
           isAlly: freshAIUnit.isAlly,
         },
-        inputMs + DICE_RESULT_DISMISS_MS,
+        inputMs + DICE_RESULT_DISMISS_MS + ANIM_TIMEOUT_MS,
       )
 
       if (this.applyTimer) clearTimeout(this.applyTimer)
