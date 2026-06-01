@@ -1,0 +1,173 @@
+{
+  "type": "map",
+  "stageId": "stage_003",
+
+  "grid": { "cols": 16, "rows": 16 },
+
+  "tiles": [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+    [1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+    [1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1],
+    [1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1],
+    [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+  ],
+
+  "tileTypes": {
+    "0": { "passable": true,  "id": "floor" },
+    "1": { "passable": false, "id": "hill"  }
+  },
+
+  "playerStart": { "x": 1, "y": 14 },
+
+  "fogOfWar": true,
+  "revealRadius": 2,
+
+  "entities": [
+
+    {
+      "entityId": "elite_alpha",
+      "type": "enemy",
+      "defId": "netrolume_elite_001",
+      "x": 9, "y": 1,
+      "patrol": [
+        { "x": 9,  "y": 1 },
+        { "x": 13, "y": 1 },
+        { "x": 13, "y": 4 },
+        { "x": 9,  "y": 4 }
+      ],
+      "visualRange": 1,
+      "partyId": "party_001",
+      "narrativeId": "stage_003_guard_spotted"
+    },
+
+    {
+      "entityId": "elite_beta",
+      "type": "enemy",
+      "defId": "netrolume_elite_001",
+      "x": 13, "y": 2,
+      "patrol": [
+        { "x": 13, "y": 2 },
+        { "x": 14, "y": 2 },
+        { "x": 14, "y": 5 },
+        { "x": 13, "y": 5 }
+      ],
+      "visualRange": 1,
+      "partyId": "party_001",
+      "narrativeId": "stage_003_guard_spotted"
+    },
+
+    {
+      "entityId": "combatant_alpha",
+      "type": "enemy",
+      "defId": "kiragen_combatant_001",
+      "x": 6, "y": 1,
+      "patrol": [
+        { "x": 6, "y": 1 },
+        { "x": 7, "y": 1 },
+        { "x": 7, "y": 3 },
+        { "x": 6, "y": 3 }
+      ],
+      "visualRange": 1,
+      "partyId": "party_001",
+      "narrativeId": "stage_003_guard_spotted"
+    },
+
+    {
+      "entityId": "grunt_alpha",
+      "type": "enemy",
+      "defId": "netrolume_grunt_001",
+      "x": 3, "y": 9,
+      "patrol": [
+        { "x": 3, "y": 9  },
+        { "x": 3, "y": 12 },
+        { "x": 5, "y": 12 },
+        { "x": 5, "y": 9  }
+      ],
+      "visualRange": 1,
+      "partyId": "party_002",
+      "narrativeId": "stage_003_guard_spotted"
+    },
+
+    {
+      "entityId": "elite_gamma",
+      "type": "enemy",
+      "defId": "netrolume_elite_001",
+      "x": 1, "y": 11,
+      "patrol": [
+        { "x": 1, "y": 11 },
+        { "x": 5, "y": 11 },
+        { "x": 5, "y": 14 },
+        { "x": 1, "y": 14 }
+      ],
+      "visualRange": 1,
+      "partyId": "party_002",
+      "narrativeId": "stage_003_guard_spotted"
+    },
+
+    {
+      "entityId": "elite_delta",
+      "type": "enemy",
+      "defId": "netrolume_elite_001",
+      "x": 7, "y": 10,
+      "patrol": [
+        { "x": 7,  "y": 10 },
+        { "x": 11, "y": 10 },
+        { "x": 11, "y": 12 },
+        { "x": 7,  "y": 12 }
+      ],
+      "visualRange": 1,
+      "partyId": "party_002",
+      "narrativeId": "stage_003_guard_spotted"
+    },
+
+    {
+      "entityId": "controller_alpha",
+      "type": "enemy",
+      "defId": "kiragen_controller_001",
+      "x": 10, "y": 11,
+      "patrol": [
+        { "x": 10, "y": 11 },
+        { "x": 13, "y": 11 }
+      ],
+      "visualRange": 1,
+      "partyId": "party_002",
+      "narrativeId": "stage_003_guard_spotted"
+    },
+
+    {
+      "entityId": "chest_a",
+      "type": "interactable",
+      "subtype": "chest",
+      "x": 1, "y": 5,
+      "reward": {
+        "gold": 80,
+        "xp": 40,
+        "narrativeText": "TBD"
+      }
+    },
+
+    {
+      "entityId": "exit_a",
+      "type": "exit",
+      "x": 14, "y": 1,
+      "leadsTo": "stage_004",
+      "narrativeId": "stage_003_exit_reached"
+    }
+
+  ],
+
+  "wavePhase": { "mode": "player-select" },
+
+  "tilesetKey": "mars"
+}

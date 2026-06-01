@@ -11,7 +11,9 @@
     "chip": {
       "label":           "HYPER",
       "colour":          "var(--accent-gold)",
-      "durationDisplay": "fade"
+      "durationDisplay": "fade",
+      "ascii":           ["★◈★", "◈◉◈", "★◈★"],
+      "description":     "Full hyper-mode. Sekkar receptors at maximum sensitivity — 90% melee dodge and 50% ranged dodge. On expiry, unleashes a 200% Power energy burst against all enemies."
     }
   },
   "dodgeConfig": {

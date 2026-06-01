@@ -7,7 +7,7 @@ export function DreamScreen() {
   return (
     <VisualNovelCanvas
       scriptId="opening"
-      onComplete={() => navigateTo(SCREEN_IDS.MAIN_MENU)}
+      onComplete={() => navigateTo(SCREEN_IDS.DUNGEON)}
     />
   )
 }

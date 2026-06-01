@@ -5,6 +5,23 @@
   "stacking": "refresh",
   "duration": 9999,
   "tags": [],
+  "secondaryThresholdConfig": [
+    {
+      "above": 30,
+      "dodgeConfig": { "allChance": 0.40 }
+    },
+    {
+      "above": 70,
+      "dodgeConfig": { "allChance": 0.55 },
+      "deflectConfig": { "allChance": 0.15, "damageReduction": 0.30 }
+    },
+    {
+      "above": 100,
+      "dodgeConfig": { "allChance": 0.60 },
+      "deflectConfig": { "allChance": 0.18, "damageReduction": 0.35 },
+      "critConfig": { "chance": 0.10, "attackerStrPercent": 300 }
+    }
+  ],
   "effects": [
     {
       "when": { "event": "onOpponentAction" },

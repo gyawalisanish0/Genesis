@@ -9,9 +9,12 @@
   "ui": {
     "chip": {
       "label":           "PRIMAL",
-      "colour":          "var(--accent-info)",
+      "colour":          "var(--accent-evasion)",
       "durationDisplay": "turns",
-      "icon":            "psv_logo"
+      "icon":            "psv_logo",
+      "ascii":           ["◈━◈", "┃◉┃", "◈━◈"],
+      "description":     "ANBOT's sensory web is active. Each stack absorbs one incoming attack with a 70% dodge chance. Hyper Sense gains its hyper branch when fewer than 3 stacks remain.",
+      "portraitGlow":    true
     }
   },
   "dodgeConfig": {

@@ -12,6 +12,7 @@ import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import { AsciiArena as BattleArena } from '../components/AsciiArena'
 import { HintToaster } from '../components/HintToaster'
 import { BattleProvider, useBattleScreen } from './BattleContext'
+import { StatusInfoOverlay }               from './StatusInfoOverlay'
 import { BattleErrorToast } from './BattleErrorToast'
 import { BattleLogOverlay } from './BattleLogOverlay'
 import { ClashQteOverlay } from './ClashQteOverlay'
@@ -31,6 +32,7 @@ import type { StatusChipData } from '../components/StatusChipBar'
 import type { Unit } from '../core/types'
 import { characterStatusIconUrl } from '../services/DataService'
 import { AsciiPortrait } from '../components/AsciiPortrait'
+import type { TurnDisplayUnitData } from '../components/AsciiArena'
 import styles from './BattleScreen.module.css'
 
 // ── Status chip helpers ──────────────────────────────────────────────────────
@@ -52,6 +54,9 @@ function buildChips(
       // For indefinite statuses (no fixed duration), fall back to showing stacks.
       duration:        slot.duration > 0 ? slot.duration : slot.stacks,
       iconUrl:         chip.icon ? characterStatusIconUrl(unit.defId, chip.icon) : undefined,
+      ascii:           chip.ascii,
+      description:     chip.description,
+      portraitGlow:    chip.portraitGlow,
     }]
   })
 }
@@ -102,7 +107,7 @@ const STACK_OFFSET_PX = 8
 
 // ── Timeline strip ──────────────────────────────────────────────────────────
 function BattleTimeline() {
-  const { tickValue, playerUnits, enemies, activeUnitIds, scrollBounds, historyEntries, getChipDef, suppressedChipIds } = useBattleScreen()
+  const { tickValue, playerUnits, enemies, activeUnitIds, scrollBounds, historyEntries, getChipDef, suppressedChipIds, setInspectingChip } = useBattleScreen()
   const containerRef = useRef<HTMLDivElement>(null)
 
   const trackHeight = (scrollBounds.max - scrollBounds.min) * TIMELINE_PX_PER_TICK
@@ -242,7 +247,7 @@ function BattleTimeline() {
                 hpFraction={unit.maxHp > 0 ? unit.hp / unit.maxHp : 0}
               />
               {chips.length > 0 && (
-                <StatusChipBar chips={chips} size="compact" />
+                <StatusChipBar chips={chips} size="compact" onTap={setInspectingChip} />
               )}
             </div>
           )
@@ -253,14 +258,14 @@ function BattleTimeline() {
 }
 
 // ── Status chip bar (leader) ─────────────────────────────────────────────────
-function LeaderChipBar() {
+function LeaderChipBar({ onTap }: { onTap: (chip: StatusChipData) => void }) {
   const { leader, getChipDef, suppressedChipIds } = useBattleScreen()
   if (!leader) return null
   const chips = buildChips(leader, getChipDef, suppressedChipIds)
   if (!chips.length) return null
   return (
     <div className={styles.statusSlots}>
-      <StatusChipBar chips={chips} size="full" />
+      <StatusChipBar chips={chips} size="full" onTap={onTap} />
     </div>
   )
 }
@@ -271,20 +276,72 @@ function LeaderChipBar() {
 // 'single' (one HUD slot); a future 'all' mode could swap which leader is shown
 // per active tick, but only ever one slot is rendered here.
 function PortraitPanel() {
-  const { turnNumber, tickValue, leader } = useBattleScreen()
+  const { turnNumber, tickValue, leader, getChipDef, suppressedChipIds } = useBattleScreen()
   if (!leader) return null
 
   const leaderShieldHp = leader.statusSlots
     .filter(s => typeof s.payload?.shieldHp === 'number' && (s.payload.shieldHp as number) > 0)
     .reduce((sum, s) => sum + (s.payload.shieldHp as number), 0)
 
+  // Portrait glow: first active chip with portraitGlow=true drives the ring colour.
+  const glowColour = leader.statusSlots.reduce<string | null>((found, slot) => {
+    if (found || suppressedChipIds.has(slot.id)) return found
+    const chip = getChipDef(slot.id)
+    return chip?.portraitGlow ? chip.colour : found
+  }, null)
+
+  const portraitGlowStyle = glowColour ? {
+    borderColor: glowColour,
+    boxShadow:   `0 0 8px ${glowColour}, 0 0 20px ${glowColour}55, inset 0 0 14px ${glowColour}18`,
+  } : undefined
+
+  // SVG arc ring: r=52 inside a 110×110 viewBox so the stroke sits just outside
+  // the 100dp portrait circle. strokeDasharray uses circumference = 2π×52 ≈ 326.7.
+  const ARC_R           = 52
+  const ARC_CIRC        = 2 * Math.PI * ARC_R
+  const secPct          = Math.max(0, Math.min(100, leader.secondaryResource)) / 100
+  const secDash         = secPct * ARC_CIRC
+
   return (
     <div className={styles.portrait}>
       <span className={styles.turnLabel}>Turn {turnNumber}</span>
       <span className={styles.tickLabel}>Tick: {tickValue}</span>
       <div className={`${styles.unitEntry} ${styles.unitEntryActive}`}>
-        <div className={styles.portraitCircle}>
-          <AsciiPortrait defId={leader.defId} />
+        <div className={styles.portraitWrap}>
+          <div className={styles.portraitCircle} style={portraitGlowStyle}>
+            <AsciiPortrait defId={leader.defId} />
+          </div>
+          {leader.secondaryResource > 0 && (
+            <>
+              <svg
+                className={styles.secondaryArc}
+                viewBox="0 0 110 110"
+                aria-hidden="true"
+              >
+                {/* Track ring */}
+                <circle
+                  cx="55" cy="55" r={ARC_R}
+                  fill="none"
+                  strokeWidth="3"
+                  stroke="var(--bg-elevated)"
+                />
+                {/* Fill arc — starts at top (−90°) */}
+                <circle
+                  cx="55" cy="55" r={ARC_R}
+                  fill="none"
+                  strokeWidth="3"
+                  stroke="var(--accent-info)"
+                  strokeLinecap="round"
+                  strokeDasharray={`${secDash} ${ARC_CIRC}`}
+                  transform="rotate(-90 55 55)"
+                  style={{ filter: 'drop-shadow(0 0 3px var(--accent-info))' }}
+                />
+              </svg>
+              <span className={styles.secondaryLabel}>
+                {Math.round(leader.secondaryResource)}
+              </span>
+            </>
+          )}
         </div>
         <span className={styles.lvlBadge}>{leader.name} ★{leader.rarity}</span>
         <div className={styles.barRow}>
@@ -375,7 +432,7 @@ function ActionGrid() {
                   aria-disabled={disabled || notEnoughAp}
                 >
                   <span className={styles.actionBtnName}>Attack</span>
-                  <span className={styles.skillTu}>TU: {basicSkill.cachedCosts.tuCost}</span>
+                  <span className={styles.actionBtnMeta}>TU: {basicSkill.cachedCosts.tuCost} · AP: {basicSkill.cachedCosts.apCost}</span>
                   {targetLabel && <span className={styles.skillTargetBadge}>→ {targetLabel}</span>}
                 </button>
               )
@@ -428,7 +485,7 @@ function ActionGrid() {
                   <span className={styles.skillName}>{name}</span>
                   <span className={styles.skillLvl}>Lv {skillInst?.currentLevel ?? '—'}</span>
                   <span className={styles.skillTu}>{tuCost !== null ? `TU: ${tuCost}` : 'TU: —'}</span>
-                  <span className={styles.skillChrg}>{hasSkill ? `Lv${skillInst.baseDef.maxLevel}` : '×—'}</span>
+                  <span className={styles.skillAp}>{hasSkill ? `AP: ${skillInst.cachedCosts.apCost}` : '—'}</span>
                   {onCooldown && (
                     <span className={styles.skillCdBadgeRow}>
                       {tickCD > 0 && (
@@ -558,7 +615,7 @@ function CounterPromptOverlay() {
 // Centered modal — only shown when 2+ enemies are alive for a single-target skill.
 // Auto-confirms if enemies die while the picker is open and only 1 remains.
 function TargetSelectOverlay() {
-  const { showTargetPicker, enemies, selectedSkill, selectTarget, selectSkill } = useBattleScreen()
+  const { showTargetPicker, enemies, selectedSkill, selectTarget, selectSkill, getChipDef, suppressedChipIds, setInspectingChip } = useBattleScreen()
   const createHandler = useScrollAwarePointer()
 
   const aliveEnemies = enemies.filter(isAlive)
@@ -585,16 +642,30 @@ function TargetSelectOverlay() {
           </button>
         </div>
         <div className={styles.targetPickerList}>
-          {aliveEnemies.map((enemy) => (
-            <button
-              key={enemy.id}
-              className={styles.targetPickerRow}
-              onPointerDown={createHandler({ onTap: () => selectTarget(enemy) })}
-            >
-              <span className={styles.targetPickerName}>{enemy.name}</span>
-              <span className={styles.targetPickerHp}>{enemy.hp}/{enemy.maxHp} HP</span>
-            </button>
-          ))}
+          {aliveEnemies.map((enemy) => {
+            const hpPct  = enemy.maxHp > 0 ? Math.max(0, Math.min(1, enemy.hp / enemy.maxHp)) : 0
+            const chips  = buildChips(enemy, getChipDef, suppressedChipIds)
+            return (
+              <button
+                key={enemy.id}
+                className={styles.targetPickerRow}
+                onPointerDown={createHandler({ onTap: () => selectTarget(enemy) })}
+              >
+                <div className={styles.targetPickerInfo}>
+                  <div className={styles.targetPickerTopRow}>
+                    <span className={styles.targetPickerName}>{enemy.name}</span>
+                    <span className={styles.targetPickerHpText}>{enemy.hp}/{enemy.maxHp}</span>
+                  </div>
+                  <div className={styles.targetPickerBarTrack}>
+                    <div className={styles.targetPickerHpFill} style={{ width: `${hpPct * 100}%` }} />
+                  </div>
+                  {chips.length > 0 && (
+                    <StatusChipBar chips={chips} size="compact" onTap={setInspectingChip} />
+                  )}
+                </div>
+              </button>
+            )
+          })}
         </div>
       </div>
     </div>
@@ -603,12 +674,34 @@ function TargetSelectOverlay() {
 
 // ── Battle layout ───────────────────────────────────────────────────────────
 function BattleLayout() {
-  const { arenaRef, isPaused, setPaused, isLoading, playerUnits, diceResult, skipDice, inspectingSkill, setInspectingSkill, battleError } = useBattleScreen()
+  const { arenaRef, isPaused, setPaused, isLoading, playerUnits, diceResult, skipDice, inspectingSkill, setInspectingSkill, battleError, leader, getChipDef, suppressedChipIds, inspectingChip, setInspectingChip } = useBattleScreen()
   const navigate    = useNavigate()
   const lastBackRef = useRef(0)
   const createHandler = useScrollAwarePointer()
   const [logOpen, setLogOpen] = useState(false)
   useScreen()
+
+  // Live player figure info — mirrors portrait panel data in the acting arena column.
+  const playerFigureInfo = useMemo<TurnDisplayUnitData | undefined>(() => {
+    if (!leader) return undefined
+    const shieldHp = leader.statusSlots
+      .filter(s => typeof s.payload?.shieldHp === 'number' && (s.payload.shieldHp as number) > 0)
+      .reduce((sum, s) => sum + (s.payload.shieldHp as number), 0)
+    return {
+      name:              leader.name,
+      className:         leader.className,
+      rarity:            leader.rarity,
+      hp:                leader.hp,
+      maxHp:             leader.maxHp,
+      ap:                leader.ap,
+      maxAp:             leader.maxAp,
+      secondaryResource: leader.secondaryResource,
+      statusSlots:       leader.statusSlots
+        .filter(s => !suppressedChipIds.has(s.id))
+        .map(s => ({ id: s.id, name: s.name, stacks: s.stacks, duration: s.duration })),
+      shieldHp,
+    }
+  }, [leader, suppressedChipIds])
 
   // Redirect silently to pre-battle if no team was confirmed (direct URL access, etc.).
   useEffect(() => {
@@ -626,6 +719,7 @@ function BattleLayout() {
     if (now - lastBackRef.current < BACK_DEBOUNCE_MS) return
     lastBackRef.current = now
     if (inspectingSkill) { setInspectingSkill(null); return }
+    if (inspectingChip)  { setInspectingChip(null);  return }
     if (logOpen) { setLogOpen(false); return }
     setPaused((prev) => !prev)
   })
@@ -651,6 +745,7 @@ function BattleLayout() {
       {isPaused && <PauseOverlay />}
       {logOpen && <BattleLogOverlay onClose={() => setLogOpen(false)} />}
       {inspectingSkill && <SkillInfoOverlay skill={inspectingSkill} onClose={() => setInspectingSkill(null)} />}
+      {inspectingChip  && <StatusInfoOverlay chip={inspectingChip} onClose={() => setInspectingChip(null)} />}
       <CounterPromptOverlay />
       <TargetSelectOverlay />
       <ClashQteOverlay />
@@ -663,7 +758,12 @@ function BattleLayout() {
       <BattleTimeline />
       <div className={styles.main}>
         <div className={styles.arenaWrap}>
-          <BattleArena ref={arenaRef} />
+          <BattleArena
+            ref={arenaRef}
+            playerFigureInfo={playerFigureInfo}
+            resolveChip={getChipDef}
+            onChipTap={setInspectingChip}
+          />
           {diceResult && (
             <button
               className={styles.diceSkipHotzone}
@@ -682,7 +782,7 @@ function BattleLayout() {
             BATTLE LOG
           </button>
         </div>
-        <LeaderChipBar />
+        <LeaderChipBar onTap={setInspectingChip} />
         <div className={styles.bottom}>
           <div className={styles.portraitCol}>
             <RollButton />

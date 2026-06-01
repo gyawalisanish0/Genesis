@@ -8,7 +8,9 @@
     "chip": {
       "label":           "SHELL",
       "colour":          "var(--accent-info)",
-      "durationDisplay": "fade"
+      "durationDisplay": "fade",
+      "ascii":           ["╔═╗", "║◈║", "╚═╝"],
+      "description":     "ANBOT's nanite mass has hardened into a protective shell, absorbing 25% of Hugo's max HP as a shield. Regenerates 4% max HP every 10 ticks while active. A hit that breaks the shell deals 2× overflow damage."
     }
   },
   "effects": [

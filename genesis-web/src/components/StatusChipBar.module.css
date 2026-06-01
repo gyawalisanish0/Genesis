@@ -1,91 +1,126 @@
+/* Square ASCII logo chips — replaces the old text-pill design.
+ * Each chip is a fixed square: art area fills the face, duration badge overlays
+ * the bottom-right corner. Compact variant shrinks to a coloured dot for the
+ * timeline strip where space is very tight.                                    */
+
 .bar {
   display:   flex;
   flex-wrap: wrap;
-  gap:       0.25rem;
+  gap:       0.375rem;
   padding:   0.25rem 0;
 }
 
 .barCompact {
-  gap:     0.15rem;
+  gap:     0.25rem;
   padding: 0.1rem 0;
 }
 
-/* ── Individual chip ── */
+/* ── Full-size square chip (44 × 44 dp) ─────────────────────────────────── */
+
 .chip {
   position:      relative;
+  width:         2.75rem;   /* 44 dp */
+  height:        2.75rem;
+  border-radius: var(--r-sm);
+  background:    color-mix(in srgb, var(--chip-colour) 12%, var(--bg-card));
+  border:        1px solid color-mix(in srgb, var(--chip-colour) 45%, transparent);
+  overflow:      hidden;
+  flex-shrink:   0;
   display:       flex;
   align-items:   center;
-  gap:           0.25rem;
-  padding:       0.15rem 0.35rem 0.15rem 0.5rem;
-  border-radius: var(--radius-sm, 0.25rem);
-  background:    color-mix(in srgb, var(--chip-colour) 15%, var(--bg-card));
-  border:        1px solid color-mix(in srgb, var(--chip-colour) 40%, transparent);
-  overflow:      hidden;
-  min-height:    var(--touch-min);
-  align-items:   center;
+  justify-content: center;
 }
 
-.barCompact .chip {
-  padding:    0.1rem 0.2rem;
-  min-height: unset;
+/* Subtle inner glow ring keyed to the chip colour */
+.chipGlow {
+  position:      absolute;
+  inset:         0;
+  border-radius: inherit;
+  box-shadow:    inset 0 0 6px color-mix(in srgb, var(--chip-colour) 30%, transparent);
+  pointer-events: none;
 }
 
-/* Left accent bar */
-.chipAccent {
-  position:         absolute;
-  left:             0;
-  top:              0;
-  bottom:           0;
-  width:            0.2rem;
-  background:       var(--chip-colour);
-  border-radius:    var(--radius-sm, 0.25rem) 0 0 var(--radius-sm, 0.25rem);
+/* Tappable variant — pressed feedback */
+.chipTappable {
+  cursor: pointer;
+  transition: transform var(--motion-button), filter var(--motion-button);
 }
 
-/* Icon slot — tinted placeholder background; shows through if image is absent or fails */
-.chipIcon {
-  position:      relative;
-  width:         1rem;
-  height:        1rem;
-  border-radius: 0.15rem;
-  background:    color-mix(in srgb, var(--chip-colour) 25%, transparent);
-  flex-shrink:   0;
-  overflow:      hidden;
+.chipTappable:active {
+  transform: scale(0.92);
+  filter:    brightness(1.2);
 }
 
-.barCompact .chipIcon {
-  width:  0.7rem;
-  height: 0.7rem;
+/* Fading chip — opacity signals low duration */
+.chipFade { opacity: 0.7; }
+
+/* ── Art area — fills the chip, contains either PNG, ASCII, or monogram ──── */
+
+.artArea {
+  width:    100%;
+  height:   100%;
+  display:  flex;
+  align-items:     center;
+  justify-content: center;
+  overflow: hidden;
 }
 
-.chipIconImg {
-  position:         absolute;
-  inset:            0;
-  width:            100%;
-  height:           100%;
-  object-fit:       contain;
-  image-rendering:  auto;
+.artImg {
+  width:          80%;
+  height:         80%;
+  object-fit:     contain;
+  image-rendering: auto;
 }
 
-.chipLabel {
-  font-size:      var(--t-label-size, 0.65rem);
-  font-weight:    600;
-  color:          var(--text-primary);
-  letter-spacing: 0.02em;
-  white-space:    nowrap;
-}
-
-.chipDuration {
-  font-size:   var(--t-label-size, 0.65rem);
+.artAscii {
+  margin:      0;
+  padding:     0;
+  font-family: 'Courier New', monospace;
+  font-size:   0.5625rem;   /* 9 dp — tight fit for 3-char wide art */
+  line-height: 1.15;
   color:       var(--chip-colour);
-  font-weight: 700;
-  white-space: nowrap;
-  margin-left: auto;
-  padding-left: 0.2rem;
+  text-align:  center;
+  white-space: pre;
+  user-select: none;
+  text-shadow: 0 0 4px var(--chip-colour);
 }
 
-/* Fade display — chip opacity drains as duration decreases.
-   Parent sets style opacity directly from durationFraction when needed.
-   For now just render normally — fine-tune in a later pass. */
-.chipFade {
-  opacity: 0.9;
+.artMonogram {
+  font-size:      0.5rem;
+  font-weight:    700;
+  letter-spacing: 0.04em;
+  color:          var(--chip-colour);
+  text-shadow:    0 0 4px var(--chip-colour);
+  user-select:    none;
+}
+
+/* ── Duration badge — bottom-right corner overlay ────────────────────────── */
+
+.badge {
+  position:      absolute;
+  bottom:        0.125rem;
+  right:         0.1875rem;
+  font-size:     0.5rem;
+  font-weight:   700;
+  color:         var(--chip-colour);
+  line-height:   1;
+  letter-spacing: 0.03em;
+  text-shadow:   0 0 4px color-mix(in srgb, var(--chip-colour) 60%, transparent);
+  pointer-events: none;
+}
+
+/* ── Compact chip (timeline markers) ────────────────────────────────────── */
+
+.chipCompact {
+  width:    0.875rem;   /* 14 dp */
+  height:   0.875rem;
+  border-radius: 0.1875rem;
+}
+
+.compactDot {
+  width:         0.4rem;
+  height:        0.4rem;
+  border-radius: 50%;
+  background:    var(--chip-colour);
+  box-shadow:    0 0 4px var(--chip-colour);
 }

@@ -191,7 +191,7 @@ export const levelUpgradeSchema = z.object({
   patch: z.record(z.string(), z.unknown()),
 }).strict()
 
-// ── Dodge config (embedded in statusDefSchema) ───────────────────────────────
+// ── Dodge / deflect / threshold configs (embedded in statusDefSchema) ─────────
 
 const dodgeConfigSchema = z.object({
   allChance:        z.number().optional(),
@@ -199,6 +199,18 @@ const dodgeConfigSchema = z.object({
   rangedChance:     z.number().optional(),
   consumeOnAttempt: z.boolean().optional(),
   consumeOnSuccess: z.boolean().optional(),
+}).strict()
+
+const deflectConfigSchema = z.object({
+  allChance:       z.number(),
+  damageReduction: z.number(),
+}).strict()
+
+const secondaryThresholdLevelSchema = z.object({
+  above:         z.number(),
+  dodgeConfig:   dodgeConfigSchema.optional(),
+  deflectConfig: deflectConfigSchema.optional(),
+  critConfig:    z.object({ chance: z.number(), attackerStrPercent: z.number() }).strict().optional(),
 }).strict()
 
 // ── Script schemas ───────────────────────────────────────────────────────────
@@ -236,6 +248,9 @@ export const statusDefSchema = z.object({
       colour:          z.string(),
       durationDisplay: z.enum(['ticks', 'turns', 'fade', 'none']),
       icon:            z.string().optional(),
+      ascii:           z.array(z.string()).optional(),
+      description:     z.string().optional(),
+      portraitGlow:    z.boolean().optional(),
     }).strict(),
   }).strict().optional(),
   tags:              z.array(z.string()).optional(),
@@ -250,9 +265,10 @@ export const statusDefSchema = z.object({
     chance:             z.number(),
     attackerStrPercent: z.number(),
   }).optional(),
-  hyperModeTrigger:  z.boolean().optional(),
-  hyperModeConfig:   z.object({ activeBelowStacks: z.number() }).optional(),
-  effects:           z.array(effectSchema),
+  hyperModeTrigger:          z.boolean().optional(),
+  hyperModeConfig:           z.object({ activeBelowStacks: z.number() }).optional(),
+  secondaryThresholdConfig:  z.array(secondaryThresholdLevelSchema).optional(),
+  effects:                   z.array(effectSchema),
 }).strict()
 
 export const passiveDefSchema = z.object({

@@ -6,12 +6,16 @@
       "narrativeId": "stage_001_intro",
       "once": true,
       "sequence": true,
+      "blocking": true,
       "priority": 20,
       "animations": [{ "type": "dialogue" }],
       "lines": [
-        { "speakerId": "hugo_001",  "text": "Outpost Sierra-7. Garrison of forty. I'm reading zero." },
-        { "speakerId": "husty_001", "text": "I reviewed the patrol logs before we landed. Last entry: seventy-one hours ago." },
-        { "speakerId": "hugo_001",  "text": "Stay close. Room by room." }
+        { "speakerId": "celan_001",  "text": "Hugo, are you there?" },
+        { "speakerId": "hugo_001",   "text": "Just landed. Strong radio signal nearby." },
+        { "speakerId": "celan_001",  "text": "Report anything, ASAP." },
+        { "speakerId": "hugo_001",   "text": "Husty, ready?" },
+        { "speakerId": "husty_001",  "text": "Navigation is not working properly. I think we should explore." },
+        { "speakerId": "tara_001",   "text": "Let's go then." }
       ]
     },
     {

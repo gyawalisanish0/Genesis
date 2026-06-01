@@ -28,5 +28,5 @@ export const SCREEN_REGISTRY: Record<ScreenId, ScreenConfig> = {
   'roster':        { id: 'roster',        path: '/roster',        title: 'Roster',       safeAreaMode: 'full' },
   'settings':      { id: 'settings',      path: '/settings',      title: 'Settings',     safeAreaMode: 'full' },
   'campaign':      { id: 'campaign',      path: '/campaign',      title: 'Campaign',     safeAreaMode: 'full' },
-  'dungeon':       { id: 'dungeon',       path: '/dungeon',       title: 'The Outpost',  safeAreaMode: 'none' },
+  'dungeon':       { id: 'dungeon',       path: '/dungeon',       title: 'Threat',       safeAreaMode: 'none' },
 }

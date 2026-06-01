@@ -1,4 +1,4 @@
-# Genesis — Demo Flow
+# Genesis — Arc 03: Unknown Relay
 
 ## Overview
 
@@ -127,34 +127,9 @@ The opening sequence ends here. The game begins.
 
 ---
 
-## Act 3 — Preparation
+## Act 3 — Mars Campaign
 
-**After the opening sequence.**
-
-The Commander assembles and briefs the team. This is the pre-battle
-wizard moment — team composition, mission parameters.
-
-The deployed team are the playable characters in the dungeon.
-Their names, classes, and personalities are defined in the character
-roster.
-
-The threat on Mars is an **intergalactic faction** — an organised
-force with reach beyond the solar system. Their presence is
-deliberate, not accidental.
-
-Their name, motivation, and connection to the Creator's dream are
-intentionally withheld in the demo. Details are revealed progressively
-as the story unfolds across worlds and chapters. The demo establishes
-their existence — nothing more.
-
-The Commander does not go to Mars. He assesses, decides, acts through
-his team.
-
----
-
-## Act 4 — Mars Campaign
-
-**3 dungeon stages on Mars.**
+**3 dungeon stages on Mars. Begins immediately after the opening sequence — no intermediate screen.**
 
 The player controls the deployed team. The Commander's perspective
 appears in narrative moments — orders, updates, reactions — but the
@@ -204,9 +179,9 @@ Stats and skill kits for each: TBD during character design phase.
 
 | Stage | Name | Grid | Patrols | New enemies |
 |---|---|---|---|---|
-| `stage_001` | The Outpost | 12×20 | 2 | Netrolume grunt |
-| `stage_002` | TBD | 14×22 | 4 | + Netrolume elite |
-| `stage_003` | TBD | 16×24 | 6 | + Kiragen combatant + controller |
+| `stage_001` | Threat | 12×20 | 2 | Netrolume grunt |
+| `stage_002` | Nostalgia | 18×14 | 4 | + Kiragen combatant |
+| `stage_003` | Quick Escalation | 16×16 | 7 | + Kiragen controller |
 
 Objective across all stages: reach the exit.
 Escalation: bigger maps, more patrols, new enemy types per stage.

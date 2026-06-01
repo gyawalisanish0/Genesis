@@ -63,6 +63,7 @@
         { "x": 9, "y": 17 }
       ],
       "visualRange": 1,
+      "partyId": "party_001",
       "narrativeId": "stage_001_guard_spotted"
     },
 
@@ -78,6 +79,7 @@
         { "x": 1, "y": 13 }
       ],
       "visualRange": 1,
+      "partyId": "party_002",
       "narrativeId": "stage_001_guard_spotted"
     },
 

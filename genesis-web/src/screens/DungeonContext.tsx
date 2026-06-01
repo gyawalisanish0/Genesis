@@ -23,14 +23,20 @@ import {
 
 export type DungeonPhase = 'loading' | 'exploring' | 'wave' | 'transitioning'
 
+export interface EnemyParty {
+  partyId: string
+  spotted: EnemyEntityDef   // the member in visual range that triggered detection
+  members: EnemyEntityDef[] // all map-defined members of this party
+}
+
 interface DungeonContextValue {
-  stageDef:         StageDef | null
-  mapDef:           MapDef | null
-  phase:            DungeonPhase
-  partyTile:        { x: number; y: number }
-  entityPositions:  Record<string, { x: number; y: number }>
-  defeatedEntityIds:Set<string>
-  waveEnemies:      EnemyEntityDef[]
+  stageDef:          StageDef | null
+  mapDef:            MapDef | null
+  phase:             DungeonPhase
+  partyTile:         { x: number; y: number }
+  entityPositions:   Record<string, { x: number; y: number }>
+  defeatedEntityIds: Set<string>
+  waveParties:       EnemyParty[]
   // Party leader summary — shown in the persistent HP pill so the player can
   // see at a glance whose perspective is on screen.
   partyLeader:      { name: string; hp: number; maxHp: number } | null
@@ -44,7 +50,7 @@ interface DungeonContextValue {
   openChest:        InteractableEntityDef | null
   arenaRef:         RefObject<DungeonArenaHandle | null>
   moveParty:        (dx: number, dy: number) => void
-  selectWaveEnemy:  (entityId: string) => void
+  selectWaveParty:  (partyId: string) => void
   collectChest:     () => void
 }
 
@@ -66,7 +72,8 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
 
   const {
     setSelectedMode, setSelectedTeamIds,
-    setCurrentEncounterEnemies, setReturnScreen, setDungeonState,
+    setCurrentEncounterEnemies, setCurrentEncounterEntityIds,
+    setReturnScreen, setDungeonState,
     dungeonState,
   } = useGameStore()
 
@@ -76,7 +83,7 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
   const [partyTile, setPartyTile] = useState({ x: 0, y: 0 })
   const [entityPositions, setEntityPositions] = useState<Record<string, { x: number; y: number }>>({})
   const [defeatedEntityIds, setDefeatedEntityIds] = useState<Set<string>>(new Set())
-  const [waveEnemies, setWaveEnemies] = useState<EnemyEntityDef[]>([])
+  const [waveParties, setWaveParties] = useState<EnemyParty[]>([])
   const [encounterFlashing, setEncounterFlashing] = useState(false)
   const [partyLeader, setPartyLeader]   = useState<{ name: string; hp: number; maxHp: number } | null>(null)
   const [tilesetError, setTilesetError] = useState<string | null>(null)
@@ -369,8 +376,20 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
       const curIdx  = patrol.findIndex((p) => p.x === cur.x && p.y === cur.y)
       const nextIdx = (curIdx + 1) % patrol.length
       const next    = patrol[nextIdx]
-      newPositions[enemy.entityId] = next
 
+      const tileBlocked    = !isTilePassable(map, next.x, next.y)
+      const partyBlocking  = partyRef.current?.x === next.x && partyRef.current?.y === next.y
+      const entityBlocking = Object.entries(newPositions).some(
+        ([id, pos]) => id !== enemy.entityId && pos.x === next.x && pos.y === next.y,
+      )
+
+      if (tileBlocked || partyBlocking || entityBlocking) {
+        pending--
+        if (pending === 0) finish()
+        continue
+      }
+
+      newPositions[enemy.entityId] = next
       arenaRef.current?.setEntityPosition(enemy.entityId, next.x, next.y, true, () => {
         pending--
         if (pending === 0) finish()
@@ -386,58 +405,75 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
 
   // ── Wave phase ─────────────────────────────────────────────────────────────
 
+  function resolvePartyId(e: EnemyEntityDef): string {
+    return e.partyId ?? e.entityId
+  }
+
   function checkWavePhase() {
-    const map   = mapDefRef.current
-    const party = partyRef.current
+    const map        = mapDefRef.current
+    const partyTile  = partyRef.current
     if (!map) return
 
-    const visible = (map.entities.filter((e) => e.type === 'enemy') as EnemyEntityDef[])
-      .filter((e) => {
-        if (defeatedRef.current.has(e.entityId)) return false
-        const pos   = entityPosRef.current[e.entityId] ?? { x: e.x, y: e.y }
-        const range = e.visualRange ?? DUNGEON_DEFAULT_VISUAL_RANGE
-        return Math.max(Math.abs(pos.x - party.x), Math.abs(pos.y - party.y)) <= range
-      })
+    const allEnemies = (map.entities.filter((e) => e.type === 'enemy') as EnemyEntityDef[])
+      .filter((e) => !defeatedRef.current.has(e.entityId))
 
-    if (visible.length === 0) {
+    // Collect individual enemies currently in visual range
+    const inRange = allEnemies.filter((e) => {
+      const pos   = entityPosRef.current[e.entityId] ?? { x: e.x, y: e.y }
+      const range = e.visualRange ?? DUNGEON_DEFAULT_VISUAL_RANGE
+      return Math.max(Math.abs(pos.x - partyTile.x), Math.abs(pos.y - partyTile.y)) <= range
+    })
+
+    if (inRange.length === 0) {
       moveQueueRef.current = false  // no encounter — unlock movement
       return
     }
 
-    // Fire spotted narrative for first enemy
-    if (visible[0].narrativeId) NarrativeService.play(visible[0].narrativeId)
+    // Group spotted enemies into distinct parties.
+    // One spotted member is enough to pull the entire defined party into battle.
+    const seenPartyIds = new Set<string>()
+    const visibleParties: EnemyParty[] = []
+    for (const spotted of inRange) {
+      const pid = resolvePartyId(spotted)
+      if (seenPartyIds.has(pid)) continue
+      seenPartyIds.add(pid)
+      const members = allEnemies.filter((e) => resolvePartyId(e) === pid)
+      visibleParties.push({ partyId: pid, spotted, members })
+    }
 
-    if (visible.length === 1) {
-      const enemy = visible[0]
+    if (visibleParties[0].spotted.narrativeId) {
+      NarrativeService.play(visibleParties[0].spotted.narrativeId)
+    }
+
+    if (visibleParties.length === 1) {
+      const party = visibleParties[0]
       // moveQueueRef stays true — locked through the entire spotted→flash→battle sequence.
-      // Phase 1: enemy shakes on the grid for DUNGEON_SPOT_FLASH_MS (2 s)
-      arenaRef.current?.spotEntity(enemy.entityId)
+      arenaRef.current?.spotEntity(party.spotted.entityId)
       setTimeout(() => {
-        arenaRef.current?.unspotEntity(enemy.entityId)
-        // Phase 2: rapid white screen flashes for DUNGEON_ENCOUNTER_FLASH_MS (1 s)
+        arenaRef.current?.unspotEntity(party.spotted.entityId)
         setEncounterFlashing(true)
         setTimeout(() => {
           setEncounterFlashing(false)
-          launchBattle(enemy)
+          launchBattle(party)
         }, DUNGEON_ENCOUNTER_FLASH_MS)
       }, DUNGEON_SPOT_FLASH_MS)
     } else {
       moveQueueRef.current = false  // wave phase — phase gate blocks moves; queue lock not needed
-      setWaveEnemies(visible)
+      setWaveParties(visibleParties)
       setPhase('wave')
-      arenaRef.current?.activateWavePhase(visible.map((e) => e.entityId))
+      arenaRef.current?.activateWavePhase(visibleParties.map((p) => p.spotted.entityId))
     }
   }
 
-  const selectWaveEnemy = useCallback((entityId: string) => {
-    const enemy = waveEnemies.find((e) => e.entityId === entityId)
-    if (!enemy) return
+  const selectWaveParty = useCallback((partyId: string) => {
+    const party = waveParties.find((p) => p.partyId === partyId)
+    if (!party) return
     arenaRef.current?.deactivateWavePhase()
     setPhase('transitioning')
-    launchBattle(enemy)
-  }, [waveEnemies])
+    launchBattle(party)
+  }, [waveParties])
 
-  function launchBattle(enemy: EnemyEntityDef) {
+  function launchBattle(party: EnemyParty) {
     const stage = stageDefRef.current
     if (!stage) return
 
@@ -466,7 +502,8 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
 
     setSelectedMode(modeDef)
     setSelectedTeamIds(stage.playerUnits.units)
-    setCurrentEncounterEnemies([enemy.defId])
+    setCurrentEncounterEnemies(party.members.map((m) => m.defId))
+    setCurrentEncounterEntityIds(party.members.map((m) => m.entityId))
     setReturnScreen(SCREEN_IDS.DUNGEON)
 
     setPhase('transitioning')
@@ -477,43 +514,23 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (phase !== 'exploring') return
-    // Check if we just returned from a battle — look for the enemy we fought
+    // Check if we just returned from a party battle — mark all members as defeated
     const store = useGameStore.getState()
-    if (store.battleResult?.outcome === 'victory' && store.currentEncounterEnemies.length > 0) {
-      const defId   = store.currentEncounterEnemies[0]
-      const map     = mapDefRef.current
-      if (map) {
-        const enemy = map.entities.find(
-          (e) => e.type === 'enemy' && (e as EnemyEntityDef).defId === defId
-            && !defeatedRef.current.has(e.entityId),
-        ) as EnemyEntityDef | undefined
-        if (enemy) markDefeated(enemy.entityId)
-      }
-      // Clear so we don't double-process
+    if (store.battleResult?.outcome === 'victory' && store.currentEncounterEntityIds.length > 0) {
+      const defeated = store.currentEncounterEntityIds
+      const updated  = new Set([...defeatedRef.current, ...defeated])
+      defeatedRef.current = updated
+      setDefeatedEntityIds(new Set(updated))
+      for (const id of defeated) arenaRef.current?.removeEntity(id)
+      setCurrentEncounterEntityIds([])
       setCurrentEncounterEnemies([])
     }
   }, [phase])
 
-  function markDefeated(entityId: string) {
-    defeatedRef.current = new Set([...defeatedRef.current, entityId])
-    setDefeatedEntityIds(new Set(defeatedRef.current))
-    arenaRef.current?.removeEntity(entityId)
-    // Check if more wave enemies remain
-    const remaining = waveEnemies.filter((e) => !defeatedRef.current.has(e.entityId))
-    if (remaining.length > 0) {
-      setWaveEnemies(remaining)
-      setPhase('wave')
-      arenaRef.current?.activateWavePhase(remaining.map((e) => e.entityId))
-    } else {
-      setWaveEnemies([])
-      setPhase('exploring')
-    }
-  }
-
   const value: DungeonContextValue = {
     stageDef, mapDef, phase, partyTile, entityPositions,
-    defeatedEntityIds, waveEnemies, partyLeader, encounterFlashing, tilesetError, bgColor,
-    openChest, arenaRef, moveParty, selectWaveEnemy, collectChest,
+    defeatedEntityIds, waveParties, partyLeader, encounterFlashing, tilesetError, bgColor,
+    openChest, arenaRef, moveParty, selectWaveParty, collectChest,
   }
 
   return <DungeonContext.Provider value={value}>{children}</DungeonContext.Provider>

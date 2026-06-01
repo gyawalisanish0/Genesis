@@ -1,0 +1,21 @@
+{
+  "type": "character",
+  "id": "celan_001",
+  "name": "Celan",
+  "className": "Commander",
+  "rarity": 5,
+  "stats": {
+    "strength": 60,
+    "endurance": 65,
+    "power": 40,
+    "resistance": 55,
+    "speed": 45,
+    "precision": 60
+  },
+  "maxHp": 480,
+  "maxAp": 100,
+  "apRegenRate": 0.6,
+  "startingAp": 15,
+  "passive": null,
+  "skillPath": null
+}

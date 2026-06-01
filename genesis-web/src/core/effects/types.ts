@@ -329,6 +329,24 @@ export interface DodgeConfig {
   consumeOnSuccess?: boolean
 }
 
+/** Config for a deflect — HP restoration after taking damage, triggered by chance. */
+export interface DeflectConfig {
+  allChance:       number  // 0–1 probability of deflect triggering
+  damageReduction: number  // fraction of damage dealt to restore as HP (e.g. 0.30)
+}
+
+/**
+ * One threshold level within a secondaryThresholdConfig array.
+ * The engine selects the level whose `above` value is the highest value
+ * still ≤ the unit's current secondaryResource.
+ */
+export interface SecondaryThresholdLevel {
+  above:          number
+  dodgeConfig?:   DodgeConfig
+  deflectConfig?: DeflectConfig
+  critConfig?:    { chance: number; attackerStrPercent: number }
+}
+
 /**
  * Status definition — the JSON file under public/data/statuses/<id>.json.
  */
@@ -354,6 +372,9 @@ export interface StatusDef {
       colour:          string
       durationDisplay: 'ticks' | 'turns' | 'fade' | 'none'
       icon?:           string
+      ascii?:          string[]
+      description?:    string
+      portraitGlow?:   boolean
     }
   }
   tags?:      string[]
@@ -393,6 +414,13 @@ export interface StatusDef {
   hyperModeConfig?: {
     activeBelowStacks: number
   }
+  /**
+   * Threshold-based passive bonuses keyed to secondaryResource level.
+   * Copied to slot payload at apply time. The engine selects the highest
+   * matching level and applies its dodge/deflect/crit configs during attack
+   * resolution — no hardcoded status IDs required.
+   */
+  secondaryThresholdConfig?: SecondaryThresholdLevel[]
   effects:    Effect[]
 }
 

@@ -30,7 +30,7 @@ import { applyEffect } from '../effects/applyEffect'
 import { getCachedSkill } from '../engines/skill/SkillInstance'
 import { makeHistoryEntry } from '../battleHistory'
 import { makeSnapshot, snapshotToBattleState } from './BattleSnapshot'
-import { resolveIncomingDodge, makeShieldedBattleState, isHyperModeActive, getEffectiveTuCost, readCritConfig } from './BattleDamage'
+import { resolveIncomingDodge, makeShieldedBattleState, isHyperModeActive, getEffectiveTuCost, readCritConfig, resolveIncomingDeflect } from './BattleDamage'
 import {
   fireHpThresholdPassives, fireStatusExpiry, fireOpponentActionEffects,
   fireCounterTriggerEffects, fireCounterCastEffects, fireOnApSpent,
@@ -265,15 +265,16 @@ export class BattleEngine {
       apCost:     skill.apCost,
       skillLevel: skillInst.currentLevel,
       target: {
-        name:        postTarget.name,
-        className:   postTarget.className,
-        rarity:      postTarget.rarity,
-        hp:          postTarget.hp,
-        maxHp:       postTarget.maxHp,
-        ap:          postTarget.ap,
-        maxAp:       postTarget.maxAp,
-        statusSlots: postTarget.statusSlots,
-        shieldHp:    this.sumShieldHp(postTarget.statusSlots),
+        name:              postTarget.name,
+        className:         postTarget.className,
+        rarity:            postTarget.rarity,
+        hp:                postTarget.hp,
+        maxHp:             postTarget.maxHp,
+        ap:                postTarget.ap,
+        maxAp:             postTarget.maxAp,
+        secondaryResource: postTarget.secondaryResource,
+        statusSlots:       postTarget.statusSlots.map(s => ({ id: s.id, name: s.name, stacks: s.stacks, duration: s.duration })),
+        shieldHp:          this.sumShieldHp(postTarget.statusSlots),
       },
       isAlly: true,
     })
@@ -754,30 +755,32 @@ export class BattleEngine {
       this.showTurnDisplay(
         {
           actor: {
-            name:        freshAIUnit.name,
-            className:   freshAIUnit.className,
-            rarity:      freshAIUnit.rarity,
-            hp:          freshAIUnit.hp,
-            maxHp:       freshAIUnit.maxHp,
-            ap:          freshAIUnit.ap,
-            maxAp:       freshAIUnit.maxAp,
-            statusSlots: freshAIUnit.statusSlots,
-            shieldHp:    this.sumShieldHp(freshAIUnit.statusSlots),
+            name:              freshAIUnit.name,
+            className:         freshAIUnit.className,
+            rarity:            freshAIUnit.rarity,
+            hp:                freshAIUnit.hp,
+            maxHp:             freshAIUnit.maxHp,
+            ap:                freshAIUnit.ap,
+            maxAp:             freshAIUnit.maxAp,
+            secondaryResource: freshAIUnit.secondaryResource,
+            statusSlots:       freshAIUnit.statusSlots.map(s => ({ id: s.id, name: s.name, stacks: s.stacks, duration: s.duration })),
+            shieldHp:          this.sumShieldHp(freshAIUnit.statusSlots),
           },
           skillName:  skill.name,
           tuCost:     skill.tuCost,
           apCost:     skill.apCost,
           skillLevel: skillInst.currentLevel,
           target: {
-            name:        target.name,
-            className:   target.className,
-            rarity:      target.rarity,
-            hp:          target.hp,
-            maxHp:       target.maxHp,
-            ap:          target.ap,
-            maxAp:       target.maxAp,
-            statusSlots: target.statusSlots,
-            shieldHp:    this.sumShieldHp(target.statusSlots),
+            name:              target.name,
+            className:         target.className,
+            rarity:            target.rarity,
+            hp:                target.hp,
+            maxHp:             target.maxHp,
+            ap:                target.ap,
+            maxAp:             target.maxAp,
+            secondaryResource: target.secondaryResource,
+            statusSlots:       target.statusSlots.map(s => ({ id: s.id, name: s.name, stacks: s.stacks, duration: s.duration })),
+            shieldHp:          this.sumShieldHp(target.statusSlots),
           },
           isAlly: freshAIUnit.isAlly,
         },
@@ -1293,6 +1296,13 @@ export class BattleEngine {
         const targetCurrent = snap.get(target.id) ?? target
         battle.setUnit(takeDamage(targetCurrent, critAmount))
         this.appendLog({ text: `★ CRITICAL! +${critAmount} bonus damage`, colour: 'var(--accent-gold)' })
+      }
+
+      const deflectHp = resolveIncomingDeflect(target, targetHpBefore, snap)
+      if (deflectHp > 0) {
+        const targetCurrent = snap.get(target.id) ?? target
+        snap.set(target.id, { ...targetCurrent, hp: Math.min(targetCurrent.maxHp, targetCurrent.hp + deflectHp) })
+        this.appendLog({ text: `◈ DEFLECT! ${targetCurrent.name} restores ${deflectHp} HP`, colour: 'var(--accent-info)' })
       }
     }
 
