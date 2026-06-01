@@ -432,7 +432,7 @@ function ActionGrid() {
                   aria-disabled={disabled || notEnoughAp}
                 >
                   <span className={styles.actionBtnName}>Attack</span>
-                  <span className={styles.skillTu}>TU: {basicSkill.cachedCosts.tuCost}</span>
+                  <span className={styles.actionBtnMeta}>TU: {basicSkill.cachedCosts.tuCost} · AP: {basicSkill.cachedCosts.apCost}</span>
                   {targetLabel && <span className={styles.skillTargetBadge}>→ {targetLabel}</span>}
                 </button>
               )
@@ -485,7 +485,7 @@ function ActionGrid() {
                   <span className={styles.skillName}>{name}</span>
                   <span className={styles.skillLvl}>Lv {skillInst?.currentLevel ?? '—'}</span>
                   <span className={styles.skillTu}>{tuCost !== null ? `TU: ${tuCost}` : 'TU: —'}</span>
-                  <span className={styles.skillChrg}>{hasSkill ? `Lv${skillInst.baseDef.maxLevel}` : '×—'}</span>
+                  <span className={styles.skillAp}>{hasSkill ? `AP: ${skillInst.cachedCosts.apCost}` : '—'}</span>
                   {onCooldown && (
                     <span className={styles.skillCdBadgeRow}>
                       {tickCD > 0 && (
