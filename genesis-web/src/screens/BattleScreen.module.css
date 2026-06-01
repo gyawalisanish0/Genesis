@@ -337,7 +337,7 @@
   justify-content: center;
   overflow: hidden;
   container-type: size;
-  box-shadow: var(--glow-genesis), inset 0 0 20px rgba(0,229,255,0.06);
+  transition: box-shadow 300ms ease-out;
 }
 
 .lvlBadge {
