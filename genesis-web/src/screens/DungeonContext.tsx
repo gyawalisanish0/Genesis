@@ -213,11 +213,20 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
         continue
       }
       arena.setEntityPosition(e.entityId, pos.x, pos.y, false)
-      // If last-seen data exists, show as greyscale if out of reveal range
-      if (lastSeen?.[e.entityId]) {
-        arena.setEntityGreyscale(e.entityId, true)
-        arena.setEntityVisible(e.entityId, true)
-      }
+    }
+
+    // Compute initial visibility from the party's starting position — mirrors
+    // the in-range check applied on every subsequent move, so entities within
+    // the starting reveal radius render immediately instead of staying hidden
+    // until the first step.
+    updateEntityVisibility(start.x, start.y)
+
+    // Previously-spotted entities remain visible as greyscale "memory"
+    // markers even when currently out of range.
+    for (const id of Object.keys(lastSeen ?? {})) {
+      if (defeatedRef.current.has(id)) continue
+      arena.setEntityGreyscale(id, true)
+      arena.setEntityVisible(id, true)
     }
   }
 
