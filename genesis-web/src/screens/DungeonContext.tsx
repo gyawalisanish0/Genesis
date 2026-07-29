@@ -7,9 +7,7 @@ import type { DungeonArenaHandle } from '../components/DungeonArena'
 import { useGameStore }     from '../core/GameContext'
 import { useScreen }        from '../navigation/useScreen'
 import { SCREEN_IDS }       from '../navigation/screenRegistry'
-import { NarrativeService } from '../services/NarrativeService'
-import { NarrativeUnits }   from '../components/NarrativeLayer'
-import { loadStageDef, loadMapDef, loadTilesetDef, loadCharacterWithSkills, loadLevelNarrative } from '../services/DataService'
+import { loadStageDef, loadMapDef, loadTilesetDef, loadCharacterWithSkills } from '../services/DataService'
 import { createUnit }       from '../core/unit'
 import {
   DUNGEON_DEFAULT_VISUAL_RANGE,
@@ -124,18 +122,14 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
     tilesetRef.current = map.tilesetKey ? await loadTilesetDef(map.tilesetKey) : null
     setBgColor(tilesetRef.current?.bgColor ?? null)
 
-    // Register narrative
-    const narrative = await loadLevelNarrative(stageId)
-    if (narrative) NarrativeService.registerEntries(stageId, narrative.entries)
-
     // Build initial entity positions
     const positions: Record<string, { x: number; y: number }> = {}
     for (const e of map.entities) {
       if (e.type !== 'trigger') positions[e.entityId] = { x: e.x, y: e.y }
     }
 
-    // Always load player units so the party HP pill + narrative registry are
-    // populated, regardless of whether we're resuming or starting fresh.
+    // Always load player units so the party HP pill is populated, regardless
+    // of whether we're resuming or starting fresh.
     await registerPlayerUnits(stage)
 
     // Restore saved dungeon state or start fresh
@@ -148,10 +142,9 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
       setEntityPositions(positions)
       entityPosRef.current = positions
 
-      // Wait for arena ref to attach + Phaser scene ready, then init + play intro
+      // Wait for arena ref to attach + Phaser scene ready, then init
       waitForArenaReady(() => {
         initArena(map, positions, start)
-        NarrativeService.play('stage_001_intro')
       })
     }
 
@@ -233,7 +226,6 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
   async function registerPlayerUnits(stage: StageDef) {
     const loaded = await Promise.all(stage.playerUnits.units.map(loadCharacterWithSkills))
     const units  = loaded.map(({ characterDef }) => createUnit(characterDef, true))
-    NarrativeUnits.register(units)
     // Cache leader summary for the persistent HP pill. The first unit in
     // stage.playerUnits.units is the party leader by convention.
     const leader = units[0]
@@ -325,12 +317,6 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
   function checkTriggers(tx: number, ty: number) {
     const map = mapDefRef.current
     if (!map) return
-    for (const e of map.entities) {
-      if (e.type !== 'trigger') continue
-      if (e.x === tx && e.y === ty && e.narrativeId) {
-        NarrativeService.play(e.narrativeId)
-      }
-    }
     // Also check static interactables (auto-trigger on step)
     for (const e of map.entities) {
       if (e.type !== 'interactable' && e.type !== 'exit') continue
@@ -343,7 +329,6 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
         continue
       }
 
-      if (e.narrativeId) NarrativeService.play(e.narrativeId)
       if (e.type === 'exit') handleExit(e as any)
     }
   }
@@ -448,10 +433,6 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
       seenPartyIds.add(pid)
       const members = allEnemies.filter((e) => resolvePartyId(e) === pid)
       visibleParties.push({ partyId: pid, spotted, members })
-    }
-
-    if (visibleParties[0].spotted.narrativeId) {
-      NarrativeService.play(visibleParties[0].spotted.narrativeId)
     }
 
     if (visibleParties.length === 1) {
