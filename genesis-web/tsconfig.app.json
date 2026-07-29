@@ -23,7 +23,10 @@
     /* Paths */
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+
+    /* Node built-ins (fs/path/url) used by the data-validation test script */
+    "types": ["node"]
   },
   "include": ["src"]
 }

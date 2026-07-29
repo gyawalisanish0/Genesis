@@ -400,7 +400,7 @@ export type AnimPhase =
   | { type: 'evasionDodge' }
   | { type: 'projectile' }
   | { type: 'impact' }
-  | { type: 'flash';        figure: 'acting' | 'target'; colour?: number }
+  | { type: 'flash';        figure: 'acting' | 'target'; colour?: string }
   | { type: 'particles';    figure: 'acting' | 'target' }
   | { type: 'damageNumber' }
   | { type: 'statusText';   text: string; colour: string }

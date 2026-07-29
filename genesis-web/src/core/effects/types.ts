@@ -31,22 +31,13 @@ export type StatKey =
   | 'precision'
 
 /** Skill tags — a skill carries 1–4. */
-export type Tag =
-  | 'physical'
-  | 'energy'
-  | 'melee'
-  | 'ranged'
-  | 'utility'
-  | 'unique'
-  | 'special'
-  | 'awakened'
-  | 'misc'
-  | 'counter'        // standard reactive counter — triggers on Evade
-  | 'uniqueCounter'  // character-specific counter with custom effects; same dice + chain rules
-  | 'basic'          // default attack — no AP cost, always available
-  | 'movement'       // repositioning / tick displacement skills
-  | 'tempo'          // tick-synergy skills — effects tied to timeline timing or position
-  | 'hyper'          // skill has a conditional hyper-mode variant with alternate cooldown/effects
+/**
+ * Skill tags are an open vocabulary — only `'counter'` and `'uniqueCounter'`
+ * carry framework-level meaning (BattleContext inspects them for the counter
+ * mechanic). Every other tag is informational, freely defined per skill JSON
+ * for UI/filter use, so this stays a plain string rather than a closed union.
+ */
+export type Tag = string
 
 // ── ValueExpr — the only mini-syntax ─────────────────────────────────────────
 

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import {
   loadCharacterIndex, loadCharacter, loadCharacterSkillDefs,
-  loadCharacterWithSkills, loadMode, clearCache,
+  loadCharacterWithSkills, loadMode, loadStatusDef, clearCache,
 } from '../DataService'
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -179,6 +179,33 @@ describe('DataService', () => {
       // Second call: both are cached — no extra fetches
       await loadCharacterWithSkills('warrior_001')
       expect(fetchMock).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  // ── Schema validation ────────────────────────────────────────────────────────
+
+  describe('schema validation', () => {
+    it('loadCharacter rejects content that fails the CharacterDef schema', async () => {
+      const broken = { ...WARRIOR, className: 'NotARealClass' }
+      vi.stubGlobal('fetch', mockOk(broken))
+      await expect(loadCharacter('warrior_001')).rejects.toThrow('invalid content')
+    })
+
+    it('loadCharacter rejects content with an unrecognised extra field', async () => {
+      const broken = { ...WARRIOR, extraField: 'nope' }
+      vi.stubGlobal('fetch', mockOk(broken))
+      await expect(loadCharacter('warrior_001')).rejects.toThrow('invalid content')
+    })
+
+    it('loadStatusDef logs and resolves to null (rather than throwing) on invalid content', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      vi.stubGlobal('fetch', mockOk({ type: 'status', id: 'broken', stacking: 'not-a-real-mode', effects: [] }))
+
+      const result = await loadStatusDef('broken')
+
+      expect(result).toBeNull()
+      expect(consoleSpy).toHaveBeenCalledTimes(1)
+      expect(consoleSpy.mock.calls[0][0]).toContain('invalid content')
     })
   })
 })

@@ -4,36 +4,39 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev":   "vite",
+    "dev": "vite",
+    "prebuild": "npm run validate:data",
     "build": "tsc -b && vite build",
-    "test":  "vitest run",
+    "validate:data": "vitest run src/services/__tests__/dataValidation.test.ts",
+    "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
-    "lint":  "eslint src"
+    "lint": "eslint src"
   },
   "dependencies": {
-    "phaser":           "^3.90.0",
-    "react":            "^19.2.4",
-    "react-dom":        "^19.2.4",
+    "@capacitor/android": "^8.3.0",
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/core": "^8.3.0",
+    "@capacitor/status-bar": "^8.0.2",
+    "phaser": "^3.90.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
     "react-router-dom": "^7.14.0",
-    "zustand":          "^5.0.12",
-    "zod":              "^4.3.6",
-    "@capacitor/core":        "^8.3.0",
-    "@capacitor/app":         "^8.1.0",
-    "@capacitor/status-bar":  "^8.0.2",
-    "@capacitor/android":     "^8.3.0"
+    "zod": "^4.3.6",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
-    "@types/react":            "^19.2.14",
-    "@types/react-dom":        "^19.2.3",
-    "@vitejs/plugin-react":    "^6.0.1",
-    "typescript":              "^6.0.2",
-    "vite":                    "^8.0.5",
-    "vitest":                  "^4.1.3",
-    "@vitest/coverage-v8":     "^4.1.3",
-    "@testing-library/react":  "^16.3.0",
+    "@capacitor/cli": "^8.3.0",
     "@testing-library/jest-dom": "^6.6.3",
-    "eslint":                  "^10.2.0",
-    "@capacitor/cli":          "^8.3.0"
+    "@testing-library/react": "^16.3.0",
+    "@types/node": "^26.1.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "@vitest/coverage-v8": "^4.1.3",
+    "eslint": "^10.2.0",
+    "typescript": "^6.0.2",
+    "vite": "^8.0.5",
+    "vitest": "^4.1.3"
   }
 }

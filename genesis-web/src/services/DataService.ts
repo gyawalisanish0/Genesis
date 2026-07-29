@@ -1,11 +1,22 @@
 // DataService — JSON game-content loader with in-memory cache.
 //
 // Layer rules: no React imports; Capacitor platform check guards native paths.
-// All callers receive typed data; Zod validation is deferred to Wave C.
+// Every fetch is validated against its Zod schema before being cached or
+// returned — required content (characters, skills, modes) throws a
+// prettified validation error on bad data; optional content (passives,
+// statuses, stages, maps, tilesets, animations) logs the same error and
+// degrades to null, matching its existing "absent file" behaviour.
 
 import type { CharacterDef, ModeDef, StageDef, MapDef, TilesetDef, AnimationManifest, AnimSequenceManifest } from '../core/types'
 import type { AsciiManifest, AsciiSequence, AsciiActionFrames } from '../ascii/types'
 import type { SkillDef, PassiveDef, StatusDef } from '../core/effects/types'
+import { prettifyError, z, type ZodType } from 'zod'
+import { skillDefSchema, passiveDefSchema, statusDefSchema } from '../core/effects/schemas'
+import {
+  characterDefSchema, modeDefSchema, stageDefSchema, mapDefSchema,
+  tilesetDefSchema, animationManifestSchema, animSequenceManifestSchema,
+} from '../core/schemas'
+import { asciiManifestSchema, asciiSequenceSchema, asciiActionFramesSchema } from '../ascii/schemas'
 
 // ── In-memory cache ───────────────────────────────────────────────────────────
 
@@ -50,13 +61,33 @@ async function fetchJson(path: string): Promise<unknown> {
   return res.json()
 }
 
+/** Parses `raw` against `schema`; throws a prettified, path-annotated error on mismatch. */
+function parseOrThrow<T>(schema: ZodType<T>, raw: unknown, path: string): T {
+  const result = schema.safeParse(raw)
+  if (!result.success) {
+    throw new Error(`DataService: invalid content at ${path}\n${prettifyError(result.error)}`)
+  }
+  return result.data
+}
+
+/** Fetches + validates optional content. Logs and returns null on fetch failure or bad data. */
+async function fetchOptional<T>(schema: ZodType<T>, path: string): Promise<T | null> {
+  try {
+    const raw = await fetchJson(path)
+    return parseOrThrow(schema, raw, path)
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : `DataService: failed to load ${path}: ${String(err)}`)
+    return null
+  }
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /** Returns the list of all available character IDs from the characters index. */
 export async function loadCharacterIndex(): Promise<string[]> {
   if (cache.characterIndex) return cache.characterIndex
   const raw = await fetchJson('data/characters/index.json')
-  cache.characterIndex = raw as string[]
+  cache.characterIndex = parseOrThrow(z.array(z.string()), raw, 'data/characters/index.json')
   return cache.characterIndex
 }
 
@@ -65,8 +96,9 @@ export function loadCharacter(id: string): Promise<CharacterDef> {
   if (cached) return Promise.resolve(cached)
   const existing = inflight.characters.get(id)
   if (existing) return existing
-  const promise = fetchJson(`data/characters/${id}/main.json`).then(raw => {
-    const def = raw as CharacterDef
+  const path = `data/characters/${id}/main.json`
+  const promise = fetchJson(path).then(raw => {
+    const def = parseOrThrow(characterDefSchema, raw, path)
     cache.characters.set(id, def)
     inflight.characters.delete(id)
     return def
@@ -79,8 +111,9 @@ export function loadCharacter(id: string): Promise<CharacterDef> {
 export async function loadCharacterSkillDefs(id: string): Promise<SkillDef[]> {
   const cached = cache.characterSkills.get(id)
   if (cached) return cached
-  const raw = await fetchJson(`data/characters/${id}/skills.json`)
-  const defs = raw as SkillDef[]
+  const path = `data/characters/${id}/skills.json`
+  const raw  = await fetchJson(path)
+  const defs = parseOrThrow(z.array(skillDefSchema), raw, path)
   cache.characterSkills.set(id, defs)
   return defs
 }
@@ -88,8 +121,9 @@ export async function loadCharacterSkillDefs(id: string): Promise<SkillDef[]> {
 export async function loadMode(id: string): Promise<ModeDef> {
   const cached = cache.modes.get(id)
   if (cached) return cached
-  const raw = await fetchJson(`data/modes/${id}.json`)
-  const def = raw as ModeDef
+  const path = `data/modes/${id}.json`
+  const raw  = await fetchJson(path)
+  const def  = parseOrThrow(modeDefSchema, raw, path)
   cache.modes.set(id, def)
   return def
 }
@@ -104,14 +138,9 @@ export async function loadCharacterPassive(id: string): Promise<PassiveDef | nul
 
   const cached = cache.passives.get(def.passive)
   if (cached) return cached
-  try {
-    const raw    = await fetchJson(`data/characters/${id}/passive.json`)
-    const result = raw as PassiveDef
-    cache.passives.set(def.passive, result)
-    return result
-  } catch {
-    return null
-  }
+  const result = await fetchOptional(passiveDefSchema, `data/characters/${id}/passive.json`)
+  if (result) cache.passives.set(def.passive, result)
+  return result
 }
 
 /**
@@ -121,14 +150,9 @@ export async function loadCharacterPassive(id: string): Promise<PassiveDef | nul
 export async function loadStatusDef(id: string): Promise<StatusDef | null> {
   const cached = cache.statuses.get(id)
   if (cached) return cached
-  try {
-    const raw    = await fetchJson(`data/statuses/${id}.json`)
-    const result = raw as StatusDef
-    cache.statuses.set(id, result)
-    return result
-  } catch {
-    return null
-  }
+  const result = await fetchOptional(statusDefSchema, `data/statuses/${id}.json`)
+  if (result) cache.statuses.set(id, result)
+  return result
 }
 
 /** Load a character definition together with all of its skill definitions and passive. */
@@ -149,7 +173,7 @@ export async function loadCharacterWithSkills(id: string): Promise<{
 export async function loadCampaignIndex(): Promise<string[]> {
   if (cache.campaignIndex) return cache.campaignIndex
   const raw = await fetchJson('data/campaign/index.json')
-  cache.campaignIndex = raw as string[]
+  cache.campaignIndex = parseOrThrow(z.array(z.string()), raw, 'data/campaign/index.json')
   return cache.campaignIndex
 }
 
@@ -157,42 +181,27 @@ export async function loadCampaignIndex(): Promise<string[]> {
 export async function loadStageDef(stageId: string): Promise<StageDef | null> {
   const cached = cache.stages.get(stageId)
   if (cached) return cached
-  try {
-    const raw = await fetchJson(`data/campaign/${stageId}/stage.json`)
-    const def = raw as StageDef
-    cache.stages.set(stageId, def)
-    return def
-  } catch {
-    return null
-  }
+  const result = await fetchOptional(stageDefSchema, `data/campaign/${stageId}/stage.json`)
+  if (result) cache.stages.set(stageId, result)
+  return result
 }
 
 /** Load dungeon map definition. Returns null silently when absent. */
 export async function loadMapDef(stageId: string): Promise<MapDef | null> {
   const cached = cache.maps.get(stageId)
   if (cached) return cached
-  try {
-    const raw = await fetchJson(`data/campaign/${stageId}/map.json`)
-    const def = raw as MapDef
-    cache.maps.set(stageId, def)
-    return def
-  } catch {
-    return null
-  }
+  const result = await fetchOptional(mapDefSchema, `data/campaign/${stageId}/map.json`)
+  if (result) cache.maps.set(stageId, result)
+  return result
 }
 
 /** Load tileset visual definition. Returns null silently when absent. */
 export async function loadTilesetDef(key: string): Promise<TilesetDef | null> {
   const cached = cache.tilesets.get(key)
   if (cached) return cached
-  try {
-    const raw = await fetchJson(`data/tilesets/${key}/tileset.json`)
-    const def = raw as TilesetDef
-    cache.tilesets.set(key, def)
-    return def
-  } catch {
-    return null
-  }
+  const result = await fetchOptional(tilesetDefSchema, `data/tilesets/${key}/tileset.json`)
+  if (result) cache.tilesets.set(key, result)
+  return result
 }
 
 /**
@@ -202,14 +211,9 @@ export async function loadTilesetDef(key: string): Promise<TilesetDef | null> {
 export async function loadAnimationManifest(defId: string): Promise<AnimationManifest | null> {
   const cached = cache.animationManifests.get(defId)
   if (cached) return cached
-  try {
-    const raw = await fetchJson(`data/characters/${defId}/animations.json`)
-    const def = raw as AnimationManifest
-    cache.animationManifests.set(defId, def)
-    return def
-  } catch {
-    return null
-  }
+  const result = await fetchOptional(animationManifestSchema, `data/characters/${defId}/animations.json`)
+  if (result) cache.animationManifests.set(defId, result)
+  return result
 }
 
 /**
@@ -219,15 +223,9 @@ export async function loadAnimationManifest(defId: string): Promise<AnimationMan
  */
 export async function loadAnimSequenceManifest(defId: string): Promise<AnimSequenceManifest | null> {
   if (cache.animSequences.has(defId)) return cache.animSequences.get(defId) ?? null
-  try {
-    const raw = await fetchJson(`data/characters/${defId}/anim_sequence.json`)
-    const manifest = raw as AnimSequenceManifest
-    cache.animSequences.set(defId, manifest)
-    return manifest
-  } catch {
-    cache.animSequences.set(defId, null)
-    return null
-  }
+  const result = await fetchOptional(animSequenceManifestSchema, `data/characters/${defId}/anim_sequence.json`)
+  cache.animSequences.set(defId, result)
+  return result
 }
 
 /**
@@ -236,15 +234,9 @@ export async function loadAnimSequenceManifest(defId: string): Promise<AnimSeque
  */
 export async function loadAsciiManifest(defId: string): Promise<AsciiManifest | null> {
   if (cache.asciiManifests.has(defId)) return cache.asciiManifests.get(defId) ?? null
-  try {
-    const raw = await fetchJson(`data/characters/${defId}/animations/animations.json`)
-    const def = raw as AsciiManifest
-    cache.asciiManifests.set(defId, def)
-    return def
-  } catch {
-    cache.asciiManifests.set(defId, null)
-    return null
-  }
+  const result = await fetchOptional(asciiManifestSchema, `data/characters/${defId}/animations/animations.json`)
+  cache.asciiManifests.set(defId, result)
+  return result
 }
 
 /**
@@ -253,15 +245,9 @@ export async function loadAsciiManifest(defId: string): Promise<AsciiManifest | 
  */
 export async function loadAsciiSequence(defId: string): Promise<AsciiSequence | null> {
   if (cache.asciiSequences.has(defId)) return cache.asciiSequences.get(defId) ?? null
-  try {
-    const raw = await fetchJson(`data/characters/${defId}/animations/anim_sequence.json`)
-    const seq = raw as AsciiSequence
-    cache.asciiSequences.set(defId, seq)
-    return seq
-  } catch {
-    cache.asciiSequences.set(defId, null)
-    return null
-  }
+  const result = await fetchOptional(asciiSequenceSchema, `data/characters/${defId}/animations/anim_sequence.json`)
+  cache.asciiSequences.set(defId, result)
+  return result
 }
 
 /**
@@ -271,15 +257,9 @@ export async function loadAsciiSequence(defId: string): Promise<AsciiSequence | 
 export async function loadAsciiAction(defId: string, action: string): Promise<AsciiActionFrames | null> {
   const key = `${defId}/${action}`
   if (cache.asciiActions.has(key)) return cache.asciiActions.get(key) ?? null
-  try {
-    const raw = await fetchJson(`data/characters/${defId}/animations/${action}_anim.json`)
-    const frames = raw as AsciiActionFrames
-    cache.asciiActions.set(key, frames)
-    return frames
-  } catch {
-    cache.asciiActions.set(key, null)
-    return null
-  }
+  const result = await fetchOptional(asciiActionFramesSchema, `data/characters/${defId}/animations/${action}_anim.json`)
+  cache.asciiActions.set(key, result)
+  return result
 }
 
 /** Synchronous URL for a character's portrait PNG at the standard path. */
