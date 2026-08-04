@@ -15,7 +15,6 @@ import {
   characterDefSchema, modeDefSchema, stageDefSchema, mapDefSchema,
   tilesetDefSchema, animationManifestSchema, animSequenceManifestSchema,
 } from '../../core/schemas'
-import { asciiManifestSchema, asciiSequenceSchema, asciiActionFramesSchema } from '../../ascii/schemas'
 
 const DATA_ROOT = join(fileURLToPath(import.meta.url), '../../../../public/data')
 
@@ -64,11 +63,6 @@ function classify(relPath: string): { schema: ZodType; label: string } | null | 
       case 'animations.json':    return { schema: animationManifestSchema,     label: 'animations' }
       case 'anim_sequence.json': return { schema: animSequenceManifestSchema,  label: 'animSequence' }
     }
-  }
-  if (seg[0] === 'characters' && seg.length === 4 && seg[2] === 'animations') {
-    if (seg[3] === 'animations.json')    return { schema: asciiManifestSchema,      label: 'asciiManifest' }
-    if (seg[3] === 'anim_sequence.json') return { schema: asciiSequenceSchema,      label: 'asciiSequence' }
-    if (seg[3].endsWith('_anim.json'))   return { schema: asciiActionFramesSchema,  label: 'asciiAction' }
   }
   if (seg[0] === 'campaign' && seg.length === 3) {
     if (seg[2] === 'stage.json') return { schema: stageDefSchema, label: 'stage' }

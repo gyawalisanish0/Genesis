@@ -9,7 +9,7 @@ import { useScreen } from '../navigation/useScreen'
 import { SCREEN_REGISTRY, SCREEN_IDS } from '../navigation/screenRegistry'
 import { useBackButton } from '../input/useBackButton'
 import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
-import { AsciiArena as BattleArena } from '../components/AsciiArena'
+import { SpriteArena as BattleArena } from '../components/SpriteArena'
 import { HintToaster } from '../components/HintToaster'
 import { BattleProvider, useBattleScreen } from './BattleContext'
 import { StatusInfoOverlay }               from './StatusInfoOverlay'
@@ -31,8 +31,8 @@ import { StatusChipBar } from '../components/StatusChipBar'
 import type { StatusChipData } from '../components/StatusChipBar'
 import type { Unit } from '../core/types'
 import { characterStatusIconUrl } from '../services/DataService'
-import { AsciiPortrait } from '../components/AsciiPortrait'
-import type { TurnDisplayUnitData } from '../components/AsciiArena'
+import { UnitPortrait } from '../components/UnitPortrait'
+import type { TurnDisplayUnitData } from '../core/battle/EngineTypes'
 import styles from './BattleScreen.module.css'
 
 // ── Status chip helpers ──────────────────────────────────────────────────────
@@ -54,7 +54,6 @@ function buildChips(
       // For indefinite statuses (no fixed duration), fall back to showing stacks.
       duration:        slot.duration > 0 ? slot.duration : slot.stacks,
       iconUrl:         chip.icon ? characterStatusIconUrl(unit.defId, chip.icon) : undefined,
-      ascii:           chip.ascii,
       description:     chip.description,
       portraitGlow:    chip.portraitGlow,
     }]
@@ -309,7 +308,7 @@ function PortraitPanel() {
       <div className={`${styles.unitEntry} ${styles.unitEntryActive}`}>
         <div className={styles.portraitWrap}>
           <div className={styles.portraitCircle} style={portraitGlowStyle}>
-            <AsciiPortrait defId={leader.defId} />
+            <UnitPortrait name={leader.name} rarity={leader.rarity} defId={leader.defId} size="lg" />
           </div>
           {leader.secondaryResource > 0 && (
             <>

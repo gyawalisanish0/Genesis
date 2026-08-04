@@ -9,7 +9,6 @@ export interface StatusChipData {
   durationDisplay: 'ticks' | 'turns' | 'fade' | 'none'
   duration:        number
   iconUrl?:        string
-  ascii?:          string[]
   description?:    string
   portraitGlow?:   boolean
 }
@@ -56,7 +55,6 @@ function ChipSquare({
   createHandler: ReturnType<typeof useScrollAwarePointer>
 }) {
   const isFading  = chip.durationDisplay === 'fade'
-  const hasAscii  = chip.ascii && chip.ascii.length > 0
   const monogram  = chip.label.slice(0, 3).toUpperCase()
   const handleTap = onTap ? () => onTap(chip) : undefined
 
@@ -87,9 +85,7 @@ function ChipSquare({
                 onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
               />
             )
-            : hasAscii
-              ? <pre className={styles.artAscii}>{chip.ascii!.join('\n')}</pre>
-              : <span className={styles.artMonogram}>{monogram}</span>
+            : <span className={styles.artMonogram}>{monogram}</span>
           }
         </div>
       )}

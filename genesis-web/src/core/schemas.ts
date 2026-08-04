@@ -172,17 +172,16 @@ export const mapDefSchema = z.object({
 
 // ── TilesetDef ────────────────────────────────────────────────────────────────
 
-const asciiTileDefSchema = z.object({
-  color:    z.string(),
-  pattern:  z.array(z.string()).optional(),
-  patterns: z.record(z.string(), z.array(z.string())).optional(),
+const tileVisualDefSchema = z.object({
+  color: z.string(),
+  art:   z.string().optional(),
 }).strict()
 
 export const tilesetDefSchema = z.object({
   type:    z.literal('tileset'),
   key:     z.string(),
   bgColor: z.string().optional(),
-  tiles:   z.record(z.string(), asciiTileDefSchema),
+  tiles:   z.record(z.string(), tileVisualDefSchema),
 }).strict()
 
 // ── AnimationManifest ─────────────────────────────────────────────────────────

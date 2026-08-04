@@ -92,19 +92,6 @@
   object-fit: contain;
 }
 
-.iconAscii {
-  margin:      0;
-  padding:     0;
-  font-family: 'Courier New', monospace;
-  font-size:   0.875rem;
-  line-height: 1.2;
-  color:       var(--chip-colour);
-  text-align:  center;
-  white-space: pre;
-  user-select: none;
-  text-shadow: 0 0 6px var(--chip-colour);
-}
-
 .iconMonogram {
   font-size:   0.75rem;
   font-weight: 700;

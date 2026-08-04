@@ -2,7 +2,6 @@ import {
   forwardRef, useImperativeHandle, useReducer, useRef, useCallback,
 } from 'react'
 import type { MapDef, TilesetDef, EntityDef, InteractableEntityDef } from '../core/types'
-import { getTileArt }                                   from './dungeonTileArt'
 import { DUNGEON_MOVE_ANIM_MS, DUNGEON_PATROL_ANIM_MS } from '../core/constants'
 import styles from './DungeonArena.module.css'
 
@@ -27,31 +26,19 @@ export interface DungeonArenaHandle {
   setTapCallback(cb: DungeonTapCallback | null): void
 }
 
-// 32 chars × (0.5rem font / line-height 0.6) = 32 × 4.8px = 153.6px block
-const BLOCK_SIZE_PX = 153.6
-// Fixed cell size — 7.5 tiles across 360dp; tile scale = 48/153.6 ≈ 0.3125
-const CELL_PX    = 48
-const TILE_SCALE = (CELL_PX / BLOCK_SIZE_PX).toFixed(4)
+// Fixed cell size — 7.5 tiles across a 360dp canvas.
+const CELL_PX = 48
+
+const FALLBACK_TILE_COLOR = '#2a1a12'
 
 // ── Tile art resolution ───────────────────────────────────────────────────────
+//
+// Tiles render as flat colour fills until pixel tile sheets are authored.
+// TilesetDef.tiles[id].color is the authored base colour; `art` (the future
+// PNG reference) is documented in docs/ui/00-design-system.md § Tilesets.
 
-function resolveTileArt(
-  tileset:  TilesetDef | null,
-  tileId:   string,
-  rotation: number,
-): { pattern: string[]; color: string } {
-  const fallback = getTileArt(tileId, rotation)
-  const entry    = tileset?.tiles[tileId]
-  if (!entry) return fallback
-  let pattern: string[]
-  if (entry.patterns) {
-    pattern = entry.patterns[String(rotation)] ?? entry.patterns['0'] ?? fallback.pattern
-  } else if (entry.pattern) {
-    pattern = entry.pattern
-  } else {
-    pattern = fallback.pattern
-  }
-  return { pattern, color: entry.color }
+function resolveTileColor(tileset: TilesetDef | null, tileId: string): string {
+  return tileset?.tiles[tileId]?.color ?? FALLBACK_TILE_COLOR
 }
 
 // ── Entity char + CSS class ───────────────────────────────────────────────────
@@ -211,9 +198,9 @@ function DungeonArena({ bgColor }, ref) {
         continue
       }
 
-      const tileCode = map.tiles[ty]?.[tx] ?? 0
-      const tileDef  = map.tileTypes[String(tileCode)]
-      const art      = resolveTileArt(tilesetRef.current, tileDef?.id ?? 'floor', tileDef?.rotation ?? 0)
+      const tileCode  = map.tiles[ty]?.[tx] ?? 0
+      const tileDef   = map.tileTypes[String(tileCode)]
+      const tileColor = resolveTileColor(tilesetRef.current, tileDef?.id ?? 'floor')
 
       const isParty    = party?.x === tx && party?.y === ty
       const entityId   = isParty ? undefined : cellEntity[key]
@@ -224,11 +211,7 @@ function DungeonArena({ bgColor }, ref) {
 
       cells.push(
         <div key={key} className={styles.cell} onPointerDown={() => handleCellTap(tx, ty)}>
-          <div className={styles.tileWrapper} style={{ backgroundColor: art.color }}>
-            <pre className={styles.tilePattern}>
-              {art.pattern.join('\n')}
-            </pre>
-          </div>
+          <div className={styles.tileWrapper} style={{ backgroundColor: tileColor }} />
           {isParty && <span className={styles.party}>◈</span>}
           {entityDef && (
             <span className={[
@@ -253,7 +236,7 @@ function DungeonArena({ bgColor }, ref) {
   return (
     <div
       className={styles.arena}
-      style={{ backgroundColor: bgColor ?? '#1a0a05', '--tile-scale': TILE_SCALE } as React.CSSProperties}
+      style={{ backgroundColor: bgColor ?? '#1a0a05' }}
     >
       <div
         className={styles.grid}

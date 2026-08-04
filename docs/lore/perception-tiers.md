@@ -10,8 +10,9 @@ ant relationships, ant grief. The human sees pattern, movement,
 structure. The complexity is real — the human just cannot hold it
 at full resolution.
 
-This is how Genesis works. The ASCII art is not a style choice.
-**It is the Commander's perception of reality.**
+This is how Genesis works. The pixel art is not a style choice.
+**It is the Commander's perception of reality** — reality sampled onto
+a fixed grid, at a fixed palette depth, with the loss made visible.
 
 ---
 
@@ -34,16 +35,15 @@ can, faintly, without knowing what it means.
 
 ### Tier 1 — OMEGA (The Commander)
 
-Perceives the world as structured symbol. Box-drawing bones.
-Block-mass bodies. Geometric identity markers. Unicode pattern
-standing in for full physical reality.
+Perceives the world quantised. Silhouettes on a fixed grid. Bodies
+resolved to a few dozen pixels. A limited palette standing in for
+the full spectrum of physical reality.
 
 The battle is real. The characters are real, complex, breathing
 beings with full inner lives. The Commander perceives them as
-ASCII — not because they *are* ASCII, but because that is what
-an OMEGA-tier consciousness does to lower-order reality. It
-compresses it to signal. To pattern. To the shape of something,
-stripped of noise.
+sprites — not because they *are* sprites, but because that is what
+an OMEGA-tier consciousness does to lower-order reality. It samples
+it. To pattern. To the shape of something, stripped of noise.
 
 This is not inferior perception. It is a different resolution —
 one that sees structure more clearly precisely because it has
@@ -61,19 +61,20 @@ their experience, reality is complete, rich, and unreduced.
 
 ---
 
-## Why ASCII Is Better Than HD
+## Why Pixel Art Is Better Than HD
 
 In-universe and out-of-universe, the answer is the same.
 
-**In-universe:** The Commander's OMEGA perception strips lower reality
-to its essential signal. What remains is more structurally true than
-a photographic representation — it shows the *shape* of a thing, not
-its surface texture.
+**In-universe:** The Commander's OMEGA perception samples lower reality
+onto a coarse grid. What remains is more structurally true than a
+photographic representation — it shows the *shape* of a thing, not its
+surface texture. The grid is visible, and its visibility is the point:
+the player can see exactly how much was discarded.
 
 **Out-of-universe:** Abstraction invites the imagination in. A fully
 rendered character is a closed statement — here is exactly what this
-looks like. ASCII is an open question — here is the shape of something,
-now complete it. The player's mind fills the gap with something more
+looks like. A sprite is an open question — here is the shape of
+something, at this resolution, now complete it. The player's mind fills the gap with something more
 vivid, more personal, and more emotionally true than any renderer
 could produce.
 
@@ -139,8 +140,8 @@ Hugo does not know it is there.
   thoughts cannot compress into OMEGA-readable signals. The chaos
   is transmission loss, not personality disorder — though the
   personality is also real.
-- **ASCII is never explained in-world** — the Commander does not
-  think "I am perceiving this in ASCII." They just see what they
+- **The rendering is never explained in-world** — the Commander does
+  not think "I am perceiving this at reduced resolution." They just see what they
   see. The framework is for designers and writers, not players.
 - **The `·` particle is never called Creator residue in-game** —
   it appears. Players who understand the hierarchy will recognise

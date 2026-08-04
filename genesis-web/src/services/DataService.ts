@@ -8,7 +8,6 @@
 // degrades to null, matching its existing "absent file" behaviour.
 
 import type { CharacterDef, ModeDef, StageDef, MapDef, TilesetDef, AnimationManifest, AnimSequenceManifest } from '../core/types'
-import type { AsciiManifest, AsciiSequence, AsciiActionFrames } from '../ascii/types'
 import type { SkillDef, PassiveDef, StatusDef } from '../core/effects/types'
 import { prettifyError, z, type ZodType } from 'zod'
 import { skillDefSchema, passiveDefSchema, statusDefSchema } from '../core/effects/schemas'
@@ -16,7 +15,6 @@ import {
   characterDefSchema, modeDefSchema, stageDefSchema, mapDefSchema,
   tilesetDefSchema, animationManifestSchema, animSequenceManifestSchema,
 } from '../core/schemas'
-import { asciiManifestSchema, asciiSequenceSchema, asciiActionFramesSchema } from '../ascii/schemas'
 
 // ── In-memory cache ───────────────────────────────────────────────────────────
 
@@ -33,9 +31,6 @@ const cache = {
   tilesets:            new Map<string, TilesetDef>(),
   animationManifests:  new Map<string, AnimationManifest>(),
   animSequences:       new Map<string, AnimSequenceManifest | null>(),
-  asciiManifests:      new Map<string, AsciiManifest | null>(),
-  asciiSequences:      new Map<string, AsciiSequence | null>(),
-  asciiActions:        new Map<string, AsciiActionFrames | null>(),
 }
 
 // In-flight deduplication: store the pending promise so concurrent callers
@@ -228,40 +223,6 @@ export async function loadAnimSequenceManifest(defId: string): Promise<AnimSeque
   return result
 }
 
-/**
- * Load a character's ASCII animation manifest.
- * Returns null silently when absent — characters without ASCII art use generic fallback.
- */
-export async function loadAsciiManifest(defId: string): Promise<AsciiManifest | null> {
-  if (cache.asciiManifests.has(defId)) return cache.asciiManifests.get(defId) ?? null
-  const result = await fetchOptional(asciiManifestSchema, `data/characters/${defId}/animations/animations.json`)
-  cache.asciiManifests.set(defId, result)
-  return result
-}
-
-/**
- * Load a character's ASCII animation sequence (state machine + timing).
- * Returns null silently when absent — engine falls back to DEFAULT_CONFIGS.
- */
-export async function loadAsciiSequence(defId: string): Promise<AsciiSequence | null> {
-  if (cache.asciiSequences.has(defId)) return cache.asciiSequences.get(defId) ?? null
-  const result = await fetchOptional(asciiSequenceSchema, `data/characters/${defId}/animations/anim_sequence.json`)
-  cache.asciiSequences.set(defId, result)
-  return result
-}
-
-/**
- * Load frame data for a specific action (idle, attack, hurt, death, dodge, or skill ID).
- * Returns null silently when absent — FigureAnimator falls back to generic frames.
- */
-export async function loadAsciiAction(defId: string, action: string): Promise<AsciiActionFrames | null> {
-  const key = `${defId}/${action}`
-  if (cache.asciiActions.has(key)) return cache.asciiActions.get(key) ?? null
-  const result = await fetchOptional(asciiActionFramesSchema, `data/characters/${defId}/animations/${action}_anim.json`)
-  cache.asciiActions.set(key, result)
-  return result
-}
-
 /** Synchronous URL for a character's portrait PNG at the standard path. */
 export function characterPortraitUrl(defId: string): string {
   return `${BASE_NORMALIZED}images/characters/${defId}/portrait.png`
@@ -288,8 +249,5 @@ export function clearCache(): void {
   cache.tilesets.clear()
   cache.animationManifests.clear()
   cache.animSequences.clear()
-  cache.asciiManifests.clear()
-  cache.asciiSequences.clear()
-  cache.asciiActions.clear()
   inflight.characters.clear()
 }

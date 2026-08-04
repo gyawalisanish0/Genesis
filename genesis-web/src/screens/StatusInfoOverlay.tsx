@@ -21,7 +21,6 @@ export function StatusInfoOverlay({ chip, stacks, onClose }: Props) {
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  const hasAscii  = chip.ascii && chip.ascii.length > 0
   const monogram  = chip.label.slice(0, 3).toUpperCase()
 
   return (
@@ -56,9 +55,7 @@ export function StatusInfoOverlay({ chip, stacks, onClose }: Props) {
                   onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
                 />
               )
-              : hasAscii
-                ? <pre className={styles.iconAscii}>{chip.ascii!.join('\n')}</pre>
-                : <span className={styles.iconMonogram}>{monogram}</span>
+              : <span className={styles.iconMonogram}>{monogram}</span>
             }
           </div>
           <div className={styles.titleBlock}>

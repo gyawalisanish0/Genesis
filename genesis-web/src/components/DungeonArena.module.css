@@ -1,7 +1,8 @@
-/* DungeonArena — React ASCII grid renderer, martian surface.
+/* DungeonArena — tile grid renderer, martian surface.
    Camera: grid is absolute-positioned, top:50% left:50% inside overflow:hidden arena.
    transform: translate(-camX, -camY) keeps the party tile centered at all times.
-   Each tile is 48×48 px; the 32×32 ASCII block scales to fit via --tile-scale. */
+   Each tile is a 48×48 px cell; tiles currently fill with their authored base
+   colour until pixel tile sheets are authored. */
 
 .arena {
   flex: 1;
@@ -35,29 +36,14 @@
   background: #000;
 }
 
-/* ── Tile art layer — 8×4 ASCII pattern at micro font ─────────────────────── */
+/* ── Tile art layer ────────────────────────────────────────────────────────── */
 
 .tileWrapper {
   position: absolute;
   inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   overflow: hidden;
   pointer-events: none;
-}
-
-.tilePattern {
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 0.5rem;       /* 8px — 32 chars × 4.8px = 153.6px block */
-  line-height: 0.6;        /* unitless — makes char pixels square (4.8 × 4.8px) */
-  color: #000000;
-  margin: 0;
-  padding: 0;
-  white-space: pre;
-  flex-shrink: 0;
-  transform: scale(var(--tile-scale, 0.195));
-  transform-origin: center center;
+  image-rendering: pixelated;
 }
 
 /* ── Entity / party layer (foreground character) ───────────────────────────── */

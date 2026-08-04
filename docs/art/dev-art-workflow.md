@@ -11,6 +11,12 @@ without blocking development.
 Gemini (image generation). Reference images are provided alongside every prompt —
 they carry the visual detail. Prompts stay minimal as a result.
 
+Output must land on the pixel grid defined in `docs/ui/00-design-system.md`:
+GBA-era pixel art, authored at **1× art pixels** (48 × 48 per battle frame),
+limited palette, hard edges, no antialiasing. Generated art almost never
+satisfies this directly — downsample and re-index to the ramp palette before
+it goes in the repo.
+
 ---
 
 ## Spritesheet format
@@ -151,4 +157,4 @@ public/images/characters/{defId}/UI/Status/psv_logo.png
 
 The engine loads icons via `DataService.characterStatusIconUrl(defId, iconKey)`. If the file is absent, the chip renders a tinted placeholder square — no broken-image state.
 
-See `docs/mechanics/phaser-arena.md` for the full art upgrade path and `docs/engine/00_content_contract.md` for the full status chip JSON spec.
+See `docs/ui/00-design-system.md` for the pixel grid and asset sizes every generated sheet must conform to, and `docs/engine/00_content_contract.md` for the full status chip JSON spec.

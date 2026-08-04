@@ -5,20 +5,23 @@
   "stacking": "refresh",
   "maxStacks": 5,
   "activateSequenceId": "hugo_001_primal_awareness_activate",
-  "tags": ["dodge", "primal", "turn-based"],
+  "tags": [
+    "dodge",
+    "primal",
+    "turn-based"
+  ],
   "ui": {
     "chip": {
-      "label":           "PRIMAL",
-      "colour":          "var(--accent-evasion)",
+      "label": "PRIMAL",
+      "colour": "var(--accent-evasion)",
       "durationDisplay": "turns",
-      "icon":            "psv_logo",
-      "ascii":           ["◈━◈", "┃◉┃", "◈━◈"],
-      "description":     "ANBOT's sensory web is active. Each stack absorbs one incoming attack with a 70% dodge chance. Hyper Sense gains its hyper branch when fewer than 3 stacks remain.",
-      "portraitGlow":    true
+      "icon": "psv_logo",
+      "description": "ANBOT's sensory web is active. Each stack absorbs one incoming attack with a 70% dodge chance. Hyper Sense gains its hyper branch when fewer than 3 stacks remain.",
+      "portraitGlow": true
     }
   },
   "dodgeConfig": {
-    "allChance": 0.70,
+    "allChance": 0.7,
     "consumeOnAttempt": true
   },
   "hyperModeTrigger": true,

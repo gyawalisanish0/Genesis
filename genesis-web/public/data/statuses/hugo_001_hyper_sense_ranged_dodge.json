@@ -5,18 +5,20 @@
   "stacking": "refresh",
   "maxStacks": 2,
   "duration": 15,
-  "tags": ["dodge", "ranged-dodge"],
+  "tags": [
+    "dodge",
+    "ranged-dodge"
+  ],
   "ui": {
     "chip": {
-      "label":           "DODGE",
-      "colour":          "var(--accent-evasion)",
+      "label": "DODGE",
+      "colour": "var(--accent-evasion)",
       "durationDisplay": "ticks",
-      "ascii":           ["◂┃▸", "◂◉▸", "◂┃▸"],
-      "description":     "ANBOT's Sekkar receptors are amplified against ranged attacks — 30% dodge chance per stack, consuming a stack on success."
+      "description": "ANBOT's Sekkar receptors are amplified against ranged attacks \u2014 30% dodge chance per stack, consuming a stack on success."
     }
   },
   "dodgeConfig": {
-    "rangedChance": 0.30,
+    "rangedChance": 0.3,
     "consumeOnSuccess": true
   },
   "effects": []

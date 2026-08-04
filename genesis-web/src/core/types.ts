@@ -245,21 +245,20 @@ export interface MapDef {
 
 // ── Tileset ────────────────────────────────────────────────────────────────────
 
-// Tile visual definition — color is required; patterns are optional JSON overrides.
-// When patterns are absent, dungeonTileArt.ts generates them computationally.
-// Keys in `patterns` are rotation degrees as strings: '0' | '90' | '180' | '270'
-export interface AsciiTileDef {
-  color:     string                           // CSS hex colour
-  pattern?:  string[]                         // fixed override (non-rotated tile)
-  patterns?: Record<string, string[]>         // per-rotation override
+// Tile visual definition. `color` is the base fill, used directly until pixel
+// tile art is authored; `art` names the tile sheet frame under
+// images/tilesets/{key}/. See docs/ui/00-design-system.md § Tilesets.
+export interface TileVisualDef {
+  color: string             // CSS hex colour — base fill
+  art?:  string             // tile sheet frame stem, e.g. 'floor_a'
 }
 
 export interface TilesetDef {
   type:     'tileset'
   key:      string
   bgColor?: string
-  // Maps TileTypeDef.id → ASCII visual definition
-  tiles:    Record<string, AsciiTileDef>
+  // Maps TileTypeDef.id → tile visual definition
+  tiles:    Record<string, TileVisualDef>
 }
 
 export interface PlayerUnitsDef {
@@ -373,8 +372,6 @@ export interface StatusChipDef {
   // Passive/status logo key. Resolves to images/characters/{defId}/UI/Status/{icon}.png
   // 'psv_logo' = passive icon. Shown inside the chip square when the PNG loads.
   icon?:           string
-  /** 3-line ASCII art logo rendered inside the chip square. Each entry = one row. */
-  ascii?:          string[]
   /** Shown in the chip detail popup when the player taps the chip. */
   description?:    string
   /** When true, applies the chip colour as a glow ring on the portrait circle. */

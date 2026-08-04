@@ -264,7 +264,6 @@ export const statusDefSchema = z.object({
       colour:          z.string(),
       durationDisplay: z.enum(['ticks', 'turns', 'fade', 'none']),
       icon:            z.string().optional(),
-      ascii:           z.array(z.string()).optional(),
       description:     z.string().optional(),
       portraitGlow:    z.boolean().optional(),
     }).strict(),
