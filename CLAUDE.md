@@ -531,6 +531,12 @@ attachment point for the replacement.
 
 ## Styling Rules
 
+Art direction is **GBA-era pixel art** — full spec in `docs/ui/00-design-system.md`.
+Mechanically enforced by `npm run validate:ui`, a ratcheting check: existing
+violations are recorded in `ui-baseline.json`, and only *new* ones fail. After
+cleaning a file, re-record with `npm run validate:ui:baseline` — the baseline
+may shrink, never grow. Rules live in `src/__tests__/uiRules.ts`.
+
 - **All sizes in `rem` or CSS custom properties** — no raw `px` except 1px borders/lines
 - **Design tokens in `tokens.css`** — never hardcode colour values inline
 - **Minimum touch target**: 48px × 48px (`var(--touch-min)`)
