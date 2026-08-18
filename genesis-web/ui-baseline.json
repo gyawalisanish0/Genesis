@@ -3,7 +3,6 @@
     "App.module.css": 1,
     "components/DungeonArena.module.css": 4,
     "components/HintToaster.module.css": 1,
-    "components/PrimaryButton.module.css": 2,
     "components/ResourceBar.module.css": 2,
     "screens/BattleErrorToast.module.css": 2,
     "screens/BattleLogOverlay.module.css": 1,
@@ -42,7 +41,6 @@
   },
   "no-border-radius": {
     "components/HintToaster.module.css": 1,
-    "components/PrimaryButton.module.css": 1,
     "components/SpriteArena.module.css": 2,
     "components/StatusChipBar.module.css": 1,
     "components/UnitPortrait.module.css": 1,

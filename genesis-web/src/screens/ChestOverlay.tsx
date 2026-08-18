@@ -1,5 +1,5 @@
 import type { InteractableEntityDef } from '../core/types'
-import { PrimaryButton } from '../components/PrimaryButton'
+import { PixelButton } from '../components/PixelButton'
 import styles from './ChestOverlay.module.css'
 
 interface Props {
@@ -30,7 +30,7 @@ export function ChestOverlay({ chest, onCollect }: Props) {
             ))}
           </div>
         )}
-        <PrimaryButton variant="primary" onPress={onCollect}>COLLECT</PrimaryButton>
+        <PixelButton variant="primary" onPress={onCollect}>COLLECT</PixelButton>
       </div>
     </div>
   )

@@ -46,6 +46,11 @@ The nine-slice box. The only container in the system.
 |---|---|---|
 | `variant` | `'default' \| 'raised' \| 'sunken' \| 'active' \| 'danger'` | `'default'` |
 | `children` | `ReactNode` | — |
+| `className` | `string?` | — · layout (size, padding, flex) belongs to the consumer |
+
+`panelClass(variant)` exports the same class pair for consumers that need the
+surface on an existing element rather than a wrapper `<div>` — that is how
+`PixelButton` composes it.
 
 ---
 
@@ -60,6 +65,11 @@ behaviour.
 | `disabled` | `boolean` | `false` |
 | `fullWidth` | `boolean` | `true` |
 | `onPress` | `() => void` | — |
+| `label` | `string?` | — · accessible name when `children` is a glyph |
+
+Composes Panel's surface via CSS Modules `composes`, then overrides
+`--panel-fill`/`--panel-inner` per variant — the border mechanics exist in
+exactly one place.
 
 | Variant | Height | Fill | Label |
 |---|---|---|---|

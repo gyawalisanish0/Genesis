@@ -1,0 +1,80 @@
+/* PixelButton — a raised Panel with a label and press behaviour.
+ * Spec: docs/ui/01-components.md § PixelButton.
+ *
+ * `composes` pulls in Panel's border mechanics, so the 2-tone surface is
+ * defined in exactly one place. Panel.module.css is emitted first as a
+ * dependency, so the overrides below win deterministically.
+ */
+
+.btn {
+  composes: surface from './Panel.module.css';
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-sm);
+  height: 3.5rem;               /* 56 dp */
+  min-height: var(--touch-min); /* 48 dp floor */
+  padding: 0 var(--s-md);
+  font-family: var(--font-pixel);
+  font-size: var(--t-subheading-size);
+  font-weight: var(--t-subheading-weight);
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: none;
+  transition: transform var(--motion-button);
+}
+
+.fullWidth { width: 100%; }
+
+/* ── Variants ────────────────────────────────────────────────────────────── */
+
+.primary {
+  --panel-outer: var(--bone-4);
+  --panel-inner: var(--cyan-1);
+  --panel-fill:  var(--accent-genesis);
+  color: var(--text-on-accent);
+}
+
+.secondary {
+  --panel-outer: var(--bone-4);
+  --panel-inner: var(--hull-5);
+  --panel-fill:  var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.danger {
+  --panel-outer: var(--bone-4);
+  --panel-inner: var(--blood-1);
+  --panel-fill:  var(--accent-danger);
+  color: var(--text-on-accent);
+}
+
+.ghost {
+  --panel-outer: var(--bg-elevated);
+  --panel-inner: transparent;
+  --panel-fill:  transparent;
+  color: var(--text-secondary);
+  height: 3rem;  /* 48 dp */
+}
+
+/* ── States ──────────────────────────────────────────────────────────────── */
+
+/* Pressed: drop 1 art px, kill the glow. No scale — that is not pixel motion. */
+.btn:active:not(:disabled) {
+  transform: translateY(var(--px));
+  filter: none;
+}
+
+.btn:focus-visible {
+  --panel-outer: var(--accent-genesis);
+  outline: none;
+}
+
+.btn:disabled {
+  --panel-outer: var(--hull-5);
+  --panel-inner: var(--hull-5);
+  --panel-fill:  var(--bg-card);
+  color: var(--text-muted);
+  cursor: default;
+}

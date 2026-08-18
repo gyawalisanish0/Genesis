@@ -39,6 +39,10 @@ Violating any of these is a bug. Most are machine-checked (see § Validator).
   `var(--rarity-*)`. No hex, no `rgb()`, no `rgba()` in a `.module.css`.
 - Tokens resolve to palette ramp steps. If a shade you need doesn't exist,
   add a ramp step to `tokens.css` — do not inline a one-off colour.
+- **A misspelled token is silently fatal.** `var(--nope)` invalidates its whole
+  declaration, and inside an `animation`/`transition` shorthand it kills the
+  effect entirely with no console warning. The `no-undefined-token` rule catches
+  this; it found three such dead rules in the pre-existing codebase.
 
 **Pixel discipline**
 - No gradients. Use a 2-colour ordered dither or a flat ramp step.
@@ -134,9 +138,9 @@ positives; a noisy check gets ignored and is worse than none.
 
 ## Migration stance
 
-`docs/ui/01-components.md` specifies `Panel`, `PixelButton`, `Sheet`,
-`Toaster`, `PromptOverlay` and ramp/pixel-font tokens that **do not exist in
-code yet**. The docs are the target, not a description of today.
+`docs/ui/01-components.md` describes the target, not a description of today.
+Built so far: ramp/pixel-font tokens, `Panel`, `PixelButton`.
+Still missing: **`Sheet`, `PromptOverlay`, `Toaster`**, segmented `ResourceBar`.
 
 Do not write against primitives that are missing, and do not rewrite the whole
 UI at once. Convert incrementally, in the dependency order in

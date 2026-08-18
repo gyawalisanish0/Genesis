@@ -26,8 +26,8 @@
 }
 
 .heading {
-  font-family: var(--font-display);
-  font-size: var(--t-subtitle-size);
+  font-family: var(--font-pixel);
+  font-size: var(--t-subheading-size);
   font-weight: 700;
   color: var(--accent-danger);
   letter-spacing: 0.06em;

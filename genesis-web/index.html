@@ -7,19 +7,23 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0,
                user-scalable=no, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#0a0a14" />
+    <!-- Must equal --bg-deep / hull-1 in src/styles/tokens.css -->
+    <meta name="theme-color" content="#02080e" />
     <link rel="manifest" href="./manifest.json" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Genesis</title>
     <style>
-      /* Prevent overscroll bounce and ensure full viewport coverage */
+      /* Prevent overscroll bounce and ensure full viewport coverage.
+         The background here is the letterbox behind the scaled canvas — it
+         must equal --bg-deep (hull-1) or a seam shows at the edges. It is
+         literal because this file loads before tokens.css. */
       * { box-sizing: border-box; margin: 0; padding: 0; }
       html, body, #root {
         width: 100%; height: 100%;
         overflow: hidden;
-        background: #0a0a14;
+        background: #02080e;
         touch-action: none;
       }
     </style>

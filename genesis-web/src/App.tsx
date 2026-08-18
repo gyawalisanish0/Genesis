@@ -3,6 +3,7 @@ import { HashRouter, Routes, Route, Navigate }             from 'react-router-do
 import { ScreenProvider }                                  from './navigation/ScreenContext'
 import { useViewportScale }                                from './utils/useViewportScale'
 import { initFullScreen }                                  from './services/DisplayService'
+import { useGameStore }                                    from './core/GameContext'
 
 import { SplashScreen }       from './screens/SplashScreen'
 import { MainMenuScreen }     from './screens/MainMenuScreen'
@@ -17,6 +18,7 @@ import styles from './App.module.css'
 
 export default function App() {
   const { scale, innerHeight } = useViewportScale()
+  const reduceAnimations = useGameStore((s) => s.settings.reduceAnimations)
 
   useEffect(() => {
     initFullScreen().catch(() => {})
@@ -26,6 +28,12 @@ export default function App() {
   useEffect(() => {
     document.documentElement.style.setProperty('--app-scale', String(scale))
   }, [scale])
+
+  // Mirror the accessibility setting onto the root so tokens.css can collapse
+  // every stepped duration to 0ms. docs/ui/00-design-system.md § 7.
+  useEffect(() => {
+    document.documentElement.dataset.reduceAnimations = String(reduceAnimations)
+  }, [reduceAnimations])
 
   return (
     <div className={styles.viewport}>

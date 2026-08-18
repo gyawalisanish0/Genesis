@@ -741,7 +741,7 @@
   justify-content: center;
   background: var(--bg-overlay);
   z-index: 35;
-  animation: fadeScaleIn var(--motion-modal) ease-out both;
+  animation: fadeScaleIn var(--motion-modal-in) both;
 }
 
 @keyframes fadeScaleIn {

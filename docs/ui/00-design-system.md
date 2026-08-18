@@ -235,8 +235,16 @@ Everything that groups content uses it. There is no other container style.
 | `active` | `cyan-4` | `cyan-1` | `hull-3` | Selected / focused |
 | `danger` | `blood-3` | `blood-1` | `hull-2` | Destructive confirm |
 
-Implemented as `border-image` with a 9-slice source so the border never
-stretches. Fill scales; border does not.
+**Implementation** (`components/Panel.tsx`): the outer line is a real
+`border`, the inner line a zero-blur `inset` `box-shadow`. Both stay exactly
+1 art px at any size, and no corner is ever rounded. Each variant only sets
+three tokens — `--panel-outer`, `--panel-inner`, `--panel-fill` — so consumers
+never touch colour directly.
+
+`border-image` with a 4-art-px slice is the upgrade path once border art is
+authored; the variant tokens carry over unchanged. It is not used today
+because a data-URI source cannot read CSS custom properties, which would force
+literal colour back into stylesheets.
 
 ---
 
