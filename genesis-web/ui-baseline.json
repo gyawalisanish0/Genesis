@@ -5,10 +5,8 @@
     "components/HintToaster.module.css": 1,
     "components/ResourceBar.module.css": 2,
     "screens/BattleErrorToast.module.css": 2,
-    "screens/BattleLogOverlay.module.css": 1,
     "screens/BattleResultScreen.module.css": 2,
     "screens/BattleScreen.module.css": 7,
-    "screens/ChestOverlay.module.css": 1,
     "screens/DungeonScreen.module.css": 5,
     "screens/MainMenuScreen.module.css": 3,
     "screens/SplashScreen.module.css": 8
@@ -36,7 +34,6 @@
     "screens/ClashQteOverlay.tsx": 1,
     "screens/DungeonContext.tsx": 1,
     "screens/SettingsScreen.tsx": 1,
-    "screens/SkillInfoOverlay.tsx": 1,
     "services/DataService.ts": 1
   },
   "no-border-radius": {
@@ -55,9 +52,7 @@
     "screens/PreBattleStepTeam.module.css": 2,
     "screens/RosterScreen.module.css": 2,
     "screens/SettingsScreen.module.css": 1,
-    "screens/SkillInfoOverlay.module.css": 3,
-    "screens/SplashScreen.module.css": 1,
-    "screens/StatusInfoOverlay.module.css": 3
+    "screens/SplashScreen.module.css": 1
   },
   "no-gradient": {
     "screens/BattleResultScreen.module.css": 1,

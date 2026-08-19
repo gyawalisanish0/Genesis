@@ -57,6 +57,26 @@ Violating any of these is a bug. Most are machine-checked (see § Validator).
 - Only non-art chrome (backdrop dim, glow pulse) may use a continuous ease.
 - `AppSettings.reduceAnimations` must collapse durations to `0ms`.
 
+**Centralised components — the load-bearing rule**
+- **Reuse the catalogued primitive; never re-implement its chrome.** A backdrop,
+  a bordered panel, a button surface, a toast — each exists exactly once
+  (`Panel`, `Sheet`, `PixelButton`, `Toaster`). Compose them. Copying their
+  CSS into a screen is the single mistake that produced six different modal
+  backdrops and a purple/cyan palette split.
+- **Shared chrome, local content.** A migrated screen keeps only its
+  content-specific CSS (reward rows, stat chips); backdrop, animation,
+  dismissal, and border live in the shared component. If you find yourself
+  writing `.backdrop { position:absolute; inset:0 }` in a screen module, stop —
+  that is `Sheet`.
+- **New visual not in the catalogue?** Add it to `docs/ui/01-components.md`
+  first, build it once in `components/`, then consume it. Never inline a
+  one-off. Prefer a new prop on an existing primitive (as `Sheet` gained
+  `placement`) over a new component.
+- **Cross-cutting behaviour stays with its owner.** The hardware back button is
+  one example: `backButtonRegistry` holds a single handler, so a shared overlay
+  must not self-register — the screen owns its back chain and wires it to the
+  component's `onClose`.
+
 **Structure**
 - One screen/component = one `.tsx` + one `.module.css` beside it.
 - Module ≤ 150 lines, component ≤ 100, function ≤ 30 (CLAUDE.md). Split, don't sprawl.
@@ -139,8 +159,9 @@ positives; a noisy check gets ignored and is worse than none.
 ## Migration stance
 
 `docs/ui/01-components.md` describes the target, not a description of today.
-Built so far: ramp/pixel-font tokens, `Panel`, `PixelButton`.
-Still missing: **`Sheet`, `PromptOverlay`, `Toaster`**, segmented `ResourceBar`.
+Built so far: ramp/pixel-font tokens, `Panel`, `PixelButton`, `Sheet`.
+Still missing: **`PromptOverlay`, `Toaster`**, segmented `ResourceBar`.
+Next in `references/migration.md`: `PromptOverlay` (step 5).
 
 Do not write against primitives that are missing, and do not rewrite the whole
 UI at once. Convert incrementally, in the dependency order in

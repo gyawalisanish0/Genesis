@@ -1,47 +1,31 @@
-.backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-}
+/* ChestOverlay — reward content only. Backdrop, dismissal, and animation are
+ * the shared Sheet (components/Sheet), which supplies the gold accent border. */
 
-.panel {
-  background: var(--bg-panel);
-  border: 1px solid var(--accent-gold);
-  border-radius: 0.75rem;
-  padding: 1.5rem 1.25rem;
-  width: 80%;
-  max-width: 18rem;
+.body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
-  animation: slideUp var(--motion-modal-in) both;
-}
-
-@keyframes slideUp {
-  from { transform: translateY(2rem); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
+  gap: var(--s-md);
+  padding: var(--s-lg) var(--s-md);
+  font-family: var(--font-sans);
 }
 
 .icon {
-  font-size: 2rem;
+  font-size: var(--t-display-size);
   color: var(--accent-gold);
   line-height: 1;
 }
 
 .title {
-  font-size: 0.85rem;
+  font-family: var(--font-pixel);
+  font-size: var(--t-subheading-size);
   font-weight: 700;
   letter-spacing: 0.12em;
   color: var(--accent-gold);
 }
 
 .flavour {
-  font-size: 0.72rem;
+  font-size: var(--t-body-sm-size);
   color: var(--text-secondary);
   text-align: center;
   margin: 0;
@@ -53,34 +37,34 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: var(--s-xs);
 }
 
 .rewardRow {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 0.75rem;
+  gap: var(--s-sm);
+  padding: var(--s-xs) var(--s-sm);
   background: var(--bg-card);
-  border-radius: 0.4rem;
 }
 
 .rewardIcon {
   color: var(--accent-gold);
-  font-size: 0.8rem;
+  font-size: var(--t-body-size);
   width: 1rem;
   text-align: center;
 }
 
 .rewardLabel {
   flex: 1;
-  font-size: 0.72rem;
+  font-size: var(--t-body-sm-size);
   color: var(--text-secondary);
   letter-spacing: 0.04em;
 }
 
 .rewardValue {
-  font-size: 0.8rem;
+  font-family: var(--font-pixel);
+  font-size: var(--t-body-size);
   font-weight: 600;
   color: var(--accent-gold);
 }

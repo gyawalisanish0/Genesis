@@ -1,0 +1,92 @@
+/* Sheet — shared backdrop + dismissible panel. Spec: docs/ui/01-components.md § Sheet.
+ * Replaces the per-overlay backdrop/card/animation CSS that used to live in
+ * SkillInfoOverlay, StatusInfoOverlay, BattleLogOverlay, and ChestOverlay. */
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  background: var(--bg-overlay);
+}
+
+.bottom { align-items: flex-end;  justify-content: center; }
+.centre { align-items: center;    justify-content: center; padding: var(--s-md); }
+
+/* The panel is a Panel(default) surface; these rules add layout only. */
+.panel {
+  display: flex;
+  flex-direction: column;
+  max-height: 80%;
+  overflow: hidden;
+  animation: sheetRise var(--motion-modal-in) both;
+}
+
+.panelBottom { width: 100%; }
+.panelCentre { width: 100%; max-width: 18rem; }
+
+@keyframes sheetRise {
+  from { transform: translateY(var(--sheet-from, 100%)); opacity: 0; }
+  to   { transform: translateY(0);                       opacity: 1; }
+}
+
+.centre .panel { --sheet-from: 0.5rem; }
+
+/* ── Header bar (only when `title` is given) ───────────────────────────────── */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-sm);
+  padding: var(--s-sm) var(--s-md);
+  border-bottom: var(--px) solid var(--panel-inner);
+  flex-shrink: 0;
+}
+
+.title {
+  font-family: var(--font-pixel);
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+}
+
+/* ── Close affordance ──────────────────────────────────────────────────────── */
+
+/* Floating ✕ (top-right) when there is no header bar to hold it. */
+.closeFloat {
+  position: absolute;
+  top: var(--s-xs);
+  right: var(--s-xs);
+  z-index: 1;
+}
+
+.closeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-family: var(--font-pixel);
+  font-size: var(--t-subheading-size);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.closeBtn:active { color: var(--text-primary); }
+
+/* ── Scrollable content region ─────────────────────────────────────────────── */
+
+.content {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg-elevated) transparent;
+}

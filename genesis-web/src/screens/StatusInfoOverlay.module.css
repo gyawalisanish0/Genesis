@@ -1,130 +1,76 @@
-/* StatusInfoOverlay — chip tap popup. Mirrors SkillInfoOverlay layout. */
+/* StatusInfoOverlay — status-specific content only. Backdrop, dismissal, and
+ * animation are the shared Sheet (components/Sheet). */
 
-.backdrop {
-  position:   absolute;
-  inset:      0;
-  display:    flex;
-  align-items:     center;
-  justify-content: center;
-  background: var(--bg-overlay);
-  z-index:    60;
-  padding:    var(--s-md);
-  border:     none;
-  font-family: var(--font-sans);
-  animation:  fadeIn 160ms ease-out both;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-.card {
-  position:   relative;
-  width:      100%;
-  max-width:  15rem;
-  background: var(--bg-elevated);
-  border:     1px solid var(--chip-colour, var(--accent-genesis));
-  border-radius: var(--r-md);
-  padding:    var(--s-md);
-  display:    flex;
+.body {
+  display: flex;
   flex-direction: column;
-  gap:        var(--s-sm);
-  box-shadow: 0 0 16px color-mix(in srgb, var(--chip-colour, var(--accent-genesis)) 25%, transparent);
-  animation:  slideUp 200ms cubic-bezier(0.34, 1.4, 0.64, 1) both;
-}
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(0.5rem) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-.closeBtn {
-  position:  absolute;
-  top:       0.25rem;
-  right:     0.25rem;
-  width:     var(--touch-min);
-  height:    var(--touch-min);
-  border:    none;
-  background: transparent;
-  color:     var(--text-muted);
-  font-size: 1.125rem;
-  cursor:    pointer;
-  display:   flex;
-  align-items:     center;
-  justify-content: center;
-  border-radius: var(--r-sm);
-  transition: color var(--motion-button), background var(--motion-button);
-}
-
-.closeBtn:hover,
-.closeBtn:active {
-  color:      var(--text-primary);
-  background: var(--bg-card);
+  gap: var(--s-sm);
+  padding: var(--s-md);
+  font-family: var(--font-sans);
 }
 
 .header {
-  display:  flex;
+  display: flex;
   align-items: center;
-  gap:      var(--s-sm);
-  padding-right: 2rem;
+  gap: var(--s-sm);
+  padding-right: var(--s-xl);   /* clear the Sheet's floating ✕ */
 }
 
-/* Large version of the chip square used as an icon in the popup header */
+/* Large version of the chip square used as an icon in the popup header. */
 .iconSquare {
-  width:         3.25rem;
-  height:        3.25rem;
-  border-radius: var(--r-sm);
-  background:    color-mix(in srgb, var(--chip-colour) 14%, var(--bg-card));
-  border:        1px solid color-mix(in srgb, var(--chip-colour) 50%, transparent);
-  box-shadow:    0 0 10px color-mix(in srgb, var(--chip-colour) 35%, transparent),
-                 inset 0 0 8px color-mix(in srgb, var(--chip-colour) 20%, transparent);
-  display:       flex;
-  align-items:   center;
+  width: 3.25rem;
+  height: 3.25rem;
+  background: color-mix(in srgb, var(--chip-colour) 14%, var(--bg-card));
+  border: var(--px) solid color-mix(in srgb, var(--chip-colour) 50%, transparent);
+  display: flex;
+  align-items: center;
   justify-content: center;
-  flex-shrink:   0;
-  overflow:      hidden;
+  flex-shrink: 0;
+  overflow: hidden;
+  image-rendering: pixelated;
 }
 
 .iconImg {
-  width:      82%;
-  height:     82%;
+  width: 82%;
+  height: 82%;
   object-fit: contain;
+  image-rendering: pixelated;
 }
 
 .iconMonogram {
-  font-size:   0.75rem;
+  font-family: var(--font-pixel);
+  font-size: var(--t-label-size);
   font-weight: 700;
-  color:       var(--chip-colour);
-  text-shadow: 0 0 6px var(--chip-colour);
+  color: var(--chip-colour);
   user-select: none;
 }
 
 .titleBlock {
-  display:        flex;
+  display: flex;
   flex-direction: column;
-  gap:            0.25rem;
+  gap: var(--s-xs);
 }
 
 .name {
-  font-size:      var(--t-subheading-size);
-  font-weight:    var(--t-subheading-weight);
-  color:          var(--text-primary);
+  font-family: var(--font-pixel);
+  font-size: var(--t-subheading-size);
+  font-weight: var(--t-subheading-weight);
+  color: var(--text-primary);
   letter-spacing: 0.04em;
-  line-height:    1.1;
+  line-height: 1.1;
 }
 
 .stacks {
-  font-size:      var(--t-micro-size);
-  color:          var(--chip-colour);
+  font-size: var(--t-micro-size);
+  color: var(--chip-colour);
   letter-spacing: 0.06em;
 }
 
 .description {
-  margin:      0;
-  font-size:   var(--t-body-size);
+  margin: 0;
+  font-size: var(--t-body-size);
   line-height: 1.5;
-  color:       var(--text-secondary);
-  border-top:  1px solid var(--bg-panel);
+  color: var(--text-secondary);
+  border-top: var(--px) solid var(--bg-panel);
   padding-top: var(--s-sm);
 }

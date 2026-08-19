@@ -65,20 +65,23 @@ export const RULES: UiRule[] = [
     fix:     'Gradients are banned in pixel art — use a 2-colour ordered dither or a flat ramp step. See docs/ui/00-design-system.md § 2 rule 2.',
   },
   {
-    // An undefined var() silently invalidates its declaration — and inside an
-    // `animation`/`transition` shorthand it kills the whole effect.
+    // An undefined var() with NO fallback silently invalidates its declaration
+    // — and inside an `animation`/`transition` shorthand it kills the whole
+    // effect. A var() WITH a fallback (`var(--x, 1rem)`) is safe by design, so
+    // only the no-fallback form is flagged.
     id:      'no-undefined-token',
     applies: p => isCss(p) && !p.endsWith('tokens.css'),
     scan:    (src, ctx) => {
       const out: string[] = []
       stripComments(src).split('\n').forEach((line, i) => {
-        for (const [, name] of line.matchAll(/var\((--[a-z0-9-]+)/g)) {
+        // `var(--x)` — closing paren straight after the name means no fallback.
+        for (const [, name] of line.matchAll(/var\(\s*(--[a-z0-9-]+)\s*\)/g)) {
           if (!ctx.knownTokens.has(name)) out.push(`${i + 1}: ${name} — ${line.trim()}`)
         }
       })
       return out
     },
-    fix:     'This custom property is defined nowhere. Add it to tokens.css or correct the name — an undefined var() makes the whole declaration invalid.',
+    fix:     'This custom property is defined nowhere and the var() has no fallback. Add it to tokens.css, correct the name, or give it a fallback — otherwise the whole declaration is invalid.',
   },
   {
     id:      'module-line-limit',
@@ -111,7 +114,10 @@ function buildContext(files: string[]): ScanContext {
   for (const f of files) {
     if (!f.endsWith('.css') && !f.endsWith('.tsx')) continue
     const src = readFileSync(f, 'utf-8')
-    for (const [, n] of src.matchAll(/^\s*(--[a-z0-9-]+)\s*:/gm)) knownTokens.add(n)
+    // A custom-property *definition* is `--x:` at a rule's start — line start or
+    // just after `{`/`;` (inline `.x { --y: … }`). `var(--x)` usages never match
+    // (no colon follows the name inside var()).
+    for (const [, n] of src.matchAll(/(?:^|[{;])\s*(--[a-z0-9-]+)\s*:/gm)) knownTokens.add(n)
     if (f.endsWith('.tsx')) {
       for (const [, n] of src.matchAll(/['"](--[a-z0-9-]+)['"]/g)) knownTokens.add(n)
     }

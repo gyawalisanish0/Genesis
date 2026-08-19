@@ -20,7 +20,7 @@ the intended refactor target, not a description of today's code.
 | Today | Replaced by | Why |
 |---|---|---|
 | `HintToaster` + `ErrorToaster` + `BattleErrorToast` | **`Toaster`** (one component, 3 tones) | Three implementations; two already share a stylesheet. Only difference is tone, persistence, and whether it blocks. |
-| `SkillInfoOverlay`, `StatusInfoOverlay`, `ChestOverlay`, `BattleLogOverlay` + backdrops | **`Sheet`** + content children | Six separate `.backdrop` rules (`inset: 0` + `--bg-overlay`) across six files. |
+| ~~`SkillInfoOverlay`, `StatusInfoOverlay`, `ChestOverlay`, `BattleLogOverlay` + backdrops~~ ✅ | **`Sheet`** + content children | Done — four bespoke backdrops collapsed into one shared `Sheet`. |
 | `TeamCollisionOverlay`, `ClashQteOverlay` | **`PromptOverlay`** + content children | Both are "battle halts, player chooses, battle resumes". Only the body differs. |
 | `UnitPortrait` · battle portrait circle · timeline marker | **`UnitPortrait`** (`size` prop) | Three renderings of the same thing. `BattleScreen` drew its own circle. |
 | `--r-sm` … `--r-xl` | nine-slice `Panel` | Rounded corners are not in the art direction. |
@@ -171,19 +171,33 @@ active `cyan-4`.
 
 ### `Sheet`
 
-Bottom sheet + backdrop. **Replaces four bespoke overlay implementations.**
+Backdrop + dismissible content panel. **Replaces four bespoke overlay
+implementations** (skill info, status info, battle log, chest) — one backdrop,
+one animation, one close contract instead of four.
 
 | Prop | Type | Default |
 |---|---|---|
-| `open` | `boolean` | — |
-| `title` | `string?` | — |
+| `open` | `boolean` | `true` — render nothing when false |
+| `title` | `string?` | — · renders a header bar with the title + ✕ |
 | `onClose` | `() => void` | — |
-| `dismissible` | `boolean` | `true` — backdrop tap + back button close |
+| `dismissible` | `boolean` | `true` — enables backdrop-tap, ✕, and Esc |
+| `placement` | `'bottom' \| 'centre'` | `'bottom'` |
+| `accent` | `string?` | — · overrides the panel border colour (status chip colour, chest gold) |
 | `children` | `ReactNode` | — |
 
-Backdrop `--bg-overlay`, tap-to-close. Panel rises from the bottom edge with
-`steps(4)` over 200 ms, drops in 120 ms. Registers a back-button handler while
-open. Content scrolls internally; the sheet never exceeds 80 % canvas height.
+Backdrop `--bg-overlay`, tap-to-close (when `dismissible`). Content is a
+`Panel variant="default"` that scrolls internally and never exceeds 80 % of the
+canvas. `placement="bottom"` is a full-width panel rising from the bottom edge;
+`placement="centre"` is a width-capped card that rises and settles in the middle.
+Both animate with `--motion-modal-in` (`steps(4)`). When `dismissible` is false
+(chest — the player must act) there is no ✕, no backdrop-tap, and no Esc.
+
+**Back button is the owning screen's job, not the Sheet's.** `backButtonRegistry`
+holds one handler at a time (CLAUDE.md § Input Handling); a Sheet that
+self-registered would clobber a screen's existing chain — in battle,
+`BattleScreen` runs a single `useBackButton` that closes overlays in priority
+order (skill → chip → log → pause). Wire hardware-back to `onClose` there, the
+same place the rest of the screen's back logic already lives.
 
 ---
 

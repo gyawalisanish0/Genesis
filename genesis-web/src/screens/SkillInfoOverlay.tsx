@@ -1,14 +1,13 @@
-// SkillInfoOverlay — long-press a skill button to open a centered modal with
-// the skill's full description, costs, tags, effects, and cooldown.
+// SkillInfoOverlay — long-press a skill button to see its full description,
+// costs, tags, effects, and cooldown. Chrome (backdrop, dismissal, animation)
+// is the shared Sheet; this file owns the skill-specific content.
 //
-// Open: tap-out backdrop OR top-right ✕ button to close. While open, the
-// battle is silently frozen via BattleContext.inspectingSkill (same gate as
-// narrativePaused) so the player can read at leisure.
+// While open, the battle is silently frozen via BattleContext.inspectingSkill
+// (set/cleared by the caller, same gate as narrativePaused).
 
-import { useEffect } from 'react'
-import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import { getCachedSkill } from '../core/engines/skill/SkillInstance'
 import type { SkillInstance, Effect, ValueExpr } from '../core/effects/types'
+import { Sheet } from '../components/Sheet'
 import styles from './SkillInfoOverlay.module.css'
 
 interface Props {
@@ -58,34 +57,11 @@ function effectLine(e: Effect): string {
 }
 
 export function SkillInfoOverlay({ skill, onClose }: Props) {
-  const createHandler = useScrollAwarePointer()
   const def = getCachedSkill(skill)
 
-  // Esc closes the overlay (desktop affordance — mobile uses tap-out / ✕).
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
-
   return (
-    <div
-      className={styles.backdrop}
-      onPointerDown={createHandler({ onTap: onClose })}
-    >
-      <div
-        className={styles.card}
-        // Stop propagation on the card so taps inside don't dismiss.
-        onPointerDown={(e) => e.stopPropagation()}
-      >
-        <button
-          className={styles.closeBtn}
-          onPointerDown={createHandler({ onTap: onClose })}
-          aria-label="Close skill info"
-        >
-          ✕
-        </button>
-
+    <Sheet placement="centre" onClose={onClose} accent="var(--accent-genesis)">
+      <div className={styles.body}>
         <header className={styles.header}>
           <span className={styles.name}>{def.name}</span>
           <span className={styles.level}>Lv {skill.currentLevel} / {def.maxLevel}</span>
@@ -155,6 +131,6 @@ export function SkillInfoOverlay({ skill, onClose }: Props) {
           </div>
         )}
       </div>
-    </div>
+    </Sheet>
   )
 }
