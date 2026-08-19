@@ -84,10 +84,13 @@ so the ratchet tightens.
    is genuinely empty in `ui-baseline.json` now, not just empty-looking.
 9. **Per-screen sweep** — remaining hardcoded colours, gradients, and the
    oversized modules (`BattleScreen` 805, `BattleContext` 668,
-   `DungeonContext` 527 lines). Two hand-rolled HP bars turned up during step
-   8 (`BattleScreen.targetPickerBarTrack/Fill`, `DungeonScreen.hpBarTrack/Fill`)
-   that duplicate `ResourceBar` and should compose it instead — good first
-   items for this step.
+   `DungeonContext` 527 lines). ~~Two hand-rolled HP bars~~ ✅ — done:
+   `BattleScreen`'s target-picker row and `DungeonScreen`'s persistent HP pill
+   both now compose `<ResourceBar variant="hp" .../>` instead of a duplicated
+   track/fill div pair. `DungeonScreen`'s pill needed a fixed-width wrapper
+   (`.hpBarWrap`, 4rem) since `ResourceBar`'s track is `width: 100%` and the
+   pill is a `flex-direction: row` container, unlike every other consumer's
+   full-width row.
 
 Steps 1–8 are complete — every duplicated component in the original
 consolidation table is gone, `ResourceBar` draws as blocks instead of a bar,

@@ -642,7 +642,6 @@ function TargetSelectOverlay() {
         </div>
         <div className={styles.targetPickerList}>
           {aliveEnemies.map((enemy) => {
-            const hpPct  = enemy.maxHp > 0 ? Math.max(0, Math.min(1, enemy.hp / enemy.maxHp)) : 0
             const chips  = buildChips(enemy, getChipDef, suppressedChipIds)
             return (
               <button
@@ -655,9 +654,7 @@ function TargetSelectOverlay() {
                     <span className={styles.targetPickerName}>{enemy.name}</span>
                     <span className={styles.targetPickerHpText}>{enemy.hp}/{enemy.maxHp}</span>
                   </div>
-                  <div className={styles.targetPickerBarTrack}>
-                    <div className={styles.targetPickerHpFill} style={{ width: `${hpPct * 100}%` }} />
-                  </div>
+                  <ResourceBar variant="hp" value={enemy.hp} max={enemy.maxHp} />
                   {chips.length > 0 && (
                     <StatusChipBar chips={chips} size="compact" onTap={setInspectingChip} />
                   )}

@@ -4,6 +4,7 @@ import { SCREEN_IDS }      from '../navigation/screenRegistry'
 import { useBackButton }   from '../input/useBackButton'
 import { DungeonProvider, useDungeonScreen } from './DungeonContext'
 import { DungeonArena }    from '../components/DungeonArena'
+import { ResourceBar } from '../components/ResourceBar'
 import { Toaster } from '../components/Toaster'
 import { ChestOverlay }    from './ChestOverlay'
 import styles from './DungeonScreen.module.css'
@@ -62,8 +63,8 @@ function PartyHpPill({ leader }: { leader: { name: string; hp: number; maxHp: nu
   return (
     <div className={`${styles.hpPill} ${low ? styles.hpPillLow : ''}`}>
       <span className={styles.hpName}>{leader.name}</span>
-      <div className={styles.hpBarTrack}>
-        <div className={styles.hpBarFill} style={{ width: `${fraction * 100}%` }} />
+      <div className={styles.hpBarWrap}>
+        <ResourceBar variant="hp" value={leader.hp} max={leader.maxHp} />
       </div>
       <span className={styles.hpValue}>{leader.hp}/{leader.maxHp}</span>
     </div>

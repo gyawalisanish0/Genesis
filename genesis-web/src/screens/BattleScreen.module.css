@@ -799,19 +799,6 @@
   color: var(--text-secondary);
 }
 
-/* HP bar track inside target row */
-.targetPickerBarTrack {
-  height: 4px;
-  background: var(--bg-elevated);
-  overflow: hidden;
-}
-
-.targetPickerHpFill {
-  height: 100%;
-  background: var(--accent-danger);
-  transition: width var(--motion-bar);
-}
-
 /* ── Skill target badge (shows confirmed target on active skill button) ─ */
 .skillTargetBadge {
   grid-column: 1 / -1;
