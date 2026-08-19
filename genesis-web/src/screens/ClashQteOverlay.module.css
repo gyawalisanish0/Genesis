@@ -1,43 +1,10 @@
+/* ClashQteOverlay — QTE content only (tug-of-war bar, knob, hint).
+ * Backdrop, card, title, and subtitle are the shared PromptOverlay
+ * (components/PromptOverlay). */
+
 @keyframes spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
-}
-
-.overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-overlay);
-  z-index: 40;
-  cursor: pointer;
-}
-
-.card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.6rem;
-  background: var(--bg-elevated);
-  border: 1px solid var(--accent-genesis);
-  border-radius: 0.5rem;
-  padding: 1.25rem 1.5rem;
-  min-width: 14rem;
-  pointer-events: none;  /* let overlay div catch all taps */
-}
-
-.title {
-  font-size: var(--t-label-size);
-  color: var(--accent-genesis);
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.roundLabel {
-  font-size: var(--t-micro-size);
-  color: var(--text-muted);
 }
 
 /* ── Bar ───────────────────────────────────────────────────────────────────── */

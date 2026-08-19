@@ -15,7 +15,7 @@ screen alone is 800 lines and every conversion risks the engine contract.
 |---|---|---|
 | ~~`PrimaryButton`~~ | **`PixelButton`** ✅ | Done. Had one call site (`ChestOverlay`); `PrimaryButton` deleted. |
 | ~~`SkillInfoOverlay`, `StatusInfoOverlay`, `ChestOverlay`, `BattleLogOverlay`~~ | **`Sheet` + content** ✅ | Done. All four now wrap `Sheet`; their bespoke backdrop/card/animation/close CSS is gone. `Sheet` gained `placement: bottom\|centre` and `accent`; back button stays a screen concern (see below). |
-| `TeamCollisionOverlay`, `ClashQteOverlay` | `PromptOverlay` + content | Both are "battle halts → player chooses → resumes". Keep bodies, share chrome. |
+| ~~`TeamCollisionOverlay`, `ClashQteOverlay`~~ | **`PromptOverlay` + content** ✅ | Done. Chrome shared; bodies kept. `PromptOverlay` takes input via `actions` (NOW/LATER) *or* `onBackdropTap` (QTE needle) — a prompt whose body *is* the interaction gets no buttons. |
 | `HintToaster`, `ErrorToaster`, `BattleErrorToast` | `Toaster` (3 tones) | First two already share a stylesheet. `fatal` keeps the blocking behaviour. |
 | Battle screen's own portrait circle | `UnitPortrait size="lg"` | Already swapped; the bespoke circle CSS can go once glow moves onto the component. |
 | `ResourceBar` continuous fill | segmented fill | Blocked 2 art px segments, `steps(16)` tween. |
@@ -25,9 +25,10 @@ screen alone is 800 lines and every conversion risks the engine contract.
 
 Already done: ASCII render layer removed; `SpriteArena` owns
 `BattleArenaHandle`; `UnitPortrait` renders `portrait.png`; tiles fill from
-`TilesetDef.tiles[id].color`. **Steps 1–4 below are complete** — ramps and
+`TilesetDef.tiles[id].color`. **Steps 1–5 below are complete** — ramps and
 `--font-pixel` shipped; `Panel` exists with all five variants; `PixelButton`
-replaced `PrimaryButton`; `Sheet` replaced the four overlays. `--px` (1 art
+replaced `PrimaryButton`; `Sheet` replaced the four info overlays;
+`PromptOverlay` replaced the two decision overlays. `--px` (1 art
 pixel = 2 dp) was added so grid multiples are expressible. `reduceAnimations`
 is now mirrored to the root element so the stepped-motion tokens actually
 collapse.
@@ -51,11 +52,10 @@ so the ratchet tightens.
    must NOT self-register — `BattleScreen`'s single `useBackButton` still owns
    the priority chain (skill → chip → log → pause). `Sheet` is presentational;
    the screen wires hardware-back to `onClose`.
-5. **`PromptOverlay`** — collapses the two battle decision overlays
-   (`TeamCollisionOverlay`, `ClashQteOverlay`). **This is the next step.**
-   Touches engine-blocking behaviour; the `Sheet` pattern (presentational,
-   screen owns back) is the template. `dismissible={false}` is the closest
-   `Sheet` analogue, but a prompt needs an `actions` row — see the catalogue.
+5. ~~**`PromptOverlay`**~~ ✅ — collapsed both battle decision overlays. Never
+   dismissible (no ✕/Esc/backdrop-close) because the engine blocks on the
+   choice; that is pinned by tests. Input arrives via `actions` **or**
+   `onBackdropTap`, never forced into buttons.
 6. **`Toaster`** — collapses three toasts. `fatal` tone must preserve
    `BattleErrorToast`'s auto-navigate.
 7. **`ResourceBar` segmentation** — visual only, no API change.
@@ -65,9 +65,9 @@ so the ratchet tightens.
    oversized modules (`BattleScreen` 805, `BattleContext` 668,
    `DungeonContext` 527 lines).
 
-Steps 1–4 are complete. **Step 5 (`PromptOverlay`) is next.** Steps 6–7 are
-independent of each other and can be taken in any order as tasks touch those
-areas.
+Steps 1–5 are complete. **Step 6 (`Toaster`) is next** — it collapses the last
+three duplicated components, after which only `ResourceBar` segmentation (7),
+retiring the radii (8), and the per-screen sweep (9) remain.
 
 ---
 

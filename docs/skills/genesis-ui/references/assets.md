@@ -5,6 +5,55 @@ from `docs/ui/00-design-system.md § 2` — this file is the authoring procedure
 
 ---
 
+## Sprite budget — start here
+
+Art is the scarcest resource on this project. The engine is built so a
+character is **fully playable on two poses**, the same way a GBA Pokémon
+battler was. Do not author more until the game is fun.
+
+| Tier | States | PNGs | What you get |
+|---|---|---|---|
+| **Minimum** | `idle`, `attack` | **~5** | Every skill animates. Fully playable. |
+| **Recommended** | + `hurt`, `death` | ~11 | Flinch on damage, proper KO. |
+| Polish | + `dodge`, `dash`, damaged variants | ~22 | Reactions read better at low HP. |
+| Signature | + per-skill poses | ~49 | One-off poses for hero moves only. |
+
+For scale: `hugo_001`'s current manifest is the **maximalist** path —
+17 states / 49 PNGs, with an empty `tagMap`. The minimum is ~10× cheaper and
+loses nothing structural.
+
+**The lever is `tagMap`.** It points combat tags at a shared state, so one
+`attack` pose serves every skill a character owns:
+
+```jsonc
+"tagMap": { "melee": "attack", "ranged": "attack", "energy": "attack" },
+"animations": {
+  "idle":   { "frames": 2, "frameRate": 1.25, "repeat": -1 },
+  "attack": { "frames": 3, "frameRate": 12,   "repeat": 0  }
+}
+```
+
+Add a per-skill pose later *only* for a signature move; `AnimationResolver`
+prefers it automatically and everything else keeps sharing `attack`.
+
+**Motion does not come from frames — it comes from the engine.** Of the 15
+`AnimPhase` types, exactly one (`playAnim`) needs character art. The other
+fourteen are free: `shove`, `evasionDodge`, `flash`, `particles`, `impact`,
+`cameraShake`, `aura`, `damageNumber`, `statusText`, `feedback`, `wait`,
+`projectile`, `parallel`, `branch`. A skill can feel completely distinct with
+zero new sprite work by choreographing those in `anim_sequence.json` — which is
+exactly how GBA-era battles faked motion from near-static battlers.
+
+Every unauthored state resolves to `null` and the engine falls back cleanly;
+nothing throws. This is pinned by
+`core/battle/__tests__/AnimationResolver.minimal.test.ts` — if that test starts
+demanding more states, the art budget for every character just went up.
+
+1–2 frames per pose is enough. Author `idle` with `repeat: -1` (loops) and
+action poses with `repeat: 0` (plays once).
+
+---
+
 ## Sizes
 
 Authored at **1× art pixels**. Rendered at exactly 2×.

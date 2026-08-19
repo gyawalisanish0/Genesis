@@ -21,7 +21,7 @@ the intended refactor target, not a description of today's code.
 |---|---|---|
 | `HintToaster` + `ErrorToaster` + `BattleErrorToast` | **`Toaster`** (one component, 3 tones) | Three implementations; two already share a stylesheet. Only difference is tone, persistence, and whether it blocks. |
 | ~~`SkillInfoOverlay`, `StatusInfoOverlay`, `ChestOverlay`, `BattleLogOverlay` + backdrops~~ ✅ | **`Sheet`** + content children | Done — four bespoke backdrops collapsed into one shared `Sheet`. |
-| `TeamCollisionOverlay`, `ClashQteOverlay` | **`PromptOverlay`** + content children | Both are "battle halts, player chooses, battle resumes". Only the body differs. |
+| ~~`TeamCollisionOverlay`, `ClashQteOverlay`~~ ✅ | **`PromptOverlay`** + content children | Done — blocking chrome shared; each keeps its own body. |
 | `UnitPortrait` · battle portrait circle · timeline marker | **`UnitPortrait`** (`size` prop) | Three renderings of the same thing. `BattleScreen` drew its own circle. |
 | `--r-sm` … `--r-xl` | nine-slice `Panel` | Rounded corners are not in the art direction. |
 | `AsciiArena`, `AsciiPortrait`, `SymbolFigure`, `dungeonTileArt`, `src/ascii/*` | **`SpriteArena`**, `UnitPortrait`, `SpriteActor`, tileset `color`/`art` | ASCII render layer removed. |
@@ -206,14 +206,22 @@ same place the rest of the screen's back logic already lives.
 A blocking decision the battle waits on. **Replaces `TeamCollisionOverlay` and
 `ClashQteOverlay` chrome.**
 
-| Prop | Type |
-|---|---|
-| `title` | `string` |
-| `children` | `ReactNode` — the decision body |
-| `actions` | `{ label, variant, onPress }[]` |
+| Prop | Type | Default |
+|---|---|---|
+| `title` | `string` | — |
+| `subtitle` | `string?` | — · progress line ("2 of 3", "Round 1 of 3") |
+| `children` | `ReactNode` | — · the decision body |
+| `actions` | `{ label, variant?, onPress }[]?` | — · rendered as `PixelButton`s in a row |
+| `onBackdropTap` | `() => void` | — · when the *surface* is the input |
 
-Not dismissible — the player must choose. Backdrop is opaque
-(`--bg-overlay`); everything behind it is inert.
+Never dismissible — there is no ✕, no Esc, no tap-to-close. The player must
+decide; the engine is blocked until they do. Backdrop is `--bg-overlay`,
+everything behind it inert.
+
+**`actions` and `onBackdropTap` are both optional and mutually exclusive in
+practice** — a prompt takes input either through buttons (team collision:
+NOW / LATER) or through the surface itself (clash QTE: tap anywhere to stop the
+needle). Do not force buttons onto a prompt whose body *is* the interaction.
 
 ---
 

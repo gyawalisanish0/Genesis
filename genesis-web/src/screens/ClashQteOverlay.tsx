@@ -11,7 +11,7 @@ import {
   QTE_BAR_FILL_PER_HIT, QTE_BAR_ALLY_WEIGHT_BONUS,
   AI_QTE_ACCURACY, QTE_AI_TAP_DELAY_MS,
 } from '../core/constants'
-import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
+import { PromptOverlay } from '../components/PromptOverlay'
 import styles from './ClashQteOverlay.module.css'
 
 const QTE_PERIOD_MS  = 60_000 / QTE_KNOB_RPM     // ms per full revolution
@@ -35,7 +35,6 @@ function isHit(angleAtStop: number, zoneStart: number, zoneDeg: number): boolean
 
 export function ClashQteOverlay() {
   const { pendingClash, resolveClash } = useBattleScreen()
-  const createHandler = useScrollAwarePointer()
 
   const [rounds, setRounds]           = useState<QteRound[]>([])
   const [barValue, setBarValue]       = useState(0.5)
@@ -120,16 +119,12 @@ export function ClashQteOverlay() {
   const enemyFill  = (1 - barValue) * 100
 
   return (
-    <div
-      className={styles.overlay}
-      onPointerDown={createHandler({ onTap: handlePlayerTap })}
+    <PromptOverlay
+      title="CLASH"
+      subtitle={phase === 'done' ? 'Resolved!' : `Round ${roundNum} of ${QTE_ROUNDS}`}
+      onBackdropTap={handlePlayerTap}
     >
-      <div className={styles.card}>
-        <span className={styles.title}>CLASH</span>
-        <span className={styles.roundLabel}>
-          {phase === 'done' ? 'Resolved!' : `Round ${roundNum} of ${QTE_ROUNDS}`}
-        </span>
-
+      <>
         {/* Tug-of-war bar */}
         <div className={styles.barTrack}>
           <div className={styles.barEnemy}  style={{ width: `${enemyFill}%` }} />
@@ -159,7 +154,7 @@ export function ClashQteOverlay() {
            barValue > 0.5         ? 'Player wins!' :
            barValue < 0.5         ? 'Enemy wins!' : 'Tie — rolling…'}
         </span>
-      </div>
-    </div>
+      </>
+    </PromptOverlay>
   )
 }

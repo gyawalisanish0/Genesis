@@ -159,9 +159,9 @@ positives; a noisy check gets ignored and is worse than none.
 ## Migration stance
 
 `docs/ui/01-components.md` describes the target, not a description of today.
-Built so far: ramp/pixel-font tokens, `Panel`, `PixelButton`, `Sheet`.
-Still missing: **`PromptOverlay`, `Toaster`**, segmented `ResourceBar`.
-Next in `references/migration.md`: `PromptOverlay` (step 5).
+Built so far: ramp/pixel-font tokens, `Panel`, `PixelButton`, `Sheet`,
+`PromptOverlay`. Still missing: **`Toaster`**, segmented `ResourceBar`.
+Next in `references/migration.md`: `Toaster` (step 6).
 
 Do not write against primitives that are missing, and do not rewrite the whole
 UI at once. Convert incrementally, in the dependency order in

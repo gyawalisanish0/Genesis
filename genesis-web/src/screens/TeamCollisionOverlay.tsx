@@ -2,15 +2,16 @@
 // Rendered when pendingTeamCollision is set in BattleContext.
 // Player chooses for each unit sequentially. "Later" units advance +1 tick
 // (displacement check applied via registerTick in resolveTeamCollision).
+//
+// Chrome (backdrop, card, title, actions) is the shared PromptOverlay.
 
 import { useState } from 'react'
 import { useBattleScreen } from './BattleContext'
-import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
+import { PromptOverlay } from '../components/PromptOverlay'
 import styles from './TeamCollisionOverlay.module.css'
 
 export function TeamCollisionOverlay() {
   const { pendingTeamCollision, resolveTeamCollision } = useBattleScreen()
-  const createHandler = useScrollAwarePointer()
 
   // Index of the unit currently being decided (0 = first, 1 = second, …).
   const [decisionIndex, setDecisionIndex] = useState(0)
@@ -37,38 +38,22 @@ export function TeamCollisionOverlay() {
   }
 
   return (
-    <div className={styles.overlay}>
-      <div className={styles.card}>
-        <span className={styles.title}>SIMULTANEOUS TURN</span>
-        <span className={styles.subtitle}>
-          {decisionIndex + 1} of {units.length}
-        </span>
-
-        <div className={styles.portrait}>
-          {currentUnit.name.charAt(0).toUpperCase()}
-        </div>
-        <span className={styles.unitName}>{currentUnit.name}</span>
-        <span className={styles.unitMeta}>
-          {currentUnit.className} · {'★'.repeat(currentUnit.rarity)}
-        </span>
-
-        <p className={styles.prompt}>Act now or wait one tick?</p>
-
-        <div className={styles.actions}>
-          <button
-            className={styles.btnNow}
-            onPointerDown={createHandler({ onTap: () => handleChoice('now') })}
-          >
-            NOW
-          </button>
-          <button
-            className={styles.btnLater}
-            onPointerDown={createHandler({ onTap: () => handleChoice('later') })}
-          >
-            LATER
-          </button>
-        </div>
+    <PromptOverlay
+      title="SIMULTANEOUS TURN"
+      subtitle={`${decisionIndex + 1} of ${units.length}`}
+      actions={[
+        { label: 'NOW',   variant: 'primary',   onPress: () => handleChoice('now') },
+        { label: 'LATER', variant: 'secondary', onPress: () => handleChoice('later') },
+      ]}
+    >
+      <div className={styles.portrait}>
+        {currentUnit.name.charAt(0).toUpperCase()}
       </div>
-    </div>
+      <span className={styles.unitName}>{currentUnit.name}</span>
+      <span className={styles.unitMeta}>
+        {currentUnit.className} · {'★'.repeat(currentUnit.rarity)}
+      </span>
+      <p className={styles.prompt}>Act now or wait one tick?</p>
+    </PromptOverlay>
   )
 }
