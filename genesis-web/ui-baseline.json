@@ -2,9 +2,7 @@
   "no-hardcoded-colour": {
     "App.module.css": 1,
     "components/DungeonArena.module.css": 4,
-    "components/HintToaster.module.css": 1,
     "components/ResourceBar.module.css": 2,
-    "screens/BattleErrorToast.module.css": 2,
     "screens/BattleResultScreen.module.css": 2,
     "screens/BattleScreen.module.css": 7,
     "screens/DungeonScreen.module.css": 5,
@@ -37,13 +35,11 @@
     "services/DataService.ts": 1
   },
   "no-border-radius": {
-    "components/HintToaster.module.css": 1,
     "components/SpriteArena.module.css": 2,
     "components/StatusChipBar.module.css": 1,
     "components/UnitPortrait.module.css": 1,
-    "screens/BattleErrorToast.module.css": 2,
     "screens/BattleResultScreen.module.css": 5,
-    "screens/BattleScreen.module.css": 12,
+    "screens/BattleScreen.module.css": 11,
     "screens/ClashQteOverlay.module.css": 1,
     "screens/MainMenuScreen.module.css": 3,
     "screens/PreBattleScreen.module.css": 1,
@@ -61,6 +57,6 @@
     "screens/SplashScreen.module.css": 8
   },
   "no-duplicate-chrome": {
-    "screens/BattleScreen.module.css": 4
+    "screens/BattleScreen.module.css": 3
   }
 }

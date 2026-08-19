@@ -1,0 +1,96 @@
+/* Toaster — transient, non-blocking notification chip.
+ * Spec: docs/ui/01-components.md § Toaster. Replaces HintToaster,
+ * ErrorToaster, and the inline AP-warning chip in BattleScreen. */
+
+.toaster {
+  position: absolute;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-sm);
+  padding: var(--s-sm) var(--s-md);
+  border: var(--px) solid var(--toast-accent);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--t-body-sm-size);
+  line-height: 1.3;
+  letter-spacing: 0.02em;
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tappable { cursor: pointer; }
+.inert    { pointer-events: none; }
+
+/* ── Tones — each sets the accent the border and glyph share ──────────────── */
+
+.hint  { --toast-accent: var(--accent-genesis); }
+.warn  { --toast-accent: var(--accent-warn); }
+.error { --toast-accent: var(--accent-danger); }
+
+/* ── Placement ────────────────────────────────────────────────────────────── */
+
+/* Screen-level: centred horizontally, clear of the safe area. */
+.top,
+.bottom {
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - var(--s-xl));
+}
+
+.top {
+  top: calc(var(--safe-top) + 4.25rem);
+  animation: toastDropIn var(--motion-modal-in) both;
+}
+
+.bottom {
+  bottom: calc(var(--safe-bottom) + 4.5rem);
+  animation: toastRiseIn var(--motion-modal-in) both;
+}
+
+/* Panel-level: stretches inside the nearest positioned ancestor. */
+.inline {
+  top: var(--s-sm);
+  left: var(--s-sm);
+  right: var(--s-sm);
+  z-index: 10;
+  color: var(--toast-accent);
+  font-family: var(--font-pixel);
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  animation: toastDropIn var(--motion-modal-in) both;
+}
+
+@keyframes toastDropIn {
+  from { opacity: 0; transform: translateY(calc(var(--px) * -3)); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes toastRiseIn {
+  from { opacity: 0; transform: translateY(calc(var(--px) * 3)); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* The centred variants need the -50% preserved through the keyframes. */
+.top,
+.bottom { animation-name: toastDropInCentred; }
+.bottom { animation-name: toastRiseInCentred; }
+
+@keyframes toastDropInCentred {
+  from { opacity: 0; transform: translate(-50%, calc(var(--px) * -3)); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@keyframes toastRiseInCentred {
+  from { opacity: 0; transform: translate(-50%, calc(var(--px) * 3)); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.glyph {
+  flex-shrink: 0;
+  color: var(--toast-accent);
+  font-size: var(--t-body-size);
+  line-height: 1;
+}

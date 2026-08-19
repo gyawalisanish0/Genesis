@@ -4,8 +4,7 @@ import { SCREEN_IDS }      from '../navigation/screenRegistry'
 import { useBackButton }   from '../input/useBackButton'
 import { DungeonProvider, useDungeonScreen } from './DungeonContext'
 import { DungeonArena }    from '../components/DungeonArena'
-import { HintToaster }     from '../components/HintToaster'
-import { ErrorToaster }    from '../components/ErrorToaster'
+import { Toaster } from '../components/Toaster'
 import { ChestOverlay }    from './ChestOverlay'
 import styles from './DungeonScreen.module.css'
 
@@ -45,12 +44,12 @@ function DungeonLayout() {
         {partyLeader           && <PartyHpPill leader={partyLeader} />}
         {encounterFlashing     && <div className={styles.encounterFlash} aria-hidden />}
         {phase === 'exploring' && (
-          <HintToaster id="dungeon-move" message="Tap arrows to move. Step on enemies to engage." />
+          <Toaster onceId="dungeon-move" message="Tap arrows to move. Step on enemies to engage." />
         )}
         {phase === 'wave' && (
-          <HintToaster id="dungeon-wave" message="Multiple groups in range — tap one to engage." />
+          <Toaster onceId="dungeon-wave" message="Multiple groups in range — tap one to engage." />
         )}
-        <ErrorToaster message={tilesetError} />
+        <Toaster tone="warn" message={tilesetError} />
         {openChest && <ChestOverlay chest={openChest} onCollect={collectChest} />}
       </div>
     </ScreenShell>

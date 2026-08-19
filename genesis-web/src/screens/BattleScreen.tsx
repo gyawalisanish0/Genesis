@@ -10,7 +10,7 @@ import { SCREEN_REGISTRY, SCREEN_IDS } from '../navigation/screenRegistry'
 import { useBackButton } from '../input/useBackButton'
 import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import { SpriteArena as BattleArena } from '../components/SpriteArena'
-import { HintToaster } from '../components/HintToaster'
+import { Toaster } from '../components/Toaster'
 import { BattleProvider, useBattleScreen } from './BattleContext'
 import { StatusInfoOverlay }               from './StatusInfoOverlay'
 import { BattleErrorToast } from './BattleErrorToast'
@@ -374,22 +374,19 @@ function ActionGrid() {
 
   const [apWarning, setApWarning]   = useState<{ needed: number; have: number } | null>(null)
   const [shakingKey, setShakingKey] = useState<string | null>(null)
-  const warnTimer  = useRef<ReturnType<typeof setTimeout> | null>(null)
   const shakeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => () => {
-    if (warnTimer.current)  clearTimeout(warnTimer.current)
     if (shakeTimer.current) clearTimeout(shakeTimer.current)
   }, [])
 
   const triggerApWarning = (apCost: number, key: string) => {
     if (!activePlayerUnit) return
-    if (warnTimer.current)  clearTimeout(warnTimer.current)
     if (shakeTimer.current) clearTimeout(shakeTimer.current)
     setApWarning({ needed: apCost, have: activePlayerUnit.ap })
     setShakingKey(key)
     shakeTimer.current = setTimeout(() => setShakingKey(null), AP_WARN_SHAKE_MS)
-    warnTimer.current  = setTimeout(() => setApWarning(null),  AP_WARN_DISMISS_MS)
+    // Dismissal is the Toaster's job — it clears apWarning via onDismiss.
   }
 
   const playerSkills  = activePlayerUnit ? getUnitSkills(activePlayerUnit.id) : []
@@ -401,11 +398,14 @@ function ActionGrid() {
 
   return (
     <div className={[styles.actionGrid, phase === 'player' ? styles.actionGridActive : ''].join(' ')}>
-      {apWarning && (
-        <div className={styles.apWarningToast} role="alert">
-          Need {apWarning.needed} AP · have {apWarning.have}
-        </div>
-      )}
+      <Toaster
+        message={apWarning ? `Need ${apWarning.needed} AP · have ${apWarning.have}` : null}
+        tone="warn"
+        position="inline"
+        durationMs={AP_WARN_DISMISS_MS}
+        dismissible={false}
+        onDismiss={() => setApWarning(null)}
+      />
       {!gridCollapsed && (
         <>
           <div className={styles.actionRow}>
@@ -749,10 +749,10 @@ function BattleLayout() {
       <TargetSelectOverlay />
       <ClashQteOverlay />
       <TeamCollisionOverlay />
-      <HintToaster id="battle-skill"  message="Tap a skill, then ROLL to attack." />
-      <HintToaster id="battle-inspect" message="Long-press any skill to see its full details." position="bottom" />
+      <Toaster onceId="battle-skill" message="Tap a skill, then ROLL to attack." />
+      <Toaster onceId="battle-inspect" message="Long-press any skill to see its full details." position="bottom" />
       {diceResult && (
-        <HintToaster id="battle-skip-dice" message="Tap the canvas to skip the dice animation." position="bottom" />
+        <Toaster onceId="battle-skip-dice" message="Tap the canvas to skip the dice animation." position="bottom" />
       )}
       <BattleTimeline />
       <div className={styles.main}>

@@ -41,8 +41,8 @@ interface DungeonContextValue {
   // True during the rapid white-flash overlay that plays before battle launches.
   encounterFlashing: boolean
   // Non-null when one or more tile textures failed to load. Cleared once the
-  // ErrorToaster auto-dismisses; set to the same message string on each new
-  // map load that has failures.
+  // Toaster auto-dismisses; set to the same message string on each new map
+  // load that has failures.
   tilesetError:     string | null
   bgColor:          string | null   // from tileset.json — drives arena container + Phaser camera
   openChest:        InteractableEntityDef | null

@@ -58,13 +58,15 @@ consistent. Only extract when the shapes genuinely diverge.
 | `PromptOverlay` | Blocking decisions the engine waits on | A blocking backdrop, an actions row |
 | `ResourceBar` | HP / AP / XP / shield | A `<div>` with a percentage width |
 | `UnitPortrait` | Any character likeness, 4 sizes | A circle with a border and an image |
+| `Toaster` | Transient chips — hints, warnings, errors | A floating message div with a timer |
 | `StatusChipBar` | Status effect chips | A row of small labelled squares |
 | `PagedGrid` | Any paged card grid | Pagination, swipe, dot indicators |
 | `ScreenShell` | Safe-area padding | `padding: env(safe-area-inset-*)` |
 | `useScrollAwarePointer` | Tap vs. scroll vs. hold | A raw `onPointerDown` in a scroller |
 
-Still to be built (see `references/migration.md`): **`Toaster`**, segmented
-`ResourceBar`.
+Every component in the original consolidation table now exists. Remaining
+migration work is polish, not extraction: segmented `ResourceBar` (step 7),
+retiring the radii (8), per-screen sweep (9). See `references/migration.md`.
 
 ### Anti-patterns, with the receipts
 
@@ -74,9 +76,11 @@ Each of these actually happened here.
   declared `position:absolute; inset:0; background:var(--bg-overlay)`. Now
   `Sheet` and `PromptOverlay`. *The `no-duplicate-chrome` rule now fails the
   build if a screen reaches for `--bg-overlay` again.*
-- **Three toast implementations.** `HintToaster`, `ErrorToaster`,
-  `BattleErrorToast` — two already shared a stylesheet, which should have been
-  the signal to extract. Differ only in tone, persistence, and blocking.
+- **Four toast implementations.** `HintToaster`, `ErrorToaster`,
+  `BattleErrorToast`, and an inline chip in `BattleScreen` that no audit had
+  even listed. Two already shared a stylesheet — that should have been the
+  signal to extract. *Consolidating usually finds more duplicates than the
+  audit predicted; go looking.*
 - **Three portrait renderings.** `UnitPortrait`, a bespoke circle in
   `BattleScreen`, and a timeline marker — the same thing three times.
 - **A palette the code never used.** The design doc specified purple; the app
@@ -217,9 +221,15 @@ which legitimately appears on backgrounds and vignettes).
 ## Migration stance
 
 `docs/ui/01-components.md` describes the target, not today.
-Built: ramp/pixel-font tokens, `Panel`, `PixelButton`, `Sheet`, `PromptOverlay`.
-Missing: **`Toaster`**, segmented `ResourceBar`.
-Next: `Toaster` (step 6 in `references/migration.md`).
+Built: ramp/pixel-font tokens, `Panel`, `PixelButton`, `Sheet`,
+`PromptOverlay`, `Toaster` — the whole consolidation table.
+Next: segmented `ResourceBar` (step 7 in `references/migration.md`).
+
+**A shape that blocks is not a variant of a shape that doesn't.** `Toaster`'s
+spec originally carried a blocking `fatal` tone; implementing it would have
+duplicated `PromptOverlay` inside `Toaster`. When a "variant" needs its own
+backdrop, actions, or focus behaviour, it is a different component — compose,
+do not overload.
 
 Do not write against primitives that don't exist yet, and do not rewrite the
 whole UI at once. Convert incrementally in dependency order, ratcheting the

@@ -31,7 +31,7 @@ the intended refactor target, not a description of today's code.
 
 | Today | Replaced by | Why |
 |---|---|---|
-| `HintToaster` + `ErrorToaster` + `BattleErrorToast` | **`Toaster`** (one component, 3 tones) | Three implementations; two already share a stylesheet. Only difference is tone, persistence, and whether it blocks. |
+| ~~`HintToaster` + `ErrorToaster` + inline AP chip~~ ✅ | **`Toaster`** (3 tones) | Done — a fourth duplicate turned up inline in `BattleScreen`. The blocking `BattleErrorToast` composes `PromptOverlay` rather than being a Toaster tone. |
 | ~~`SkillInfoOverlay`, `StatusInfoOverlay`, `ChestOverlay`, `BattleLogOverlay` + backdrops~~ ✅ | **`Sheet`** + content children | Done — four bespoke backdrops collapsed into one shared `Sheet`. |
 | ~~`TeamCollisionOverlay`, `ClashQteOverlay`~~ ✅ | **`PromptOverlay`** + content children | Done — blocking chrome shared; each keeps its own body. |
 | `UnitPortrait` · battle portrait circle · timeline marker | **`UnitPortrait`** (`size` prop) | Three renderings of the same thing. `BattleScreen` drew its own circle. |
@@ -239,24 +239,40 @@ needle). Do not force buttons onto a prompt whose body *is* the interaction.
 
 ### `Toaster`
 
-Transient notification chip. **Replaces `HintToaster`, `ErrorToaster`, and
-`BattleErrorToast`.**
+Transient, **non-blocking** notification chip. **Replaces `HintToaster`,
+`ErrorToaster`, and the inline AP-warning chip in `BattleScreen`.**
 
 | Prop | Type | Default |
 |---|---|---|
-| `message` | `string \| null` | — `null` renders nothing |
-| `tone` | `'hint' \| 'warn' \| 'fatal'` | `'hint'` |
-| `onceId` | `string?` | localStorage key — shows at most once ever |
-| `onDismiss` | `() => void` | — |
+| `message` | `string \| null` | — · `null` renders nothing |
+| `tone` | `'hint' \| 'warn' \| 'error'` | `'hint'` |
+| `position` | `'top' \| 'bottom' \| 'inline'` | `'top'` |
+| `onceId` | `string?` | — · localStorage key; shows at most once ever |
+| `durationMs` | `number?` | `HINT_TOASTER_DURATION_MS` |
+| `dismissible` | `boolean` | `true` — tap to close |
+| `onDismiss` | `() => void` | — · fired on tap **and** on auto-expiry |
 
-| Tone | Border | Duration | Blocking |
-|---|---|---|---|
-| `hint` | `cyan-4` | `HINT_TOASTER_DURATION_MS` | no |
-| `warn` | `flare-3` | `HINT_TOASTER_DURATION_MS` | no |
-| `fatal` | `blood-3` | `BATTLE_ERROR_TOAST_MS` | yes — dims screen, offers an exit action |
+| Tone | Border | Glyph |
+|---|---|---|
+| `hint` | `--accent-genesis` | 💡 |
+| `warn` | `--accent-warn` | ⚠ |
+| `error` | `--accent-danger` | ✖ |
 
-`onceId` present ⇒ persistence-backed one-shot hint. Absent ⇒ shows on every
-non-null message, restarting the timer.
+`onceId` present ⇒ persistence-backed one-shot hint (never shown twice on a
+device). Absent ⇒ shows whenever `message` is non-null, restarting the timer.
+
+`position="inline"` stretches within the nearest positioned ancestor instead of
+the screen — for a chip that belongs to a panel (the AP warning sits over the
+action grid). Pair with `dismissible={false}` so it never eats a tap meant for
+the UI underneath.
+
+> **A blocking error is not a Toaster.** An earlier draft of this spec gave
+> `Toaster` a `fatal` tone that dimmed the screen and offered an exit action.
+> That would have meant re-implementing `PromptOverlay`'s backdrop and actions
+> row inside `Toaster` — the exact duplication this catalogue exists to
+> prevent. Blocking messages compose `PromptOverlay` instead (rung 3 of the
+> reuse ladder); see `BattleErrorToast`, which supplies a countdown subtitle
+> and a LEAVE BATTLE action.
 
 ---
 
