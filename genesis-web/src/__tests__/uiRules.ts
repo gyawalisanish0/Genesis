@@ -41,7 +41,8 @@ function matchLines(src: string, re: RegExp): string[] {
 }
 
 // Radii are retired in favour of nine-slice panels. Functional circles survive.
-const ALLOWED_RADIUS = /border-radius:\s*(var\(--r-pill\)|50%|999px|inherit|0)\s*;?/
+// Anchored to a `;` or line-end so `0.25rem` isn't swallowed by the bare `0` alternative.
+const ALLOWED_RADIUS = /border-radius:\s*(var\(--r-pill\)|50%|999px|inherit|0)\s*(;|$)/
 
 export const MODULE_LINE_LIMIT = 150
 

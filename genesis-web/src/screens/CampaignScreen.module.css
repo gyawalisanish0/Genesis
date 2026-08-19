@@ -46,7 +46,6 @@
 .card {
   background: var(--bg-card);
   border: 1px solid var(--bg-elevated);
-  border-radius: 0.625rem;
   padding: 1rem;
   display: flex;
   flex-direction: column;
@@ -95,7 +94,6 @@
 .playBtn {
   background: var(--accent-genesis);
   border: none;
-  border-radius: 0.5rem;
   color: var(--text-on-accent);
   font-size: 0.875rem;
   font-weight: 700;

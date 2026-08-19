@@ -121,7 +121,6 @@
 
 .navBtn {
   border: none;
-  border-radius: var(--r-md);
   font-family: var(--font-sans);
   font-size: var(--t-subheading-size);
   font-weight: var(--t-subheading-weight);
@@ -174,7 +173,6 @@
 .dialog {
   background: var(--bg-panel);
   border: 1px solid var(--bg-elevated);
-  border-radius: var(--r-md);
   padding: var(--s-md);
   width: 80%;
   max-width: 18rem;
@@ -199,7 +197,6 @@
   flex: 1;
   height: var(--touch-min);
   border: none;
-  border-radius: var(--r-md);
   font-family: var(--font-sans);
   font-size: var(--t-label-size);
   font-weight: var(--t-label-weight);

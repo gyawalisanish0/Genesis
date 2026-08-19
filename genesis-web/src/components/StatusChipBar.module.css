@@ -21,7 +21,6 @@
   position:      relative;
   width:         2.75rem;   /* 44 dp */
   height:        2.75rem;
-  border-radius: var(--r-sm);
   background:    color-mix(in srgb, var(--chip-colour) 12%, var(--bg-card));
   border:        1px solid color-mix(in srgb, var(--chip-colour) 45%, transparent);
   overflow:      hidden;
@@ -101,7 +100,6 @@
 .chipCompact {
   width:    0.875rem;   /* 14 dp */
   height:   0.875rem;
-  border-radius: 0.1875rem;
 }
 
 .compactDot {

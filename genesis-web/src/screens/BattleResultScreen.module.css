@@ -65,7 +65,6 @@
 /* ── Rewards card ───────────────────────────────────────────────────── */
 .rewardsCard {
   background: var(--bg-card);
-  border-radius: var(--r-md);
   padding: var(--s-sm) var(--s-md);
   display: flex;
   flex-direction: column;
@@ -98,7 +97,6 @@
   align-items: center;
   gap: var(--s-md);
   background: var(--bg-card);
-  border-radius: var(--r-md);
   padding: var(--s-sm) var(--s-md);
   min-height: 4rem;  /* 64 dp */
 }
@@ -123,7 +121,6 @@
 /* ── Battle stats card ──────────────────────────────────────────────── */
 .statsCard {
   background: var(--bg-card);
-  border-radius: var(--r-md);
   overflow: hidden;
 }
 
@@ -154,7 +151,6 @@
   height: 3.5rem;  /* 56 dp */
   background: var(--accent-genesis);
   border: none;
-  border-radius: var(--r-md);
   color: var(--text-on-accent);
   font-family: var(--font-sans);
   font-size: var(--t-subheading-size);
@@ -171,7 +167,6 @@
   height: 3rem;  /* 48 dp */
   background: transparent;
   border: 1px solid var(--bg-elevated);
-  border-radius: var(--r-md);
   color: var(--text-secondary);
   font-family: var(--font-sans);
   font-size: var(--t-body-size);

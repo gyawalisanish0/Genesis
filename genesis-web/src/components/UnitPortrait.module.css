@@ -1,5 +1,4 @@
 .portrait {
-  border-radius: var(--r-md);
   border: 2px solid transparent;
   background: var(--bg-elevated);
   display: flex;

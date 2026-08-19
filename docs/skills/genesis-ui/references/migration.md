@@ -19,21 +19,22 @@ screen alone is 800 lines and every conversion risks the engine contract.
 | ~~`HintToaster`, `ErrorToaster`, inline AP chip~~ | **`Toaster` (3 tones)** ✅ | Done. A *fourth* duplicate was found inline in `BattleScreen`. `BattleErrorToast` did **not** become a Toaster tone — it blocks, so it composes `PromptOverlay` instead. |
 | Battle screen's own portrait circle | `UnitPortrait size="lg"` | Already swapped; the bespoke circle CSS can go once glow moves onto the component. |
 | ~~`ResourceBar` continuous fill~~ | **segmented fill** ✅ | Done. Fixed `RESOURCE_BAR_SEGMENT_COUNT` (20) grid of blocks with `var(--px)` gaps, not a measured pixel width. HP fill retones at the low/critical thresholds; shield draws extra segments past value. `--r-pill` on the old track/fill is gone too — one more consumer off the retired radii. |
-| `--r-sm` … `--r-xl` in `tokens.css` | deleted | Blocked on `Panel` existing (done) — now also unblocked on `ResourceBar` (done). `--r-pill` stays. |
+| ~~`--r-sm` … `--r-xl` in `tokens.css`~~ | **deleted** ✅ | Done. All 32 consumers converted: decorative rounded rects square off (`0`, i.e. the declaration is removed), true chip/badge shapes (`skillCdChip`, `objectivePill`, `hpPill`) move to `var(--r-pill)`. `--r-pill` stays permanently. |
 | ~~flat hex in `tokens.css`~~ | **ramp steps** ✅ | Done. Ten ramps added; every semantic token repointed; names unchanged. |
 | ~~`--font-sans` only~~ | **`--font-pixel` + `--font-sans`** ✅ | Done. Neither face is bundled yet — both degrade to system stacks. |
 
 Already done: ASCII render layer removed; `SpriteArena` owns
 `BattleArenaHandle`; `UnitPortrait` renders `portrait.png`; tiles fill from
-`TilesetDef.tiles[id].color`. **Steps 1–7 below are complete** — ramps and
+`TilesetDef.tiles[id].color`. **Steps 1–8 below are complete** — ramps and
 `--font-pixel` shipped; `Panel` exists with all five variants; `PixelButton`
 replaced `PrimaryButton`; `Sheet` replaced the four info overlays;
 `PromptOverlay` replaced the two decision overlays and now also backs the
 blocking battle error; `Toaster` replaced three toasts plus an inline chip;
-`ResourceBar` draws a segmented grid instead of a continuous fill. `--px` (1 art
-pixel = 2 dp) was added so grid multiples are expressible. `reduceAnimations`
-is now mirrored to the root element so the stepped-motion tokens actually
-collapse.
+`ResourceBar` draws a segmented grid instead of a continuous fill; `--r-sm`
+… `--r-xl` are gone from `tokens.css` and `no-border-radius` is at zero.
+`--px` (1 art pixel = 2 dp) was added so grid multiples are expressible.
+`reduceAnimations` is now mirrored to the root element so the stepped-motion
+tokens actually collapse.
 
 ---
 
@@ -70,15 +71,27 @@ so the ratchet tightens.
    pixel math was needed. HP retones (`flare-3` under 50%, `blood-2` under 25%)
    via a class on the track, matching `01-components.md`'s fill table. Track
    chrome switched from `--bg-elevated` to the `Panel` sunken tokens.
-8. **Retire radii** — delete `--r-sm`…`--r-xl` once no consumer references
-   them. This is what finally drives `no-border-radius` to zero.
+8. ~~**Retire radii**~~ ✅ — deleted `--r-sm`…`--r-xl` from `tokens.css`.
+   32 consumers converted across 15 files: decorative rects square off,
+   genuine chip/badge shapes (`skillCdChip`, `objectivePill`, `hpPill`,
+   `StatusChipBar.chipCompact` — the last one squared, matching its full-size
+   sibling) move to `var(--r-pill)`. Along the way, `ALLOWED_RADIUS` in
+   `uiRules.ts` turned out to be unanchored — `border-radius: 0.25rem`
+   satisfied it because the bare `0` alternative matched as a prefix with no
+   boundary check. Fixed and re-baselined; that surfaced (and this step also
+   fixed) 9 previously-invisible violations in `CampaignScreen` and
+   `DungeonScreen` that predate this migration entirely. `no-border-radius`
+   is genuinely empty in `ui-baseline.json` now, not just empty-looking.
 9. **Per-screen sweep** — remaining hardcoded colours, gradients, and the
    oversized modules (`BattleScreen` 805, `BattleContext` 668,
-   `DungeonContext` 527 lines).
+   `DungeonContext` 527 lines). Two hand-rolled HP bars turned up during step
+   8 (`BattleScreen.targetPickerBarTrack/Fill`, `DungeonScreen.hpBarTrack/Fill`)
+   that duplicate `ResourceBar` and should compose it instead — good first
+   items for this step.
 
-Steps 1–7 are complete — every duplicated component in the original
-consolidation table is now gone, and `ResourceBar` draws as blocks instead of
-a bar. **Step 8 (retire the radii) is next**, then the per-screen sweep (9).
+Steps 1–8 are complete — every duplicated component in the original
+consolidation table is gone, `ResourceBar` draws as blocks instead of a bar,
+and `no-border-radius` is at zero. **Step 9 (the per-screen sweep) is next.**
 
 ---
 

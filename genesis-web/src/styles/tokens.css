@@ -193,14 +193,9 @@
   --s-xl:  2rem;      /* 32 dp — 16 art px */
   --s-2xl: 3rem;      /* 48 dp — 24 art px */
 
-  /* ── Corner radius — RETIRED (docs/ui § 5) ───────────────────────────── */
-  /* Corners belong to the Panel border, not border-radius. These remain only
-   * until the 19 pre-design-system consumers migrate; do not use in new code.
-   * --r-pill survives permanently for functional circles. */
-  --r-sm:   0.25rem;
-  --r-md:   0.5rem;
-  --r-lg:   1rem;
-  --r-xl:   1.5rem;
+  /* ── Corner radius (docs/ui § 5) ──────────────────────────────────────── */
+  /* Corners belong to the Panel border, not border-radius. --r-pill is the
+   * only survivor, for functional circles/pills. */
   --r-pill: 999px;
 
   /* ── Touch target (minimum 48 × 48 dp) ──────────────────────────────── */

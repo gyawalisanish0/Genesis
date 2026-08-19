@@ -45,7 +45,6 @@
   width: 3.5rem;
   height: 3.5rem;
   border: 2px solid var(--bg-elevated);
-  border-radius: var(--r-md);
   background: var(--bg-card);
   color: var(--text-secondary);
   font-size: var(--t-heading-size);
@@ -70,7 +69,6 @@
   gap: 0.125rem;
   padding: var(--s-xs) var(--s-sm);
   border: 1px solid var(--bg-elevated);
-  border-radius: var(--r-sm);
   background: var(--bg-panel);
 }
 
