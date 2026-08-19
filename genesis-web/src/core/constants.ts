@@ -90,6 +90,12 @@ export const DUNGEON_SPOT_FLASH_MS         = 2000  // ms enemy shakes on-grid (s
 export const DUNGEON_ENCOUNTER_FLASH_MS    = 1000  // ms rapid white-flash overlay before navigating to battle
 export const DUNGEON_ENCOUNTER_BANNER_MS   = 1200  // ms encounter telegraph banner (wave phase)
 
+// Resource bar segmentation — HP/AP/XP fill draws as this many discrete
+// blocks rather than a continuous width, so it "ticks down" instead of sliding.
+export const RESOURCE_BAR_SEGMENT_COUNT      = 20    // blocks the fill divides into
+export const RESOURCE_BAR_LOW_THRESHOLD      = 0.5   // HP fill shifts to flare-3 below this
+export const RESOURCE_BAR_CRITICAL_THRESHOLD = 0.25  // HP fill shifts to blood-2 below this
+
 // First-time hint toaster
 export const HINT_TOASTER_DURATION_MS = 5000  // ms the hint stays visible before auto-dismiss
 

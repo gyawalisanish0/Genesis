@@ -18,18 +18,19 @@ screen alone is 800 lines and every conversion risks the engine contract.
 | ~~`TeamCollisionOverlay`, `ClashQteOverlay`~~ | **`PromptOverlay` + content** ✅ | Done. Chrome shared; bodies kept. `PromptOverlay` takes input via `actions` (NOW/LATER) *or* `onBackdropTap` (QTE needle) — a prompt whose body *is* the interaction gets no buttons. |
 | ~~`HintToaster`, `ErrorToaster`, inline AP chip~~ | **`Toaster` (3 tones)** ✅ | Done. A *fourth* duplicate was found inline in `BattleScreen`. `BattleErrorToast` did **not** become a Toaster tone — it blocks, so it composes `PromptOverlay` instead. |
 | Battle screen's own portrait circle | `UnitPortrait size="lg"` | Already swapped; the bespoke circle CSS can go once glow moves onto the component. |
-| `ResourceBar` continuous fill | segmented fill | Blocked 2 art px segments, `steps(16)` tween. |
-| `--r-sm` … `--r-xl` in `tokens.css` | deleted | Blocked on `Panel` existing. `--r-pill` stays. |
+| ~~`ResourceBar` continuous fill~~ | **segmented fill** ✅ | Done. Fixed `RESOURCE_BAR_SEGMENT_COUNT` (20) grid of blocks with `var(--px)` gaps, not a measured pixel width. HP fill retones at the low/critical thresholds; shield draws extra segments past value. `--r-pill` on the old track/fill is gone too — one more consumer off the retired radii. |
+| `--r-sm` … `--r-xl` in `tokens.css` | deleted | Blocked on `Panel` existing (done) — now also unblocked on `ResourceBar` (done). `--r-pill` stays. |
 | ~~flat hex in `tokens.css`~~ | **ramp steps** ✅ | Done. Ten ramps added; every semantic token repointed; names unchanged. |
 | ~~`--font-sans` only~~ | **`--font-pixel` + `--font-sans`** ✅ | Done. Neither face is bundled yet — both degrade to system stacks. |
 
 Already done: ASCII render layer removed; `SpriteArena` owns
 `BattleArenaHandle`; `UnitPortrait` renders `portrait.png`; tiles fill from
-`TilesetDef.tiles[id].color`. **Steps 1–6 below are complete** — ramps and
+`TilesetDef.tiles[id].color`. **Steps 1–7 below are complete** — ramps and
 `--font-pixel` shipped; `Panel` exists with all five variants; `PixelButton`
 replaced `PrimaryButton`; `Sheet` replaced the four info overlays;
 `PromptOverlay` replaced the two decision overlays and now also backs the
-blocking battle error; `Toaster` replaced three toasts plus an inline chip. `--px` (1 art
+blocking battle error; `Toaster` replaced three toasts plus an inline chip;
+`ResourceBar` draws a segmented grid instead of a continuous fill. `--px` (1 art
 pixel = 2 dp) was added so grid multiples are expressible. `reduceAnimations`
 is now mirrored to the root element so the stepped-motion tokens actually
 collapse.
@@ -63,17 +64,21 @@ so the ratchet tightens.
    `Toaster` would have duplicated `PromptOverlay` — the exact anti-pattern
    this migration exists to remove. `BattleErrorToast` composes `PromptOverlay`
    and keeps its countdown + auto-navigate.
-7. **`ResourceBar` segmentation** — visual only, no API change.
+7. ~~**`ResourceBar` segmentation**~~ ✅ — visual only, no API change. A fixed
+   20-block CSS grid (`RESOURCE_BAR_SEGMENT_COUNT`) replaced the percentage-width
+   fill; `gap: var(--px)` draws the block seams, so no gradient or measured
+   pixel math was needed. HP retones (`flare-3` under 50%, `blood-2` under 25%)
+   via a class on the track, matching `01-components.md`'s fill table. Track
+   chrome switched from `--bg-elevated` to the `Panel` sunken tokens.
 8. **Retire radii** — delete `--r-sm`…`--r-xl` once no consumer references
    them. This is what finally drives `no-border-radius` to zero.
 9. **Per-screen sweep** — remaining hardcoded colours, gradients, and the
    oversized modules (`BattleScreen` 805, `BattleContext` 668,
    `DungeonContext` 527 lines).
 
-Steps 1–6 are complete — every duplicated component in the original
-consolidation table is now gone. **Step 7 (`ResourceBar` segmentation) is
-next**, then retiring the radii (8) and the per-screen sweep (9). Step 8 is
-what finally drives `no-border-radius` to zero.
+Steps 1–7 are complete — every duplicated component in the original
+consolidation table is now gone, and `ResourceBar` draws as blocks instead of
+a bar. **Step 8 (retire the radii) is next**, then the per-screen sweep (9).
 
 ---
 
