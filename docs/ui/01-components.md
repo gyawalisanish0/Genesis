@@ -6,9 +6,21 @@ Every reusable UI part, its anatomy, props, and states. Screens
 Foundations (pixel grid, palette, panel variants, motion) come from
 `00-design-system.md`.
 
-**Rule:** if a screen needs a visual that isn't here, add it here first. A
-one-off implemented inside a screen file is how the previous system grew six
-different modal backdrops.
+**Rule — reuse first.** Walk this ladder top-down and stop at the first rung
+that works:
+
+1. **Use** a component here as-is.
+2. **Extend** one with a new prop (`Sheet` gained `placement`; `PromptOverlay`
+   gained `onBackdropTap`). Prefer this over a new component.
+3. **Compose** existing ones (`Panel` + `PixelButton` + `ResourceBar`).
+4. **Extract** a new shared component — catalogue it *here first*, then build it
+   once in `components/`.
+5. **Screen-local styling** for genuinely one-off **content** — never chrome.
+
+There is no sixth rung. A one-off inlined in a screen file is how the previous
+system grew six different modal backdrops, three toasts, and three portrait
+renderings. `npm run validate:ui`'s `no-duplicate-chrome` rule now fails the
+build when a screen reaches for `--bg-overlay` instead of `Sheet`.
 
 ---
 

@@ -59,5 +59,8 @@
     "screens/ClashQteOverlay.module.css": 1,
     "screens/MainMenuScreen.module.css": 1,
     "screens/SplashScreen.module.css": 8
+  },
+  "no-duplicate-chrome": {
+    "screens/BattleScreen.module.css": 4
   }
 }

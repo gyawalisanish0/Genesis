@@ -84,6 +84,16 @@ export const RULES: UiRule[] = [
     fix:     'This custom property is defined nowhere and the var() has no fallback. Add it to tokens.css, correct the name, or give it a fallback — otherwise the whole declaration is invalid.',
   },
   {
+    // `--bg-overlay` exists for exactly one purpose: the modal backdrop owned by
+    // Sheet / PromptOverlay. Using it anywhere else means a screen is
+    // re-implementing shared chrome — the mistake that produced six different
+    // modal backdrops before consolidation.
+    id:      'no-duplicate-chrome',
+    applies: p => isModuleCss(p) && !p.startsWith('components/'),
+    scan:    src => matchLines(src, /var\(--bg-overlay\)/),
+    fix:     'Compose <Sheet> (dismissible) or <PromptOverlay> (blocking) instead of hand-rolling a backdrop. --bg-overlay belongs to those two components. See docs/ui/01-components.md § Sheet.',
+  },
+  {
     id:      'module-line-limit',
     applies: p => isSource(p),
     scan:    src => {
