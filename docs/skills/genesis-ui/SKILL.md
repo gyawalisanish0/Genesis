@@ -66,8 +66,9 @@ consistent. Only extract when the shapes genuinely diverge.
 
 Every component in the original consolidation table now exists,
 `ResourceBar` draws as segmented blocks, and the retired radii (`--r-sm`…
-`--r-xl`) are gone from `tokens.css` — `no-border-radius` is at zero.
-Remaining migration work is the per-screen sweep (step 9). See
+`--r-xl`) are gone from `tokens.css` — `no-border-radius` and
+`no-duplicate-chrome` are both at zero project-wide. Remaining migration
+work is the rest of the per-screen sweep (step 9). See
 `references/migration.md`.
 
 ### Anti-patterns, with the receipts
@@ -225,10 +226,13 @@ which legitimately appears on backgrounds and vignettes).
 `docs/ui/01-components.md` describes the target, not today.
 Built: ramp/pixel-font tokens, `Panel`, `PixelButton`, `Sheet`,
 `PromptOverlay`, `Toaster`, segmented `ResourceBar` — the whole
-consolidation table — plus retiring `--r-sm`…`--r-xl`.
-Next: the per-screen sweep (step 9 in `references/migration.md`) — two
-hand-rolled HP bars (`BattleScreen`, `DungeonScreen`) that should compose
-`ResourceBar` instead are the first candidates.
+consolidation table — plus retiring `--r-sm`…`--r-xl` and closing out every
+`no-duplicate-chrome` violation (two hand-rolled HP bars now compose
+`ResourceBar`; `BattleScreen`'s pause/counter/target overlays now compose
+`PromptOverlay`/`Sheet`).
+Next: the rest of the per-screen sweep (step 9 in `references/migration.md`)
+— remaining hardcoded colours/gradients and the oversized modules
+(`BattleScreen`, `BattleContext`, `DungeonContext`).
 
 **A shape that blocks is not a variant of a shape that doesn't.** `Toaster`'s
 spec originally carried a blocking `fatal` tone; implementing it would have

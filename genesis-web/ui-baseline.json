@@ -3,7 +3,7 @@
     "App.module.css": 1,
     "components/DungeonArena.module.css": 4,
     "screens/BattleResultScreen.module.css": 2,
-    "screens/BattleScreen.module.css": 7,
+    "screens/BattleScreen.module.css": 6,
     "screens/DungeonScreen.module.css": 5,
     "screens/MainMenuScreen.module.css": 3,
     "screens/SplashScreen.module.css": 8
@@ -38,8 +38,5 @@
     "screens/ClashQteOverlay.module.css": 1,
     "screens/MainMenuScreen.module.css": 1,
     "screens/SplashScreen.module.css": 8
-  },
-  "no-duplicate-chrome": {
-    "screens/BattleScreen.module.css": 3
   }
 }

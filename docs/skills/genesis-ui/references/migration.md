@@ -90,7 +90,15 @@ so the ratchet tightens.
    track/fill div pair. `DungeonScreen`'s pill needed a fixed-width wrapper
    (`.hpBarWrap`, 4rem) since `ResourceBar`'s track is `width: 100%` and the
    pill is a `flex-direction: row` container, unlike every other consumer's
-   full-width row.
+   full-width row. ~~BattleScreen's last 3 `no-duplicate-chrome` violations~~ ✅
+   — done: `PauseOverlay` and `CounterPromptOverlay` now compose `PromptOverlay`
+   (title + actions); `TargetSelectOverlay` composes `Sheet` (`placement="centre"`,
+   its existing ✕ button became `onClose`). The pause backdrop's hardcoded
+   `rgba(0,0,0,0.75)` is gone too — one more `no-hardcoded-colour` entry off
+   the baseline. `.diceSkipHint` also stopped reusing `--bg-overlay` for an
+   unrelated small hint chip; it's `--bg-elevated` now, matching `Toaster`'s
+   own chip background — it isn't a modal and doesn't belong on that token.
+   `no-duplicate-chrome` is empty project-wide.
 
 Steps 1–8 are complete — every duplicated component in the original
 consolidation table is gone, `ResourceBar` draws as blocks instead of a bar,

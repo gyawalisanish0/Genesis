@@ -11,6 +11,8 @@ import { useBackButton } from '../input/useBackButton'
 import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import { SpriteArena as BattleArena } from '../components/SpriteArena'
 import { Toaster } from '../components/Toaster'
+import { PromptOverlay } from '../components/PromptOverlay'
+import { Sheet } from '../components/Sheet'
 import { BattleProvider, useBattleScreen } from './BattleContext'
 import { StatusInfoOverlay }               from './StatusInfoOverlay'
 import { BattleErrorToast } from './BattleErrorToast'
@@ -561,15 +563,14 @@ function RollButton() {
 function PauseOverlay() {
   const { setPaused } = useBattleScreen()
   const navigate = useNavigate()
-  const createHandler = useScrollAwarePointer()
   return (
-    <div className={styles.pauseOverlay}>
-      <div className={styles.pauseCard}>
-        <span className={styles.pauseTitle}>PAUSED</span>
-        <button className={styles.pauseBtn} onPointerDown={createHandler({ onTap: () => setPaused(false) })}>RESUME</button>
-        <button className={styles.pauseBtn} onPointerDown={createHandler({ onTap: () => navigate(SCREEN_REGISTRY[SCREEN_IDS.MAIN_MENU].path) })}>LEAVE BATTLE</button>
-      </div>
-    </div>
+    <PromptOverlay
+      title="PAUSED"
+      actions={[
+        { label: 'RESUME', onPress: () => setPaused(false) },
+        { label: 'LEAVE BATTLE', variant: 'danger', onPress: () => navigate(SCREEN_REGISTRY[SCREEN_IDS.MAIN_MENU].path) },
+      ]}
+    />
   )
 }
 
@@ -578,7 +579,6 @@ function PauseOverlay() {
 // Counter reactions bypass cooldown: whichever skill is offered fires freely.
 function CounterPromptOverlay() {
   const { pendingCounterDecision, confirmCounter, skipCounter } = useBattleScreen()
-  const createHandler = useScrollAwarePointer()
   if (!pendingCounterDecision) return null
 
   const { counterSkill } = pendingCounterDecision
@@ -586,27 +586,16 @@ function CounterPromptOverlay() {
   const apCost    = counterSkill.cachedCosts.apCost
 
   return (
-    <div className={styles.counterPromptOverlay}>
-      <div className={styles.counterPromptCard}>
-        <span className={styles.counterPromptTitle}>Counter Opportunity!</span>
-        <span className={styles.counterPromptSkill}>{skillName}</span>
-        <span className={styles.counterPromptCost}>AP: {apCost}</span>
-        <div className={styles.counterPromptActions}>
-          <button
-            className={styles.counterPromptFire}
-            onPointerDown={createHandler({ onTap: confirmCounter })}
-          >
-            COUNTER
-          </button>
-          <button
-            className={styles.counterPromptSkip}
-            onPointerDown={createHandler({ onTap: skipCounter })}
-          >
-            SKIP
-          </button>
-        </div>
-      </div>
-    </div>
+    <PromptOverlay
+      title="COUNTER OPPORTUNITY!"
+      subtitle={skillName}
+      actions={[
+        { label: 'COUNTER', onPress: confirmCounter },
+        { label: 'SKIP', variant: 'secondary', onPress: skipCounter },
+      ]}
+    >
+      <span className={styles.counterPromptCost}>AP: {apCost}</span>
+    </PromptOverlay>
   )
 }
 
@@ -629,42 +618,31 @@ function TargetSelectOverlay() {
   if (!showTargetPicker || !selectedSkill) return null
 
   return (
-    <div className={styles.targetPickerOverlay}>
-      <div className={styles.targetPickerCard}>
-        <div className={styles.targetPickerHeader}>
-          <span className={styles.targetPickerTitle}>SELECT TARGET</span>
-          <button
-            className={styles.targetPickerCancel}
-            onPointerDown={createHandler({ onTap: () => selectSkill(null) })}
-          >
-            ✕
-          </button>
-        </div>
-        <div className={styles.targetPickerList}>
-          {aliveEnemies.map((enemy) => {
-            const chips  = buildChips(enemy, getChipDef, suppressedChipIds)
-            return (
-              <button
-                key={enemy.id}
-                className={styles.targetPickerRow}
-                onPointerDown={createHandler({ onTap: () => selectTarget(enemy) })}
-              >
-                <div className={styles.targetPickerInfo}>
-                  <div className={styles.targetPickerTopRow}>
-                    <span className={styles.targetPickerName}>{enemy.name}</span>
-                    <span className={styles.targetPickerHpText}>{enemy.hp}/{enemy.maxHp}</span>
-                  </div>
-                  <ResourceBar variant="hp" value={enemy.hp} max={enemy.maxHp} />
-                  {chips.length > 0 && (
-                    <StatusChipBar chips={chips} size="compact" onTap={setInspectingChip} />
-                  )}
+    <Sheet title="SELECT TARGET" placement="centre" onClose={() => selectSkill(null)}>
+      <div className={styles.targetPickerList}>
+        {aliveEnemies.map((enemy) => {
+          const chips  = buildChips(enemy, getChipDef, suppressedChipIds)
+          return (
+            <button
+              key={enemy.id}
+              className={styles.targetPickerRow}
+              onPointerDown={createHandler({ onTap: () => selectTarget(enemy) })}
+            >
+              <div className={styles.targetPickerInfo}>
+                <div className={styles.targetPickerTopRow}>
+                  <span className={styles.targetPickerName}>{enemy.name}</span>
+                  <span className={styles.targetPickerHpText}>{enemy.hp}/{enemy.maxHp}</span>
                 </div>
-              </button>
-            )
-          })}
-        </div>
+                <ResourceBar variant="hp" value={enemy.hp} max={enemy.maxHp} />
+                {chips.length > 0 && (
+                  <StatusChipBar chips={chips} size="compact" onTap={setInspectingChip} />
+                )}
+              </div>
+            </button>
+          )
+        })}
       </div>
-    </div>
+    </Sheet>
   )
 }
 
