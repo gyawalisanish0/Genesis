@@ -11,6 +11,7 @@ import { useBackButton } from '../input/useBackButton'
 import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
 import { SpriteArena as BattleArena } from '../components/SpriteArena'
 import { Toaster } from '../components/Toaster'
+import { HintQueue } from '../components/HintQueue'
 import { PromptOverlay } from '../components/PromptOverlay'
 import { Sheet } from '../components/Sheet'
 import { DiceRoll } from '../components/DiceRoll'
@@ -564,18 +565,23 @@ function BattleLayout() {
       <ClashBanner />
       <ClashQteOverlay />
       <TeamCollisionOverlay />
-      <Toaster onceId="battle-skill" message="Tap a skill, then ROLL to attack." />
-      <Toaster onceId="battle-inspect" message="Long-press any skill to see its full details." position="bottom" />
-      {/* Tick displacement has no room to explain itself on a 28 dp strip, so
-          the strip shows the landing and the toast names the cause. */}
+      {/* One at a time — rendered together these fired simultaneously and
+          stacked unreadably on first entry. */}
+      <HintQueue
+        hints={[
+          { id: 'battle-skill',     message: 'Tap a skill, then ROLL to attack.' },
+          { id: 'battle-inspect',   message: 'Long-press any skill to see its full details.', position: 'bottom' },
+          ...(diceResult ? [{ id: 'battle-skip-dice', message: 'Tap the arena to skip the roll.', position: 'bottom' as const }] : []),
+        ]}
+      />
+      {/* Displacement is an event, not a hint — it interrupts on purpose and is
+          not queued behind first-run copy. The strip shows the landing; this
+          names the cause, which will not fit on a 48 dp strip. */}
       <Toaster
         key={displacement?.key}
         message={displacement ? `Tick ${displacement.fromTick} was full — shoved to ${displacement.toTick}` : null}
         tone="warn"
       />
-      {diceResult && (
-        <Toaster onceId="battle-skip-dice" message="Tap the arena to skip the roll." position="bottom" />
-      )}
       <BattleTimelineStrip />
       <div className={styles.main}>
         <div className={styles.arenaWrap}>

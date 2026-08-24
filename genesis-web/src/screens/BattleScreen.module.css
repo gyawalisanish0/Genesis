@@ -35,9 +35,13 @@
   border: none;
   cursor: pointer;
   display: flex;
-  align-items: flex-end;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  padding-bottom: var(--s-sm);
+  gap: var(--s-sm);
+  /* Centred, not bottom-anchored: at the arena's bottom edge the hint sat
+     directly on top of the ally's CombatantPlate. The centre band is the
+     one region both plates leave clear. */
   z-index: 10;
   font-family: var(--font-sans);
   animation: diceSkipFadeIn 200ms ease-out both;

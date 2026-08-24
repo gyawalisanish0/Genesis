@@ -53,13 +53,12 @@ function makeSoundScene(Phaser: typeof PhaserNS) {
     preload() {
       const base = (import.meta.env.BASE_URL ?? '/').replace(/\/$/, '') + '/'
       for (const key of [...SFX_KEYS, ...MUSIC_KEYS]) {
-        // Ordered by preference — the browser takes the first format it
-        // supports. .wav last so placeholder assets work until real ones land.
-        this.load.audio(key, [
-          `${base}audio/${key}.webm`,
-          `${base}audio/${key}.mp3`,
-          `${base}audio/${key}.wav`,
-        ])
+        // Phaser picks the first format the BROWSER supports — it does not
+        // check whether the file exists. Listing a format we do not ship
+        // therefore guarantees a 404 per key on every load. Only .wav is
+        // shipped today (placeholders); when real audio lands, add its
+        // extension ahead of wav here and in public/audio/.
+        this.load.audio(key, [`${base}audio/${key}.wav`])
       }
     }
 

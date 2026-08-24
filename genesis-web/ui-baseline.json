@@ -5,7 +5,7 @@
     "screens/BattleResultScreen.module.css": 2,
     "screens/BattleScreen.module.css": 2,
     "screens/DungeonScreen.module.css": 5,
-    "screens/MainMenuScreen.module.css": 3,
+    "screens/MainMenuScreen.module.css": 2,
     "screens/SplashScreen.module.css": 8
   },
   "module-line-limit": {
