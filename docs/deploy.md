@@ -9,25 +9,37 @@ Two web targets share one build. They differ only in `base`.
 
 ## Vercel
 
-`vercel.json` at the repo root is self-contained — no dashboard configuration
-is required beyond connecting the repository.
+**Root Directory is `genesis-web`**, so `vercel.json` lives there and every
+command in it runs with that directory as the working directory. There is
+deliberately no `vercel.json` at the repository root — with a Root Directory
+set, one there is either ignored or actively wrong, since a `cd genesis-web`
+would resolve to `genesis-web/genesis-web`.
 
 ```
-installCommand   npm ci --prefix genesis-web
-buildCommand     npm run build --prefix genesis-web -- --base=/
-outputDirectory  genesis-web/dist
+installCommand   npm ci
+buildCommand     npm run build -- --base=/
+outputDirectory  dist
+framework        vite
 ```
 
-`build` runs `prebuild` → `validate:data` first, so a deploy fails on invalid
-game JSON rather than shipping it.
+**Declare `installCommand` explicitly, even though `npm ci` is the default.**
+An Install Command saved in the Vercel dashboard wins whenever `vercel.json`
+does not specify one. A stale dashboard value of `npm ci --prefix genesis-web`
+survived several config changes and kept failing the deploy with
+`EUSAGE: can only install with an existing package-lock.json`, because the
+prefix resolved to `genesis-web/genesis-web`. Specifying it in `vercel.json`
+takes precedence and keeps the source of truth in the repository.
 
-**Rewrites.** Everything that is not a real asset directory rewrites to
-`index.html`. The app uses `HashRouter`, so routes live after `#` and the path
-stays `/` in normal use; the rewrite only covers hand-typed deep links.
+Two related traps, both of which cost a deploy here:
 
-**Caching.** Hashed files under `/assets/` are immutable and cached for a year.
-Game JSON under `/data/` is revalidated every request, so content changes ship
-without a rebuild of the client bundle.
+- **Never `npm ci --prefix <dir>`.** `--prefix` sets where packages are
+  installed; npm still resolves `package-lock.json` from the working directory.
+  It is also version-dependent — npm 10.9 tolerates it locally, Vercel's does
+  not — so it passes every local check and fails only on deploy.
+- **`engines.node` must use a form Vercel resolves**, e.g. `22.x`. It overrides
+  the Node version in Project Settings, and the build log states so explicitly:
+  `Due to "engines": { "node": "22.x" } ... Node.js Version "22.x" will be used`.
+  Vite 8 and rolldown require `^20.19.0 || >=22.12.0`, so this pin is load-bearing.
 
 ## GitHub Pages
 

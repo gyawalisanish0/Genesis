@@ -1,9 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": null,
-  "installCommand": "npm ci --prefix genesis-web",
-  "buildCommand": "npm run build --prefix genesis-web -- --base=/",
-  "outputDirectory": "genesis-web/dist",
+  "framework": "vite",
+  "installCommand": "npm ci",
+  "buildCommand": "npm run build -- --base=/",
+  "outputDirectory": "dist",
   "rewrites": [
     {
       "source": "/((?!assets/|data/|images/|audio/|manifest.json|favicon.ico).*)",
