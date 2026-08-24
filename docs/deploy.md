@@ -9,34 +9,29 @@ Two web targets share one build. They differ only in `base`.
 
 ## Vercel
 
-**Root Directory must be `genesis-web`** in the Vercel project settings, and
-`vercel.json` lives in that same directory. Vercel reads `vercel.json` from the
-Root Directory, not from the repository root — a `vercel.json` at the repo root
-is silently ignored when a Root Directory is set, which is easy to miss because
-nothing warns about it.
+Config exists for **both** possible Root Directory settings, so the deploy works
+either way:
 
-```
-buildCommand     npm run build -- --base=/
-outputDirectory  dist
-framework        vite
-```
+| Root Directory | Config used | Build |
+|---|---|---|
+| repository root (default) | `vercel.json` | `cd genesis-web && npm ci` → `cd genesis-web && npm run build -- --base=/` → `genesis-web/dist` |
+| `genesis-web` | `genesis-web/vercel.json` | `npm run build -- --base=/` → `dist` |
+
+Vercel reads `vercel.json` from the Root Directory, so a config at the
+repository root is silently ignored when a Root Directory is set — and nothing
+warns about it. Keeping one in each place removes that failure mode.
+
+**Never use `npm ci --prefix <dir>`.** `--prefix` sets where packages are
+installed but npm still resolves `package-lock.json` from the *working
+directory*. From the repository root — which has no lockfile — this fails with
+`EUSAGE: can only install with an existing package-lock.json`. It is
+version-dependent: npm 10.9 locally tolerates it, Vercel's npm does not, so it
+passes locally and fails in CI. Use `cd genesis-web && npm ci`.
 
 **Node version.** `engines.node` in `package.json` (backed by `.nvmrc`) pins
-Node for Vercel. This is not optional: Vite 8 and rolldown declare
-`^20.19.0 || >=22.12.0`, so an unpinned project can land on a default Node that
-fails the engine check at install time even though CI — which pins Node 22 —
-passes.
-
-`build` runs `prebuild` → `validate:data` first, so a deploy fails on invalid
-game JSON rather than shipping it.
-
-**Rewrites.** Everything that is not a real asset directory rewrites to
-`index.html`. The app uses `HashRouter`, so routes live after `#` and the path
-stays `/` in normal use; the rewrite only covers hand-typed deep links.
-
-**Caching.** Hashed files under `/assets/` are immutable and cached for a year.
-Game JSON under `/data/` is revalidated every request, so content changes ship
-without a rebuild of the client bundle.
+Node for Vercel. Vite 8 and rolldown declare `^20.19.0 || >=22.12.0`, so an
+unpinned project can land on a default Node that fails the engine check even
+though CI — which pins Node 22 — passes.
 
 ## GitHub Pages
 
