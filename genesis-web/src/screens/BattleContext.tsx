@@ -32,6 +32,7 @@ import { unitIsDamaged } from '../core/battle/BattleResolution'
 import { BattleEngine } from '../core/battle/BattleEngine'
 import type { BattleEngineSnapshot, BattleEngineCallbacks, LogEntry, DiceResult, CounterDecision, ClashState, TeamCollisionState, TurnDisplayData } from '../core/battle/EngineTypes'
 import type { TurnPhase } from '../core/battle/EngineTypes'
+import type { BattleStep } from '../core/battle/BattleStepMachine'
 import type { DiceProbabilities } from '../core/combat/HitChanceEvaluator'
 import { forecastOutcomes } from '../core/combat/OutcomeForecast'
 import { SoundService } from '../services/SoundService'
@@ -53,6 +54,9 @@ export type { TurnPhase, LogEntry, DiceResult, CounterDecision, ClashState, Team
 interface BattleContextValue {
   arenaRef: React.RefObject<BattleArenaHandle | null>
   phase:            TurnPhase
+  /** Raw engine step. `phase` collapses several steps, but the clash
+   *  announcement needs the specific one. */
+  battleStep:       BattleStep
   turnNumber:       number
   tickValue:        number
   activeUnitIds:    Set<string>
@@ -683,7 +687,7 @@ export function BattleProvider({ children }: Props) {
   return (
     <BattleContext.Provider value={{
       arenaRef,
-      phase,
+      phase, battleStep,
       turnNumber: (leader?.actionCount ?? 0) + 1,
       tickValue, activeUnitIds,
       playerUnits, leader, activePlayerUnit, enemies, log, historyEntries,

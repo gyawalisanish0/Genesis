@@ -21,6 +21,7 @@ import { StatusInfoOverlay }               from './StatusInfoOverlay'
 import { BattleErrorToast } from './BattleErrorToast'
 import { BattleLogOverlay } from './BattleLogOverlay'
 import { ClashQteOverlay } from './ClashQteOverlay'
+import { ClashBanner } from './ClashBanner'
 import { TeamCollisionOverlay } from './TeamCollisionOverlay'
 import { SkillInfoOverlay } from './SkillInfoOverlay'
 import { isOnCooldown, ticksRemaining, turnsRemaining } from '../core/combat/CooldownResolver'
@@ -560,6 +561,7 @@ function BattleLayout() {
       {inspectingChip  && <StatusInfoOverlay chip={inspectingChip} onClose={() => setInspectingChip(null)} />}
       <CounterPromptOverlay />
       <TargetSelectOverlay />
+      <ClashBanner />
       <ClashQteOverlay />
       <TeamCollisionOverlay />
       <Toaster onceId="battle-skill" message="Tap a skill, then ROLL to attack." />
