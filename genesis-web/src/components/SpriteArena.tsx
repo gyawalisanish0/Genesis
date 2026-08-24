@@ -12,6 +12,7 @@ import type { TurnDisplayData, TurnDisplayUnitData } from '../core/battle/Engine
 import type { StatusChipData } from './StatusChipBar'
 import { characterStatusIconUrl } from '../services/DataService'
 import { useArenaStage } from './useArenaStage'
+import { useAnimSequence } from './useAnimSequence'
 import { SpriteActor } from './SpriteActor'
 import { CombatantPlate } from './CombatantPlate'
 import styles from './SpriteArena.module.css'
@@ -60,6 +61,14 @@ interface Props {
 export const SpriteArena = forwardRef<BattleArenaHandle, Props>(
 function SpriteArena({ playerFigureInfo, allyDefIds, resolveChip, onChipTap }, ref) {
   const s = useArenaStage(ref)
+  // Replays the attack's authored choreography, or the built-in default whose
+  // branch makes Evade and Fail read differently.
+  const fx = useAnimSequence(s.attack && {
+    sequence: s.attack.sequence,
+    outcome:  s.attack.outcome,
+    isMelee:  s.attack.isMelee,
+    key:      s.attack.key,
+  })
 
   const isAlly = (id: string | null) =>
     !!id && (allyDefIds ? allyDefIds.has(id) : s.turn?.isAlly !== false && id === s.actingDefId)
@@ -90,16 +99,30 @@ function SpriteArena({ playerFigureInfo, allyDefIds, resolveChip, onChipTap }, r
     })
   }
 
-  const actor = (defId: string, info: TurnDisplayUnitData | null, facing: 'front' | 'back') => (
-    <SpriteActor
-      defId={defId} name={info?.name ?? defId} facing={facing}
-      manifest={s.manifests.get(defId)} isDamaged={s.damaged.has(defId)}
-      dead={s.dead.has(defId)} acting={s.actingDefId === defId}
-    />
-  )
+  /** Which animation role this combatant plays in the current attack. */
+  const roleOf = (defId: string): 'acting' | 'target' | null =>
+    !s.attack ? null
+      : s.attack.actingDefId === defId ? 'acting'
+      : s.attack.targetDefId === defId ? 'target'
+      : null
+
+  const actor = (defId: string, info: TurnDisplayUnitData | null, facing: 'front' | 'back') => {
+    const role = roleOf(defId)
+    return (
+      <SpriteActor
+        defId={defId} name={info?.name ?? defId} facing={facing}
+        manifest={s.manifests.get(defId)} isDamaged={s.damaged.has(defId)}
+        dead={s.dead.has(defId)} acting={s.actingDefId === defId}
+        shoving={role !== null && fx.shove === role}
+        dodging={role !== null && fx.dodge === role}
+        flashColour={role !== null && fx.flash?.figure === role ? (fx.flash.colour ?? 'var(--text-primary)') : null}
+        stateOverride={role ? fx.anim[role] : undefined}
+      />
+    )
+  }
 
   return (
-    <div className={styles.arena}>
+    <div className={`${styles.arena} ${fx.shake > 0 ? styles.shaking : ''}`}>
       <div className={styles.enemyRow}>
         {enemyInfo && <CombatantPlate info={enemyInfo} side="enemy" chips={chipsFor(enemyInfo, enemyDefId)} onChipTap={onChipTap} />}
         {enemyDefId && actor(enemyDefId, enemyInfo, 'front')}
@@ -109,6 +132,8 @@ function SpriteArena({ playerFigureInfo, allyDefIds, resolveChip, onChipTap }, r
       <div className={styles.centre}>
         {s.dice     && <span className={styles.dice}>{s.dice}</span>}
         {s.feedback && <span className={styles.feedback} style={{ color: s.feedback.colour }}>{s.feedback.text}</span>}
+        {fx.text && <span className={styles.feedback} style={{ color: fx.text.colour }}>{fx.text.text}</span>}
+        {fx.impact && <span className={styles.impact} />}
       </div>
 
       <div className={styles.allyRow}>

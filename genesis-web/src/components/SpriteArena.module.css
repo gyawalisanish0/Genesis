@@ -36,6 +36,34 @@
   align-items: flex-end;
 }
 
+/* Camera shake on impact — the arena, not the sprite, so nothing sub-pixels. */
+.shaking { animation: arenaShake 160ms steps(4) infinite; }
+
+@keyframes arenaShake {
+  0%, 100% { transform: translate(0, 0); }
+  25%      { transform: translate(var(--px), 0); }
+  50%      { transform: translate(0, var(--px)); }
+  75%      { transform: translate(calc(var(--px) * -1), 0); }
+}
+
+/* Impact ring — flat, hard-edged, no blur. */
+.impact {
+  position: absolute;
+  width: 2rem;
+  height: 2rem;
+  border: var(--px) solid var(--text-primary);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: impactRing 190ms steps(3) both;
+}
+
+@keyframes impactRing {
+  from { transform: scale(0.3); opacity: 1; }
+  to   { transform: scale(1.6); opacity: 0; }
+}
+
+:root[data-reduce-animations='true'] .shaking { animation: none; }
+
 /* ── Floating damage number ──────────────────────────────────────────────── */
 
 .damage {

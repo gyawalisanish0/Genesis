@@ -80,3 +80,36 @@
 }
 
 :root[data-reduce-animations='true'] .body { animation: none; }
+
+/* ── Sequence-driven motion (components/useAnimSequence.ts) ──────────────── */
+
+/* Contact step toward the opponent. Stepped, never eased — it is pixel art. */
+.shoving  { transform: translateX(var(--shove-dx, 0.5rem)); transition: transform 190ms steps(2); }
+.back.shoving  { --shove-dx: 0.5rem; }
+.front.shoving { --shove-dx: -0.5rem; }
+
+/* Sidestep on an evade — the defender moves, which is what distinguishes
+ * Evade from Fail on screen. */
+.dodging { transform: translateX(var(--dodge-dx, -1rem)); transition: transform 170ms steps(2); }
+.back.dodging  { --dodge-dx: -1rem; }
+.front.dodging { --dodge-dx: 1rem; }
+
+/* Flat silhouette flash over the sprite. The mask (set inline from the current
+ * frame URL) is what makes this the sprite's shape rather than a filled box.
+ * mask-size must match the frame's own fitting so the two stay registered. */
+.flash {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0.85;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+}
+
+:root[data-reduce-animations='true'] .shoving,
+:root[data-reduce-animations='true'] .dodging { transition: none; }
