@@ -9,29 +9,37 @@ Two web targets share one build. They differ only in `base`.
 
 ## Vercel
 
-Config exists for **both** possible Root Directory settings, so the deploy works
-either way:
+**Root Directory is `genesis-web`**, so `vercel.json` lives there and every
+command in it runs with that directory as the working directory. There is
+deliberately no `vercel.json` at the repository root — with a Root Directory
+set, one there is either ignored or actively wrong, since a `cd genesis-web`
+would resolve to `genesis-web/genesis-web`.
 
-| Root Directory | Config used | Build |
-|---|---|---|
-| repository root (default) | `vercel.json` | `cd genesis-web && npm ci` → `cd genesis-web && npm run build -- --base=/` → `genesis-web/dist` |
-| `genesis-web` | `genesis-web/vercel.json` | `npm run build -- --base=/` → `dist` |
+```
+installCommand   npm ci
+buildCommand     npm run build -- --base=/
+outputDirectory  dist
+framework        vite
+```
 
-Vercel reads `vercel.json` from the Root Directory, so a config at the
-repository root is silently ignored when a Root Directory is set — and nothing
-warns about it. Keeping one in each place removes that failure mode.
+**Declare `installCommand` explicitly, even though `npm ci` is the default.**
+An Install Command saved in the Vercel dashboard wins whenever `vercel.json`
+does not specify one. A stale dashboard value of `npm ci --prefix genesis-web`
+survived several config changes and kept failing the deploy with
+`EUSAGE: can only install with an existing package-lock.json`, because the
+prefix resolved to `genesis-web/genesis-web`. Specifying it in `vercel.json`
+takes precedence and keeps the source of truth in the repository.
 
-**Never use `npm ci --prefix <dir>`.** `--prefix` sets where packages are
-installed but npm still resolves `package-lock.json` from the *working
-directory*. From the repository root — which has no lockfile — this fails with
-`EUSAGE: can only install with an existing package-lock.json`. It is
-version-dependent: npm 10.9 locally tolerates it, Vercel's npm does not, so it
-passes locally and fails in CI. Use `cd genesis-web && npm ci`.
+Two related traps, both of which cost a deploy here:
 
-**Node version.** `engines.node` in `package.json` (backed by `.nvmrc`) pins
-Node for Vercel. Vite 8 and rolldown declare `^20.19.0 || >=22.12.0`, so an
-unpinned project can land on a default Node that fails the engine check even
-though CI — which pins Node 22 — passes.
+- **Never `npm ci --prefix <dir>`.** `--prefix` sets where packages are
+  installed; npm still resolves `package-lock.json` from the working directory.
+  It is also version-dependent — npm 10.9 tolerates it locally, Vercel's does
+  not — so it passes every local check and fails only on deploy.
+- **`engines.node` must use a form Vercel resolves**, e.g. `22.x`. It overrides
+  the Node version in Project Settings, and the build log states so explicitly:
+  `Due to "engines": { "node": "22.x" } ... Node.js Version "22.x" will be used`.
+  Vite 8 and rolldown require `^20.19.0 || >=22.12.0`, so this pin is load-bearing.
 
 ## GitHub Pages
 
