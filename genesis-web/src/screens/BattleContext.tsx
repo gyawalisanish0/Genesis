@@ -32,6 +32,8 @@ import { unitIsDamaged } from '../core/battle/BattleResolution'
 import { BattleEngine } from '../core/battle/BattleEngine'
 import type { BattleEngineSnapshot, BattleEngineCallbacks, LogEntry, DiceResult, CounterDecision, ClashState, TeamCollisionState, TurnDisplayData } from '../core/battle/EngineTypes'
 import type { TurnPhase } from '../core/battle/EngineTypes'
+import type { DiceProbabilities } from '../core/combat/HitChanceEvaluator'
+import { forecastOutcomes } from '../core/combat/OutcomeForecast'
 
 // ── Re-exports for child components ───────────────────────────────────────────
 export type { TurnPhase, LogEntry, DiceResult, CounterDecision, ClashState, TeamCollisionState }
@@ -59,6 +61,8 @@ interface BattleContextValue {
   suppressedChipIds: ReadonlySet<string>
   getChipDef: (statusId: string) => import('../core/types').StatusChipDef | null
   diceResult:      DiceResult | null
+  /** Odds the player committed to, captured when ROLL fired. */
+  diceForecast:    DiceProbabilities | null
   pendingCounterDecision: CounterDecision | null
   pendingClash:            ClashState | null
   pendingTeamCollision:    TeamCollisionState | null
@@ -137,6 +141,7 @@ export function BattleProvider({ children }: Props) {
   const [inspectingSkill, setInspectingSkillState] = useState<SkillInstance | null>(null)
   const [inspectingChip, setInspectingChip]        = useState<StatusChipData | null>(null)
   const [diceResult, setDiceResult]                = useState<DiceResult | null>(null)
+  const [diceForecast, setDiceForecast]            = useState<DiceProbabilities | null>(null)
 
   // ── Refs for arena and misc ────────────────────────────────────────────────
   const arenaRef        = useRef<BattleArenaHandle>(null)
@@ -526,8 +531,12 @@ export function BattleProvider({ children }: Props) {
   // These forward to engine; engine drives the step machine.
   // safeEngineCall catches any synchronous throws and routes them to the error toast.
   const executeSkill = useCallback((skill: SkillInstance) => {
+    // Snapshot the odds the player is committing to. Captured here rather than
+    // recomputed at reveal time so a later selection change cannot rewrite
+    // history — the band must show the table the roll was actually made against.
+    if (activePlayerUnit) setDiceForecast(forecastOutcomes(activePlayerUnit, skill.baseDef))
     safeEngineCall(() => engineRef.current?.executeSkill(skill, selectedTarget))
-  }, [selectedTarget, safeEngineCall])
+  }, [selectedTarget, safeEngineCall, activePlayerUnit])
 
   const skipTurn = useCallback(() => {
     safeEngineCall(() => engineRef.current?.skipTurn())
@@ -650,7 +659,7 @@ export function BattleProvider({ children }: Props) {
       selectedSkill, selectedTarget, showTargetPicker,
       gridCollapsed, isPaused, isLoading,
       suppressedChipIds, getChipDef,
-      diceResult, pendingCounterDecision,
+      diceResult, diceForecast, pendingCounterDecision,
       pendingClash, pendingTeamCollision,
       registeredTicks, scrollBounds,
       battleError,

@@ -13,6 +13,9 @@ import { SpriteArena as BattleArena } from '../components/SpriteArena'
 import { Toaster } from '../components/Toaster'
 import { PromptOverlay } from '../components/PromptOverlay'
 import { Sheet } from '../components/Sheet'
+import { DiceRoll } from '../components/DiceRoll'
+import { OutcomeBand } from '../components/OutcomeBand'
+import { forecastOutcomes, forecastApGain } from '../core/combat/OutcomeForecast'
 import { BattleProvider, useBattleScreen } from './BattleContext'
 import { StatusInfoOverlay }               from './StatusInfoOverlay'
 import { BattleErrorToast } from './BattleErrorToast'
@@ -33,6 +36,7 @@ import { StatusChipBar } from '../components/StatusChipBar'
 import type { StatusChipData } from '../components/StatusChipBar'
 import type { Unit } from '../core/types'
 import { characterStatusIconUrl } from '../services/DataService'
+import { SoundService } from '../services/SoundService'
 import { UnitPortrait } from '../components/UnitPortrait'
 import type { TurnDisplayUnitData } from '../core/battle/EngineTypes'
 import styles from './BattleScreen.module.css'
@@ -369,7 +373,7 @@ function ActionGrid() {
   const {
     phase, gridCollapsed, toggleGrid,
     activePlayerUnit, getUnitSkills, selectedSkill, selectedTarget, selectSkill, skipTurn,
-    setInspectingSkill, hyperSenseModeActive,
+    setInspectingSkill, hyperSenseModeActive, tickValue,
   } = useBattleScreen()
   const createHandler = useScrollAwarePointer()
   const disabled = phase !== 'player'
@@ -385,6 +389,7 @@ function ActionGrid() {
   const triggerApWarning = (apCost: number, key: string) => {
     if (!activePlayerUnit) return
     if (shakeTimer.current) clearTimeout(shakeTimer.current)
+    SoundService.playSfx('ap_short')
     setApWarning({ needed: apCost, have: activePlayerUnit.ap })
     setShakingKey(key)
     shakeTimer.current = setTimeout(() => setShakingKey(null), AP_WARN_SHAKE_MS)
@@ -417,7 +422,7 @@ function ActionGrid() {
               const tapHandler     = !disabled
                 ? (notEnoughAp
                   ? () => triggerApWarning(basicSkill.cachedCosts.apCost, 'basic')
-                  : () => selectSkill(isSelected ? null : basicSkill))
+                  : () => { SoundService.playSfx('select'); selectSkill(isSelected ? null : basicSkill) })
                 : undefined
               const holdHandler = () => setInspectingSkill(basicSkill)
               const targetLabel = isSelected && selectedTarget ? selectedTarget.name : null
@@ -458,10 +463,15 @@ function ActionGrid() {
               // Show selected target name on the active skill button.
               const targetLabel = isSelected && selectedTarget ? selectedTarget.name : null
               const canTap      = hasSkill && !disabled && !onCooldown && !tagBlocked
+              // Same helper the resolver rolls against, so the strip cannot lie.
+              const odds        = hasSkill && activePlayerUnit
+                ? forecastOutcomes(activePlayerUnit, skillInst.baseDef) : null
+              const apBack      = hasSkill && activePlayerUnit && tuCost !== null
+                ? forecastApGain(activePlayerUnit, tuCost, tickValue) : 0
               const tapHandler  = canTap
                 ? (notEnoughAp
                   ? () => triggerApWarning(skillInst.cachedCosts.apCost, String(i))
-                  : () => selectSkill(isSelected ? null : skillInst))
+                  : () => { SoundService.playSfx('select'); selectSkill(isSelected ? null : skillInst) })
                 : undefined
               const holdHandler = hasSkill
                 ? () => setInspectingSkill(skillInst)
@@ -486,7 +496,10 @@ function ActionGrid() {
                   <span className={styles.skillName}>{name}</span>
                   <span className={styles.skillLvl}>Lv {skillInst?.currentLevel ?? '—'}</span>
                   <span className={styles.skillTu}>{tuCost !== null ? `TU: ${tuCost}` : 'TU: —'}</span>
-                  <span className={styles.skillAp}>{hasSkill ? `AP: ${skillInst.cachedCosts.apCost}` : '—'}</span>
+                  <span className={styles.skillAp}>
+                    {hasSkill ? `AP: ${skillInst.cachedCosts.apCost}` : '—'}
+                    {apBack > 0 && <span className={styles.skillApBack}> +{apBack}</span>}
+                  </span>
                   {onCooldown && (
                     <span className={styles.skillCdBadgeRow}>
                       {tickCD > 0 && (
@@ -503,6 +516,11 @@ function ActionGrid() {
                   )}
                   {targetLabel && (
                     <span className={styles.skillTargetBadge}>→ {targetLabel}</span>
+                  )}
+                  {odds && (
+                    <span className={styles.skillOdds}>
+                      <OutcomeBand probabilities={odds} size="card" />
+                    </span>
                   )}
                 </button>
               )
@@ -648,7 +666,7 @@ function TargetSelectOverlay() {
 
 // ── Battle layout ───────────────────────────────────────────────────────────
 function BattleLayout() {
-  const { arenaRef, isPaused, setPaused, isLoading, playerUnits, diceResult, skipDice, inspectingSkill, setInspectingSkill, battleError, leader, getChipDef, suppressedChipIds, inspectingChip, setInspectingChip } = useBattleScreen()
+  const { arenaRef, isPaused, setPaused, isLoading, playerUnits, diceResult, diceForecast, skipDice, inspectingSkill, setInspectingSkill, battleError, leader, getChipDef, suppressedChipIds, inspectingChip, setInspectingChip } = useBattleScreen()
   const navigate    = useNavigate()
   const lastBackRef = useRef(0)
   const createHandler = useScrollAwarePointer()
@@ -735,7 +753,7 @@ function BattleLayout() {
       <Toaster onceId="battle-skill" message="Tap a skill, then ROLL to attack." />
       <Toaster onceId="battle-inspect" message="Long-press any skill to see its full details." position="bottom" />
       {diceResult && (
-        <Toaster onceId="battle-skip-dice" message="Tap the canvas to skip the dice animation." position="bottom" />
+        <Toaster onceId="battle-skip-dice" message="Tap the arena to skip the roll." position="bottom" />
       )}
       <BattleTimeline />
       <div className={styles.main}>
@@ -751,8 +769,17 @@ function BattleLayout() {
             <button
               className={styles.diceSkipHotzone}
               onPointerDown={createHandler({ onTap: skipDice })}
-              aria-label="Skip dice animation"
+              aria-label="Skip dice roll"
             >
+              {/* The band is the player's own committed odds. Enemy rolls have no
+                  forecast (the player chose nothing), so they get the callout only. */}
+              {diceForecast && (
+                <DiceRoll
+                  key={diceResult.animKey}
+                  probabilities={diceForecast}
+                  outcome={diceResult.outcome}
+                />
+              )}
               <span className={styles.diceSkipHint}>TAP TO SKIP</span>
             </button>
           )}

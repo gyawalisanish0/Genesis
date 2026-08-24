@@ -9,6 +9,7 @@ import type { Ref } from 'react'
 import type { AnimationManifest } from '../core/types'
 import type { TurnDisplayData } from '../core/battle/EngineTypes'
 import { DICE_RESULT_DISMISS_MS, ANIM_TIMEOUT_MS } from '../core/constants'
+import { SoundService } from '../services/SoundService'
 import type { BattleArenaHandle } from './SpriteArena'
 
 export interface StageState {
@@ -69,10 +70,14 @@ export function useArenaStage(ref: Ref<BattleArenaHandle>): StageState {
       const s = stageRef.current
       s.feedback = { text: feedbackText, colour: feedbackColour }
       s.damage   = damage > 0 ? { defId: targetDefId, amount: damage } : null
+      // Impact body only when something actually connected — the outcome sting
+      // is the DiceRoll's job, so a whiff stays silent here rather than doubling.
+      if (damage > 0) SoundService.playSfx('impact')
       after(ANIM_TIMEOUT_MS, () => { s.feedback = null; s.damage = null })
       bump()
     },
     playDeath(defId) {
+      SoundService.playSfx('death')
       stageRef.current.dead.add(defId)
       bump()
     },

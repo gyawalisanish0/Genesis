@@ -1,0 +1,61 @@
+/* OutcomeBand — the four-outcome odds bar.
+ * Zone widths are the real probabilities, so the bar is a picture of the table.
+ * Spec: docs/ui/01-components.md § OutcomeBand. */
+
+.band {
+  display: flex;
+  width: 100%;
+  overflow: hidden;
+  background: var(--panel-sunken-fill);
+  border: var(--px) solid var(--panel-sunken-outer);
+}
+
+.zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--px);
+  transition: opacity var(--motion-button);
+}
+
+/* Outcome colours match the dice result text elsewhere in the battle screen. */
+.boosted { background: var(--accent-gold); }
+.hit     { background: var(--accent-heal); }
+.evade   { background: var(--accent-evasion); }
+.fail    { background: var(--accent-danger); }
+
+.dimmed { opacity: 0.25; }
+
+/* ── Compact: the resting strip on a skill card ──────────────────────────── */
+
+.card {
+  height: 0.25rem;   /* 4 dp — 2 art px */
+}
+
+/* ── Full: the band the needle sweeps during a roll ──────────────────────── */
+
+.roll {
+  height: 2.5rem;    /* 40 dp */
+}
+
+.roll .zone {
+  flex-direction: column;
+  gap: 0.125rem;
+  overflow: hidden;
+}
+
+.zoneLabel {
+  font-family: var(--font-pixel);
+  font-size: var(--t-micro-size);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-on-accent);
+  white-space: nowrap;
+}
+
+.zonePct {
+  font-size: var(--t-micro-size);
+  color: var(--text-on-accent);
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}

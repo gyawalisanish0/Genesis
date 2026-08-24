@@ -482,7 +482,7 @@
   border: 1px solid transparent;
   cursor: pointer;
   display: grid;
-  grid-template-areas: "name lvl" "tu   ap";
+  grid-template-areas: "name lvl" "tu   ap" "odds odds";
   grid-template-columns: 1fr auto;
   padding: var(--s-xs);
   gap: 0.125rem;
@@ -570,7 +570,22 @@
 .skillName { grid-area: name; font-size: var(--t-label-size); color: var(--text-primary); text-align: left; }
 .skillLvl  { grid-area: lvl;  font-size: var(--t-micro-size); color: var(--accent-gold); text-align: right; }
 .skillTu   { grid-area: tu;   font-size: var(--t-micro-size); color: var(--text-muted); text-align: left; }
-.skillAp   { grid-area: ap;   font-size: var(--t-micro-size); color: var(--accent-info); text-align: right; }
+.skillAp   { grid-area: ap;   font-size: var(--t-micro-size); color: var(--accent-info); text-align: right; white-space: nowrap; }
+
+/* AP paid back by spending this skill's ticks — the tempo half of the trade. */
+.skillApBack {
+  color: var(--accent-heal);
+  font-variant-numeric: tabular-nums;
+}
+
+/* This caster's real four-outcome odds, as a shape rather than numbers. The
+ * same band the dice needle sweeps, so the strip is read once and understood
+ * everywhere. docs/ui/01-components.md § OutcomeBand. */
+.skillOdds {
+  grid-area: odds;
+  display: block;
+  margin-top: 0.125rem;
+}
 
 .collapseBtn {
   height: 2rem;

@@ -1,0 +1,71 @@
+/* DiceRoll — needle over the odds band.
+ * The needle is chrome, not sprite art, so it may glow and may ease while
+ * sweeping; the landing itself is stepped. Spec: docs/ui/01-components.md. */
+
+.roll {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-xs);
+  width: 100%;
+  max-width: 17rem;
+}
+
+.bandWrap {
+  position: relative;
+  width: 100%;
+}
+
+.needle {
+  position: absolute;
+  top: -0.25rem;
+  bottom: -0.25rem;
+  width: var(--px);
+  margin-left: calc(var(--px) * -0.5);
+  background: var(--text-primary);
+  box-shadow: var(--glow-genesis);
+  pointer-events: none;
+}
+
+.needleSweeping {
+  animation: sweep var(--dice-sweep, 720ms) steps(24) infinite alternate;
+}
+
+/* Landing is a hard cut to the rolled zone — no easing into the answer. */
+.needleSettled {
+  transition: left var(--motion-button);
+}
+
+@keyframes sweep {
+  from { left: 2%; }
+  to   { left: 98%; }
+}
+
+/* ── Result callout ──────────────────────────────────────────────────────── */
+
+.result {
+  font-family: var(--font-pixel);
+  font-size: var(--t-subheading-size);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  opacity: 0;
+}
+
+.resultIn {
+  opacity: 1;
+  animation: slam var(--motion-modal-in) steps(3) both;
+}
+
+@keyframes slam {
+  from { transform: scale(1.6); }
+  to   { transform: scale(1); }
+}
+
+.boosted { color: var(--accent-gold);    text-shadow: var(--glow-gold); }
+.hit     { color: var(--accent-heal);    text-shadow: var(--glow-heal); }
+.evade   { color: var(--accent-evasion); }
+.fail    { color: var(--accent-danger);  text-shadow: var(--glow-danger); }
+
+:root[data-reduce-animations='true'] .needleSweeping,
+:root[data-reduce-animations='true'] .resultIn { animation: none; }
+:root[data-reduce-animations='true'] .result   { opacity: 1; }

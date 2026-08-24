@@ -107,6 +107,12 @@ export const FLASH_HOLD_MS        = 96    // impact silhouette flash
 export const DEATH_FADE_MS        = 480
 export const SEQUENCE_BUDGET_MS   = 1400  // must fit inside ANIM_TIMEOUT_MS
 
+// Dice roll — the needle sweeps the odds band, then settles in the rolled zone.
+// Sweep + settle must fit inside DICE_RESULT_DISMISS_MS (1200) or the roll is
+// cut off before the player reads it.
+export const DICE_SWEEP_MS  = 720   // needle travel before it locks on
+export const DICE_SETTLE_MS = 380   // hold on the result after landing
+
 // Resource bar segmentation — HP/AP/XP fill draws as this many discrete
 // blocks rather than a continuous width, so it "ticks down" instead of sliding.
 export const RESOURCE_BAR_SEGMENT_COUNT      = 20    // blocks the fill divides into
