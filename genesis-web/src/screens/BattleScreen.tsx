@@ -31,6 +31,7 @@ import {
 } from '../core/constants'
 import { getCachedSkill } from '../core/engines/skill/SkillInstance'
 import { isAlive, isSkillTagBlocked } from '../core/unit'
+import { countByTick, occupancyState, wouldDisplace } from '../core/combat/TickOccupancy'
 import { ResourceBar } from '../components/ResourceBar'
 import { StatusChipBar } from '../components/StatusChipBar'
 import type { StatusChipData } from '../components/StatusChipBar'
@@ -114,7 +115,7 @@ const STACK_OFFSET_PX = 8
 function BattleTimeline() {
   const { tickValue, playerUnits, enemies, activeUnitIds, scrollBounds, historyEntries,
           getChipDef, suppressedChipIds, setInspectingChip,
-          selectedSkill, activePlayerUnit, displacement } = useBattleScreen()
+          selectedSkill, activePlayerUnit, displacement, registeredTicks } = useBattleScreen()
   const containerRef = useRef<HTMLDivElement>(null)
 
   const trackHeight = (scrollBounds.max - scrollBounds.min) * TIMELINE_PX_PER_TICK
@@ -194,6 +195,14 @@ function BattleTimeline() {
     ? activePlayerUnit.tickPosition + selectedSkill.cachedCosts.tuCost
     : null
 
+  // How crowded each tick is, and whether the projected landing is already at
+  // the occupancy cap — in which case committing means being displaced by a D8
+  // roll. Shown up front so that is a known risk rather than a surprise.
+  const occupancy = useMemo(() => countByTick(registeredTicks), [registeredTicks])
+  const landingIsFull = projectedTick !== null && activePlayerUnit
+    ? wouldDisplace(projectedTick, registeredTicks, activePlayerUnit.id)
+    : false
+
   const allUnits = [...playerUnits, ...enemies]
 
   // Group live units by tick so we can fan same-tick markers vertically.
@@ -230,11 +239,24 @@ function BattleTimeline() {
             style={{ top: tickToTop(tick, scrollBounds.max) }}
           />
         ))}
+        {/* Occupancy — a tick at the cap displaces the next arrival, so the
+            crowd has to be visible before anyone commits to landing there. */}
+        {[...occupancy].map(([tick, count]) => (
+          <div
+            key={`occ-${tick}`}
+            className={`${styles.occupancy} ${styles[occupancyState(count)]}`}
+            style={{ top: tickToTop(tick, scrollBounds.max) }}
+            aria-hidden
+          />
+        ))}
         <div className={styles.nowLine} style={{ top: tickToTop(tickValue, scrollBounds.max) }} />
         {/* Where the selected skill would land the acting unit. Lets a cheap
             6-TU skill be compared against a 15-TU one before committing. */}
         {projectedTick !== null && (
-          <div className={styles.projected} style={{ top: tickToTop(projectedTick, scrollBounds.max) }} />
+          <div
+            className={`${styles.projected} ${landingIsFull ? styles.projectedFull : ''}`}
+            style={{ top: tickToTop(projectedTick, scrollBounds.max) }}
+          />
         )}
         {/* A displaced unit landed somewhere it did not choose — say so, or the
             jump reads as the timeline glitching. */}

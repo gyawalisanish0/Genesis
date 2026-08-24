@@ -82,6 +82,26 @@
   transform: translateY(-50%);
 }
 
+/* Occupancy — how many units share a tick. A tick at TICK_MAX_OCCUPANCY
+ * displaces the next arrival by a D8 roll, so the crowd must be visible
+ * before anyone commits to landing there. docs/mechanics/timeline-collisions.md */
+.occupancy {
+  position: absolute;
+  left: 0.125rem;
+  width: 0.25rem;
+  height: 0.25rem;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.shared { background: var(--text-muted); }
+
+/* At the cap — the next unit to arrive here gets shoved. */
+.full {
+  background: var(--accent-warn);
+  box-shadow: 0 0 0 var(--px) var(--accent-warn);
+}
+
 /* Projected landing — a ghost tick showing where the selected skill lands the
  * acting unit. Chrome, not sprite art, so the dash and glow are licensed. */
 .projected {
@@ -94,6 +114,15 @@
   transform: translateY(-50%);
   pointer-events: none;
 }
+
+/* Landing on a full tick means a D8 shove. The line turns to the warning
+ * colour so the risk is visible while the skill is still just selected. */
+.projectedFull {
+  background: var(--accent-warn);
+  opacity: 1;
+}
+
+.projectedFull::before { background: var(--accent-warn); }
 
 /* Ticks left of the projection are the ones this action will cost. */
 .projected::before {
