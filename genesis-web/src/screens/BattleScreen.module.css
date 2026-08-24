@@ -311,6 +311,12 @@
 /* ── Action grid ────────────────────────────────────────────────────── */
 .actionGrid {
   flex: 1;
+  /* A flex item defaults to min-width: auto, which refuses to shrink below its
+   * content's intrinsic width — the longest skill name sets that floor. Without
+   * this the grid keeps its preferred width and overflows the 360 dp canvas
+   * instead of taking whatever the portrait column leaves it. Widening the tick
+   * stream from 28 to 48 dp is what pushed it over. */
+  min-width: 0;
   display: flex;
   flex-direction: column;
   padding: var(--s-sm);
@@ -339,6 +345,7 @@
 
 .actionBtn {
   flex: 1;
+  min-width: 0;
   height: 3rem;  /* 48 dp */
   background: var(--bg-elevated);
   border: none;
@@ -383,6 +390,9 @@
 }
 
 .skillBtn {
+  /* Same reason as .actionGrid — grid tracks will not shrink past their content
+   * unless the item is allowed to. */
+  min-width: 0;
   background: var(--bg-card);
   border: 1px solid transparent;
   cursor: pointer;

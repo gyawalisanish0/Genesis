@@ -33,6 +33,43 @@ elements never do.
 
 ---
 
+
+## Viewport adaptation
+
+The design canvas is a fixed **360 dp column**, scaled to the device by
+`useViewportScale`. Two guards apply and the smaller wins:
+
+```
+scale = min(w / 360, h / 640)
+```
+
+| Term | Prevents |
+|---|---|
+| `w / 360` | the column rendering wider than the viewport |
+| `h / 640` | zooming so far that under 640 dp of design height remains |
+
+640 dp is the shortest height screens are laid out to survive. Both guards are
+required: with only the width guard, a 1024 × 1366 tablet scaled to 2.84× and
+left 480 dp of height, which clipped the main menu's bottom row off-screen with
+no way to reach it. Tablets pillarbox; landscape letterboxes; phones fill the
+width. Tall phones simply get more than 640 dp to lay out in — screens must
+tolerate extra height, never assume exactly 640.
+
+Two layout rules follow from the fixed column, and both have already caused
+real clipping:
+
+- **`.viewportInner` must not be a shrinkable flex item.** It is a fixed 360 px
+  box that a transform scales. As a default flex item it shrank on viewports
+  narrower than 360 px, compounding with the transform and laying content out
+  in ~280 design px.
+- **Flex/grid children that must fit need `min-width: 0`.** The default
+  `min-width: auto` refuses to shrink below content's intrinsic width, so the
+  action grid kept its preferred width and overflowed the canvas rather than
+  taking the space left over.
+
+Verify across sizes with `src/utils/__tests__/useViewportScale.test.ts`, which
+asserts the height invariant against a real device matrix.
+
 ## 2. The Pixel Grid
 
 This is the rule the whole art direction hangs on.
