@@ -236,6 +236,14 @@ export function characterStatusIconUrl(defId: string, iconKey: string): string {
   return `${BASE_NORMALIZED}images/characters/${defId}/UI/Status/${iconKey}.png`
 }
 
+/** Synchronous URL for one animation frame PNG.
+ *  Frames are 0-indexed inside a folder named for the animation state.
+ *  Resolves to: images/characters/{defId}/{stateKey}/{index}.png
+ */
+export function characterFrameUrl(defId: string, stateKey: string, index: number): string {
+  return `${BASE_NORMALIZED}images/characters/${defId}/${stateKey}/${index}.png`
+}
+
 export function clearCache(): void {
   cache.characterIndex = null
   cache.campaignIndex  = null

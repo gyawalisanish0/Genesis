@@ -677,6 +677,14 @@ function BattleLayout() {
     }
   }, [leader, suppressedChipIds])
 
+  // Which defIds belong to the player's side — the arena uses this to decide
+  // which slot a combatant occupies, so an acting enemy never lands in the
+  // lower-left ally position.
+  const allyDefIds = useMemo(
+    () => new Set(playerUnits.map((u) => u.defId)),
+    [playerUnits],
+  )
+
   // Redirect silently to pre-battle if no team was confirmed (direct URL access, etc.).
   useEffect(() => {
     if (!isLoading && playerUnits.length === 0) {
@@ -735,6 +743,7 @@ function BattleLayout() {
           <BattleArena
             ref={arenaRef}
             playerFigureInfo={playerFigureInfo}
+            allyDefIds={allyDefIds}
             resolveChip={getChipDef}
             onChipTap={setInspectingChip}
           />

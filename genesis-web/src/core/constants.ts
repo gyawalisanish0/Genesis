@@ -90,6 +90,23 @@ export const DUNGEON_SPOT_FLASH_MS         = 2000  // ms enemy shakes on-grid (s
 export const DUNGEON_ENCOUNTER_FLASH_MS    = 1000  // ms rapid white-flash overlay before navigating to battle
 export const DUNGEON_ENCOUNTER_BANNER_MS   = 1200  // ms encounter telegraph banner (wave phase)
 
+// Battle arena — GBA duel frame geometry (dp; all multiples of 2 dp = 1 art px)
+export const SPRITE_BOX_DP        = 96    // 48 art px at 2x — the GBA 26.7%-of-width ratio
+export const PLATFORM_W_DP        = 96    // shadow disc under a combatant
+export const PLATFORM_H_DP        = 16
+export const SPRITE_BOB_PERIOD_MS = 1600  // idle breathing cycle
+export const SPRITE_BOB_DIP_DP    = 2     // 1 art px
+export const SHOVE_STEP_DP        = 8     // contact step toward the target
+export const SHOVE_OUT_MS         = 190
+export const SHAKE_AMPLITUDE_DP   = 4
+export const SHAKE_HIT_MS         = 160
+export const SHAKE_BOOSTED_MS     = 320
+export const EVADE_DODGE_DX_DP    = 16    // sidestep distance on an evade
+export const EVADE_DODGE_MS       = 170
+export const FLASH_HOLD_MS        = 96    // impact silhouette flash
+export const DEATH_FADE_MS        = 480
+export const SEQUENCE_BUDGET_MS   = 1400  // must fit inside ANIM_TIMEOUT_MS
+
 // Resource bar segmentation — HP/AP/XP fill draws as this many discrete
 // blocks rather than a continuous width, so it "ticks down" instead of sliding.
 export const RESOURCE_BAR_SEGMENT_COUNT      = 20    // blocks the fill divides into

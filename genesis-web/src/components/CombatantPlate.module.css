@@ -1,0 +1,39 @@
+/* CombatantPlate — layout only; the surface comes from Panel.
+ * Spec: docs/ui/01-components.md § CombatantPlate. */
+
+.plate {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 11rem;   /* 176 dp */
+  padding: var(--s-xs) var(--s-sm);
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-xs);
+}
+
+.name {
+  font-family: var(--font-pixel);
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  letter-spacing: 0.04em;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hp {
+  font-size: var(--t-micro-size);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* Plates sit opposite their sprite — the GBA crossed layout. */
+.enemy { justify-self: start; }
+.ally  { justify-self: end; }

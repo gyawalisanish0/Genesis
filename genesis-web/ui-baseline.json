@@ -10,7 +10,6 @@
   },
   "module-line-limit": {
     "components/DungeonArena.tsx": 1,
-    "components/SpriteArena.tsx": 1,
     "core/battle/BattleApplyRunner.ts": 1,
     "core/battle/BattleAttackResolver.ts": 1,
     "core/battle/BattleDamage.ts": 1,

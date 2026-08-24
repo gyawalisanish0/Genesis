@@ -286,16 +286,31 @@ One combatant on the battle stage. Drives a sprite sheet from
 | Prop | Type |
 |---|---|
 | `defId` | `string` |
+| `name` | `string` — seeds the fallback letter |
 | `manifest` | `AnimationManifest \| null` |
-| `state` | `'idle' \| 'attack' \| 'hurt' \| 'dodge' \| 'death'` |
 | `facing` | `'front' \| 'back'` |
-| `damaged` | `boolean` — swaps to `*_damaged` states below the HP threshold |
+| `isDamaged` | `boolean` — swaps to `*_damaged` states below the HP threshold |
+| `dead` | `boolean` |
+| `acting` | `boolean` — pauses the idle bob for the resolving combatant |
 
 Sprite is 48 × 48 art px (96 dp), anchored bottom-centre on a **platform
 ellipse** — a 64 × 16 art px shadow disc in `hull-1`. Playback uses `steps(n)`
 at the manifest's `frameRate`; `repeat: -1` loops (idle), `0` plays once.
 
 Ally renders `facing="back"`, enemy `facing="front"` — the GBA convention.
+Facing resolves through `withFacing()` in `core/battle/AnimationResolver.ts`: a
+`{state}_back` entry wins when the actor faces away, otherwise the front pose is
+reused and mirrored. **Mirroring is a placeholder, not a substitute** — a
+mirrored front pose still plainly faces the camera, so a real back pose is
+required art, and it is the most-seen asset in the game.
+
+`display.scale` in the manifest is deliberately **ignored**: it was authored
+against the deleted Phaser coordinate space and double-scales against the CSS
+box. The slot is a fixed 96 dp and the frame is fitted to it, which holds for
+any source resolution.
+
+**Built.** Renders real frames where art exists and a lettered fallback box
+where it does not, so the stage is complete before any sprite is authored.
 
 ---
 
@@ -348,8 +363,16 @@ The battle stage. Owns `BattleArenaHandle` — the imperative contract
 `skipActiveDice` · `playAttack` · `playDeath` · `showTurnDisplay` ·
 `hideTurnDisplay`.
 
-Currently a placeholder rendering labelled slots — sprite sheets are not
-authored yet. The handle contract is real and already engine-driven.
+**Built** as the GBA duel frame: enemy front-facing upper-right with its plate
+upper-left, ally back-facing lower-left with its plate lower-right. The pair on
+stage is whatever `setTurnState(acting, target)` last named, so a party larger
+than one shows whoever is in the current exchange — the Pokémon convention.
+
+`allyDefIds` decides which side a combatant occupies. Without it the arena
+assumed *acting = ally*, which put an attacking enemy in the player's slot.
+
+Stage state and the imperative handle live in `useArenaStage.ts`; the component
+itself is presentational.
 
 ---
 

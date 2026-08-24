@@ -11,6 +11,23 @@ export interface ResolvedAnimation {
   dashDx:    number            // meleeDashDx from manifest (0 for ranged)
 }
 
+/** GBA convention: the player's own unit is seen from behind, the opponent from
+ *  the front. A `{state}_back` entry overrides its front counterpart when the
+ *  actor faces away; absent one, the front pose is reused. Purely additive —
+ *  a character with only front art still renders every state. */
+export type Facing = 'front' | 'back'
+
+export function withFacing(
+  resolved: ResolvedAnimation | null,
+  manifest: AnimationManifest,
+  facing:   Facing,
+): ResolvedAnimation | null {
+  if (!resolved || facing !== 'back') return resolved
+  const backKey   = `${resolved.stateKey}_back`
+  const backEntry = manifest.animations[backKey] ?? manifest.animations.skills?.[backKey]
+  return backEntry ? { ...resolved, stateKey: backKey, entry: backEntry } : resolved
+}
+
 export function resolveAttackAnimation(
   manifest:  AnimationManifest,
   skillId:   string,

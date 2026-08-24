@@ -100,6 +100,16 @@ so the ratchet tightens.
    own chip background — it isn't a modal and doesn't belong on that token.
    `no-duplicate-chrome` is empty project-wide.
 
+**Battle scene, increment 1 — shipped.** Direction set by the user: Pokémon-style
+duel frame, simple front/back sprite poses. `SpriteActor`, `CombatantPlate`,
+`useSpriteFrames` and `useArenaStage` are built; `SpriteArena` is the duel frame
+and renders Hugo's real frames today. `BattleArenaHandle` is byte-identical —
+the rewrite consumes parameters that were already arriving, it does not change
+the contract. Two findings worth carrying forward: the manifest's `display.scale`
+is unusable (authored for the deleted Phaser space) and is ignored in favour of
+fitting the frame to a fixed 96 dp slot; and mirroring a front pose does **not**
+read as a back view, so back sprites are required art rather than a nice-to-have.
+
 Steps 1–8 are complete — every duplicated component in the original
 consolidation table is gone, `ResourceBar` draws as blocks instead of a bar,
 and `no-border-radius` is at zero. **Step 9 (the per-screen sweep) is next.**

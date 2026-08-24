@@ -1,8 +1,8 @@
-/* SpriteArena — GBA-framed battle stage.
- * Enemy occupies the upper-right, ally the lower-left, matching the staging
- * documented in docs/ui/02-screens.md § Battle. Slot visuals are placeholders
- * until sprite sheets are authored.
- */
+/* SpriteArena — GBA duel frame.
+ * Enemy occupies the upper-right with its plate to the left; ally the
+ * lower-left with its plate to the right. The crossed arrangement is the
+ * Pokémon/Fire-Emblem convention and keeps each plate clear of its own sprite.
+ * Spec: docs/ui/02-screens.md § Battle. */
 
 .arena {
   position: relative;
@@ -15,75 +15,49 @@
   overflow: hidden;
 }
 
-/* ── Combatant slots ───────────────────────────────────────────────────────── */
-
-.slot {
+.enemyRow,
+.allyRow {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--s-sm);
-  min-height: 4rem;
+  min-height: 6rem;   /* 96 dp — the sprite box */
 }
 
-.enemy {
-  justify-self: end;
-  flex-direction: row-reverse;
+/* Enemy: plate then sprite, pushed right. */
+.enemyRow {
+  justify-content: flex-end;
+  align-items: flex-start;
 }
 
-.ally {
-  justify-self: start;
+/* Ally: sprite then plate, pushed left. */
+.allyRow {
+  justify-content: flex-start;
+  align-items: flex-end;
 }
 
-.dead {
-  opacity: 0.25;
-  filter: grayscale(1);
-}
-
-.figure {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 3.5rem;
-  height: 3.5rem;
-  border: 2px solid var(--bg-elevated);
-  background: var(--bg-card);
-  color: var(--text-secondary);
-  font-size: var(--t-heading-size);
-  font-weight: var(--t-heading-weight);
-}
+/* ── Floating damage number ──────────────────────────────────────────────── */
 
 .damage {
   position: absolute;
-  top: -0.75rem;
-  right: -0.5rem;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
   color: var(--accent-danger);
-  font-size: var(--t-label-size);
+  font-family: var(--font-pixel);
+  font-size: var(--t-subheading-size);
   font-weight: 700;
   text-shadow: var(--glow-danger);
+  pointer-events: none;
+  animation: damageRise 600ms steps(4) both;
 }
 
-/* ── Name / HP plate ───────────────────────────────────────────────────────── */
-
-.plate {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  padding: var(--s-xs) var(--s-sm);
-  border: 1px solid var(--bg-elevated);
-  background: var(--bg-panel);
+@keyframes damageRise {
+  from { transform: translate(-50%, 0.75rem); }
+  to   { transform: translate(-50%, -0.75rem); }
 }
 
-.name {
-  color: var(--text-primary);
-  font-size: var(--t-label-size);
-  font-weight: var(--t-label-weight);
-}
-
-.hp {
-  color: var(--text-secondary);
-  font-size: var(--t-micro-size);
-}
-
-/* ── Centre feedback band ──────────────────────────────────────────────────── */
+/* ── Centre feedback band ────────────────────────────────────────────────── */
 
 .centre {
   display: flex;
@@ -95,6 +69,7 @@
 
 .dice {
   color: var(--accent-genesis);
+  font-family: var(--font-pixel);
   font-size: var(--t-subheading-size);
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -102,20 +77,10 @@
 }
 
 .feedback {
+  font-family: var(--font-pixel);
   font-size: var(--t-subheading-size);
   font-weight: 700;
   letter-spacing: 0.04em;
 }
 
-/* ── Placeholder notice ────────────────────────────────────────────────────── */
-
-.pending {
-  position: absolute;
-  right: var(--s-sm);
-  bottom: var(--s-xs);
-  margin: 0;
-  color: var(--text-muted);
-  font-size: var(--t-micro-size);
-  letter-spacing: 0.05em;
-  pointer-events: none;
-}
+:root[data-reduce-animations='true'] .damage { animation: none; }
