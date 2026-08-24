@@ -2,7 +2,7 @@
 // Layout: 28dp timeline strip (left) + main area (right).
 // Child components read from BattleContext via useBattleScreen().
 
-import React, { useRef, useEffect, useMemo, useState } from 'react'
+import { useRef, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ScreenShell } from '../navigation/ScreenShell'
 import { useScreen } from '../navigation/useScreen'
@@ -24,285 +24,53 @@ import { ClashQteOverlay } from './ClashQteOverlay'
 import { TeamCollisionOverlay } from './TeamCollisionOverlay'
 import { SkillInfoOverlay } from './SkillInfoOverlay'
 import { isOnCooldown, ticksRemaining, turnsRemaining } from '../core/combat/CooldownResolver'
-import {
-  TIMELINE_PX_PER_TICK, TIMELINE_OVERLAY_PX,
-  TIMELINE_RECENTER_DELAY_MS, BACK_DEBOUNCE_MS,
-  AP_WARN_SHAKE_MS, AP_WARN_DISMISS_MS,
-} from '../core/constants'
+import { BACK_DEBOUNCE_MS, AP_WARN_SHAKE_MS, AP_WARN_DISMISS_MS } from '../core/constants'
 import { getCachedSkill } from '../core/engines/skill/SkillInstance'
 import { isAlive, isSkillTagBlocked } from '../core/unit'
-import { countByTick, occupancyState, wouldDisplace } from '../core/combat/TickOccupancy'
 import { ResourceBar } from '../components/ResourceBar'
+import { TimelineStrip } from '../components/TimelineStrip'
+import { chipsForUnit } from '../components/statusChips'
 import { StatusChipBar } from '../components/StatusChipBar'
 import type { StatusChipData } from '../components/StatusChipBar'
-import type { Unit } from '../core/types'
-import { characterStatusIconUrl } from '../services/DataService'
 import { SoundService } from '../services/SoundService'
 import { UnitPortrait } from '../components/UnitPortrait'
 import type { TurnDisplayUnitData } from '../core/battle/EngineTypes'
 import styles from './BattleScreen.module.css'
 
-// ── Status chip helpers ──────────────────────────────────────────────────────
+// ── Tick stream ─────────────────────────────────────────────────────────────
+// Thin adaptor: reads the battle context and hands the strip plain data, so
+// TimelineStrip itself stays presentational and testable.
+function BattleTimelineStrip() {
+  const {
+    tickValue, playerUnits, enemies, activeUnitIds, registeredTicks, scrollBounds,
+    historyEntries, getChipDef, suppressedChipIds, setInspectingChip,
+    selectedSkill, activePlayerUnit, displacement, turnDisplay,
+  } = useBattleScreen()
 
-function buildChips(
-  unit: Unit,
-  getChipDef: (id: string) => import('../core/types').StatusChipDef | null,
-  suppressedChipIds: ReadonlySet<string>,
-): StatusChipData[] {
-  return unit.statusSlots.flatMap((slot) => {
-    if (suppressedChipIds.has(slot.id)) return []
-    const chip = getChipDef(slot.id)
-    if (!chip) return []
-    return [{
-      slotId:          slot.id,
-      label:           chip.label,
-      colour:          chip.colour,
-      durationDisplay: chip.durationDisplay,
-      // For indefinite statuses (no fixed duration), fall back to showing stacks.
-      duration:        slot.duration > 0 ? slot.duration : slot.stacks,
-      iconUrl:         chip.icon ? characterStatusIconUrl(unit.defId, chip.icon) : undefined,
-      description:     chip.description,
-      portraitGlow:    chip.portraitGlow,
-    }]
-  })
-}
-
-// ── Timeline helpers ─────────────────────────────────────────────────────────
-
-/**
- * Convert a tick → CSS top offset inside the track.
- * tick = maxTick → top: 0 (strip top edge)
- * tick = minTick → top: trackHeight (strip bottom edge)
- */
-function tickToTop(tick: number, maxTick: number): number {
-  return (maxTick - tick) * TIMELINE_PX_PER_TICK
-}
-
-// ── Timeline marker (SVG portrait + HP arc ring) ────────────────────────────
-interface TimelineMarkerProps {
-  name:        string
-  isAlly:      boolean
-  hpFraction:  number   // 0–1; drives arc fill length
-}
-
-function TimelineMarker({ isAlly, hpFraction }: TimelineMarkerProps) {
-  const circ      = 2 * Math.PI * 10
-  const ringColor = isAlly ? 'var(--accent-info)' : 'var(--accent-danger)'
-
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden>
-      {/* Portrait background */}
-      <circle cx="12" cy="12" r="9" fill="var(--bg-card)" />
-      {/* HP track — always full ring, dim */}
-      <circle cx="12" cy="12" r="10" fill="none"
-        stroke="var(--bg-elevated)" strokeWidth="2" />
-      {/* HP fill arc — length encodes hpFraction */}
-      <circle cx="12" cy="12" r="10" fill="none"
-        stroke={ringColor} strokeWidth="2"
-        strokeDasharray={`${hpFraction * circ} ${circ}`}
-        strokeLinecap="round"
-        transform="rotate(-90 12 12)"
-      />
-    </svg>
-  )
-}
-
-// Vertical gap between markers that share the same tick position.
-// Centered on the tick line so the group's midpoint stays at the actual tick.
-const STACK_OFFSET_PX = 8
-
-// ── Timeline strip ──────────────────────────────────────────────────────────
-function BattleTimeline() {
-  const { tickValue, playerUnits, enemies, activeUnitIds, scrollBounds, historyEntries,
-          getChipDef, suppressedChipIds, setInspectingChip,
-          selectedSkill, activePlayerUnit, displacement, registeredTicks } = useBattleScreen()
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  const trackHeight = (scrollBounds.max - scrollBounds.min) * TIMELINE_PX_PER_TICK
-
-  // Tick marks: minor every 10, major every 50, spanning the registered range.
-  const tickMarkPositions = useMemo(() => {
-    const marks: number[] = []
-    for (let t = scrollBounds.min; t <= scrollBounds.max; t += 10) marks.push(t)
-    return marks
-  }, [scrollBounds])
-
-  // Measure wrap height via ResizeObserver — clientHeight is 0 on mount.
-  const [containerHeight, setContainerHeight] = useState(0)
-  useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
-    const ro = new ResizeObserver((entries) => {
-      setContainerHeight(entries[0].contentRect.height)
-    })
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
-
-  const [offset, setOffset] = useState(0)
-  const [animated, setAnimated] = useState(false)
-  const mountedRef = useRef(false)
-
-  // anchorY: viewport Y where the now-line should sit (top edge of bottom overlay).
-  // Snap instantly on first measurement; animate on all subsequent tick advances.
-  useEffect(() => {
-    if (containerHeight === 0) return
-    const anchorY = containerHeight - TIMELINE_OVERLAY_PX - 10
-    const nowTop  = tickToTop(tickValue, scrollBounds.max)
-    setOffset(anchorY - nowTop)
-    if (!mountedRef.current) {
-      mountedRef.current = true
-      setAnimated(true)
-    }
-  }, [tickValue, scrollBounds, containerHeight])
-
-  // Drag-to-pan state
-  const dragStartY     = useRef(0)
-  const dragBaseOffset = useRef(0)
-  const recenterTimer  = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // Clean up any pending recenter timer on unmount.
-  useEffect(() => () => {
-    if (recenterTimer.current) clearTimeout(recenterTimer.current)
-  }, [])
-
-  function handleDragStart(e: React.PointerEvent<HTMLDivElement>) {
-    if (recenterTimer.current) clearTimeout(recenterTimer.current)
-    dragStartY.current     = e.clientY
-    dragBaseOffset.current = offset
-    setAnimated(false)
-    e.currentTarget.setPointerCapture(e.pointerId)
-  }
-
-  function handleDragMove(e: React.PointerEvent<HTMLDivElement>) {
-    if (!e.currentTarget.hasPointerCapture(e.pointerId)) return
-    setOffset(dragBaseOffset.current + (e.clientY - dragStartY.current))
-  }
-
-  function handleDragEnd() {
-    setAnimated(true)
-    if (recenterTimer.current) clearTimeout(recenterTimer.current)
-    recenterTimer.current = setTimeout(() => {
-      const anchorY = containerHeight - TIMELINE_OVERLAY_PX - 10
-      const nowTop  = tickToTop(tickValue, scrollBounds.max)
-      setOffset(anchorY - nowTop)
-    }, TIMELINE_RECENTER_DELAY_MS)
-  }
-
-  // Projected landing for the currently selected skill. Null when nothing is
-  // selected, so the marker only appears while a decision is open.
-  const projectedTick = selectedSkill && activePlayerUnit
-    ? activePlayerUnit.tickPosition + selectedSkill.cachedCosts.tuCost
+  // Intent is only knowable for the unit whose action is currently telegraphed;
+  // the engine does not plan further ahead than that, so nothing else is guessed.
+  const actingUnit = [...playerUnits, ...enemies].find(u => activeUnitIds.has(u.id)) ?? null
+  const intent = turnDisplay && actingUnit
+    ? { unitId: actingUnit.id, tuCost: turnDisplay.tuCost }
     : null
 
-  // How crowded each tick is, and whether the projected landing is already at
-  // the occupancy cap — in which case committing means being displaced by a D8
-  // roll. Shown up front so that is a known risk rather than a surprise.
-  const occupancy = useMemo(() => countByTick(registeredTicks), [registeredTicks])
-  const landingIsFull = projectedTick !== null && activePlayerUnit
-    ? wouldDisplace(projectedTick, registeredTicks, activePlayerUnit.id)
-    : false
-
-  const allUnits = [...playerUnits, ...enemies]
-
-  // Group live units by tick so we can fan same-tick markers vertically.
-  const tickGroups = new Map<number, string[]>()
-  for (const unit of allUnits) {
-    const ids = tickGroups.get(unit.tickPosition) ?? []
-    ids.push(unit.id)
-    tickGroups.set(unit.tickPosition, ids)
-  }
-
-  // Top value for a unit, offset within its tick group (centered on the tick line).
-  function stackedTop(unitId: string, tick: number): number {
-    const ids = tickGroups.get(tick) ?? []
-    const n   = ids.length
-    const i   = ids.indexOf(unitId)
-    return tickToTop(tick, scrollBounds.max) + (i - (n - 1) / 2) * STACK_OFFSET_PX
-  }
-
   return (
-    <div className={styles.timelineWrap} ref={containerRef}>
-      <div
-        className={`${styles.timelineTrack} ${animated ? styles.timelineTrackAnimated : ''}`}
-        style={{ height: trackHeight, transform: `translateY(${offset}px)` }}
-        onPointerDown={handleDragStart}
-        onPointerMove={handleDragMove}
-        onPointerUp={() => handleDragEnd()}
-        onPointerCancel={() => handleDragEnd()}
-      >
-        <div className={styles.timelineAxis} />
-        {tickMarkPositions.map((tick) => (
-          <div
-            key={tick}
-            className={`${styles.tickMark} ${tick % 50 === 0 ? styles.tickMarkMajor : ''}`}
-            style={{ top: tickToTop(tick, scrollBounds.max) }}
-          />
-        ))}
-        {/* Occupancy — a tick at the cap displaces the next arrival, so the
-            crowd has to be visible before anyone commits to landing there. */}
-        {[...occupancy].map(([tick, count]) => (
-          <div
-            key={`occ-${tick}`}
-            className={`${styles.occupancy} ${styles[occupancyState(count)]}`}
-            style={{ top: tickToTop(tick, scrollBounds.max) }}
-            aria-hidden
-          />
-        ))}
-        <div className={styles.nowLine} style={{ top: tickToTop(tickValue, scrollBounds.max) }} />
-        {/* Where the selected skill would land the acting unit. Lets a cheap
-            6-TU skill be compared against a 15-TU one before committing. */}
-        {projectedTick !== null && (
-          <div
-            className={`${styles.projected} ${landingIsFull ? styles.projectedFull : ''}`}
-            style={{ top: tickToTop(projectedTick, scrollBounds.max) }}
-          />
-        )}
-        {/* A displaced unit landed somewhere it did not choose — say so, or the
-            jump reads as the timeline glitching. */}
-        {displacement && (
-          <div
-            key={displacement.key}
-            className={styles.displaced}
-            style={{ top: tickToTop(displacement.toTick, scrollBounds.max) }}
-          />
-        )}
-        {/* History ghosts — rendered first so live markers paint on top */}
-        {historyEntries.map((entry) => (
-          <div
-            key={entry.id}
-            className={`${styles.marker} ${styles.markerGhost}`}
-            style={{ top: tickToTop(entry.tick, scrollBounds.max) }}
-          >
-            <TimelineMarker name={entry.name} isAlly={entry.isAlly} hpFraction={0} />
-          </div>
-        ))}
-        {/* Live unit markers */}
-        {allUnits.map((unit) => {
-          const chips = buildChips(unit, getChipDef, suppressedChipIds)
-          return (
-            <div
-              key={unit.id}
-              className={[
-                styles.marker,
-                activeUnitIds.has(unit.id)
-                  ? (unit.isAlly ? styles.markerActiveAlly : styles.markerActiveEnemy)
-                  : '',
-              ].join(' ')}
-              style={{ top: stackedTop(unit.id, unit.tickPosition) }}
-            >
-              <TimelineMarker
-                name={unit.name}                isAlly={unit.isAlly}
-                hpFraction={unit.maxHp > 0 ? unit.hp / unit.maxHp : 0}
-              />
-              {chips.length > 0 && (
-                <StatusChipBar chips={chips} size="compact" onTap={setInspectingChip} />
-              )}
-            </div>
-          )
-        })}
-      </div>
-    </div>
+    <TimelineStrip
+      tickValue={tickValue}
+      units={[...playerUnits, ...enemies]}
+      activeUnitIds={activeUnitIds}
+      registeredTicks={registeredTicks}
+      scrollBounds={scrollBounds}
+      historyEntries={historyEntries}
+      projectedTick={selectedSkill && activePlayerUnit
+        ? activePlayerUnit.tickPosition + selectedSkill.cachedCosts.tuCost : null}
+      projectingId={activePlayerUnit?.id ?? null}
+      displacement={displacement}
+      intent={intent}
+      resolveChip={getChipDef}
+      suppressedChipIds={suppressedChipIds}
+      onChipTap={setInspectingChip}
+    />
   )
 }
 
@@ -310,7 +78,7 @@ function BattleTimeline() {
 function LeaderChipBar({ onTap }: { onTap: (chip: StatusChipData) => void }) {
   const { leader, getChipDef, suppressedChipIds } = useBattleScreen()
   if (!leader) return null
-  const chips = buildChips(leader, getChipDef, suppressedChipIds)
+  const chips = chipsForUnit(leader, getChipDef, suppressedChipIds)
   if (!chips.length) return null
   return (
     <div className={styles.statusSlots}>
@@ -683,7 +451,7 @@ function TargetSelectOverlay() {
     <Sheet title="SELECT TARGET" placement="centre" onClose={() => selectSkill(null)}>
       <div className={styles.targetPickerList}>
         {aliveEnemies.map((enemy) => {
-          const chips  = buildChips(enemy, getChipDef, suppressedChipIds)
+          const chips  = chipsForUnit(enemy, getChipDef, suppressedChipIds)
           return (
             <button
               key={enemy.id}
@@ -806,7 +574,7 @@ function BattleLayout() {
       {diceResult && (
         <Toaster onceId="battle-skip-dice" message="Tap the arena to skip the roll." position="bottom" />
       )}
-      <BattleTimeline />
+      <BattleTimelineStrip />
       <div className={styles.main}>
         <div className={styles.arenaWrap}>
           <BattleArena

@@ -45,6 +45,8 @@ export const MAX_SKILL_SLOTS = 4
 export const TEAM_SIZE_MAX   = 2
 
 // Timeline visual settings
+export const TIMELINE_STRIP_DP         = 48    // strip width; fits token + occupancy + intent badge
+export const TICK_TOKEN_DP             = 24    // unit marker diameter on the stream
 export const TIMELINE_PX_PER_TICK      = 10    // pixels per tick unit on the strip
 export const TIMELINE_BUFFER_TICKS     = 15    // extra ticks beyond the outermost registered unit
 export const TIMELINE_OVERLAY_PX       = 24    // dead-zone overlay height at each strip edge (1.5rem @ 16px base — must match CSS)

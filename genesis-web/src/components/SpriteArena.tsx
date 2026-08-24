@@ -10,7 +10,7 @@ import { forwardRef } from 'react'
 import type { AnimationManifest, AnimationProjectileDef, AnimPhase, StatusChipDef } from '../core/types'
 import type { TurnDisplayData, TurnDisplayUnitData } from '../core/battle/EngineTypes'
 import type { StatusChipData } from './StatusChipBar'
-import { characterStatusIconUrl } from '../services/DataService'
+import { chipsForSlots } from './statusChips'
 import { useArenaStage } from './useArenaStage'
 import { useAnimSequence } from './useAnimSequence'
 import { SpriteActor } from './SpriteActor'
@@ -79,25 +79,10 @@ function SpriteArena({ playerFigureInfo, allyDefIds, resolveChip, onChipTap }, r
   const allyInfo   = (s.turn?.isAlly === false ? s.turn.target : s.turn?.actor) ?? playerFigureInfo ?? null
   const enemyInfo  = (s.turn?.isAlly === false ? s.turn.actor  : s.turn?.target) ?? null
 
-  // TurnDisplayUnitData carries slots but not the unit, so icon URLs (which need
-  // a defId) resolve against whichever combatant is being drawn.
-  const chipsFor = (info: TurnDisplayUnitData | null, defId: string | null): StatusChipData[] => {
-    if (!info || !resolveChip || !defId) return []
-    return info.statusSlots.flatMap((slot) => {
-      const chip = resolveChip(slot.id)
-      if (!chip) return []
-      return [{
-        slotId:          slot.id,
-        label:           chip.label,
-        colour:          chip.colour,
-        durationDisplay: chip.durationDisplay,
-        duration:        slot.duration > 0 ? slot.duration : slot.stacks,
-        iconUrl:         chip.icon ? characterStatusIconUrl(defId, chip.icon) : undefined,
-        description:     chip.description,
-        portraitGlow:    chip.portraitGlow,
-      }]
-    })
-  }
+  // TurnDisplayUnitData carries slots but not the unit, so the defId of whichever
+  // combatant is being drawn supplies the icon path.
+  const chipsFor = (info: TurnDisplayUnitData | null, defId: string | null): StatusChipData[] =>
+    info && resolveChip && defId ? chipsForSlots(info.statusSlots, defId, resolveChip) : []
 
   /** Which animation role this combatant plays in the current attack. */
   const roleOf = (defId: string): 'acting' | 'target' | null =>

@@ -74,6 +74,8 @@ interface BattleContextValue {
   /** Odds the player committed to, captured when ROLL fired. */
   diceForecast:    DiceProbabilities | null
   displacement:    TickDisplacement | null
+  /** The action currently telegraphed, so the timeline can show intent. */
+  turnDisplay:     TurnDisplayData | null
   pendingCounterDecision: CounterDecision | null
   pendingClash:            ClashState | null
   pendingTeamCollision:    TeamCollisionState | null
@@ -155,6 +157,7 @@ export function BattleProvider({ children }: Props) {
   const [diceForecast, setDiceForecast]            = useState<DiceProbabilities | null>(null)
   /** Last D8 displacement, surfaced so the timeline can explain a jump. */
   const [displacement, setDisplacement]            = useState<TickDisplacement | null>(null)
+  const [turnDisplay, setTurnDisplay]              = useState<TurnDisplayData | null>(null)
 
   // ── Refs for arena and misc ────────────────────────────────────────────────
   const arenaRef        = useRef<BattleArenaHandle>(null)
@@ -224,11 +227,16 @@ export function BattleProvider({ children }: Props) {
 
   // ── Show turn display helper ───────────────────────────────────────────────
   const showTurnDisplay = useCallback((d: TurnDisplayData, dismissAfter?: number) => {
-    // Engine drives timing; we just forward to arena
+    // Engine drives timing; we just forward to arena. Also held in state so the
+    // timeline can badge the acting unit with what it is about to spend.
     arenaRef.current?.showTurnDisplay(d)
+    setTurnDisplay(d)
     if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current)
     const delay = dismissAfter ?? 2000
-    dismissTimerRef.current = setTimeout(() => arenaRef.current?.hideTurnDisplay(), delay)
+    dismissTimerRef.current = setTimeout(() => {
+      arenaRef.current?.hideTurnDisplay()
+      setTurnDisplay(null)
+    }, delay)
   }, [])
 
   // ── Error reporting ───────────────────────────────────────────────────────
@@ -287,7 +295,11 @@ export function BattleProvider({ children }: Props) {
         safe(() => showTurnDisplay(data, dismissAfter))
       },
       onHideTurnDisplay() {
-        safe(() => { if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current); arenaRef.current?.hideTurnDisplay() })
+        safe(() => {
+          if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current)
+          arenaRef.current?.hideTurnDisplay()
+          setTurnDisplay(null)
+        })
       },
       onShowDiceResult(outcome, message) {
         safe(() => showDiceResult(outcome, message))
@@ -678,7 +690,7 @@ export function BattleProvider({ children }: Props) {
       selectedSkill, selectedTarget, showTargetPicker,
       gridCollapsed, isPaused, isLoading,
       suppressedChipIds, getChipDef,
-      diceResult, diceForecast, displacement, pendingCounterDecision,
+      diceResult, diceForecast, displacement, turnDisplay, pendingCounterDecision,
       pendingClash, pendingTeamCollision,
       registeredTicks, scrollBounds,
       battleError,
