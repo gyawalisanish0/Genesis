@@ -9,14 +9,23 @@ Two web targets share one build. They differ only in `base`.
 
 ## Vercel
 
-`vercel.json` at the repo root is self-contained — no dashboard configuration
-is required beyond connecting the repository.
+**Root Directory must be `genesis-web`** in the Vercel project settings, and
+`vercel.json` lives in that same directory. Vercel reads `vercel.json` from the
+Root Directory, not from the repository root — a `vercel.json` at the repo root
+is silently ignored when a Root Directory is set, which is easy to miss because
+nothing warns about it.
 
 ```
-installCommand   npm ci --prefix genesis-web
-buildCommand     npm run build --prefix genesis-web -- --base=/
-outputDirectory  genesis-web/dist
+buildCommand     npm run build -- --base=/
+outputDirectory  dist
+framework        vite
 ```
+
+**Node version.** `engines.node` in `package.json` (backed by `.nvmrc`) pins
+Node for Vercel. This is not optional: Vite 8 and rolldown declare
+`^20.19.0 || >=22.12.0`, so an unpinned project can land on a default Node that
+fails the engine check at install time even though CI — which pins Node 22 —
+passes.
 
 `build` runs `prebuild` → `validate:data` first, so a deploy fails on invalid
 game JSON rather than shipping it.
