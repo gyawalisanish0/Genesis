@@ -391,14 +391,22 @@
 
 .skillBtn {
   /* Same reason as .actionGrid — grid tracks will not shrink past their content
-   * unless the item is allowed to. */
+   * unless the item is allowed to. Clipping is the other half: once a track can
+   * be narrower than its content, an unclipped card spills its name into the
+   * neighbouring cell. */
   min-width: 0;
+  overflow: hidden;
   background: var(--bg-card);
   border: 1px solid transparent;
   cursor: pointer;
   display: grid;
-  grid-template-areas: "name lvl" "tu   ap" "odds odds";
-  grid-template-columns: 1fr auto;
+  grid-template-areas: "name lvl" "meta meta" "odds odds";
+  /* minmax(0, ...) on both: an `auto` track sizes to its widest cell, and a
+   * `1fr` track will not shrink below min-content. TU/AP moved out to their own
+   * full-width row for the same reason — once the AP figure gained a regen
+   * suffix ("AP: 12 +5") it widened the right column to 40 dp and starved the
+   * skill name to 29 dp, which broke every name mid-word. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto);
   padding: var(--s-xs);
   gap: 0.125rem;
   font-family: var(--font-sans);
@@ -490,13 +498,37 @@
   box-shadow: 0 0 0 1px var(--accent-genesis) inset;
 }
 
-.skillName { grid-area: name; font-size: var(--t-label-size); color: var(--text-primary); text-align: left; }
+/* Two columns of a 182 dp grid leave ~87 dp per card, so long names must be
+ * able to break rather than force the track wider. */
+.skillName {
+  grid-area: name;
+  font-size: var(--t-label-size);
+  color: var(--text-primary);
+  text-align: left;
+  min-width: 0;
+  /* break-word, not anywhere: `anywhere` also shrinks the intrinsic min-content
+   * width, so the browser broke every name mid-word ("Nani/tes/Slas/h") even
+   * where the whole word would have fitted. break-word wraps at spaces first
+   * and only splits a word that genuinely cannot fit. */
+  overflow-wrap: break-word;
+  line-height: 1.15;
+}
 
 .skillLvl  { grid-area: lvl;  font-size: var(--t-micro-size); color: var(--accent-gold); text-align: right; }
 
-.skillTu   { grid-area: tu;   font-size: var(--t-micro-size); color: var(--text-muted); text-align: left; }
+/* TU and AP share one full-width row so neither can dictate the name column. */
+.skillMeta {
+  grid-area: meta;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s-xs);
+  min-width: 0;
+}
 
-.skillAp   { grid-area: ap;   font-size: var(--t-micro-size); color: var(--accent-info); text-align: right; white-space: nowrap; }
+.skillTu   { font-size: var(--t-micro-size); color: var(--text-muted); white-space: nowrap; }
+
+.skillAp   { font-size: var(--t-micro-size); color: var(--accent-info); text-align: right; white-space: nowrap; }
 
 /* AP paid back by spending this skill's ticks — the tempo half of the trade. */
 .skillApBack {
@@ -588,4 +620,26 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Off-turn the action grid binds to no unit, so every card shows an em dash.
+ * Naming who holds the tick turns that from "broken" into "not your turn". */
+.waitingFor {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  padding: var(--s-xs) var(--s-sm);
+  /* --bg-overlay belongs to Sheet / PromptOverlay; this is a chip, not a
+     backdrop, so it takes the panel surface. */
+  background: var(--bg-panel);
+  border: var(--px) solid var(--panel-default-outer);
+  color: var(--text-secondary);
+  font-family: var(--font-pixel);
+  font-size: var(--t-micro-size);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  pointer-events: none;
+  white-space: nowrap;
 }

@@ -1,5 +1,5 @@
 // Battle screen — core gameplay view.
-// Layout: 28dp timeline strip (left) + main area (right).
+// Layout: 48dp tick stream (left) + main area (right).
 // Child components read from BattleContext via useBattleScreen().
 
 import { useRef, useEffect, useMemo, useState } from 'react'
@@ -188,6 +188,7 @@ function ActionGrid() {
     phase, gridCollapsed, toggleGrid,
     activePlayerUnit, getUnitSkills, selectedSkill, selectedTarget, selectSkill, skipTurn,
     setInspectingSkill, hyperSenseModeActive, tickValue,
+    playerUnits, enemies, activeUnitIds,
   } = useBattleScreen()
   const createHandler = useScrollAwarePointer()
   const disabled = phase !== 'player'
@@ -217,6 +218,13 @@ function ActionGrid() {
   // Pad skill list to always show 4 slots.
   const slots = Array.from({ length: 4 }, (_, i) => activeSkills[i] ?? null)
 
+  // Off-turn the grid has no unit to bind to, so every card renders as an em
+  // dash. With AI allies that happens constantly and reads as a broken screen
+  // rather than "someone else is acting", so name who has the tick.
+  const actingElsewhere = !activePlayerUnit
+    ? [...playerUnits, ...enemies].find(u => activeUnitIds.has(u.id)) ?? null
+    : null
+
   return (
     <div className={[styles.actionGrid, phase === 'player' ? styles.actionGridActive : ''].join(' ')}>
       <Toaster
@@ -227,6 +235,11 @@ function ActionGrid() {
         dismissible={false}
         onDismiss={() => setApWarning(null)}
       />
+      {actingElsewhere && (
+        <span className={styles.waitingFor}>
+          {actingElsewhere.name} is acting
+        </span>
+      )}
       {!gridCollapsed && (
         <>
           <div className={styles.actionRow}>
@@ -309,10 +322,12 @@ function ActionGrid() {
                 >
                   <span className={styles.skillName}>{name}</span>
                   <span className={styles.skillLvl}>Lv {skillInst?.currentLevel ?? '—'}</span>
-                  <span className={styles.skillTu}>{tuCost !== null ? `TU: ${tuCost}` : 'TU: —'}</span>
-                  <span className={styles.skillAp}>
-                    {hasSkill ? `AP: ${skillInst.cachedCosts.apCost}` : '—'}
-                    {apBack > 0 && <span className={styles.skillApBack}> +{apBack}</span>}
+                  <span className={styles.skillMeta}>
+                    <span className={styles.skillTu}>{tuCost !== null ? `TU: ${tuCost}` : 'TU: —'}</span>
+                    <span className={styles.skillAp}>
+                      {hasSkill ? `AP: ${skillInst.cachedCosts.apCost}` : '—'}
+                      {apBack > 0 && <span className={styles.skillApBack}> +{apBack}</span>}
+                    </span>
                   </span>
                   {onCooldown && (
                     <span className={styles.skillCdBadgeRow}>
