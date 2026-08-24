@@ -1,5 +1,6 @@
 import type { InteractableEntityDef } from '../core/types'
-import { PrimaryButton } from '../components/PrimaryButton'
+import { PixelButton } from '../components/PixelButton'
+import { Sheet } from '../components/Sheet'
 import styles from './ChestOverlay.module.css'
 
 interface Props {
@@ -7,11 +8,12 @@ interface Props {
   onCollect: () => void
 }
 
+// Not dismissible — the player must COLLECT to close. Chrome is the shared Sheet.
 export function ChestOverlay({ chest, onCollect }: Props) {
   const reward = chest.reward
   return (
-    <div className={styles.backdrop}>
-      <div className={styles.panel}>
+    <Sheet placement="centre" dismissible={false} accent="var(--accent-gold)">
+      <div className={styles.body}>
         <div className={styles.icon}>◈</div>
         <span className={styles.title}>SUPPLY CACHE</span>
         {reward?.narrativeText && (
@@ -30,9 +32,9 @@ export function ChestOverlay({ chest, onCollect }: Props) {
             ))}
           </div>
         )}
-        <PrimaryButton variant="primary" onPress={onCollect}>COLLECT</PrimaryButton>
+        <PixelButton variant="primary" onPress={onCollect}>COLLECT</PixelButton>
       </div>
-    </div>
+    </Sheet>
   )
 }
 

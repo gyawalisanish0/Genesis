@@ -92,7 +92,6 @@
 /* ── Row group (rounded card containing rows) ───────────────────────── */
 .group {
   background: var(--bg-card);
-  border-radius: var(--r-md);
   overflow: hidden;
 }
 

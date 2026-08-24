@@ -1,4 +1,4 @@
-/* Square ASCII logo chips — replaces the old text-pill design.
+/* Square icon chips — PNG icon, else monogram fallback.
  * Each chip is a fixed square: art area fills the face, duration badge overlays
  * the bottom-right corner. Compact variant shrinks to a coloured dot for the
  * timeline strip where space is very tight.                                    */
@@ -21,7 +21,6 @@
   position:      relative;
   width:         2.75rem;   /* 44 dp */
   height:        2.75rem;
-  border-radius: var(--r-sm);
   background:    color-mix(in srgb, var(--chip-colour) 12%, var(--bg-card));
   border:        1px solid color-mix(in srgb, var(--chip-colour) 45%, transparent);
   overflow:      hidden;
@@ -54,7 +53,7 @@
 /* Fading chip — opacity signals low duration */
 .chipFade { opacity: 0.7; }
 
-/* ── Art area — fills the chip, contains either PNG, ASCII, or monogram ──── */
+/* ── Art area — fills the chip: PNG icon, else monogram ─────────────────── */
 
 .artArea {
   width:    100%;
@@ -70,19 +69,6 @@
   height:         80%;
   object-fit:     contain;
   image-rendering: auto;
-}
-
-.artAscii {
-  margin:      0;
-  padding:     0;
-  font-family: 'Courier New', monospace;
-  font-size:   0.5625rem;   /* 9 dp — tight fit for 3-char wide art */
-  line-height: 1.15;
-  color:       var(--chip-colour);
-  text-align:  center;
-  white-space: pre;
-  user-select: none;
-  text-shadow: 0 0 4px var(--chip-colour);
 }
 
 .artMonogram {
@@ -114,7 +100,6 @@
 .chipCompact {
   width:    0.875rem;   /* 14 dp */
   height:   0.875rem;
-  border-radius: 0.1875rem;
 }
 
 .compactDot {

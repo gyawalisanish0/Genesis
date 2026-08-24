@@ -12,7 +12,7 @@ import {
 } from '../constants'
 import { tickStatusDurations, updateStatusIntervalTick, takeDamage } from '../unit'
 import { calculateApGained }                            from '../combat/TickCalculator'
-import { calculateFinalChance, shiftProbabilities }     from '../combat/HitChanceEvaluator'
+import { forecastOutcomes }                              from '../combat/OutcomeForecast'
 import { roll, resolveCounterRoll }                     from '../combat/DiceResolver'
 import { findCounterSkill, canCounter, isSingleTarget } from '../combat/CounterResolver'
 import { applyTickCooldown }                            from '../combat/CooldownResolver'
@@ -44,16 +44,15 @@ export function runAttack(
     engine.fireExpiryChain(target.defId, statusId, snap)
   }
 
-  const baseChance = skill.resolution?.baseChance ?? 1.0
+  // Precision comes from the caster's base stats, status bonuses from the live
+  // snapshot — forecastOutcomes reads both off the unit it is given, so it is
+  // handed a caster carrying the snapshot's statuses.
   const casterForDice = snap.get(caster.id) ?? caster
-  const rangedBonus = skill.tags.includes('ranged')
-    ? casterForDice.statusSlots.reduce((sum, slot) => {
-        const b = slot.payload?.rangedBaseChanceBonus
-        return typeof b === 'number' ? sum + b : sum
-      }, 0)
-    : 0
-  const finalChance = calculateFinalChance(caster.stats.precision, baseChance + rangedBonus)
-  const diceOutcome = dodged ? 'Evade' : roll(shiftProbabilities(finalChance))
+  const probabilities = forecastOutcomes(
+    { ...casterForDice, stats: caster.stats },
+    skill,
+  )
+  const diceOutcome = dodged ? 'Evade' : roll(probabilities)
   const noDamage    = diceOutcome === 'Evade' || diceOutcome === 'Fail'
 
   engine.showDiceResult(diceOutcome, buildOutcomeMessage(diceOutcome, caster.name, target.name))

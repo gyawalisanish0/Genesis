@@ -1,0 +1,49 @@
+/* Panel — the nine-slice box. Spec: docs/ui/00-design-system.md § 6.
+ *
+ * Anatomy is a hard 2-tone border: outer 1 art px, inner 1 art px, then fill.
+ * The outer line is a real border; the inner line is a zero-blur inset shadow,
+ * so both stay exactly 1 art px at any size and no corner is ever rounded.
+ *
+ * When authored border art lands, swap .surface's border/box-shadow for
+ * `border-image` with a 4-art-px slice — the variant tokens stay as they are.
+ */
+
+.surface {
+  border: var(--px) solid var(--panel-outer);
+  box-shadow: inset 0 0 0 var(--px) var(--panel-inner);
+  background: var(--panel-fill);
+  /* Floor so content clears the inner line; consumers override with more. */
+  padding: var(--px);
+}
+
+/* ── Variants — each only sets the three surface tokens ──────────────────── */
+
+.default {
+  --panel-outer: var(--panel-default-outer);
+  --panel-inner: var(--panel-default-inner);
+  --panel-fill:  var(--panel-default-fill);
+}
+
+.raised {
+  --panel-outer: var(--panel-raised-outer);
+  --panel-inner: var(--panel-raised-inner);
+  --panel-fill:  var(--panel-raised-fill);
+}
+
+.sunken {
+  --panel-outer: var(--panel-sunken-outer);
+  --panel-inner: var(--panel-sunken-inner);
+  --panel-fill:  var(--panel-sunken-fill);
+}
+
+.active {
+  --panel-outer: var(--panel-active-outer);
+  --panel-inner: var(--panel-active-inner);
+  --panel-fill:  var(--panel-active-fill);
+}
+
+.danger {
+  --panel-outer: var(--panel-danger-outer);
+  --panel-inner: var(--panel-danger-inner);
+  --panel-fill:  var(--panel-danger-fill);
+}

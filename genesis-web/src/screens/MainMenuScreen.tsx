@@ -7,11 +7,17 @@ import { useScreen } from '../navigation/useScreen'
 import { SCREEN_IDS } from '../navigation/screenRegistry'
 import { useBackButton } from '../input/useBackButton'
 import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
+import { PromptOverlay } from '../components/PromptOverlay'
+import { Toaster } from '../components/Toaster'
 import styles from './MainMenuScreen.module.css'
 
 export function MainMenuScreen() {
   const { navigateTo } = useScreen()
   const [showQuitConfirm, setShowQuitConfirm] = useState(false)
+  // Mastery Road and the Shop are designed but unbuilt (docs/ui/02-screens.md
+  // lists neither as having a route). Saying so beats a button that silently
+  // does nothing, which reads as the game being broken.
+  const [notYet, setNotYet] = useState<string | null>(null)
   useBackButton(() => setShowQuitConfirm(true))
   const createHandler = useScrollAwarePointer()
 
@@ -59,8 +65,8 @@ export function MainMenuScreen() {
           </button>
 
           <button
-            className={`${styles.navBtn} ${styles.navBtnSecondary}`}
-            onPointerDown={createHandler({ onTap: () => {} })}
+            className={`${styles.navBtn} ${styles.navBtnSecondary} ${styles.navBtnLocked}`}
+            onPointerDown={createHandler({ onTap: () => setNotYet('Mastery Road') })}
           >
             MASTERY ROAD
           </button>
@@ -73,8 +79,8 @@ export function MainMenuScreen() {
               SETTINGS
             </button>
             <button
-              className={`${styles.navBtn} ${styles.navBtnCard}`}
-              onPointerDown={createHandler({ onTap: () => {} })}
+              className={`${styles.navBtn} ${styles.navBtnCard} ${styles.navBtnLocked}`}
+              onPointerDown={createHandler({ onTap: () => setNotYet('The Shop') })}
             >
               💎 SHOP
             </button>
@@ -83,16 +89,19 @@ export function MainMenuScreen() {
 
       </div>
       {showQuitConfirm && (
-        <div className={styles.overlay}>
-          <div className={styles.dialog}>
-            <span className={styles.dialogTitle}>Quit Game?</span>
-            <div className={styles.dialogActions}>
-              <button className={styles.dialogBtn} onPointerDown={createHandler({ onTap: () => setShowQuitConfirm(false) })}>CANCEL</button>
-              <button className={`${styles.dialogBtn} ${styles.dialogBtnQuit}`} onPointerDown={createHandler({ onTap: () => CapApp.exitApp() })}>QUIT</button>
-            </div>
-          </div>
-        </div>
+        <PromptOverlay
+          title="QUIT GAME?"
+          actions={[
+            { label: 'CANCEL', variant: 'secondary', onPress: () => setShowQuitConfirm(false) },
+            { label: 'QUIT',   variant: 'danger',    onPress: () => CapApp.exitApp() },
+          ]}
+        />
       )}
+      <Toaster
+        key={notYet}
+        message={notYet ? `${notYet} is not in this build yet.` : null}
+        onDismiss={() => setNotYet(null)}
+      />
     </ScreenShell>
   )
 }

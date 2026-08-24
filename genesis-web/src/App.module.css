@@ -25,4 +25,11 @@
   overflow: hidden;
   transform-origin: center center;
   will-change: transform;
+  /* The design column is a fixed 360 px that the transform scales — it must not
+   * be laid out at any other width. As a flex item it defaults to shrinkable,
+   * so on a viewport narrower than 360 px (a folded phone at 280, a narrow
+   * desktop window) flex squeezed the column BEFORE the transform, compounding
+   * the reduction and laying content out in ~280 design px. Battle plates ran
+   * off the right edge as a result. */
+  flex-shrink: 0;
 }

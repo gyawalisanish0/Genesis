@@ -20,9 +20,7 @@ import { createSkillInstance } from '../core/engines/skill/SkillInstance'
 import { loadCharacterWithSkills, loadStatusDef, loadAnimationManifest, loadAnimSequenceManifest } from '../services/DataService'
 import { registerStatusDef, clearStatusRegistry } from '../core/effects/statusRegistry'
 import type { PassiveDef, StatusDef } from '../core/effects/types'
-import { NarrativeService } from '../services/NarrativeService'
-import { NarrativeUnits } from '../components/NarrativeLayer'
-import type { BattleArenaHandle } from '../components/AsciiArena'
+import type { BattleArenaHandle } from '../components/SpriteArena'
 import type { StatusChipData } from '../components/StatusChipBar'
 import type { HistoryEntry } from '../core/battleHistory'
 import { useGameStore } from '../core/GameContext'
@@ -34,6 +32,19 @@ import { unitIsDamaged } from '../core/battle/BattleResolution'
 import { BattleEngine } from '../core/battle/BattleEngine'
 import type { BattleEngineSnapshot, BattleEngineCallbacks, LogEntry, DiceResult, CounterDecision, ClashState, TeamCollisionState, TurnDisplayData } from '../core/battle/EngineTypes'
 import type { TurnPhase } from '../core/battle/EngineTypes'
+import type { BattleStep } from '../core/battle/BattleStepMachine'
+import type { DiceProbabilities } from '../core/combat/HitChanceEvaluator'
+import { forecastOutcomes } from '../core/combat/OutcomeForecast'
+import { SoundService } from '../services/SoundService'
+
+/** A unit shoved off its requested tick by the occupancy cap. */
+export interface TickDisplacement {
+  unitId:   string
+  fromTick: number
+  toTick:   number
+  /** Changes per event so a repeat displacement re-triggers the animation. */
+  key:      number
+}
 
 // ── Re-exports for child components ───────────────────────────────────────────
 export type { TurnPhase, LogEntry, DiceResult, CounterDecision, ClashState, TeamCollisionState }
@@ -43,7 +54,9 @@ export type { TurnPhase, LogEntry, DiceResult, CounterDecision, ClashState, Team
 interface BattleContextValue {
   arenaRef: React.RefObject<BattleArenaHandle | null>
   phase:            TurnPhase
-  narrativePaused:  boolean
+  /** Raw engine step. `phase` collapses several steps, but the clash
+   *  announcement needs the specific one. */
+  battleStep:       BattleStep
   turnNumber:       number
   tickValue:        number
   activeUnitIds:    Set<string>
@@ -62,6 +75,11 @@ interface BattleContextValue {
   suppressedChipIds: ReadonlySet<string>
   getChipDef: (statusId: string) => import('../core/types').StatusChipDef | null
   diceResult:      DiceResult | null
+  /** Odds the player committed to, captured when ROLL fired. */
+  diceForecast:    DiceProbabilities | null
+  displacement:    TickDisplacement | null
+  /** The action currently telegraphed, so the timeline can show intent. */
+  turnDisplay:     TurnDisplayData | null
   pendingCounterDecision: CounterDecision | null
   pendingClash:            ClashState | null
   pendingTeamCollision:    TeamCollisionState | null
@@ -137,10 +155,13 @@ export function BattleProvider({ children }: Props) {
   const [showTargetPicker, setShowTargetPicker] = useState(false)
   const [gridCollapsed, setGridCollapsed]   = useState(false)
   const [isPaused, setPaused]               = useState(false)
-  const [narrativePaused, setNarrativePaused] = useState(false)
   const [inspectingSkill, setInspectingSkillState] = useState<SkillInstance | null>(null)
   const [inspectingChip, setInspectingChip]        = useState<StatusChipData | null>(null)
   const [diceResult, setDiceResult]                = useState<DiceResult | null>(null)
+  const [diceForecast, setDiceForecast]            = useState<DiceProbabilities | null>(null)
+  /** Last D8 displacement, surfaced so the timeline can explain a jump. */
+  const [displacement, setDisplacement]            = useState<TickDisplacement | null>(null)
+  const [turnDisplay, setTurnDisplay]              = useState<TurnDisplayData | null>(null)
 
   // ── Refs for arena and misc ────────────────────────────────────────────────
   const arenaRef        = useRef<BattleArenaHandle>(null)
@@ -210,11 +231,16 @@ export function BattleProvider({ children }: Props) {
 
   // ── Show turn display helper ───────────────────────────────────────────────
   const showTurnDisplay = useCallback((d: TurnDisplayData, dismissAfter?: number) => {
-    // Engine drives timing; we just forward to arena
+    // Engine drives timing; we just forward to arena. Also held in state so the
+    // timeline can badge the acting unit with what it is about to spend.
     arenaRef.current?.showTurnDisplay(d)
+    setTurnDisplay(d)
     if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current)
     const delay = dismissAfter ?? 2000
-    dismissTimerRef.current = setTimeout(() => arenaRef.current?.hideTurnDisplay(), delay)
+    dismissTimerRef.current = setTimeout(() => {
+      arenaRef.current?.hideTurnDisplay()
+      setTurnDisplay(null)
+    }, delay)
   }, [])
 
   // ── Error reporting ───────────────────────────────────────────────────────
@@ -273,7 +299,11 @@ export function BattleProvider({ children }: Props) {
         safe(() => showTurnDisplay(data, dismissAfter))
       },
       onHideTurnDisplay() {
-        safe(() => { if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current); arenaRef.current?.hideTurnDisplay() })
+        safe(() => {
+          if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current)
+          arenaRef.current?.hideTurnDisplay()
+          setTurnDisplay(null)
+        })
       },
       onShowDiceResult(outcome, message) {
         safe(() => showDiceResult(outcome, message))
@@ -281,9 +311,13 @@ export function BattleProvider({ children }: Props) {
       onClearDiceResult() {
         safe(() => { if (diceTimerRef.current) clearTimeout(diceTimerRef.current); setDiceResult(null) })
       },
-      onNarrativeEmit(event) {
-        safe(() => NarrativeService.emit(event))
+      onTickDisplaced(unitId, fromTick, toTick) {
+        safe(() => {
+          SoundService.playSfx('tick_advance')
+          setDisplacement({ unitId, fromTick, toTick, key: Date.now() })
+        })
       },
+      onNarrativeEmit() {},
       onStateChanged(s) {
         safe(() => setSnapshot({ ...s }))
       },
@@ -301,19 +335,6 @@ export function BattleProvider({ children }: Props) {
       },
     }
   }, [showTurnDisplay, showDiceResult, reportError])
-
-  // ── Narrative pause listeners ──────────────────────────────────────────────
-  useEffect(() => {
-    const unsubPause  = NarrativeService.onNarrativePause(() => {
-      setNarrativePaused(true)
-      engineRef.current?.setNarrativePaused(true)
-    })
-    const unsubResume = NarrativeService.onNarrativeResume(() => {
-      setNarrativePaused(false)
-      engineRef.current?.setNarrativePaused(false)
-    })
-    return () => { unsubPause(); unsubResume() }
-  }, [])
 
   // ── Load battle data and create engine ─────────────────────────────────────
   useEffect(() => {
@@ -451,12 +472,6 @@ export function BattleProvider({ children }: Props) {
 
           setLog([{ id: '1', text: 'Battle started!', colour: 'var(--accent-genesis)' }])
           setIsLoading(false)
-          NarrativeUnits.register([...startedPlayers, ...startedEnemies])
-          NarrativeService.emit({
-            type:     'battle_start',
-            actorId:  displacedPlayers[0]?.defId,
-            targetId: displacedEnemies[0]?.defId,
-          })
           engine.start()
         }
       } catch (err) {
@@ -510,7 +525,6 @@ export function BattleProvider({ children }: Props) {
           finalUnit = spawnSnap.get(newUnit.id) ?? newUnit
         }
 
-        NarrativeUnits.register([finalUnit])
         engine.spawnUnit(finalUnit, skills, data.passiveDef ?? null, manifest)
         setLog(prev => [...prev, { id: String(Date.now()), text: `${data.characterDef.name} has entered the battle!`, colour: 'var(--accent-genesis)' }])
       } catch (err) {
@@ -552,8 +566,12 @@ export function BattleProvider({ children }: Props) {
   // These forward to engine; engine drives the step machine.
   // safeEngineCall catches any synchronous throws and routes them to the error toast.
   const executeSkill = useCallback((skill: SkillInstance) => {
+    // Snapshot the odds the player is committing to. Captured here rather than
+    // recomputed at reveal time so a later selection change cannot rewrite
+    // history — the band must show the table the roll was actually made against.
+    if (activePlayerUnit) setDiceForecast(forecastOutcomes(activePlayerUnit, skill.baseDef))
     safeEngineCall(() => engineRef.current?.executeSkill(skill, selectedTarget))
-  }, [selectedTarget, safeEngineCall])
+  }, [selectedTarget, safeEngineCall, activePlayerUnit])
 
   const skipTurn = useCallback(() => {
     safeEngineCall(() => engineRef.current?.skipTurn())
@@ -669,15 +687,14 @@ export function BattleProvider({ children }: Props) {
   return (
     <BattleContext.Provider value={{
       arenaRef,
-      phase,
-      narrativePaused,
+      phase, battleStep,
       turnNumber: (leader?.actionCount ?? 0) + 1,
       tickValue, activeUnitIds,
       playerUnits, leader, activePlayerUnit, enemies, log, historyEntries,
       selectedSkill, selectedTarget, showTargetPicker,
       gridCollapsed, isPaused, isLoading,
       suppressedChipIds, getChipDef,
-      diceResult, pendingCounterDecision,
+      diceResult, diceForecast, displacement, turnDisplay, pendingCounterDecision,
       pendingClash, pendingTeamCollision,
       registeredTicks, scrollBounds,
       battleError,

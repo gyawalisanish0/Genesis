@@ -45,7 +45,6 @@
 .logoMark {
   width: 7.5rem;    /* 120 dp */
   height: 7.5rem;
-  border-radius: var(--r-xl);
   background: linear-gradient(135deg, var(--accent-genesis), var(--accent-info));
   display: flex;
   align-items: center;

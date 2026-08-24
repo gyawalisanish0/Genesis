@@ -1,0 +1,115 @@
+/* SpriteActor — a combatant slot in the GBA duel frame.
+ * The sprite sits bottom-centred on a shadow platform. Idle motion is a stepped
+ * 1-art-px bob; nothing here eases, because it is made of pixels.
+ * Spec: docs/ui/01-components.md § SpriteActor. */
+
+.actor {
+  position: relative;
+  width: 6rem;    /* 96 dp — SPRITE_BOX_DP */
+  height: 6rem;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.body {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  max-width: 100%;
+  max-height: 100%;
+  transform-origin: bottom center;
+  animation: bob var(--sprite-bob, 1600ms) steps(2) infinite;
+}
+
+.frame {
+  display: block;
+  max-width: 6rem;
+  max-height: 6rem;
+  width: auto;
+  height: auto;
+  image-rendering: pixelated;
+}
+
+/* Shown until a character's frames are authored. */
+.fallback {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border: var(--px) solid var(--panel-default-outer);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-family: var(--font-pixel);
+  font-size: var(--t-heading-size);
+  font-weight: var(--t-heading-weight);
+}
+
+/* Shadow disc — 64 x 12 art px. Flat, no blur: depth is a ramp step. */
+.platform {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 6rem;      /* 96 dp — PLATFORM_W_DP */
+  height: 1rem;     /* 16 dp — PLATFORM_H_DP */
+  transform: translateX(-50%);
+  background: var(--hull-1);
+  border-radius: 50%;   /* functional ellipse — see docs/ui § 5 */
+  opacity: 0.55;
+}
+
+/* Ally faces away from the camera; enemy faces it. Where a `_back` pose is
+ * unauthored the front pose is reused, so the mirror keeps the two sides
+ * distinguishable rather than looking like the same actor twice. */
+.front .frame { transform: none; }
+.back  .frame { transform: scaleX(-1); }
+
+.acting .body { animation-play-state: paused; }
+
+.dead {
+  filter: grayscale(1);
+  opacity: 0.3;
+}
+.dead .body { animation: none; }
+
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(var(--px)); }
+}
+
+:root[data-reduce-animations='true'] .body { animation: none; }
+
+/* ── Sequence-driven motion (components/useAnimSequence.ts) ──────────────── */
+
+/* Contact step toward the opponent. Stepped, never eased — it is pixel art. */
+.shoving  { transform: translateX(var(--shove-dx, 0.5rem)); transition: transform 190ms steps(2); }
+.back.shoving  { --shove-dx: 0.5rem; }
+.front.shoving { --shove-dx: -0.5rem; }
+
+/* Sidestep on an evade — the defender moves, which is what distinguishes
+ * Evade from Fail on screen. */
+.dodging { transform: translateX(var(--dodge-dx, -1rem)); transition: transform 170ms steps(2); }
+.back.dodging  { --dodge-dx: -1rem; }
+.front.dodging { --dodge-dx: 1rem; }
+
+/* Flat silhouette flash over the sprite. The mask (set inline from the current
+ * frame URL) is what makes this the sprite's shape rather than a filled box.
+ * mask-size must match the frame's own fitting so the two stay registered. */
+.flash {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0.85;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+}
+
+:root[data-reduce-animations='true'] .shoving,
+:root[data-reduce-animations='true'] .dodging { transition: none; }

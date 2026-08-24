@@ -9,118 +9,6 @@
   overflow: hidden;
 }
 
-/* ── Timeline column (28dp left column) ─────────────────────────────── */
-.timelineWrap {
-  width: 1.75rem;  /* 28 dp */
-  height: 100%;
-  border-right: 1px solid var(--bg-panel);
-  flex-shrink: 0;
-  position: relative;
-  overflow: hidden;
-  background: var(--bg-elevated);
-}
-
-/* Dead-zone overlays — content scrolls physically behind these.
- * Height = 1.5rem (24dp) must match TIMELINE_OVERLAY_PX in constants.ts. */
-.timelineWrap::before,
-.timelineWrap::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 1.5rem;
-  background: var(--bg-deep);
-  pointer-events: none;
-  z-index: 1;
-}
-.timelineWrap::before { top: 0; }
-.timelineWrap::after  { bottom: 0; }
-
-/* Track — absolutely positioned; height set inline; shifted via transform. */
-.timelineTrack {
-  position: absolute;
-  top: 0;
-  width: 100%;
-}
-
-.timelineTrackAnimated {
-  transition: transform var(--motion-timeline);
-}
-
-.timelineAxis {
-  position: absolute;
-  left: 50%;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  transform: translateX(-50%);
-  background: var(--bg-panel);
-}
-
-/* Tick mark — top set inline; major variant widens and brightens. */
-.tickMark {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0.5rem;
-  height: 1px;
-  background: var(--bg-panel);
-}
-
-.tickMarkMajor {
-  width: 1rem;
-  background: var(--text-muted);
-}
-
-/* Horizontal "now" bar at the current tick position. */
-.nowLine {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: var(--accent-genesis);
-  transform: translateY(-50%);
-}
-
-/* Unit marker — positions the SVG portrait on its tick; SVG owns size/color.
- * top transition: elastic spring fires when registerTick advances the marker
- * after the dice animation ends, creating a satisfying world-update feel. */
-.marker {
-  position: absolute;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  border-radius: 50%;  /* needed for markerActive box-shadow pulse */
-  transition: top 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-/* Active ally — blue pulse matching the HP arc ring colour */
-.markerActiveAlly {
-  animation: markerPulseAlly 1.5s ease-in-out infinite;
-}
-
-/* Active enemy — red pulse matching the HP arc ring colour */
-.markerActiveEnemy {
-  animation: markerPulseEnemy 1.5s ease-in-out infinite;
-}
-
-/* History ghost — grayscale + dimmed; no interaction */
-.markerGhost {
-  filter: grayscale(1);
-  opacity: 0.4;
-  pointer-events: none;
-}
-
-@keyframes markerPulseAlly {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5); }
-  50%       { box-shadow: 0 0 0 0.375rem rgba(59, 130, 246, 0); }
-}
-
-@keyframes markerPulseEnemy {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
-  50%       { box-shadow: 0 0 0 0.375rem rgba(239, 68, 68, 0); }
-}
-
 /* ── Main content area (332dp right column) ────────────────────────── */
 .main {
   flex: 1;
@@ -147,9 +35,13 @@
   border: none;
   cursor: pointer;
   display: flex;
-  align-items: flex-end;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  padding-bottom: var(--s-sm);
+  gap: var(--s-sm);
+  /* Centred, not bottom-anchored: at the arena's bottom edge the hint sat
+     directly on top of the ally's CombatantPlate. The centre band is the
+     one region both plates leave clear. */
   z-index: 10;
   font-family: var(--font-sans);
   animation: diceSkipFadeIn 200ms ease-out both;
@@ -158,24 +50,27 @@
 .diceSkipHotzone:active { transform: none; }
 
 .diceSkipHint {
-  background: var(--bg-overlay);
+  background: var(--bg-elevated);
   color: var(--text-secondary);
   font-size: var(--t-micro-size);
   letter-spacing: 0.12em;
   padding: 0.25rem 0.625rem;
-  border-radius: var(--r-md);
   border: 1px solid var(--bg-elevated);
   animation: diceSkipPulse 1.4s ease-in-out infinite;
 }
 
 @keyframes diceSkipFadeIn {
   from { opacity: 0; }
+
   to   { opacity: 1; }
+
 }
 
 @keyframes diceSkipPulse {
   0%, 100% { opacity: 0.55; }
+
   50%      { opacity: 1; }
+
 }
 
 /* ── Battle log button row ──────────────────────────────────────────── */
@@ -191,7 +86,6 @@
   padding: 0 0.75rem;
   background: var(--bg-elevated);
   border: 1px solid var(--bg-panel);
-  border-radius: 0.25rem;
   color: var(--text-secondary);
   font-size: 0.625rem;
   letter-spacing: 0.07em;
@@ -210,7 +104,9 @@
 
 @keyframes logEntryIn {
   from { opacity: 0; transform: translateX(-0.375rem); }
+
   to   { opacity: 1; transform: translateX(0); }
+
 }
 
 /* ── Status slots pill ──────────────────────────────────────────────── */
@@ -273,7 +169,9 @@
 
 @keyframes rollPulse {
   0%, 100% { opacity: 1;    }
+
   50%       { opacity: 0.5; }
+
 }
 
 /* ── Portrait panel ─────────────────────────────────────────────────── */
@@ -288,6 +186,7 @@
 }
 
 .turnLabel { font-size: var(--t-micro-size); color: var(--text-secondary); }
+
 .tickLabel { font-size: var(--t-micro-size); color: var(--text-muted); }
 
 /* Wrapper that holds the portrait circle and the SVG arc ring overlay */
@@ -412,6 +311,12 @@
 /* ── Action grid ────────────────────────────────────────────────────── */
 .actionGrid {
   flex: 1;
+  /* A flex item defaults to min-width: auto, which refuses to shrink below its
+   * content's intrinsic width — the longest skill name sets that floor. Without
+   * this the grid keeps its preferred width and overflows the 360 dp canvas
+   * instead of taking whatever the portrait column leaves it. Widening the tick
+   * stream from 28 to 48 dp is what pushed it over. */
+  min-width: 0;
   display: flex;
   flex-direction: column;
   padding: var(--s-sm);
@@ -428,7 +333,9 @@
 
 @keyframes actionGridPulse {
   0%, 100% { box-shadow: inset 0 0 0 1px rgba(139, 92, 246, 0.20); }
+
   50%      { box-shadow: inset 0 0 0 2px rgba(139, 92, 246, 0.55); }
+
 }
 
 .actionRow {
@@ -438,10 +345,10 @@
 
 .actionBtn {
   flex: 1;
+  min-width: 0;
   height: 3rem;  /* 48 dp */
   background: var(--bg-elevated);
   border: none;
-  border-radius: var(--r-md);
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -457,9 +364,11 @@
   transform: scale(0.93);
   transition: transform 60ms ease-in;
 }
+
 .actionBtn:disabled { opacity: 0.2; }
 
 .actionBtnBasic  { background: var(--bg-elevated); }
+
 .actionBtnEnd    { background: var(--bg-card); }
 
 .actionBtnName {
@@ -481,13 +390,23 @@
 }
 
 .skillBtn {
+  /* Same reason as .actionGrid — grid tracks will not shrink past their content
+   * unless the item is allowed to. Clipping is the other half: once a track can
+   * be narrower than its content, an unclipped card spills its name into the
+   * neighbouring cell. */
+  min-width: 0;
+  overflow: hidden;
   background: var(--bg-card);
   border: 1px solid transparent;
-  border-radius: var(--r-md);
   cursor: pointer;
   display: grid;
-  grid-template-areas: "name lvl" "tu   ap";
-  grid-template-columns: 1fr auto;
+  grid-template-areas: "name lvl" "meta meta" "odds odds";
+  /* minmax(0, ...) on both: an `auto` track sizes to its widest cell, and a
+   * `1fr` track will not shrink below min-content. TU/AP moved out to their own
+   * full-width row for the same reason — once the AP figure gained a regen
+   * suffix ("AP: 12 +5") it widened the right column to 40 dp and starved the
+   * skill name to 29 dp, which broke every name mid-word. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto);
   padding: var(--s-xs);
   gap: 0.125rem;
   font-family: var(--font-sans);
@@ -524,39 +443,22 @@
 /* Shake feedback when player taps an AP-short button. */
 @keyframes btnShake {
   0%,  100% { transform: translateX(0); }
+
   18%        { transform: translateX(-6px); }
+
   36%        { transform: translateX(5px); }
+
   54%        { transform: translateX(-4px); }
+
   72%        { transform: translateX(3px); }
+
   90%        { transform: translateX(-2px); }
+
 }
+
 .skillBtnShake {
   animation: btnShake 380ms ease-out;
   transition: none;
-}
-
-/* Insufficient-AP toast — overlays the top of the action grid. */
-.apWarningToast {
-  position: absolute;
-  top: var(--s-sm);
-  left: var(--s-sm);
-  right: var(--s-sm);
-  z-index: 10;
-  background: var(--bg-overlay);
-  border: 1px solid var(--accent-warn);
-  border-radius: var(--r-md);
-  color: var(--accent-warn);
-  font-size: var(--t-label-size);
-  font-weight: var(--t-label-weight);
-  text-align: center;
-  padding: var(--s-xs) var(--s-sm);
-  pointer-events: none;
-  animation: toastSlideIn 180ms ease-out;
-}
-
-@keyframes toastSlideIn {
-  from { opacity: 0; transform: translateY(-6px); }
-  to   { opacity: 1; transform: translateY(0); }
 }
 
 .skillCdBadge {
@@ -580,13 +482,14 @@
 .skillCdChip {
   font-size: 0.6rem;
   padding: 0.05rem 0.35rem;
-  border-radius: 0.625rem;
+  border-radius: var(--r-pill);
   letter-spacing: 0.04em;
   line-height: 1;
   border: 1px solid currentColor;
 }
 
 .skillCdChipTick { color: var(--accent-warn); }
+
 .skillCdChipTurn { color: var(--accent-info); }
 
 .skillBtnSelected {
@@ -595,16 +498,57 @@
   box-shadow: 0 0 0 1px var(--accent-genesis) inset;
 }
 
-.skillName { grid-area: name; font-size: var(--t-label-size); color: var(--text-primary); text-align: left; }
+/* Two columns of a 182 dp grid leave ~87 dp per card, so long names must be
+ * able to break rather than force the track wider. */
+.skillName {
+  grid-area: name;
+  font-size: var(--t-label-size);
+  color: var(--text-primary);
+  text-align: left;
+  min-width: 0;
+  /* break-word, not anywhere: `anywhere` also shrinks the intrinsic min-content
+   * width, so the browser broke every name mid-word ("Nani/tes/Slas/h") even
+   * where the whole word would have fitted. break-word wraps at spaces first
+   * and only splits a word that genuinely cannot fit. */
+  overflow-wrap: break-word;
+  line-height: 1.15;
+}
+
 .skillLvl  { grid-area: lvl;  font-size: var(--t-micro-size); color: var(--accent-gold); text-align: right; }
-.skillTu   { grid-area: tu;   font-size: var(--t-micro-size); color: var(--text-muted); text-align: left; }
-.skillAp   { grid-area: ap;   font-size: var(--t-micro-size); color: var(--accent-info); text-align: right; }
+
+/* TU and AP share one full-width row so neither can dictate the name column. */
+.skillMeta {
+  grid-area: meta;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s-xs);
+  min-width: 0;
+}
+
+.skillTu   { font-size: var(--t-micro-size); color: var(--text-muted); white-space: nowrap; }
+
+.skillAp   { font-size: var(--t-micro-size); color: var(--accent-info); text-align: right; white-space: nowrap; }
+
+/* AP paid back by spending this skill's ticks — the tempo half of the trade. */
+.skillApBack {
+  color: var(--accent-heal);
+  font-variant-numeric: tabular-nums;
+}
+
+/* This caster's real four-outcome odds, as a shape rather than numbers. The
+ * same band the dice needle sweeps, so the strip is read once and understood
+ * everywhere. docs/ui/01-components.md § OutcomeBand. */
+.skillOdds {
+  grid-area: odds;
+  display: block;
+  margin-top: 0.125rem;
+}
 
 .collapseBtn {
   height: 2rem;
   background: var(--bg-elevated);
   border: none;
-  border-radius: var(--r-md);
   color: var(--text-secondary);
   cursor: pointer;
   font-size: var(--t-label-size);
@@ -615,179 +559,13 @@
 .collapseBtn:active { background: var(--bg-card); }
 
 /* ── Counter prompt overlay ─────────────────────────────────────────── */
-.counterPromptOverlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-overlay);
-  z-index: 40;
-}
-
-.counterPromptCard {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.4rem;
-  background: var(--bg-elevated);
-  border: 1px solid var(--accent-genesis);
-  border-radius: var(--r-md);
-  padding: var(--s-md) calc(var(--s-md) * 1.5);
-  min-width: 12rem;
-}
-
-.counterPromptTitle {
-  font-size: var(--t-label-size);
-  font-weight: var(--t-label-weight);
-  color: var(--accent-genesis);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.counterPromptSkill {
-  font-size: var(--t-body-size);
-  color: var(--text-primary);
-}
-
+/* Chrome is PromptOverlay; this is content only. */
 .counterPromptCost {
   font-size: var(--t-micro-size);
   color: var(--text-muted);
 }
 
-.counterPromptActions {
-  display: flex;
-  gap: 0.75rem;
-  margin-top: 0.4rem;
-}
-
-.counterPromptFire,
-.counterPromptSkip {
-  min-height: var(--touch-min);
-  min-width: 5rem;
-  border-radius: var(--r-sm);
-  font-family: var(--font-sans);
-  font-size: var(--t-label-size);
-  font-weight: var(--t-label-weight);
-  border: none;
-  cursor: pointer;
-  transition: transform var(--motion-button);
-}
-
-.counterPromptFire {
-  background: var(--accent-genesis);
-  color: var(--text-on-accent);
-}
-
-.counterPromptSkip {
-  background: var(--bg-panel);
-  color: var(--text-secondary);
-  border: 1px solid var(--text-muted);
-}
-
-/* ── Pause overlay ──────────────────────────────────────────────────── */
-.pauseOverlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.75);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-}
-
-.pauseCard {
-  background: var(--bg-panel);
-  border: 1px solid var(--bg-elevated);
-  border-radius: var(--r-md);
-  padding: var(--s-md);
-  width: 80%;
-  max-width: 16rem;
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-sm);
-}
-
-.pauseTitle {
-  font-size: var(--t-subheading-size);
-  font-weight: var(--t-subheading-weight);
-  color: var(--text-primary);
-  text-align: center;
-  letter-spacing: 0.15rem;
-}
-
-.pauseBtn {
-  width: 100%;
-  height: var(--touch-min);
-  border: none;
-  border-radius: var(--r-md);
-  font-family: var(--font-sans);
-  font-size: var(--t-label-size);
-  font-weight: var(--t-label-weight);
-  cursor: pointer;
-  background: var(--bg-elevated);
-  color: var(--text-primary);
-  transition: transform var(--motion-button);
-}
-
-.pauseBtn:active { transform: scale(0.97); }
-
-/* ── Target picker overlay ──────────────────────────────────────────── */
-.targetPickerOverlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-overlay);
-  z-index: 35;
-  animation: fadeScaleIn var(--motion-modal) ease-out both;
-}
-
-@keyframes fadeScaleIn {
-  from { opacity: 0; transform: scale(0.92); }
-  to   { opacity: 1; transform: scale(1); }
-}
-
-.targetPickerCard {
-  width: 80%;
-  max-width: 16rem;
-  background: var(--bg-elevated);
-  border: 1px solid var(--bg-panel);
-  border-radius: var(--r-md);
-  padding: var(--s-sm) 0 var(--s-sm);
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-xs);
-}
-
-.targetPickerHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 var(--s-md);
-}
-
-.targetPickerTitle {
-  font-size: var(--t-label-size);
-  font-weight: var(--t-label-weight);
-  color: var(--text-muted);
-  letter-spacing: 0.1em;
-}
-
-.targetPickerCancel {
-  width: var(--touch-min);
-  height: var(--touch-min);
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  font-size: 1rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
+/* ── Target picker (Sheet content) ────────────────────────────────────── */
 .targetPickerList {
   display: flex;
   flex-direction: column;
@@ -833,21 +611,6 @@
   color: var(--text-secondary);
 }
 
-/* HP bar track inside target row */
-.targetPickerBarTrack {
-  height: 4px;
-  background: var(--bg-elevated);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.targetPickerHpFill {
-  height: 100%;
-  background: var(--accent-danger);
-  border-radius: 2px;
-  transition: width var(--motion-bar);
-}
-
 /* ── Skill target badge (shows confirmed target on active skill button) ─ */
 .skillTargetBadge {
   grid-column: 1 / -1;
@@ -859,3 +622,24 @@
   text-overflow: ellipsis;
 }
 
+/* Off-turn the action grid binds to no unit, so every card shows an em dash.
+ * Naming who holds the tick turns that from "broken" into "not your turn". */
+.waitingFor {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  padding: var(--s-xs) var(--s-sm);
+  /* --bg-overlay belongs to Sheet / PromptOverlay; this is a chip, not a
+     backdrop, so it takes the panel surface. */
+  background: var(--bg-panel);
+  border: var(--px) solid var(--panel-default-outer);
+  color: var(--text-secondary);
+  font-family: var(--font-pixel);
+  font-size: var(--t-micro-size);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  pointer-events: none;
+  white-space: nowrap;
+}

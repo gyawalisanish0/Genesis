@@ -45,7 +45,6 @@
   flex: 1;
   background: var(--bg-elevated);
   border: none;
-  border-radius: var(--r-md);
   color: var(--text-primary);
   font-size: var(--t-body-size);
   padding: 0.5rem var(--s-sm);
@@ -142,7 +141,6 @@
 /* ── Character card — compact 3×3 ───────────────────────────────────── */
 .card {
   background: var(--bg-card);
-  border-radius: var(--r-md);
   padding: var(--s-xs);
   display: flex;
   flex-direction: column;

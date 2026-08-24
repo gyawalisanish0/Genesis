@@ -7,7 +7,6 @@ import type { ScreenConfig, ScreenId } from '../core/screen-types'
 // Usage: navigate(SCREEN_REGISTRY[SCREEN_IDS.MAIN_MENU].path)
 export const SCREEN_IDS = {
   SPLASH:        'splash',
-  DREAM:         'dream',
   MAIN_MENU:     'main-menu',
   PRE_BATTLE:    'pre-battle',
   BATTLE:        'battle',
@@ -20,7 +19,6 @@ export const SCREEN_IDS = {
 
 export const SCREEN_REGISTRY: Record<ScreenId, ScreenConfig> = {
   'splash':        { id: 'splash',        path: '/splash',        title: 'Genesis',      safeAreaMode: 'none' },
-  'dream':         { id: 'dream',         path: '/dream',         title: '',             safeAreaMode: 'none' },
   'main-menu':     { id: 'main-menu',     path: '/main-menu',     title: 'Main Menu',    safeAreaMode: 'full' },
   'pre-battle':    { id: 'pre-battle',    path: '/pre-battle',    title: 'Select Team',  safeAreaMode: 'full' },
   'battle':        { id: 'battle',        path: '/battle',        title: 'Battle',       safeAreaMode: 'none' },

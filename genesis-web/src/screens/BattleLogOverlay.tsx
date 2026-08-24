@@ -1,10 +1,10 @@
-// BattleLogOverlay — slide-up panel showing the full battle log history.
-// Opened by the BATTLE LOG button below the arena canvas.
-// Closed by: X button, tap on the semi-transparent backdrop, or back button.
+// BattleLogOverlay — the full battle log history. Chrome (backdrop, header,
+// dismissal, animation) is the shared Sheet; this file owns the scrolling list.
+// Battle back-button closes it via BattleScreen's central handler.
 
 import { useEffect, useRef } from 'react'
 import { useBattleScreen } from './BattleContext'
-import { useScrollAwarePointer } from '../utils/useScrollAwarePointer'
+import { Sheet } from '../components/Sheet'
 import styles from './BattleLogOverlay.module.css'
 
 interface Props {
@@ -14,7 +14,6 @@ interface Props {
 export function BattleLogOverlay({ onClose }: Props) {
   const { log } = useBattleScreen()
   const listRef = useRef<HTMLDivElement>(null)
-  const createHandler = useScrollAwarePointer()
 
   // Scroll to the latest entry whenever the overlay opens or new entries arrive.
   useEffect(() => {
@@ -23,35 +22,18 @@ export function BattleLogOverlay({ onClose }: Props) {
   }, [log])
 
   return (
-    <div
-      className={styles.backdrop}
-      onPointerDown={createHandler({ onTap: onClose })}
-    >
-      <div
-        className={styles.panel}
-        onPointerDown={(e) => e.stopPropagation()}
-      >
-        <div className={styles.header}>
-          <span className={styles.title}>BATTLE LOG</span>
-          <button
-            className={styles.closeBtn}
-            onPointerDown={createHandler({ onTap: onClose })}
+    <Sheet title="BATTLE LOG" onClose={onClose}>
+      <div className={styles.list} ref={listRef}>
+        {log.map((entry) => (
+          <div
+            key={entry.id}
+            className={styles.entry}
+            style={{ color: entry.colour ?? 'var(--text-muted)' }}
           >
-            ✕
-          </button>
-        </div>
-        <div className={styles.list} ref={listRef}>
-          {log.map((entry) => (
-            <div
-              key={entry.id}
-              className={styles.entry}
-              style={{ color: entry.colour ?? 'var(--text-muted)' }}
-            >
-              {entry.text}
-            </div>
-          ))}
-        </div>
+            {entry.text}
+          </div>
+        ))}
       </div>
-    </div>
+    </Sheet>
   )
 }

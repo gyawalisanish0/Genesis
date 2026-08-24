@@ -245,21 +245,20 @@ export interface MapDef {
 
 // ── Tileset ────────────────────────────────────────────────────────────────────
 
-// Tile visual definition — color is required; patterns are optional JSON overrides.
-// When patterns are absent, dungeonTileArt.ts generates them computationally.
-// Keys in `patterns` are rotation degrees as strings: '0' | '90' | '180' | '270'
-export interface AsciiTileDef {
-  color:     string                           // CSS hex colour
-  pattern?:  string[]                         // fixed override (non-rotated tile)
-  patterns?: Record<string, string[]>         // per-rotation override
+// Tile visual definition. `color` is the base fill, used directly until pixel
+// tile art is authored; `art` names the tile sheet frame under
+// images/tilesets/{key}/. See docs/ui/00-design-system.md § Tilesets.
+export interface TileVisualDef {
+  color: string             // CSS hex colour — base fill
+  art?:  string             // tile sheet frame stem, e.g. 'floor_a'
 }
 
 export interface TilesetDef {
   type:     'tileset'
   key:      string
   bgColor?: string
-  // Maps TileTypeDef.id → ASCII visual definition
-  tiles:    Record<string, AsciiTileDef>
+  // Maps TileTypeDef.id → tile visual definition
+  tiles:    Record<string, TileVisualDef>
 }
 
 export interface PlayerUnitsDef {
@@ -373,8 +372,6 @@ export interface StatusChipDef {
   // Passive/status logo key. Resolves to images/characters/{defId}/UI/Status/{icon}.png
   // 'psv_logo' = passive icon. Shown inside the chip square when the PNG loads.
   icon?:           string
-  /** 3-line ASCII art logo rendered inside the chip square. Each entry = one row. */
-  ascii?:          string[]
   /** Shown in the chip detail popup when the player taps the chip. */
   description?:    string
   /** When true, applies the chip colour as a glow ring on the portrait circle. */
@@ -400,7 +397,7 @@ export type AnimPhase =
   | { type: 'evasionDodge' }
   | { type: 'projectile' }
   | { type: 'impact' }
-  | { type: 'flash';        figure: 'acting' | 'target'; colour?: number }
+  | { type: 'flash';        figure: 'acting' | 'target'; colour?: string }
   | { type: 'particles';    figure: 'acting' | 'target' }
   | { type: 'damageNumber' }
   | { type: 'statusText';   text: string; colour: string }
@@ -416,43 +413,3 @@ export type AnimPhase =
  * for that skill. Loaded from `characters/{defId}/anim_sequence.json`.
  */
 export type AnimSequenceManifest = Record<string, AnimPhase[]>
-
-// ── Visual Novel Script ───────────────────────────────────────────────────────
-
-export type VNSpeaker = 'creator' | 'player' | 'kali' | 'commander' | 'celan' | 'narration' | 'alert'
-export type VNEffect  = 'shake' | 'pulse' | 'glow' | 'dim'
-export type VNSpeed   = 'slow' | 'normal' | 'fast'
-
-export interface VNDialogueLine {
-  kind:          'dialogue'
-  who:           VNSpeaker
-  text:          string
-  speed?:        VNSpeed | number  // overrides per-speaker default
-  effect?:       VNEffect          // CSS text animation
-  sfx?:          string            // SoundService key — plays on line start
-  autoAdvance?:  number            // ms after typewriter completes; auto-advances
-}
-
-export interface VNInputLine {
-  kind:         'input'
-  inputKey:     'commanderName' | 'organisationName'
-  placeholder?: string
-}
-
-export interface VNTransitionLine {
-  kind:  'transition'
-  style: 'white_flash'
-}
-
-export interface VNPauseLine {
-  kind:     'pause'
-  duration: number  // ms; auto-advances, no tap
-}
-
-export type VNLine = VNDialogueLine | VNInputLine | VNTransitionLine | VNPauseLine
-
-export interface VNScriptDef {
-  type:     'vn_script'
-  scriptId: string
-  lines:    VNLine[]
-}

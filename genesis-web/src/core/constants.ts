@@ -45,6 +45,8 @@ export const MAX_SKILL_SLOTS = 4
 export const TEAM_SIZE_MAX   = 2
 
 // Timeline visual settings
+export const TIMELINE_STRIP_DP         = 48    // strip width; fits token + occupancy + intent badge
+export const TICK_TOKEN_DP             = 24    // unit marker diameter on the stream
 export const TIMELINE_PX_PER_TICK      = 10    // pixels per tick unit on the strip
 export const TIMELINE_BUFFER_TICKS     = 15    // extra ticks beyond the outermost registered unit
 export const TIMELINE_OVERLAY_PX       = 24    // dead-zone overlay height at each strip edge (1.5rem @ 16px base — must match CSS)
@@ -90,6 +92,35 @@ export const DUNGEON_SPOT_FLASH_MS         = 2000  // ms enemy shakes on-grid (s
 export const DUNGEON_ENCOUNTER_FLASH_MS    = 1000  // ms rapid white-flash overlay before navigating to battle
 export const DUNGEON_ENCOUNTER_BANNER_MS   = 1200  // ms encounter telegraph banner (wave phase)
 
+// Battle arena — GBA duel frame geometry (dp; all multiples of 2 dp = 1 art px)
+export const SPRITE_BOX_DP        = 96    // 48 art px at 2x — the GBA 26.7%-of-width ratio
+export const PLATFORM_W_DP        = 96    // shadow disc under a combatant
+export const PLATFORM_H_DP        = 16
+export const SPRITE_BOB_PERIOD_MS = 1600  // idle breathing cycle
+export const SPRITE_BOB_DIP_DP    = 2     // 1 art px
+export const SHOVE_STEP_DP        = 8     // contact step toward the target
+export const SHOVE_OUT_MS         = 190
+export const SHAKE_AMPLITUDE_DP   = 4
+export const SHAKE_HIT_MS         = 160
+export const SHAKE_BOOSTED_MS     = 320
+export const EVADE_DODGE_DX_DP    = 16    // sidestep distance on an evade
+export const EVADE_DODGE_MS       = 170
+export const FLASH_HOLD_MS        = 96    // impact silhouette flash
+export const DEATH_FADE_MS        = 480
+export const SEQUENCE_BUDGET_MS   = 1400  // must fit inside ANIM_TIMEOUT_MS
+
+// Dice roll — the needle sweeps the odds band, then settles in the rolled zone.
+// Sweep + settle must fit inside DICE_RESULT_DISMISS_MS (1200) or the roll is
+// cut off before the player reads it.
+export const DICE_SWEEP_MS  = 720   // needle travel before it locks on
+export const DICE_SETTLE_MS = 380   // hold on the result after landing
+
+// Resource bar segmentation — HP/AP/XP fill draws as this many discrete
+// blocks rather than a continuous width, so it "ticks down" instead of sliding.
+export const RESOURCE_BAR_SEGMENT_COUNT      = 20    // blocks the fill divides into
+export const RESOURCE_BAR_LOW_THRESHOLD      = 0.5   // HP fill shifts to flare-3 below this
+export const RESOURCE_BAR_CRITICAL_THRESHOLD = 0.25  // HP fill shifts to blood-2 below this
+
 // First-time hint toaster
 export const HINT_TOASTER_DURATION_MS = 5000  // ms the hint stays visible before auto-dismiss
 
@@ -100,18 +131,6 @@ export const BATTLE_ERROR_TOAST_MS = 15000  // ms error toast is shown before au
 export const AP_WARN_SHAKE_MS   = 380   // shake animation duration on tapped AP-short button
 export const AP_WARN_DISMISS_MS = 3000  // ms the insufficient-AP toast stays visible
 export const HINT_STORAGE_PREFIX      = 'genesis-hint-'
-
-// Narrative layer — dialogue box + animation timings
-export const NARRATIVE_DISMISS_MS    = 3500  // ms before dialogue box auto-dismisses
-export const NARRATIVE_TYPEWRITER_MS = 30    // ms per character typewriter effect
-export const NARRATIVE_FLASH_MS      = 600   // screen-flash animation duration
-export const NARRATIVE_FLY_MS        = 350   // portrait fly-in animation duration
-export const NARRATIVE_FLOAT_MS      = 1200  // floating-text rise + fade duration
-
-// Creator dialogue — dot-field coalesce animation
-export const CREATOR_DOT_TICK_MS        = 40  // animation frame interval ms
-export const CREATOR_DOT_FLICKER        = 5   // noise frames before letter snaps into place
-export const CREATOR_DOT_CHARS_PER_TICK = 3   // characters that begin revealing each tick
 
 // Default app settings
 export const DEFAULT_SETTINGS: AppSettings = {

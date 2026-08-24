@@ -10,10 +10,8 @@ import { useScreen } from '../navigation/useScreen'
 import { SCREEN_IDS } from '../navigation/screenRegistry'
 import {
   loadCharacterIndex, loadCharacter,
-  loadCharacterDialogue, loadCampaignIndex, loadStageDef,
-  loadLevelNarrative,
+  loadCampaignIndex, loadStageDef,
 } from '../services/DataService'
-import { NarrativeService }  from '../services/NarrativeService'
 import { ResolutionService } from '../services/ResolutionService'
 import styles from './SplashScreen.module.css'
 
@@ -29,16 +27,7 @@ async function loadAllGameData(onProgress: (pct: number) => void): Promise<void>
   // Load campaign index + stage defs
   const stageIds = await loadCampaignIndex().catch(() => [] as string[])
   await Promise.all(stageIds.map(loadStageDef))
-  onProgress(70)
-
-  // Load character dialogue; register globally
-  const dialogueDefs = await Promise.all(ids.map(loadCharacterDialogue))
-  const characterEntries = dialogueDefs.flatMap((d) => d?.entries ?? [])
-  NarrativeService.registerEntries('characters', characterEntries)
   onProgress(90)
-
-  // Pre-load campaign stage_001 narrative (registered fresh when dungeon loads)
-  await loadLevelNarrative('stage_001').catch(() => null)
 
   onProgress(100)
 }
@@ -58,7 +47,6 @@ export function SplashScreen() {
   const [error,        setError]        = useState<string | null>(null)
   const [done,         setDone]         = useState(false)
   const [readyToEnter, setReadyToEnter] = useState(false)
-  const [destination,  setDestination]  = useState<typeof SCREEN_IDS.DREAM | typeof SCREEN_IDS.MAIN_MENU>(SCREEN_IDS.MAIN_MENU)
 
   useEffect(() => {
     Promise.all([
@@ -67,13 +55,12 @@ export function SplashScreen() {
     ])
       .then(() => {
         setDone(true)
-        setDestination(SCREEN_IDS.DREAM)
         if (isBrowserTab()) {
           // Hold navigation — first tap fires requestFullscreen (via DisplayService listener)
           // then navigates on the same gesture.
           setReadyToEnter(true)
         } else {
-          setTimeout(() => navigateTo(SCREEN_IDS.DREAM), 400)
+          setTimeout(() => navigateTo(SCREEN_IDS.MAIN_MENU), 400)
         }
       })
       .catch((err: unknown) => {
@@ -86,7 +73,7 @@ export function SplashScreen() {
     <ScreenShell>
       <div
         className={styles.root}
-        onPointerDown={readyToEnter ? () => navigateTo(destination) : undefined}
+        onPointerDown={readyToEnter ? () => navigateTo(SCREEN_IDS.MAIN_MENU) : undefined}
       >
         <div className={styles.stars} aria-hidden />
 

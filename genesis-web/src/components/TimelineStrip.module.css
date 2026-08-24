@@ -1,0 +1,194 @@
+/* TimelineStrip — the tick stream. Moved out of BattleScreen.module.css when
+ * the strip became its own component. Spec: docs/ui/01-components.md. */
+
+/* ── The tick stream (48 dp left column) ────────────────────────────────
+ * Widened from 28 dp: at that width a token filled the strip edge to edge and
+ * left no room for occupancy or intent, which is why the displacement label
+ * had to clip. CONCEPT.md calls the tick system the invention — 28 dp did not
+ * pay that claim. Spec: docs/ui/01-components.md § TimelineStrip. */
+.wrap {
+  width: 3rem;  /* 48 dp — TIMELINE_STRIP_DP */
+  height: 100%;
+  border-right: 1px solid var(--bg-panel);
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-elevated);
+}
+
+/* Dead-zone overlays — content scrolls physically behind these.
+ * Height = 1.5rem (24dp) must match TIMELINE_OVERLAY_PX in constants.ts. */
+.wrap::before,
+.wrap::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1.5rem;
+  background: var(--bg-deep);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.wrap::before { top: 0; }
+
+.wrap::after  { bottom: 0; }
+
+/* Track — absolutely positioned; height set inline; shifted via transform. */
+.track {
+  position: absolute;
+  top: 0;
+  width: 100%;
+}
+
+.trackAnimated {
+  transition: transform var(--motion-timeline);
+}
+
+.axis {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  transform: translateX(-50%);
+  background: var(--bg-panel);
+}
+
+/* Tick mark — top set inline; major variant widens and brightens. */
+.tickMark {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0.5rem;
+  height: 1px;
+  background: var(--bg-panel);
+}
+
+.tickMarkMajor {
+  width: 1rem;
+  background: var(--text-muted);
+}
+
+/* Horizontal "now" bar at the current tick position. */
+.nowLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--accent-genesis);
+  transform: translateY(-50%);
+}
+
+/* Occupancy — how many units share a tick. A tick at TICK_MAX_OCCUPANCY
+ * displaces the next arrival by a D8 roll, so the crowd must be visible
+ * before anyone commits to landing there. docs/mechanics/timeline-collisions.md */
+.occupancy {
+  position: absolute;
+  left: 0.125rem;
+  width: 0.25rem;
+  height: 0.25rem;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.shared { background: var(--text-muted); }
+
+/* At the cap — the next unit to arrive here gets shoved. */
+.full {
+  background: var(--accent-warn);
+  box-shadow: 0 0 0 var(--px) var(--accent-warn);
+}
+
+/* Projected landing — a ghost tick showing where the selected skill lands the
+ * acting unit. Chrome, not sprite art, so the dash and glow are licensed. */
+.projected {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: var(--px);
+  background: var(--accent-genesis);
+  opacity: 0.55;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+/* Landing on a full tick means a D8 shove. The line turns to the warning
+ * colour so the risk is visible while the skill is still just selected. */
+.projectedFull {
+  background: var(--accent-warn);
+  opacity: 1;
+}
+
+.projectedFull::before { background: var(--accent-warn); }
+
+/* Ticks left of the projection are the ones this action will cost. */
+.projected::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  width: 0.5rem;
+  height: var(--px);
+  background: var(--accent-genesis);
+}
+
+/* D8 displacement callout — the cause of an otherwise unexplained jump. */
+.displaced {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: var(--px);
+  background: var(--accent-warn);
+  transform: translateY(-50%);
+  pointer-events: none;
+  animation: displacedFade 1600ms steps(6) both;
+}
+
+@keyframes displacedFade {
+  0%   { opacity: 0; }
+  15%  { opacity: 1; }
+  70%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+:root[data-reduce-animations='true'] .displaced { animation: none; opacity: 1; }
+
+/* Unit marker — positions the SVG portrait on its tick; SVG owns size/color.
+ * top transition: elastic spring fires when registerTick advances the marker
+ * after the dice animation ends, creating a satisfying world-update feel. */
+.marker {
+  position: absolute;
+  left: calc(50% + 0.25rem);   /* offset for the occupancy gutter on the left */
+  transform: translate(-50%, -50%);
+  display: flex;
+  border-radius: 50%;  /* needed for markerActive box-shadow pulse */
+  transition: top 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Active ally — pulse in --accent-info, matching the HP arc. The previous
+ * literal rgba(59,130,246) was a generic blue, not this token. */
+.activeAlly {
+  animation: markerPulseAlly 1.5s ease-in-out infinite;
+}
+
+/* Active enemy — pulse in --accent-danger, matching the HP arc. */
+.activeEnemy {
+  animation: markerPulseEnemy 1.5s ease-in-out infinite;
+}
+
+/* History ghost — grayscale + dimmed; no interaction */
+.ghostMarker {
+  filter: grayscale(1);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+@keyframes markerPulseAlly {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent-info) 50%, transparent); }
+  50%      { box-shadow: 0 0 0 0.375rem transparent; }
+}
+
+@keyframes markerPulseEnemy {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent-danger) 50%, transparent); }
+  50%      { box-shadow: 0 0 0 0.375rem transparent; }
+}

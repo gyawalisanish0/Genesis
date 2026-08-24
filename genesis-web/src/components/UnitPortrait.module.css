@@ -1,5 +1,4 @@
 .portrait {
-  border-radius: var(--r-md);
   border: 2px solid transparent;
   background: var(--bg-elevated);
   display: flex;
@@ -14,6 +13,14 @@
   font-size: var(--t-subheading-size);
   font-weight: var(--t-subheading-weight);
   color: var(--text-secondary);
+}
+
+/* Pixel art must never be smoothed — see docs/ui/00-design-system.md § Pixel rules. */
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
 }
 
 /* Size variants */

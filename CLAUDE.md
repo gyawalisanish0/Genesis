@@ -159,31 +159,34 @@ Genesis/
 │   │   ├── manifest.json         # PWA manifest: standalone mode, portrait, theme colour
 │   │   ├── data/                 # JSON game content
 │   │   │   ├── characters/       # index.json + one subfolder per character
-│   │   │   │   ├── index.json    # ["warrior_001", "hunter_001"]
-│   │   │   │   ├── warrior_001/  # Iron Warden (Warrior, Rarity 3)
-│   │   │   │   │   ├── main.json        # CharacterDef
-│   │   │   │   │   ├── skills.json      # SkillDef[] — Slash (physical, melee)
-│   │   │   │   │   ├── dialogue.json    # CharacterDialogueDef — universal reactions
-│   │   │   │   │   └── animations.json  # AnimationManifest (optional)
-│   │   │   │   └── hunter_001/   # Swift Veil (Hunter, Rarity 2)
-│   │   │   │       ├── main.json
-│   │   │   │       ├── skills.json      # Arcane Bolt (energy, ranged)
-│   │   │   │       ├── dialogue.json    # CharacterDialogueDef — universal reactions
-│   │   │   │       └── animations.json  # AnimationManifest (optional)
-│   │   │   ├── levels/           # Level-specific narrative (one subfolder per level)
-│   │   │   │   └── story_001/
-│   │   │   │       └── narrative.json # LevelNarrativeDef — story beats, cutscenes
-│   │   │   ├── tilesets/         # Visual tileset definitions (one subfolder per tileset key)
+│   │   │   │   ├── index.json    # ["hugo_001", "husty_001", "tara_001", …]
+│   │   │   │   └── hugo_001/     # one folder per character
+│   │   │   │       ├── main.json         # CharacterDef
+│   │   │   │       ├── skills.json       # SkillDef[]
+│   │   │   │       ├── passive.json      # PassiveDef (optional)
+│   │   │   │       ├── animations.json   # AnimationManifest — sprite sheet contract (optional)
+│   │   │   │       ├── anim_sequence.json# AnimSequenceManifest — per-skill AnimPhase[] (optional)
+│   │   │   │       └── dialogue.json     # (orphaned — narrative system removed)
+│   │   │   ├── campaign/         # index.json + one subfolder per stage
+│   │   │   │   └── stage_001/
+│   │   │   │       ├── stage.json     # StageDef
+│   │   │   │       ├── map.json       # MapDef
+│   │   │   │       └── narrative.json # (orphaned — narrative system removed)
+│   │   │   ├── statuses/         # {statusId}.json — StatusDef, global namespace
+│   │   │   ├── levels/           # (orphaned — narrative system removed)
+│   │   │   ├── scripts/          # (orphaned — VN scene system removed)
+│   │   │   ├── tilesets/         # One subfolder per tileset key
 │   │   │   │   └── mars/
-│   │   │   │       └── tileset.json   # TilesetDef — sourceSize, tiles map, pending stubs
+│   │   │   │       └── tileset.json   # TilesetDef — bgColor + tiles map (color, optional art)
 │   │   │   └── modes/            # story.json, ranked.json
-│   │   └── images/               # 3x PNG assets (primary density)
-│   │       └── tilesets/         # (reserved — mars tiles are ASCII, no PNGs needed)
+│   │   └── images/               # Pixel art, authored at 1× (art px) — see docs/ui/00-design-system.md
+│   │       ├── characters/{defId}/portrait.png   # 32 × 32 art px
+│   │       └── tilesets/{key}/{art}.png          # 24 × 24 art px (pending)
 │   ├── audio/                    # Sound files — {key}.webm + {key}.mp3 pairs
 │   └── src/
 │       ├── core/                 # Pure TS game logic — zero UI imports
-│       │   ├── types.ts          # StatBlockDef, CharacterDef, SkillDef, Unit, ModeDef, AppSettings, BattleResult, QualityTier, TilesetDef, AuraDef, AnimationStateDef, AnimationProjectileDef, AnimationManifest, AnimPhase, AnimSequenceManifest, VNScriptDef, VNLine, VNDialogueLine, VNInputLine, VNTransitionLine, VNPauseLine, VNSpeaker, VNEffect, VNSpeed
-│       │   ├── constants.ts      # All numeric constants: tick ranges, dice params, timing thresholds, BETWEEN_TURN_PAUSE_MS, NARRATIVE_* timings, QUALITY_* thresholds, DUNGEON_ENCOUNTER_BANNER_MS, HINT_TOASTER_DURATION_MS, HINT_STORAGE_PREFIX
+│       │   ├── types.ts          # StatBlockDef, CharacterDef, SkillDef, Unit, ModeDef, AppSettings, BattleResult, QualityTier, TileVisualDef, TilesetDef, AuraDef, AnimationStateDef, AnimationProjectileDef, AnimationManifest, AnimPhase, AnimSequenceManifest
+│       │   ├── constants.ts      # All numeric constants: tick ranges, dice params, timing thresholds, BETWEEN_TURN_PAUSE_MS, QUALITY_* thresholds, DUNGEON_ENCOUNTER_BANNER_MS, HINT_TOASTER_DURATION_MS, HINT_STORAGE_PREFIX
 │       │   ├── screen-types.ts   # ScreenId, ScreenConfig, SafeAreaMode, ScreenLifecycleHooks
 │       │   ├── unit.ts           # Immutable Unit factory + mutation helpers (createUnit, takeDamage, healUnit, incrementActionCount, …)
 │       │   ├── battleHistory.ts  # HistoryEntry type + makeHistoryEntry factory
@@ -198,17 +201,13 @@ Genesis/
 │       │   │   ├── ClashResolver.ts      # buildFactions, resolveClashOrder, resolveClashWinner (speed/dice)
 │       │   │   └── index.ts
 │       │   ├── effects/          # Effect engine — open hook system for skills/items/passives
-│       │   │   ├── types.ts      # 15 effect discriminated union, ValueExpr, WhenClause, EffectContext
+│       │   │   ├── types.ts      # 17 effect discriminated union, ValueExpr, WhenClause, EffectContext
 │       │   │   ├── applyEffect.ts        # Dispatch: rescope target → evaluate condition → call handler
 │       │   │   ├── resolveValue.ts       # ValueExpr → number (flat, stat-%, sum)
 │       │   │   ├── conditions.ts         # Recursive boolean gates (chance, HP/AP, status, dice, not/all/any)
 │       │   │   ├── patch.ts              # Named-key level-upgrade patching (dot-delimited paths)
 │       │   │   ├── targetSelector.ts     # Single/multi/filtered target resolution
-│       │   │   └── builtins/     # 6 registered handlers: damage, heal, gainAp, spendAp, tickShove, modifyStat
-│       │   ├── narrative/        # Pure narrative types + resolver — zero UI imports
-│       │   │   ├── types.ts      # NarrativeTrigger, NarrativeAnimation, NarrativeEntry, CharacterDialogueDef, LevelNarrativeDef, NarrativeEvent
-│       │   │   ├── NarrativeResolver.ts # resolveByEvent, resolveById, pickLine
-│       │   │   └── index.ts      # re-exports
+│       │   │   └── builtins/     # 14 registered handlers: damage, heal, gainAp, spendAp, tickShove, modifyStat, applyStatus, secondaryResource, resetApAccum, syncResources, broadcastResource, spawnUnit, …
 │       │   └── engines/skill/    # createSkillInstance, getCachedSkill, levelUpSkill, invalidateCache
 │       ├── navigation/           # Screen routing, safe-area, back-button
 │       │   ├── screenRegistry.ts # SCREEN_IDS constants + SCREEN_REGISTRY map (9 screens: splash, main-menu, campaign, dungeon, pre-battle, battle, battle-result, roster, settings)
@@ -219,9 +218,8 @@ Genesis/
 │       │   ├── backButtonRegistry.ts  # Module-level singleton: register/unregister/invoke one handler at a time
 │       │   └── useBackButton.ts       # Hook: registers handler, pushes URL-sentinel for web popstate interception
 │       ├── services/             # Side-effectful singletons; Capacitor allowed
-│       │   ├── DataService.ts    # JSON loader: loadCharacter, loadCharacterSkillDefs, loadMode, loadCharacterWithSkills, loadCharacterDialogue, loadLevelNarrative, loadTilesetDef, loadAnimationManifest, loadAnimSequenceManifest, loadVNScript(scriptId) (all cached; loadAnimationManifest and loadAnimSequenceManifest return null silently when absent); characterPortraitUrl(defId) and characterStatusIconUrl(defId, iconKey) — synchronous URL helpers (no fetch)
+│       │   ├── DataService.ts    # JSON loader: loadCharacter, loadCharacterSkillDefs, loadMode, loadCharacterWithSkills, loadTilesetDef, loadAnimationManifest, loadAnimSequenceManifest (all cached and Zod-validated; loadAnimationManifest and loadAnimSequenceManifest return null silently when absent); characterPortraitUrl(defId) and characterStatusIconUrl(defId, iconKey) — synchronous URL helpers (no fetch)
 │       │   ├── DisplayService.ts # Full-screen + StatusBar: Capacitor StatusBar.hide() on native; Fullscreen API on web
-│       │   ├── NarrativeService.ts # Global narrative bus: emit(), play(), subscribe(), subscribeDirect(), registerEntries(), unregisterEntries(), getAllEntries()
 │       │   ├── ResolutionService.ts # Quality tier: rAF FPS benchmark → High/Medium/Low; sets data-quality on documentElement for CSS gates; localStorage persistence; stepUp(); subscribe()
 │       │   ├── SoundService.ts   # Phaser headless audio engine: init(), playSfx(key), playMusic(key), stopMusic(), setSfxVolume(v), setMusicVolume(v); audio files at public/audio/{key}.webm|mp3; keys registered in SFX_KEYS / MUSIC_KEYS arrays
 │       │   └── __tests__/
@@ -229,11 +227,9 @@ Genesis/
 │       │   ├── useScrollAwarePointer.ts  # Tap / hold / scroll gesture discriminator (pointer-delta based)
 │       │   └── useViewportScale.ts       # portrait: scale=w/360; landscape: scale=min(w/360,h/640); innerHeight=h/scale; updates on resize/orientationchange/visualViewport
 │       ├── hooks/                # Shared React hooks (data fetching, UI state)
-│       │   ├── useRosterData.ts          # Loads character index + all CharacterDef via DataService (cached)
-│       │   └── useVNPlayer.ts            # VN script player: typewriter, speed/effect/sfx/autoAdvance, transitions, inputs, canvas phase
+│       │   └── useRosterData.ts          # Loads character index + all CharacterDef via DataService (cached)
 │       ├── screens/              # React screen components (one .tsx + one .module.css each)
-│       │   ├── SplashScreen.tsx          # Real DataService preload (characters + campaign + narrative) → auto-navigate to main menu
-│       │   ├── DreamScreen.tsx           # 9-line wrapper — renders <VisualNovelCanvas scriptId="opening" onComplete={→main-menu} />; no logic
+│       │   ├── SplashScreen.tsx          # Real DataService preload (characters + campaign) → auto-navigate to main menu
 │       │   ├── MainMenuScreen.tsx        # PLAY / ROSTER / SETTINGS nav; quit confirm on back
 │       │   ├── CampaignScreen.tsx        # Stage select + unlocking; primary game flow for public demo
 │       │   ├── DungeonScreen.tsx         # Turn-based dungeon exploration; stage objective pill, party HP pill, encounter banner, HintToaster hints
@@ -244,7 +240,7 @@ Genesis/
 │       │   ├── PreBattleStepTeam.tsx     # Step 1 — character roster pick (1–2 units)
 │       │   ├── PreBattleStepItems.tsx    # Step 2 — equipment slots (stub)
 │       │   ├── BattleScreen.tsx          # Battle layout: timeline strip, arena, BATTLE LOG button, portrait col, action grid, overlays; tap-to-skip dice hotzone; player-turn action grid pulse
-│       │   ├── BattleContext.tsx         # Screen-local context: arenaRef, phase, units, log, timeline, DiceResult, inspectingSkill, skipDice, endBattle navigation, tick displacement at start, phase-gated arena animations, sequential AI timing; drives AsciiArena via BattleArenaHandle ref
+│       │   ├── BattleContext.tsx         # Screen-local context: arenaRef, phase, units, log, timeline, DiceResult, inspectingSkill, skipDice, endBattle navigation, tick displacement at start, phase-gated arena animations, sequential AI timing; drives SpriteArena via BattleArenaHandle ref
 │       │   ├── BattleLogOverlay.tsx      # Slide-up battle log history panel; opened by BATTLE LOG button; closed by ✕, backdrop tap, or back button; auto-scrolls to latest entry
 │       │   ├── BattleLogOverlay.module.css
 │       │   ├── DiceResultOverlay.module.css
@@ -257,38 +253,25 @@ Genesis/
 │       │   ├── BattleResultScreen.tsx    # Victory/defeat banner, rewards, unit results, battle stats
 │       │   ├── RosterScreen.tsx          # Character grid with class + rarity + name filters
 │       │   └── SettingsScreen.tsx        # Audio / display / notification / account settings
-│       ├── ascii/                # Pure-TS ASCII animation engine — no React, no Phaser
-│       │   ├── AsciiAnimEngine.ts    # BattleArenaHandle command dispatcher → AnimSignal stream → React re-render
-│       │   ├── FigureAnimator.ts     # Per-figure frame-loop: idle, attack, hurt, dodge, death state machine
-│       │   ├── ProjectileAnimator.ts # Ranged attack projectile arc animation
-│       │   └── types.ts              # AnimSignal, AsciiArenaFrame, AsciiManifest, AsciiSequence, AsciiStateConfig, AsciiActionFrames
 │       ├── components/           # Reusable React widgets
 │       │   ├── PrimaryButton.tsx         # Variants: primary / secondary / danger / ghost
 │       │   ├── ResourceBar.tsx           # Animated HP / AP / XP bar (400ms tween)
 │       │   ├── UnitPortrait.tsx          # Portrait circle: rarity-coloured border, 4 sizes, greyscale option
 │       │   ├── PagedGrid.tsx             # Generic paged grid: cols×rows, pointer swipe, arrows, dots, page counter
-│       │   ├── AsciiArena.tsx            # React battle arena: exposes BattleArenaHandle ref; delegates to AsciiAnimEngine; renders acting/target ASCII figures, dice, feedback, turn display — no Phaser canvas
-│       │   ├── AsciiArena.module.css
-│       │   ├── DungeonArena.tsx          # React dungeon grid: forwardRef DungeonArenaHandle (loadMap, setPartyTile, revealTiles, setEntityPosition, setEntityVisible, setEntityGreyscale, removeEntity, activateWavePhase, deactivateWavePhase, setTapCallback); follow camera — party always centered; 48px fixed cells; 32×32 ASCII tile blocks scaled via CSS transform
+│       │   ├── SpriteArena.tsx           # React battle stage: owns BattleArenaHandle ref; GBA framing (enemy upper-right, ally lower-left); placeholder slots until sprite sheets are authored
+│       │   ├── SpriteArena.module.css
+│       │   ├── DungeonArena.tsx          # React dungeon grid: forwardRef DungeonArenaHandle (loadMap, setPartyTile, revealTiles, setEntityPosition, setEntityVisible, setEntityGreyscale, removeEntity, activateWavePhase, deactivateWavePhase, setTapCallback); follow camera — party always centered; 48px fixed cells; tiles fill with TilesetDef.tiles[id].color until tile art is authored
 │       │   ├── DungeonArena.module.css
-│       │   ├── dungeonTileArt.ts         # Fallback 32×32 ASCII tile pattern generator (seeded hash); used when tileset JSON is absent
-│       │   ├── NarrativeLayer.tsx        # Global narrative overlay (mounted in App.tsx); exports NarrativeUnits registry
-│       │   ├── NarrativeDialogueOverlay.tsx  # Dialogue box: portrait + nameplate + typewriter text
-│       │   ├── NarrativeScreenFlash.tsx  # Full-screen colour burst animation
-│       │   ├── NarrativePortraitFlyIn.tsx # Character portrait slides in from left/right
-│       │   ├── NarrativeFloatingText.tsx # Floating impact text (e.g. "CRITICAL!")
 │       │   ├── HintToaster.tsx           # One-shot contextual hint chip; localStorage-backed; auto-dismiss + tap-dismiss
 │       │   ├── HintToaster.module.css
-│       │   ├── VisualNovelCanvas.tsx     # Full-screen VN player: loads VNScriptDef via DataService, delegates to useVNPlayer; renders dark/light canvas, speaker chips, typewriter text, name input, white-flash transition
-│       │   └── VisualNovelCanvas.module.css
 │       ├── styles/
 │       │   └── tokens.css        # Full design-token set (colours, typography, spacing, radius, motion, safe-area, --app-scale)
-│       ├── App.tsx               # Transform-scale viewport + HashRouter + ScreenProvider + 7-route declaration
+│       ├── App.tsx               # Transform-scale viewport + HashRouter + ScreenProvider + route table
 │       ├── App.module.css        # Outer wrapper (black letterbox); inner container uses CSS transform scale
 │       └── main.tsx              # Vite entry: registerBuiltins() → React root
 ```
 
-> Both renderers are pure React + CSS — no Phaser canvas. **`AsciiArena`** drives battles via `AsciiAnimEngine` (pure TS state machine). **`DungeonArena`** renders the dungeon grid with a follow camera (party always centered, 48px cells, 32×32 ASCII tile blocks). **`SoundService`** runs Phaser in `HEADLESS` mode as the sole audio engine — audio files live in `public/audio/`.
+> Both renderers are pure React + CSS — no Phaser canvas. **`SpriteArena`** is the battle stage and owns the `BattleArenaHandle` contract the engine drives. **`DungeonArena`** renders the dungeon grid with a follow camera (party always centered, 48px cells). Art direction is GBA-era pixel art — see `docs/ui/00-design-system.md`. **`SoundService`** runs Phaser in `HEADLESS` mode as the sole audio engine — audio files live in `public/audio/`.
 
 ---
 
@@ -296,7 +279,7 @@ Genesis/
 
 ### Layer Ordering (no circular imports)
 ```
-core → ascii → services → components → screens → App
+core → services → components → screens → App
 ```
 Each layer may only import from layers to its left.
 
@@ -304,11 +287,6 @@ Each layer may only import from layers to its left.
 - **Zero UI imports** — no React, no Phaser, no Capacitor
 - Pure TypeScript functions and interfaces
 - Unit is an **immutable value object** — mutation functions return a new object
-
-### `ascii/`
-- Pure TypeScript — no React, no Phaser, no Capacitor
-- `AsciiAnimEngine` is the battle animation state machine; receives `BattleArenaHandle` commands, emits `AnimSignal` to React
-- `FigureAnimator` drives per-figure frame loops (idle, attack, hurt, dodge, death)
 
 ### `services/`
 - No React imports
@@ -343,7 +321,7 @@ Each layer may only import from layers to its left.
 ## Input Handling
 
 - **Menus / screens**: standard React `onPointerDown` handlers (via `useScrollAwarePointer`)
-- **Battle arena**: standard React `onPointerDown` on the `AsciiArena` container
+- **Battle arena**: standard React `onPointerDown` on the `SpriteArena` container
 - **Back button — native (Android/iOS)**: Capacitor `App.addListener('backButton', …)` in `ScreenProvider`, dispatches to `backButtonRegistry`. One listener, never re-registered.
 - **Back button — web browser**: `popstate` capture-phase listener in `ScreenProvider` intercepts browser back before React Router. `useBackButton` pushes a URL-stable sentinel (`window.history.pushState(null, '')` at the current hash) so no `hashchange` fires; only `popstate` fires and is intercepted cleanly.
 - **Back button in battle**: `useBackButton` registers a strict bounded pause loop — back → pause, back → resume. No navigation escape via back; only the LEAVE BATTLE button in the pause menu exits. Guards: skip during load, 300 ms debounce, functional `setPaused(prev => !prev)` to avoid stale closure.
@@ -485,16 +463,16 @@ public/data/characters/index.json              # character discovery list
 public/data/characters/{id}/main.json          # CharacterDef (stats, class, rarity…)
 public/data/characters/{id}/skills.json        # SkillDef[] for that character
 public/data/characters/{id}/passive.json       # PassiveDef — single passive per character
-public/data/characters/{id}/dialogue.json      # CharacterDialogueDef — universal battle reactions (optional)
+public/data/characters/{id}/dialogue.json      # (orphaned — narrative system removed; retained for redesign)
 public/data/characters/{id}/animations.json    # AnimationManifest — display dims, animation states, aura defs, projectile (optional; null return = placeholder fallback)
 public/data/characters/{id}/anim_sequence.json # AnimSequenceManifest — skill.id or sequenceId → AnimPhase[]; covers skill attacks and status activation/expiry sequences (optional; null when absent)
 public/data/statuses/{id}.json                 # StatusDef — one file per status; global namespace
 public/data/campaign/index.json                # stage discovery list ["stage_001", ...]
 public/data/campaign/{stageId}/stage.json      # StageDef (playerUnits, moveRange, enemyAi, playerControl)
 public/data/campaign/{stageId}/map.json        # MapDef (tilemap, entities, wavePhase, fogOfWar, tilesetKey?)
-public/data/campaign/{stageId}/narrative.json  # LevelNarrativeDef — dungeon-specific story beats + cutscenes
+public/data/campaign/{stageId}/narrative.json  # (orphaned — narrative system removed; retained for redesign)
 public/data/tilesets/{key}/tileset.json        # TilesetDef — sourceSize, tiles (id→PNG), optional pending stubs
-public/data/scripts/{scriptId}.json            # VNScriptDef — visual novel script (e.g. opening.json)
+public/data/scripts/{scriptId}.json            # (orphaned — VN scene system removed; retained for redesign)
 public/images/characters/{id}/portrait.png     # Character portrait — HUD panel, timeline markers, roster, pre-battle, result screen
 public/images/characters/{id}/{state_key}/     # Animation frames — 0.png, 1.png … (0-indexed); state_key matches animations.json
 public/images/characters/{id}/UI/Status/{key}.png  # Status/passive chip icons — key matches StatusDef.ui.chip.icon
@@ -533,63 +511,31 @@ skill with dual cooldowns is usable again. Values are patchable via
 
 ---
 
-## Narrative Layer
+## Narrative Layer — removed
 
-The narrative layer drives immersive dialogue and visual reactions across all
-screens. It is globally active — any screen, context, or service can fire an
-event and the nearest `NarrativeLayer` component resolves and plays the match.
+The narrative/VN scene system (`NarrativeLayer`, `NarrativeService`,
+`core/narrative/`, `VisualNovelCanvas`, `useVNPlayer`, `DreamScreen`) was
+removed pending a redesign around centralised scene management.
 
-Full spec: `docs/mechanics/narrative.md`
+Its **content** is intentionally retained on disk and is currently unloaded by
+any code: `characters/{id}/dialogue.json`, `campaign/{stageId}/narrative.json`,
+`levels/{levelId}/narrative.json`, `scripts/{scriptId}.json`. These paths are
+listed in `ORPHANED_PATTERNS` in `dataValidation.test.ts` so the content
+validator skips them rather than failing the build.
 
-### Key rules
-
-- **`NarrativeLayer` is mounted once in `App.tsx`** — inside the scale container,
-  as a sibling of `<Routes>`. Never mount it inside a screen component.
-- **`NarrativeService.emit(event)`** fires a narrative event from any layer
-  (`core/` excluded — pass `defId` not `unit.id` so triggers match JSON keys).
-- **`NarrativeService.play(narrativeId)`** triggers a specific entry directly
-  (cutscene transitions, boss taunts, scripted moments).
-- **`NarrativeService.registerEntries(namespace, entries)`** populates the entry
-  pool. Call at startup (`SplashScreen`) for persistent character/level data.
-- **`NarrativeUnits.register(units)`** — call after battle units load so portrait
-  fly-in animations can resolve speaker data. Clear on battle unmount.
-- **Character dialogue** lives in `characters/{id}/dialogue.json` — universal,
-  mode-independent reactions. Registered under namespace `'characters'`.
-- **Level narrative** lives in `levels/{levelId}/narrative.json` — story-specific
-  beats. Registered under namespace `'{levelId}'`.
-- **`blocking: true`** dims the screen and blocks input — use only for story
-  cutscenes, never for frequent reactive lines.
-- **`priority`** — higher interrupts lower. Default is `0`; story beats use `20`.
-- **`once: true`** — the entry is tracked in a session-scoped Set and will not
-  fire again in the same session.
-- **`sequence: true`** — all `lines` play in order, one tap (or `NARRATIVE_DISMISS_MS`)
-  per line. Without it, one line is picked randomly.
-- **Dialogue freezes the battle** — any entry with `{ type: 'dialogue' }` in its
-  `animations` array silently halts enemy AI, player actions (`executeSkill`,
-  `skipTurn`), and phase derivation for its duration. Freeze is silent (no
-  visual indicator) and resumes instantly on dismiss. Non-dialogue animations
-  (`screen_flash`, `portrait_fly`, `floating_text`) do **not** freeze.
-  `BattleContext` exposes `narrativePaused: boolean` for any UI that needs it.
-
-### Animation types (play simultaneously per entry)
-
-| Type             | Visual effect |
-|---|---|
-| `dialogue`       | Slide-up box: portrait + nameplate + typewriter text |
-| `screen_flash`   | Full-screen colour burst; fades out |
-| `portrait_fly`   | Character portrait slides in from left or right edge |
-| `floating_text`  | Impact text rises from centre and fades |
-
-### Standard event strings
-
-`battle_start` · `battle_victory` · `battle_defeat` · `skill_used` ·
-`boosted_hit` · `evaded` · `unit_death` · `counter` · `clash_resolved`
-
-Any string is valid — add new events by adding JSON entries, no code change needed.
+`BattleEngineCallbacks.onNarrativeEmit` survives as a no-op hook — it is
+generic engine plumbing, not part of the removed system, and is the intended
+attachment point for the replacement.
 
 ---
 
 ## Styling Rules
+
+Art direction is **GBA-era pixel art** — full spec in `docs/ui/00-design-system.md`.
+Mechanically enforced by `npm run validate:ui`, a ratcheting check: existing
+violations are recorded in `ui-baseline.json`, and only *new* ones fail. After
+cleaning a file, re-record with `npm run validate:ui:baseline` — the baseline
+may shrink, never grow. Rules live in `src/__tests__/uiRules.ts`.
 
 - **All sizes in `rem` or CSS custom properties** — no raw `px` except 1px borders/lines
 - **Design tokens in `tokens.css`** — never hardcode colour values inline
@@ -753,7 +699,6 @@ Use the `AskUserQuestion` tool with targeted multiple-choice options. Good quest
 
 - Import React, Phaser, or Capacitor inside `core/`
 - Import Phaser anywhere except `SoundService.ts` — it is the sole Phaser consumer
-- Import React inside `ascii/`
 - Hardcode colour values — use CSS custom properties from `tokens.css`
 - Hardcode safe-area inset values — use `env(safe-area-inset-*)` or `var(--safe-*)`
 - Set layout properties via React `style` prop when they belong in a CSS module

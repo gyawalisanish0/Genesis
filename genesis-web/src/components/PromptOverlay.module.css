@@ -1,0 +1,61 @@
+/* PromptOverlay — blocking decision chrome. Spec: docs/ui/01-components.md.
+ * Replaces the per-overlay backdrop/card CSS in TeamCollisionOverlay and
+ * ClashQteOverlay. Never dismissible: the engine waits on the player. */
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s-md);
+  background: var(--bg-overlay);
+  animation: promptIn var(--motion-modal-in) both;
+}
+
+@keyframes promptIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* The card is a Panel(default) surface; these rules add layout only. */
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-sm);
+  width: 100%;
+  max-width: 17rem;
+  max-height: 90%;
+  overflow-y: auto;
+  padding: var(--s-md);
+}
+
+.title {
+  font-family: var(--font-pixel);
+  font-size: var(--t-subheading-size);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--accent-genesis);
+}
+
+.subtitle {
+  font-size: var(--t-micro-size);
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-sm);
+  width: 100%;
+}
+
+.actions {
+  display: flex;
+  gap: var(--s-sm);
+  width: 100%;
+}

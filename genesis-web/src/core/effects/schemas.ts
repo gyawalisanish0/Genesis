@@ -12,6 +12,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { z } from 'zod'
+import type { ValueExpr, Condition } from './types'
 
 // ── Scalar vocabularies ──────────────────────────────────────────────────────
 
@@ -19,11 +20,9 @@ export const statKeySchema = z.enum([
   'strength', 'endurance', 'power', 'resistance', 'speed', 'precision',
 ])
 
-export const tagSchema = z.enum([
-  'physical', 'energy', 'melee', 'ranged',
-  'utility', 'unique', 'special', 'awakened', 'misc', 'basic',
-  'movement', 'hyper',
-])
+// Open vocabulary — only 'counter'/'uniqueCounter' carry framework meaning
+// (see Tag in effects/types.ts); every other value is content-defined.
+export const tagSchema = z.string().min(1)
 
 export const diceOutcomeSchema = z.enum(['Boosted', 'Hit', 'Evade', 'Fail'])
 
@@ -42,7 +41,7 @@ const valueExprBase = z.union([
   z.object({ globalApSpentPercent: z.number() }).strict(),
 ])
 
-export const valueExprSchema: z.ZodType<unknown> = z.lazy(() =>
+export const valueExprSchema: z.ZodType<ValueExpr> = z.lazy(() =>
   z.union([
     valueExprBase,
     z.object({ sum: z.array(valueExprSchema) }).strict(),
@@ -70,6 +69,9 @@ export const whenClauseSchema = z.discriminatedUnion('event', [
   z.object({ event: z.literal('onBattleStart') }).strict(),
   z.object({ event: z.literal('onBattleEnd') }).strict(),
   z.object({ event: z.literal('onApSpent') }).strict(),
+  z.object({ event: z.literal('onOpponentAction') }).strict(),
+  z.object({ event: z.literal('onCounterTrigger') }).strict(),
+  z.object({ event: z.literal('onCounterCast') }).strict(),
 ])
 
 // ── Condition (recursive) ────────────────────────────────────────────────────
@@ -87,10 +89,12 @@ const conditionLeaf = z.union([
   z.object({ hasTag:        z.string() }).strict(),
   z.object({ diceOutcome:   diceOutcomeSchema }).strict(),
   z.object({ apAccumGte:    z.number() }).strict(),
+  z.object({ selfSecondaryAbove: z.number() }).strict(),
+  z.object({ selfSecondaryBelow: z.number() }).strict(),
   z.object({ selfStatusStacksBelow: z.object({ id: z.string(), stacks: z.number() }) }).strict(),
 ])
 
-export const conditionSchema: z.ZodType<unknown> = z.lazy(() =>
+export const conditionSchema: z.ZodType<Condition> = z.lazy(() =>
   z.union([
     conditionLeaf,
     z.object({ not: conditionSchema }).strict(),
@@ -163,14 +167,24 @@ export const effectSchema = z.discriminatedUnion('type', [
     blocksRecastOfSkill:  z.string().optional(),
     rangedBaseChanceBonus: z.number().optional(),
     stacks:               z.number().int().positive().optional(),
+    payload:              z.record(z.string(), z.unknown()).optional(),
   }).strict(),
   z.object({ ...effectCommon, type: z.literal('removeStatus'),      status: z.string().optional(), tag: z.string().optional() }).strict(),
   z.object({ ...effectCommon, type: z.literal('shiftProbability'),  outcome: diceOutcomeSchema, delta: z.number() }).strict(),
   z.object({ ...effectCommon, type: z.literal('rerollDice'),        outcome: diceOutcomeSchema.optional(), uses: z.number().int().positive(), perBattle: z.boolean().optional() }).strict(),
   z.object({ ...effectCommon, type: z.literal('forceOutcome'),      outcome: diceOutcomeSchema }).strict(),
   z.object({ ...effectCommon, type: z.literal('triggerSkill'),      skillId: z.string(), ignoreCost: z.boolean().optional() }).strict(),
-  z.object({ ...effectCommon, type: z.literal('secondaryResource'), delta: z.number() }).strict(),
+  z.object({
+    ...effectCommon,
+    type:  z.literal('secondaryResource'),
+    delta: z.union([z.number(), z.tuple([z.number(), z.number()])]).optional(),
+    max:   z.number().optional(),
+    set:   z.number().optional(),
+  }).strict(),
   z.object({ ...effectCommon, type: z.literal('resetApAccum') }).strict(),
+  z.object({ ...effectCommon, type: z.literal('syncResources') }).strict(),
+  z.object({ ...effectCommon, type: z.literal('broadcastResource'), statusId: z.string() }).strict(),
+  z.object({ ...effectCommon, type: z.literal('spawnUnit'),         defId: z.string(), attackTarget: z.string().optional() }).strict(),
 ])
 
 // ── Resolution + LevelUpgrade ───────────────────────────────────────────────
@@ -224,6 +238,8 @@ export const skillDefSchema = z.object({
   apCost:        z.number().int().nonnegative(),
   tickCooldown:  z.number().int().positive().optional(),
   turnCooldown:  z.number().int().positive().optional(),
+  minTurns:      z.number().int().nonnegative().optional(),
+  hyperCooldown: z.number().int().positive().optional(),
   tags:          z.array(tagSchema).min(1).max(4),
   maxLevel:      z.number().int().min(1),
   targeting:     targetingSchema,
@@ -248,7 +264,6 @@ export const statusDefSchema = z.object({
       colour:          z.string(),
       durationDisplay: z.enum(['ticks', 'turns', 'fade', 'none']),
       icon:            z.string().optional(),
-      ascii:           z.array(z.string()).optional(),
       description:     z.string().optional(),
       portraitGlow:    z.boolean().optional(),
     }).strict(),

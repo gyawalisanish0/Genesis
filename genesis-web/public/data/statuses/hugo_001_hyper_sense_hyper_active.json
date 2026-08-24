@@ -6,27 +6,38 @@
   "expiresWithStatus": "hugo_001_primal_awareness_dodge",
   "activateSequenceId": "hugo_001_hyper_sense_hyper_activate",
   "expireSequenceId": "hugo_001_hyper_sense_expiry",
-  "tags": ["dodge", "hyper", "melee-dodge", "turn-based", "energy", "ranged"],
+  "tags": [
+    "dodge",
+    "hyper",
+    "melee-dodge",
+    "turn-based",
+    "energy",
+    "ranged"
+  ],
   "ui": {
     "chip": {
-      "label":           "HYPER",
-      "colour":          "var(--accent-gold)",
+      "label": "HYPER",
+      "colour": "var(--accent-gold)",
       "durationDisplay": "fade",
-      "ascii":           ["★◈★", "◈◉◈", "★◈★"],
-      "description":     "Full hyper-mode. Sekkar receptors at maximum sensitivity — 90% melee dodge and 50% ranged dodge. On expiry, unleashes a 200% Power energy burst against all enemies."
+      "description": "Full hyper-mode. Sekkar receptors at maximum sensitivity \u2014 90% melee dodge and 50% ranged dodge. On expiry, unleashes a 200% Power energy burst against all enemies."
     }
   },
   "dodgeConfig": {
-    "meleeChance": 0.90,
-    "rangedChance": 0.50
+    "meleeChance": 0.9,
+    "rangedChance": 0.5
   },
   "effects": [
     {
       "id": "hugo_001_hyper_sense_expire_counter",
-      "when": { "event": "onExpire" },
+      "when": {
+        "event": "onExpire"
+      },
       "target": "all-enemies",
       "type": "damage",
-      "amount": { "stat": "power", "percent": 200 },
+      "amount": {
+        "stat": "power",
+        "percent": 200
+      },
       "damageType": "energy"
     }
   ]

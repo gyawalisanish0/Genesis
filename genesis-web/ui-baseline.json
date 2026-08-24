@@ -1,0 +1,41 @@
+{
+  "no-hardcoded-colour": {
+    "App.module.css": 1,
+    "components/DungeonArena.module.css": 4,
+    "screens/BattleResultScreen.module.css": 2,
+    "screens/BattleScreen.module.css": 2,
+    "screens/DungeonScreen.module.css": 5,
+    "screens/MainMenuScreen.module.css": 2,
+    "screens/SplashScreen.module.css": 8
+  },
+  "module-line-limit": {
+    "components/DungeonArena.tsx": 1,
+    "core/battle/BattleApplyRunner.ts": 1,
+    "core/battle/BattleAttackResolver.ts": 1,
+    "core/battle/BattleDamage.ts": 1,
+    "core/battle/BattleEnemyTelegraphRunner.ts": 1,
+    "core/battle/BattleEngine.ts": 1,
+    "core/battle/BattlePassive.ts": 1,
+    "core/battle/BattlePlayerActions.ts": 1,
+    "core/battle/BattleTickRunner.ts": 1,
+    "core/battle/EngineTypes.ts": 1,
+    "core/effects/builtins/applyStatus.ts": 1,
+    "core/effects/schemas.ts": 1,
+    "core/effects/types.ts": 1,
+    "core/schemas.ts": 1,
+    "core/types.ts": 1,
+    "core/unit.ts": 1,
+    "screens/BattleContext.tsx": 1,
+    "screens/BattleScreen.tsx": 1,
+    "screens/ClashQteOverlay.tsx": 1,
+    "screens/DungeonContext.tsx": 1,
+    "screens/SettingsScreen.tsx": 1,
+    "services/DataService.ts": 1
+  },
+  "no-gradient": {
+    "screens/BattleResultScreen.module.css": 1,
+    "screens/ClashQteOverlay.module.css": 1,
+    "screens/MainMenuScreen.module.css": 1,
+    "screens/SplashScreen.module.css": 8
+  }
+}

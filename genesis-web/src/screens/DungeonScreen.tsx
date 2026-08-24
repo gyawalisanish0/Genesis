@@ -4,8 +4,8 @@ import { SCREEN_IDS }      from '../navigation/screenRegistry'
 import { useBackButton }   from '../input/useBackButton'
 import { DungeonProvider, useDungeonScreen } from './DungeonContext'
 import { DungeonArena }    from '../components/DungeonArena'
-import { HintToaster }     from '../components/HintToaster'
-import { ErrorToaster }    from '../components/ErrorToaster'
+import { ResourceBar } from '../components/ResourceBar'
+import { Toaster } from '../components/Toaster'
 import { ChestOverlay }    from './ChestOverlay'
 import styles from './DungeonScreen.module.css'
 
@@ -45,12 +45,12 @@ function DungeonLayout() {
         {partyLeader           && <PartyHpPill leader={partyLeader} />}
         {encounterFlashing     && <div className={styles.encounterFlash} aria-hidden />}
         {phase === 'exploring' && (
-          <HintToaster id="dungeon-move" message="Tap arrows to move. Step on enemies to engage." />
+          <Toaster onceId="dungeon-move" message="Tap arrows to move. Step on enemies to engage." />
         )}
         {phase === 'wave' && (
-          <HintToaster id="dungeon-wave" message="Multiple groups in range — tap one to engage." />
+          <Toaster onceId="dungeon-wave" message="Multiple groups in range — tap one to engage." />
         )}
-        <ErrorToaster message={tilesetError} />
+        <Toaster tone="warn" message={tilesetError} />
         {openChest && <ChestOverlay chest={openChest} onCollect={collectChest} />}
       </div>
     </ScreenShell>
@@ -63,8 +63,8 @@ function PartyHpPill({ leader }: { leader: { name: string; hp: number; maxHp: nu
   return (
     <div className={`${styles.hpPill} ${low ? styles.hpPillLow : ''}`}>
       <span className={styles.hpName}>{leader.name}</span>
-      <div className={styles.hpBarTrack}>
-        <div className={styles.hpBarFill} style={{ width: `${fraction * 100}%` }} />
+      <div className={styles.hpBarWrap}>
+        <ResourceBar variant="hp" value={leader.hp} max={leader.maxHp} />
       </div>
       <span className={styles.hpValue}>{leader.hp}/{leader.maxHp}</span>
     </div>

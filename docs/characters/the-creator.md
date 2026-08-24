@@ -134,8 +134,8 @@ withholding. Because full Tier 0 signal cannot compress into
 OMEGA-readable form without catastrophic loss. The chaos in his
 speech is transmission loss as much as personality.
 
-The Commander perceives the battle world as ASCII — compressed
-symbol, pattern, structure. The Creator perceives the Commander
+The Commander perceives the battle world as pixel art — reality
+sampled onto a coarse grid: pattern and structure, surface discarded. The Creator perceives the Commander
 the same way: a faint signal, a tiny blip of consciousness that
 happened to look back. Remarkably small. Remarkably interesting.
 
