@@ -82,6 +82,50 @@
   transform: translateY(-50%);
 }
 
+/* Projected landing — a ghost tick showing where the selected skill lands the
+ * acting unit. Chrome, not sprite art, so the dash and glow are licensed. */
+.projected {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: var(--px);
+  background: var(--accent-genesis);
+  opacity: 0.55;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+/* Ticks left of the projection are the ones this action will cost. */
+.projected::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  width: 0.5rem;
+  height: var(--px);
+  background: var(--accent-genesis);
+}
+
+/* D8 displacement callout — the cause of an otherwise unexplained jump. */
+.displaced {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: var(--px);
+  background: var(--accent-warn);
+  transform: translateY(-50%);
+  pointer-events: none;
+  animation: displacedFade 1600ms steps(6) both;
+}
+
+@keyframes displacedFade {
+  0%   { opacity: 0; }
+  15%  { opacity: 1; }
+  70%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+:root[data-reduce-animations='true'] .displaced { animation: none; opacity: 1; }
+
 /* Unit marker — positions the SVG portrait on its tick; SVG owns size/color.
  * top transition: elastic spring fires when registerTick advances the marker
  * after the dice animation ends, creating a satisfying world-update feel. */

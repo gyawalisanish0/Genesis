@@ -138,6 +138,9 @@ export interface BattleEngineCallbacks {
   onHideTurnDisplay(): void
   // Dice overlay
   onShowDiceResult(outcome: DiceOutcome, message: string): void
+  /** A unit's requested tick was taken, so D8 displacement moved it elsewhere.
+   *  Optional: absent implementations simply do not visualise displacement. */
+  onTickDisplaced?(unitId: string, fromTick: number, toTick: number): void
   onClearDiceResult(): void
   // Narrative
   onNarrativeEmit(event: { type: string; actorId?: string; targetId?: string }): void

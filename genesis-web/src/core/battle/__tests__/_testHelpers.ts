@@ -89,6 +89,7 @@ export function makeCallbacks(): CallbackHarness {
     onBattleEnd:       vi.fn(),
     onLog:             vi.fn((e) => { logs.push(e.text) }),
     onHistory:         vi.fn(),
+    onTickDisplaced:   vi.fn(),
   }
   return { cb, snapshots, logs, latest: () => snapshots[snapshots.length - 1] }
 }

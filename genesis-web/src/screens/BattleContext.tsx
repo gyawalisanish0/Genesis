@@ -34,6 +34,16 @@ import type { BattleEngineSnapshot, BattleEngineCallbacks, LogEntry, DiceResult,
 import type { TurnPhase } from '../core/battle/EngineTypes'
 import type { DiceProbabilities } from '../core/combat/HitChanceEvaluator'
 import { forecastOutcomes } from '../core/combat/OutcomeForecast'
+import { SoundService } from '../services/SoundService'
+
+/** A unit shoved off its requested tick by the occupancy cap. */
+export interface TickDisplacement {
+  unitId:   string
+  fromTick: number
+  toTick:   number
+  /** Changes per event so a repeat displacement re-triggers the animation. */
+  key:      number
+}
 
 // ── Re-exports for child components ───────────────────────────────────────────
 export type { TurnPhase, LogEntry, DiceResult, CounterDecision, ClashState, TeamCollisionState }
@@ -63,6 +73,7 @@ interface BattleContextValue {
   diceResult:      DiceResult | null
   /** Odds the player committed to, captured when ROLL fired. */
   diceForecast:    DiceProbabilities | null
+  displacement:    TickDisplacement | null
   pendingCounterDecision: CounterDecision | null
   pendingClash:            ClashState | null
   pendingTeamCollision:    TeamCollisionState | null
@@ -142,6 +153,8 @@ export function BattleProvider({ children }: Props) {
   const [inspectingChip, setInspectingChip]        = useState<StatusChipData | null>(null)
   const [diceResult, setDiceResult]                = useState<DiceResult | null>(null)
   const [diceForecast, setDiceForecast]            = useState<DiceProbabilities | null>(null)
+  /** Last D8 displacement, surfaced so the timeline can explain a jump. */
+  const [displacement, setDisplacement]            = useState<TickDisplacement | null>(null)
 
   // ── Refs for arena and misc ────────────────────────────────────────────────
   const arenaRef        = useRef<BattleArenaHandle>(null)
@@ -281,6 +294,12 @@ export function BattleProvider({ children }: Props) {
       },
       onClearDiceResult() {
         safe(() => { if (diceTimerRef.current) clearTimeout(diceTimerRef.current); setDiceResult(null) })
+      },
+      onTickDisplaced(unitId, fromTick, toTick) {
+        safe(() => {
+          SoundService.playSfx('tick_advance')
+          setDisplacement({ unitId, fromTick, toTick, key: Date.now() })
+        })
       },
       onNarrativeEmit() {},
       onStateChanged(s) {
@@ -659,7 +678,7 @@ export function BattleProvider({ children }: Props) {
       selectedSkill, selectedTarget, showTargetPicker,
       gridCollapsed, isPaused, isLoading,
       suppressedChipIds, getChipDef,
-      diceResult, diceForecast, pendingCounterDecision,
+      diceResult, diceForecast, displacement, pendingCounterDecision,
       pendingClash, pendingTeamCollision,
       registeredTicks, scrollBounds,
       battleError,

@@ -265,6 +265,9 @@ export class BattleEngine {
 
   registerTickInternal(id: string, tick: number): void {
     const finalTick = resolveTickDisplacement(tick, this.registeredTicks, id, this.tickValue)
+    // A displaced unit lands somewhere it did not ask for. Without this signal
+    // the marker appears to jump at random, since the cause is invisible.
+    if (finalTick !== tick) this.cb.onTickDisplaced?.(id, tick, finalTick)
     this.registeredTicks = new Map(this.registeredTicks).set(id, finalTick)
     this.playerUnits = this.playerUnits.map(u => u.id === id ? { ...u, tickPosition: finalTick } : u)
     this.enemies     = this.enemies.map(e => e.id === id ? { ...e, tickPosition: finalTick } : e)

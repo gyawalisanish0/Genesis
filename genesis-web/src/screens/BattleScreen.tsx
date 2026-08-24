@@ -112,7 +112,9 @@ const STACK_OFFSET_PX = 8
 
 // ── Timeline strip ──────────────────────────────────────────────────────────
 function BattleTimeline() {
-  const { tickValue, playerUnits, enemies, activeUnitIds, scrollBounds, historyEntries, getChipDef, suppressedChipIds, setInspectingChip } = useBattleScreen()
+  const { tickValue, playerUnits, enemies, activeUnitIds, scrollBounds, historyEntries,
+          getChipDef, suppressedChipIds, setInspectingChip,
+          selectedSkill, activePlayerUnit, displacement } = useBattleScreen()
   const containerRef = useRef<HTMLDivElement>(null)
 
   const trackHeight = (scrollBounds.max - scrollBounds.min) * TIMELINE_PX_PER_TICK
@@ -186,6 +188,12 @@ function BattleTimeline() {
     }, TIMELINE_RECENTER_DELAY_MS)
   }
 
+  // Projected landing for the currently selected skill. Null when nothing is
+  // selected, so the marker only appears while a decision is open.
+  const projectedTick = selectedSkill && activePlayerUnit
+    ? activePlayerUnit.tickPosition + selectedSkill.cachedCosts.tuCost
+    : null
+
   const allUnits = [...playerUnits, ...enemies]
 
   // Group live units by tick so we can fan same-tick markers vertically.
@@ -223,6 +231,20 @@ function BattleTimeline() {
           />
         ))}
         <div className={styles.nowLine} style={{ top: tickToTop(tickValue, scrollBounds.max) }} />
+        {/* Where the selected skill would land the acting unit. Lets a cheap
+            6-TU skill be compared against a 15-TU one before committing. */}
+        {projectedTick !== null && (
+          <div className={styles.projected} style={{ top: tickToTop(projectedTick, scrollBounds.max) }} />
+        )}
+        {/* A displaced unit landed somewhere it did not choose — say so, or the
+            jump reads as the timeline glitching. */}
+        {displacement && (
+          <div
+            key={displacement.key}
+            className={styles.displaced}
+            style={{ top: tickToTop(displacement.toTick, scrollBounds.max) }}
+          />
+        )}
         {/* History ghosts — rendered first so live markers paint on top */}
         {historyEntries.map((entry) => (
           <div
@@ -666,7 +688,7 @@ function TargetSelectOverlay() {
 
 // ── Battle layout ───────────────────────────────────────────────────────────
 function BattleLayout() {
-  const { arenaRef, isPaused, setPaused, isLoading, playerUnits, diceResult, diceForecast, skipDice, inspectingSkill, setInspectingSkill, battleError, leader, getChipDef, suppressedChipIds, inspectingChip, setInspectingChip } = useBattleScreen()
+  const { arenaRef, isPaused, setPaused, isLoading, playerUnits, diceResult, diceForecast, displacement, skipDice, inspectingSkill, setInspectingSkill, battleError, leader, getChipDef, suppressedChipIds, inspectingChip, setInspectingChip } = useBattleScreen()
   const navigate    = useNavigate()
   const lastBackRef = useRef(0)
   const createHandler = useScrollAwarePointer()
@@ -752,6 +774,13 @@ function BattleLayout() {
       <TeamCollisionOverlay />
       <Toaster onceId="battle-skill" message="Tap a skill, then ROLL to attack." />
       <Toaster onceId="battle-inspect" message="Long-press any skill to see its full details." position="bottom" />
+      {/* Tick displacement has no room to explain itself on a 28 dp strip, so
+          the strip shows the landing and the toast names the cause. */}
+      <Toaster
+        key={displacement?.key}
+        message={displacement ? `Tick ${displacement.fromTick} was full — shoved to ${displacement.toTick}` : null}
+        tone="warn"
+      />
       {diceResult && (
         <Toaster onceId="battle-skip-dice" message="Tap the arena to skip the roll." position="bottom" />
       )}
