@@ -1,31 +1,34 @@
 /* DungeonArena — tile grid renderer, martian surface.
-   Camera: grid is absolute-positioned, top:50% left:50% inside overflow:hidden arena.
-   transform: translate(-camX, -camY) keeps the party tile centered at all times.
-   Each tile is a 48×48 px cell; tiles currently fill with their authored base
-   colour until pixel tile sheets are authored. */
+   Camera: .camera is absolute-positioned, top:50% left:50% inside an
+   overflow:hidden arena; translate(-camX, -camY) keeps the party tile centred.
+   Tiles and tokens both live inside .camera so they pan together.
+   Each tile is a 48 × 48 px cell; tiles fill with their authored base colour
+   until pixel tile sheets are authored. */
 
 .arena {
   flex: 1;
   position: relative;
   overflow: hidden;
-  background: #1a0a05;
+  background: var(--bg-deep);
+}
+
+.camera {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  /* transform is set inline: translate(-camX, -camY) to centre the party */
+  transition: transform var(--motion-step);
 }
 
 .grid {
   display: grid;
   position: absolute;
-  top: 50%;
-  left: 50%;
-  /* transform is set inline: translate(-camX, -camY) to center party */
-  transition: transform 180ms ease-out;
+  inset: 0;
 }
 
 /* ── Cells ─────────────────────────────────────────────────────────────────── */
 
 .cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   position: relative;
   cursor: pointer;
   user-select: none;
@@ -33,7 +36,7 @@
 }
 
 .cellHidden {
-  background: #000;
+  background: var(--fog-unlit);
 }
 
 /* ── Tile art layer ────────────────────────────────────────────────────────── */
@@ -44,27 +47,85 @@
   overflow: hidden;
   pointer-events: none;
   image-rendering: pixelated;
+  /* Seam + bevel. Without these a run of floor tiles reads as one colour slab
+     and stepping between them is invisible. Top-left light, bottom-right dark,
+     as if lit from above — plus a hairline seam to count tiles by. */
+  box-shadow:
+    inset 1px 1px 0 var(--bevel-light),
+    inset -1px -1px 0 var(--bevel-dark);
 }
 
-/* ── Entity / party layer (foreground character) ───────────────────────────── */
+/* ── Sight falloff ─────────────────────────────────────────────────────────── */
 
-.entity,
-.party {
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 0.85rem;
-  font-weight: 700;
-  line-height: 1;
+/* Torchlight, drawn as flat bands over each tile rather than as one radial
+   gradient across the arena. Banding is the point: pixel art has no smooth
+   ramps (docs/ui § 2 rule 2), and per-tile shading also distinguishes tiles the
+   party remembers from tiles it can currently see. Band is set by
+   core/dungeon/sight.ts. */
+.tileShade {
   position: absolute;
   inset: 0;
+  pointer-events: none;
+  background: var(--fog-memory);
+}
+
+.tileShade[data-band='3'] { background: var(--fog-lit-1); }
+.tileShade[data-band='2'] { background: var(--fog-lit-2); }
+.tileShade[data-band='1'] { background: var(--fog-lit-3); }
+
+/* ── Token layer (party + entities) ────────────────────────────────────────── */
+
+.tokenLayer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* One token per visible entity. Sized to a cell and translated into place, so
+   a move tweens instead of snapping — see DungeonTokenLayer for why tokens are
+   not children of their cell. */
+.token {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3rem;
+  height: 3rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  pointer-events: none;
-  z-index: 1;
-  /* Dark halo so the marker reads clearly over any tile pattern */
+  /* transform is set inline: translate(x * cell, y * cell) */
+  transition: transform var(--motion-step);
+}
+
+.tokenShadow {
+  position: absolute;
+  bottom: 0.5rem;
+  width: 1rem;
+  height: 0.25rem;
+  border-radius: var(--r-pill);
+  background: var(--shadow-drop);
+  filter: blur(1px);
+}
+
+/* The glyph itself. Grounded above its shadow and bobbing, so a token reads as
+   a figure standing on the tile rather than a mark printed on it. */
+.tokenBody {
+  position: relative;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  color: currentColor;
   text-shadow:
-    0 0 4px #000,
-    0 0 8px rgba(0, 0, 0, 0.9);
+    0 0 var(--px) var(--shadow-outline),
+    0 0 calc(var(--px) * 3) var(--shadow-halo),
+    0 0 calc(var(--px) * 6) currentColor;
+  animation: tokenIdle var(--motion-idle) infinite alternate;
+}
+
+@keyframes tokenIdle {
+  from { transform: translateY(calc(var(--px) * -2)); }
+  to   { transform: translateY(calc(var(--px) *  1)); }
 }
 
 /* Entity colour tokens */
@@ -74,14 +135,16 @@
 .exit   { color: var(--accent-heal);    }
 .npc    { color: var(--text-secondary); }
 
-/* Greyscale — entity out of sight range */
+/* Greyscale — entity out of sight range, drawn as a remembered position. */
 .gray {
   filter: grayscale(1);
-  opacity: 0.5;
+  opacity: 0.45;
 }
 
+.gray .tokenShadow { opacity: 0.3; }
+
 /* Wave phase — selectable enemies breathe */
-.wave {
+.wave .tokenBody {
   animation: wavePulse 0.7s ease-in-out infinite alternate;
 }
 
@@ -90,12 +153,42 @@
   to   { opacity: 1.00; transform: scale(1.18); }
 }
 
-/* Spotted — enemy detected, harsh strobe before screen flash */
-.spotted {
-  animation: entitySpotted 0.22s ease-in-out infinite;
+/* ── Spotted — the pre-encounter alert ─────────────────────────────────────── */
+
+/* The old treatment strobed the glyph at 4.5 Hz, which read as a rendering
+   glitch rather than a threat. The enemy now rears up once and holds a hard
+   lit pose, with an alert marker popping above it. */
+.spotted .tokenBody {
+  animation: spottedRear 0.42s steps(3) 1 forwards;
 }
 
-@keyframes entitySpotted {
-  0%, 100% { transform: scale(1.05); opacity: 1;   filter: brightness(1);   }
-  50%       { transform: scale(1.55); opacity: 0.4; filter: brightness(3.5); }
+@keyframes spottedRear {
+  0%   { transform: translateY(0)                        scale(1);    filter: brightness(1); }
+  45%  { transform: translateY(calc(var(--px) * -5))     scale(1.35); filter: brightness(2.4); }
+  100% { transform: translateY(calc(var(--px) * -2))     scale(1.2);  filter: brightness(1.7); }
+}
+
+.tokenAlert {
+  position: absolute;
+  bottom: 1.9375rem;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent-warn);
+  text-shadow: 0 0 calc(var(--px) * 3) var(--shadow-outline);
+  transform-origin: 50% 100%;
+  animation:
+    alertPop  0.22s steps(2) 1 both,
+    alertBeat 0.5s  steps(2) 0.22s infinite alternate;
+}
+
+@keyframes alertPop {
+  from { opacity: 0; transform: scale(0.2) translateY(calc(var(--px) * 4)); }
+  to   { opacity: 1; transform: scale(1)   translateY(0); }
+}
+
+@keyframes alertBeat {
+  from { transform: scale(1);    }
+  to   { transform: scale(1.18); }
 }

@@ -10,6 +10,7 @@ import { SCREEN_IDS }       from '../navigation/screenRegistry'
 import { loadStageDef, loadMapDef, loadTilesetDef, loadCharacterWithSkills } from '../services/DataService'
 import { createUnit }       from '../core/unit'
 import { advancePatrol }    from '../core/dungeon/patrol'
+import { isWithinSight }    from '../core/dungeon/sight'
 import {
   DUNGEON_DEFAULT_VISUAL_RANGE,
   DUNGEON_REVEAL_RADIUS,
@@ -39,6 +40,9 @@ interface DungeonContextValue {
   // Party leader summary — shown in the persistent HP pill so the player can
   // see at a glance whose perspective is on screen.
   partyLeader:      { name: string; hp: number; maxHp: number } | null
+  // True during the alert beat — the enemy has spotted the party and is rearing
+  // up, before the screen blows out to white.
+  encounterSpotting: boolean
   // True during the rapid white-flash overlay that plays before battle launches.
   encounterFlashing: boolean
   // Non-null when one or more tile textures failed to load. Cleared once the
@@ -83,6 +87,7 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
   const [entityPositions, setEntityPositions] = useState<Record<string, { x: number; y: number }>>({})
   const [defeatedEntityIds, setDefeatedEntityIds] = useState<Set<string>>(new Set())
   const [waveParties, setWaveParties] = useState<EnemyParty[]>([])
+  const [encounterSpotting, setEncounterSpotting] = useState(false)
   const [encounterFlashing, setEncounterFlashing] = useState(false)
   const [partyLeader, setPartyLeader]   = useState<{ name: string; hp: number; maxHp: number } | null>(null)
   const [tilesetError, setTilesetError] = useState<string | null>(null)
@@ -314,9 +319,8 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
       if (defeatedRef.current.has(e.entityId)) continue
       const pos = entityPosRef.current[e.entityId]
       if (!pos) continue
-      const dx    = Math.abs(pos.x - partyX)
-      const dy    = Math.abs(pos.y - partyY)
-      const inRange = Math.max(dx, dy) <= DUNGEON_REVEAL_RADIUS
+      // Must match the fog reveal shape, or an entity renders on a black tile.
+      const inRange = isWithinSight(pos.x - partyX, pos.y - partyY, DUNGEON_REVEAL_RADIUS)
       arenaRef.current?.setEntityVisible(e.entityId, inRange)
       if (!inRange) arenaRef.current?.setEntityGreyscale(e.entityId, true)
       else          arenaRef.current?.setEntityGreyscale(e.entityId, false)
@@ -462,8 +466,10 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
       const party = visibleParties[0]
       // moveQueueRef stays true — locked through the entire spotted→flash→battle sequence.
       arenaRef.current?.spotEntity(party.spotted.entityId)
+      setEncounterSpotting(true)
       setTimeout(() => {
         arenaRef.current?.unspotEntity(party.spotted.entityId)
+        setEncounterSpotting(false)
         setEncounterFlashing(true)
         setTimeout(() => {
           setEncounterFlashing(false)
@@ -542,7 +548,7 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
 
   const value: DungeonContextValue = {
     stageDef, mapDef, phase, partyTile, entityPositions,
-    defeatedEntityIds, waveParties, partyLeader, encounterFlashing, tilesetError, bgColor,
+    defeatedEntityIds, waveParties, partyLeader, encounterSpotting, encounterFlashing, tilesetError, bgColor,
     openChest, arenaRef, moveParty, selectWaveParty, collectChest,
   }
 

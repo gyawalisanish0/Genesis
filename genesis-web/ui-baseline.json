@@ -1,7 +1,6 @@
 {
   "no-hardcoded-colour": {
     "App.module.css": 1,
-    "components/DungeonArena.module.css": 4,
     "screens/BattleResultScreen.module.css": 2,
     "screens/BattleScreen.module.css": 2,
     "screens/DungeonScreen.module.css": 5,
