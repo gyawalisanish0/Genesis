@@ -2,7 +2,13 @@ import {
   forwardRef, useImperativeHandle, useReducer, useRef, useCallback,
 } from 'react'
 import type { MapDef, TilesetDef, EntityDef, InteractableEntityDef } from '../core/types'
-import { DUNGEON_MOVE_ANIM_MS, DUNGEON_PATROL_ANIM_MS } from '../core/constants'
+import {
+  DUNGEON_MOVE_ANIM_MS, DUNGEON_PATROL_ANIM_MS, DUNGEON_REVEAL_RADIUS,
+} from '../core/constants'
+import { isWithinSight } from '../core/dungeon/sight'
+import { DungeonTileLayer }  from './DungeonTileLayer'
+import { DungeonTokenLayer } from './DungeonTokenLayer'
+import type { DungeonToken, TokenKind } from './DungeonTokenLayer'
 import styles from './DungeonArena.module.css'
 
 // ── Public types ──────────────────────────────────────────────────────────────
@@ -29,36 +35,26 @@ export interface DungeonArenaHandle {
 // Fixed cell size — 7.5 tiles across a 360dp canvas.
 const CELL_PX = 48
 
-const FALLBACK_TILE_COLOR = '#2a1a12'
+const FALLBACK_BG = '#1a0a05'
 
-// ── Tile art resolution ───────────────────────────────────────────────────────
-//
-// Tiles render as flat colour fills until pixel tile sheets are authored.
-// TilesetDef.tiles[id].color is the authored base colour; `art` (the future
-// PNG reference) is documented in docs/ui/00-design-system.md § Tilesets.
+// ── Entity → token mapping ────────────────────────────────────────────────────
 
-function resolveTileColor(tileset: TilesetDef | null, tileId: string): string {
-  return tileset?.tiles[tileId]?.color ?? FALLBACK_TILE_COLOR
+function tokenKind(def: EntityDef): TokenKind {
+  switch (def.type) {
+    case 'enemy':        return 'enemy'
+    case 'exit':         return 'exit'
+    case 'interactable': return (def as InteractableEntityDef).subtype === 'chest' ? 'chest' : 'npc'
+    default:             return 'npc'
+  }
 }
 
-// ── Entity char + CSS class ───────────────────────────────────────────────────
-
-function entityChar(def: EntityDef): string {
+function tokenGlyph(def: EntityDef): string {
   switch (def.type) {
     case 'enemy':        return '◆'
     case 'npc':          return '●'
     case 'exit':         return '▶'
     case 'interactable': return (def as InteractableEntityDef).subtype === 'chest' ? '▣' : '◇'
     default:             return '?'
-  }
-}
-
-function entityColorClass(def: EntityDef): string {
-  switch (def.type) {
-    case 'enemy':        return styles.enemy
-    case 'exit':         return styles.exit
-    case 'interactable': return styles.chest
-    default:             return styles.npc
   }
 }
 
@@ -94,6 +90,7 @@ function DungeonArena({ bgColor }, ref) {
       entityGrayRef.current = {}
       entityDefsRef.current = {}
       waveRef.current       = new Set()
+      spottedRef.current    = new Set()
       partyRef.current      = null
       for (const e of mapDef.entities) {
         if (e.type === 'trigger') continue
@@ -113,6 +110,7 @@ function DungeonArena({ bgColor }, ref) {
       if (!map) return
       for (let dy = -radius; dy <= radius; dy++) {
         for (let dx = -radius; dx <= radius; dx++) {
+          if (!isWithinSight(dx, dy, radius)) continue
           const tx = cx + dx
           const ty = cy + dy
           if (tx >= 0 && ty >= 0 && tx < map.grid.cols && ty < map.grid.rows)
@@ -162,94 +160,80 @@ function DungeonArena({ bgColor }, ref) {
     setTapCallback(cb) { tapRef.current = cb },
   }))
 
-  function handleCellTap(tx: number, ty: number) {
-    if (!tapRef.current) return
-    let entityId: string | null = null
+  /** The visible entity standing on a tile, if any — drives tap targeting. */
+  const entityAt = useCallback((tx: number, ty: number): string | null => {
     for (const [id, pos] of Object.entries(entityPosRef.current)) {
-      if (pos.x === tx && pos.y === ty && entityVisRef.current[id]) {
-        entityId = id
-        break
-      }
+      if (pos.x === tx && pos.y === ty && entityVisRef.current[id]) return id
     }
-    tapRef.current.onTileTap(tx, ty, entityId)
-  }
+    return null
+  }, [])
+
+  const handleCellTap = useCallback((tx: number, ty: number) => {
+    tapRef.current?.onTileTap(tx, ty, entityAt(tx, ty))
+  }, [entityAt])
 
   const map = mapRef.current
   if (!map) {
-    return <div className={styles.arena} style={{ backgroundColor: bgColor ?? '#1a0a05' }} />
+    return <div className={styles.arena} style={{ backgroundColor: bgColor ?? FALLBACK_BG }} />
   }
 
-  // Build cell → entity lookup (visible entities only)
-  const cellEntity: Record<string, string> = {}
-  for (const [id, pos] of Object.entries(entityPosRef.current)) {
-    if (entityVisRef.current[id]) cellEntity[`${pos.x},${pos.y}`] = id
-  }
+  const tokens = buildTokens()
 
+  // Camera: offset so the party tile lands at the arena centre (top/left: 50%).
   const party = partyRef.current
-  const cells = []
-
-  for (let ty = 0; ty < map.grid.rows; ty++) {
-    for (let tx = 0; tx < map.grid.cols; tx++) {
-      const key      = `${tx},${ty}`
-      const revealed = !map.fogOfWar || revealedRef.current.has(key)
-
-      if (!revealed) {
-        cells.push(<div key={key} className={styles.cellHidden} />)
-        continue
-      }
-
-      const tileCode  = map.tiles[ty]?.[tx] ?? 0
-      const tileDef   = map.tileTypes[String(tileCode)]
-      const tileColor = resolveTileColor(tilesetRef.current, tileDef?.id ?? 'floor')
-
-      const isParty    = party?.x === tx && party?.y === ty
-      const entityId   = isParty ? undefined : cellEntity[key]
-      const entityDef  = entityId ? entityDefsRef.current[entityId] : null
-      const isWave     = entityId ? waveRef.current.has(entityId) : false
-      const isGray     = entityId ? !!entityGrayRef.current[entityId] : false
-      const isSpotted  = entityId ? spottedRef.current.has(entityId) : false
-
-      cells.push(
-        <div key={key} className={styles.cell} onPointerDown={() => handleCellTap(tx, ty)}>
-          <div className={styles.tileWrapper} style={{ backgroundColor: tileColor }} />
-          {isParty && <span className={styles.party}>◈</span>}
-          {entityDef && (
-            <span className={[
-              styles.entity,
-              entityColorClass(entityDef),
-              isWave    ? styles.wave    : '',
-              isGray    ? styles.gray    : '',
-              isSpotted ? styles.spotted : '',
-            ].filter(Boolean).join(' ')}>
-              {entityChar(entityDef)}
-            </span>
-          )}
-        </div>
-      )
-    }
-  }
-
-  // Camera: offset so party tile lands at arena center (top:50% left:50%)
   const camX = party ? party.x * CELL_PX + CELL_PX / 2 : (map.grid.cols * CELL_PX) / 2
-  const camY = party ? party.y * CELL_PX + CELL_PX / 2 : (map.grid.rows * CELL_PX) / 2
+  const camY  = party ? party.y * CELL_PX + CELL_PX / 2 : (map.grid.rows * CELL_PX) / 2
 
   return (
-    <div
-      className={styles.arena}
-      style={{ backgroundColor: bgColor ?? '#1a0a05' }}
-    >
+    <div className={styles.arena} style={{ backgroundColor: bgColor ?? FALLBACK_BG }}>
       <div
-        className={styles.grid}
+        className={styles.camera}
         style={{
-          width:               `${map.grid.cols * CELL_PX}px`,
-          height:              `${map.grid.rows * CELL_PX}px`,
-          gridTemplateColumns: `repeat(${map.grid.cols}, ${CELL_PX}px)`,
-          gridTemplateRows:    `repeat(${map.grid.rows}, ${CELL_PX}px)`,
-          transform:           `translate(${-camX}px, ${-camY}px)`,
+          width:     `${map.grid.cols * CELL_PX}px`,
+          height:    `${map.grid.rows * CELL_PX}px`,
+          transform: `translate(${-camX}px, ${-camY}px)`,
         }}
       >
-        {cells}
+        <div
+          className={styles.grid}
+          style={{
+            gridTemplateColumns: `repeat(${map.grid.cols}, ${CELL_PX}px)`,
+            gridTemplateRows:    `repeat(${map.grid.rows}, ${CELL_PX}px)`,
+          }}
+        >
+          <DungeonTileLayer
+            map={map}
+            tileset={tilesetRef.current}
+            revealed={revealedRef.current}
+            party={party}
+            radius={DUNGEON_REVEAL_RADIUS}
+            onTap={handleCellTap}
+          />
+        </div>
+        <DungeonTokenLayer tokens={tokens} cellPx={CELL_PX} />
       </div>
     </div>
   )
+
+  function buildTokens(): DungeonToken[] {
+    const out: DungeonToken[] = []
+    for (const [id, pos] of Object.entries(entityPosRef.current)) {
+      if (!entityVisRef.current[id]) continue
+      const def = entityDefsRef.current[id]
+      if (!def) continue
+      out.push({
+        id,
+        x: pos.x, y: pos.y,
+        kind:    tokenKind(def),
+        glyph:   tokenGlyph(def),
+        gray:    !!entityGrayRef.current[id],
+        wave:    waveRef.current.has(id),
+        spotted: spottedRef.current.has(id),
+      })
+    }
+    // Party last so it draws over anything sharing its tile.
+    const p = partyRef.current
+    if (p) out.push({ id: '__party', x: p.x, y: p.y, kind: 'party', glyph: '◈' })
+    return out
+  }
 })

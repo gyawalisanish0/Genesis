@@ -35,3 +35,13 @@ jobs:
       - name: Type-check and build
         working-directory: genesis-web
         run: npm run build
+
+      # Text layout needs a real browser — jsdom has no layout engine, so three
+      # separate display strings shipped wrapped before this check existed.
+      - name: Install Chromium for layout checks
+        working-directory: genesis-web
+        run: npx playwright install --with-deps chromium
+
+      - name: Check text layout
+        working-directory: genesis-web
+        run: npm run validate:layout

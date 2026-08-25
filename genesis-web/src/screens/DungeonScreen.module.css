@@ -92,8 +92,10 @@
 }
 
 .dpadBtn {
-  width: 2.75rem;
-  height: 2.75rem;
+  /* The d-pad is the primary control in the dungeon; it was 44 dp, under the
+     48 dp minimum. */
+  width: var(--touch-min);
+  height: var(--touch-min);
   background: var(--bg-elevated);
   border: 1px solid var(--bg-card);
   color: var(--text-primary);
@@ -102,7 +104,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  active-opacity: 0.7;
 }
 
 .dpadBtn:active {
@@ -217,19 +218,35 @@
   z-index: 70;
   pointer-events: none;
   background: #fff;
-  animation: encounterFlash 1s linear forwards;
+  /* Two hard hits then a hold to white that carries into the battle screen.
+     This used to strobe four times over a full second, which read as a
+     rendering fault rather than a transition. Duration tracks
+     DUNGEON_ENCOUNTER_FLASH_MS. */
+  animation: encounterFlash 520ms steps(1, end) forwards;
 }
 
 @keyframes encounterFlash {
   0%   { opacity: 0; }
-  10%  { opacity: 1; }
-  22%  { opacity: 0; }
-  36%  { opacity: 1; }
-  50%  { opacity: 0; }
-  64%  { opacity: 1; }
-  78%  { opacity: 0; }
-  88%  { opacity: 1; }
+  8%   { opacity: 1; }
+  24%  { opacity: 0; }
+  38%  { opacity: 1; }
+  52%  { opacity: 0.15; }
+  70%  { opacity: 1; }
   100% { opacity: 1; }
+}
+
+/* Alert beat — the ground jolts while the enemy rears up, so detection is felt
+   and not only seen. Held for DUNGEON_SPOT_FLASH_MS. */
+.rootSpotting {
+  animation: encounterJolt 320ms steps(2) 3;
+}
+
+@keyframes encounterJolt {
+  0%   { transform: translate(0, 0); }
+  25%  { transform: translate(-0.125rem,  0.0625rem); }
+  50%  { transform: translate( 0.125rem, -0.0625rem); }
+  75%  { transform: translate(-0.0625rem, 0); }
+  100% { transform: translate(0, 0); }
 }
 
 /* Encounter telegraph banner — kept for potential wave-phase future use */

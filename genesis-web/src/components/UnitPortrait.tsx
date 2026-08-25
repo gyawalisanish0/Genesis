@@ -32,7 +32,9 @@ export function UnitPortrait({ name, rarity, defId, size = 'md', greyscale = fal
   return (
     <div
       className={`${styles.portrait} ${styles[size]} ${greyscale ? styles.greyscale : ''}`}
-      style={{ borderColor }}
+      // color rides along with the border so the placeholder initial picks up
+      // the rarity tint via currentColor.
+      style={{ borderColor, color: borderColor }}
       aria-label={name}
     >
       {showImage

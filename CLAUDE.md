@@ -121,8 +121,97 @@ same pattern:
   never placed on cooldown when used reactively. Cooldown applies only to
   proactive (normal turn) use of those same skills.
 
+### 6. Skills are what make characters different
+
+The framework is uniform; the roster is not. A character's identity lives in
+their skills and passive, and **spreading a mechanic across the roster for
+coverage destroys the thing it was meant to serve**.
+
+The timeline is the worked example. It is already engaged three ways, and the
+differences are the design:
+
+| Layer | Who | How |
+|---|---|---|
+| Universal | every unit | TU cost on every skill — the tempo/power trade |
+| Faction identity | Netrolume | `Hertz Beats` — a passive that cuts 10% TU from every action |
+| Character identity | Tara | the Chaos axis — `Chaotic Vortex` displaces the enemy timeline |
+
+Giving every character a tick-manipulation skill would make Tara's
+displacement unremarkable and Hertz Beats redundant. The same holds for any
+mechanic: shields are Hugo's, AP discipline is Husty's, summons are Kiragen's.
+
+**Counting effect types is not a measure of whether a system is used.** "Only
+one skill uses `tickShove`" is not evidence the timeline is under-used — it is
+evidence that one character owns active tick manipulation, which is correct.
+Before concluding a mechanic is neglected, read `docs/characters/` and check
+whether it is *someone's identity* rather than a gap.
+
 ---
 
+
+## Design Authority — read before changing content
+
+Game content is **authored design**, not configuration. Skills, costs,
+cooldowns, scaling and the intent behind them are written down before they
+reach JSON. Editing `public/data/` without reading the document that specifies
+it is changing someone's design without them.
+
+### Precedence
+
+When two documents disagree, the higher one wins:
+
+| # | Source | Scope |
+|---|---|---|
+| 1 | `CONCEPT.md` | The game's rules — economy, caps, tick system, progression |
+| 2 | `docs/characters/` | Per-character rosters, per-skill costs, passives, intent |
+| 3 | `docs/mechanics/` | Cross-cutting mechanic specs (counter, cooldown, collisions) |
+| 4 | `docs/engine/` | The runtime contract as built |
+| 5 | `docs/design/*-concept.md` | **Proposals.** Explicitly not authority |
+
+`docs/design/battle-scene-concept.md` once specified an ActionGrid that "pages
+when a unit has >4 skills", contradicting `CONCEPT.md`'s hard cap of 4 equipped
+skills. A proposal doc is specific enough to *look* authoritative. It is not.
+
+### `docs/characters/` is the skill specification
+
+```
+docs/characters/
+├── README.md                    ← roster status
+├── in-game/                     ← playable + enemy units: FULL skill specs
+│   ├── hugo-rekrot.md           ← per-skill AP, TU, damage, cooldown, scaling
+│   ├── husty.md
+│   ├── kiragen.md               ← both Kiragen units
+│   ├── netrolume.md             ← both Netrolume units
+│   └── tara-kuronage.md
+└── civilizations/               ← faction lore feeding the above
+```
+
+Every unit's roster is complete and closed. Before touching a skill:
+
+1. Open its character doc. Costs, cooldown, scaling and **design intent** are
+   there — Hammer Bash is documented as the heavy commitment, "not a rotation
+   filler", which is a constraint on what may be added to it.
+2. Check the roster length. Units equip **up to 4 active skills**
+   (`CONCEPT.md`) plus a `basic`. A "new" skill for a full character is a
+   *replacement*, which is a design decision, not an implementation one.
+3. Look for passive interactions. Netrolume TU costs are documented as
+   `10 → effective 9 (after Hertz Beats)`; retuning the base silently breaks
+   the passive that defines the faction.
+
+### Engine changes vs content changes
+
+| | Engine (`src/core/`) | Content (`public/data/`) |
+|---|---|---|
+| Nature | Rules wired right or wrong | Design decisions |
+| Example | `BOOSTED_MULTIPLIER` never applied; `tickShove` on the caster discarded | What a skill costs, what it does, who has it |
+| Claude may | Fix a rule that does not do what it says | **Propose only** |
+| Process | Fix, test, explain | Draft the character-doc entry → get approval → then JSON |
+
+A balance change *is* a design change. "AP cost should be 0 because a basic
+attack ought to always be affordable" is a rule invented by the implementer;
+the Netrolume basics carry an AP cost deliberately, and their doc says so.
+
+---
 
 ## Tech Stack
 
@@ -144,10 +233,24 @@ same pattern:
 
 ## Repository Structure
 
+`docs/` is not reference material — it is the specification. See
+§ Design Authority before editing anything under `public/data/`.
+
 ```
 Genesis/
 ├── CLAUDE.md
+├── CONCEPT.md                    # THE game design doc — highest authority
 ├── README.md
+├── docs/
+│   ├── characters/
+│   │   ├── in-game/              # per-character skill specs: AP, TU, damage,
+│   │   │                         #   cooldown, scaling, and design intent
+│   │   └── civilizations/        # faction lore feeding the above
+│   ├── mechanics/                # counter, cooldown, timeline-collisions, …
+│   ├── engine/                   # runtime + content contract as built
+│   ├── ui/                       # design system, components, screens
+│   ├── art/                      # sprite pipeline + generation prompts
+│   └── design/                   # PROPOSALS — not authority
 ├── genesis-web/                  # Web project root (Vite + React + Capacitor)
 │   ├── index.html
 │   ├── package.json
@@ -672,7 +775,19 @@ PreBattleScreen.tsx  →  PreBattleScreen.tsx  +  PreBattleStepMode.tsx
 
 ## Session Protocol
 
-**Before implementing any task, Claude must ask follow-up questions when requirements are not fully specified.**
+**Read the spec before asking, and before assuming there is no spec.**
+
+Most things that look unspecified are written down somewhere. The order is:
+the task description → `CONCEPT.md` → the relevant `docs/` file → the code.
+Reading the code first and inferring the design from it inverts that, and the
+inference is usually a rule the implementer invented.
+
+Concretely, before changing a skill: open `docs/characters/in-game/<unit>.md`.
+Before changing a screen: `docs/ui/`. Before changing a mechanic:
+`docs/mechanics/`. If a doc seems absent, search for it — `docs/characters/`
+went unread for an entire session because nothing linked to it from here.
+
+**Then ask follow-up questions where requirements are genuinely not specified.**
 
 This applies to all changes regardless of size — new features, bug fixes, refactors, and doc updates.
 
@@ -682,6 +797,8 @@ This applies to all changes regardless of size — new features, bug fixes, refa
 - Any data or logic change where the expected behaviour has more than one valid interpretation
 - Any task involving new files, new components, or new screens
 - Any task that touches more than one file and the scope is not fully clear
+- Any change to authored content — a skill's cost, damage, roster or behaviour —
+  even when it looks like pure balance. See § Design Authority
 
 ### What to ask
 
@@ -707,3 +824,14 @@ Use the `AskUserQuestion` tool with targeted multiple-choice options. Good quest
 - Leave any module beyond ~150 lines without evaluating a split
 - Add error handling for scenarios that cannot happen
 - Introduce features beyond what was explicitly requested
+- Edit a skill, stat or cost in `public/data/` without first reading that
+  unit's file in `docs/characters/in-game/`
+- Add a skill to a character whose documented roster is already full, or invent
+  a skill that appears in no character doc
+- Treat `docs/design/*-concept.md` as authority — those are proposals, and one
+  of them contradicts `CONCEPT.md` today
+- Spread a mechanic across the roster because a count says it is "under-used" —
+  see § Game Design Principles 6
+- Verify a change with `tsc --noEmit` alone. `npm run build` runs `tsc -b`
+  against `tsconfig.app.json`, which is stricter and is the gate CI uses; a
+  clean `--noEmit` has already let a broken build through

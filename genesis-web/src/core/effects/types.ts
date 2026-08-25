@@ -508,6 +508,11 @@ export interface EffectContext {
   source:   EffectSource
   event:    WhenClause
   /** Present during onDiceRoll / onHit / onAfterHit. */
+  /**
+   * How much of the skill's output this outcome delivers — Boosted 1.5, Hit 1,
+   * Fail 0.25 (a graze). Magnitude handlers multiply by it; absent means 1.
+   */
+  outcomeScale?: number
   dice?:    DiceOutcome
   /** Current global battle tick — passed when effects that initialise status intervals are applied. */
   currentTick?: number

@@ -1,0 +1,31 @@
+/* Silkscreen — the pixel typeface the design system specifies (docs/ui § 4).
+ *
+ * Self-hosted rather than linked from Google Fonts: the game ships as a
+ * Capacitor app and a PWA, and a webfont fetched at runtime is not available
+ * offline or on first paint. Latin subset only, two weights, ~16 KB total.
+ *
+ * Referenced relatively from src/assets so Vite fingerprints the files and
+ * rewrites the URL against --base. An absolute /fonts/… path silently breaks
+ * under a non-root base, the same trap DataService documents for its fetches.
+ *
+ * `font-display: block` rather than `swap`. Silkscreen is metrically nothing
+ * like a fallback sans — swapping mid-session reflows every label and visibly
+ * re-lays-out the HUD. A short block is less disruptive than a flash of the
+ * wrong typeface at a completely different width.
+ */
+
+@font-face {
+  font-family: 'Silkscreen';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('../assets/fonts/silkscreen-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Silkscreen';
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url('../assets/fonts/silkscreen-700.woff2') format('woff2');
+}

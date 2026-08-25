@@ -15,7 +15,9 @@ import type { Unit } from '../../types'
 type HealEffect = Extract<Effect, { type: 'heal' }>
 
 const handle: EffectHandler<HealEffect> = (effect, ctx) => {
-  const amount = Math.round(resolveValueExpr(effect.amount, ctx))
+  // Dice magnitude is applied here rather than at the call site so every
+  // source of output — skill, status tick, counter — scales identically.
+  const amount = Math.round(resolveValueExpr(effect.amount, ctx) * (ctx.outcomeScale ?? 1))
   for (const target of resolveRecipients(ctx)) {
     ctx.battle.setUnit(healUnit(target, amount))
   }

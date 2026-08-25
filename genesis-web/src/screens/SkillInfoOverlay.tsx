@@ -6,7 +6,8 @@
 // (set/cleared by the caller, same gate as narrativePaused).
 
 import { getCachedSkill } from '../core/engines/skill/SkillInstance'
-import type { SkillInstance, Effect, ValueExpr } from '../core/effects/types'
+import type { SkillInstance } from '../core/effects/types'
+import { effectLine } from './skillEffectText'
 import { Sheet } from '../components/Sheet'
 import styles from './SkillInfoOverlay.module.css'
 
@@ -16,45 +17,6 @@ interface Props {
 }
 
 // Render a ValueExpr as concise human-readable text.
-function valueText(v: ValueExpr): string {
-  if (typeof v === 'number')            return String(v)
-  if ('sum'                in v)        return v.sum.map(valueText).join(' + ')
-  if ('secondary'          in v)        return `${v.secondary * 100}% surge`
-  if ('globalApSpentPercent' in v)      return `${v.globalApSpentPercent}% AP pool`
-  const of = v.of ?? 'caster'
-  return `${v.percent}% ${of} ${v.stat}`
-}
-
-// One human-readable line per effect. Skips effects with non-onCast triggers
-// only when the trigger is the default — otherwise prefix with the trigger.
-function effectLine(e: Effect): string {
-  const trigger = e.when.event === 'onCast' ? '' : `[${e.when.event}] `
-  switch (e.type) {
-    case 'damage':            return `${trigger}Damage: ${valueText(e.amount)}${e.damageType ? ` (${e.damageType})` : ''}`
-    case 'heal':              return `${trigger}Heal: ${valueText(e.amount)}`
-    case 'tickShove':         return `${trigger}Shove tick: ${e.amount > 0 ? '+' : ''}${e.amount}`
-    case 'gainAp':            return `${trigger}Gain AP: ${e.amount}`
-    case 'spendAp':           return `${trigger}Spend AP: ${e.amount}`
-    case 'modifyStat': {
-      if (e.deltaPercent !== undefined) return `${trigger}${e.stat} ${e.deltaPercent > 0 ? '+' : ''}${e.deltaPercent}% for ${e.duration} ticks`
-      const d = e.delta ?? 0
-      return `${trigger}${e.stat} ${d > 0 ? '+' : ''}${d} for ${e.duration} ticks`
-    }
-    case 'applyStatus':       return `${trigger}Apply ${e.status}${e.duration ? ` (${e.duration}t)` : ''}${e.chance != null ? ` @ ${Math.round(e.chance * 100)}%` : ''}`
-    case 'removeStatus':      return `${trigger}Remove ${e.status ?? `status[tag=${e.tag}]`}`
-    case 'shiftProbability':  return `${trigger}Shift ${e.outcome} probability ${e.delta > 0 ? '+' : ''}${e.delta}`
-    case 'rerollDice':        return `${trigger}Reroll ${e.outcome ?? 'any'} (${e.uses} use${e.uses === 1 ? '' : 's'}${e.perBattle ? ', per battle' : ''})`
-    case 'forceOutcome':      return `${trigger}Force outcome: ${e.outcome}`
-    case 'triggerSkill':      return `${trigger}Trigger skill: ${e.skillId}${e.ignoreCost ? ' (free)' : ''}`
-    case 'secondaryResource': {
-      if (e.set !== undefined) return `${trigger}Reset surge to ${e.set}`
-      if (Array.isArray(e.delta)) return `${trigger}Surge +${e.delta[0]}–${e.delta[1]}`
-      return `${trigger}Surge ${(e.delta ?? 0) >= 0 ? '+' : ''}${e.delta ?? 0}`
-    }
-    case 'resetApAccum':     return `${trigger}Reset AP accumulator`
-    default:                 return ''
-  }
-}
 
 export function SkillInfoOverlay({ skill, onClose }: Props) {
   const def = getCachedSkill(skill)

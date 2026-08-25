@@ -121,7 +121,9 @@
 
 .navBtn {
   border: none;
-  font-family: var(--font-sans);
+  /* Chrome uses the pixel face (tokens.css § Typography). This picked sans and
+     left the menu's own buttons in a different typeface from its wordmark. */
+  font-family: var(--font-pixel);
   font-size: var(--t-subheading-size);
   font-weight: var(--t-subheading-weight);
   cursor: pointer;

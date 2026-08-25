@@ -9,6 +9,8 @@ import { useScreen }        from '../navigation/useScreen'
 import { SCREEN_IDS }       from '../navigation/screenRegistry'
 import { loadStageDef, loadMapDef, loadTilesetDef, loadCharacterWithSkills } from '../services/DataService'
 import { createUnit }       from '../core/unit'
+import { advancePatrol }    from '../core/dungeon/patrol'
+import { isWithinSight }    from '../core/dungeon/sight'
 import {
   DUNGEON_DEFAULT_VISUAL_RANGE,
   DUNGEON_REVEAL_RADIUS,
@@ -38,6 +40,9 @@ interface DungeonContextValue {
   // Party leader summary — shown in the persistent HP pill so the player can
   // see at a glance whose perspective is on screen.
   partyLeader:      { name: string; hp: number; maxHp: number } | null
+  // True during the alert beat — the enemy has spotted the party and is rearing
+  // up, before the screen blows out to white.
+  encounterSpotting: boolean
   // True during the rapid white-flash overlay that plays before battle launches.
   encounterFlashing: boolean
   // Non-null when one or more tile textures failed to load. Cleared once the
@@ -82,6 +87,7 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
   const [entityPositions, setEntityPositions] = useState<Record<string, { x: number; y: number }>>({})
   const [defeatedEntityIds, setDefeatedEntityIds] = useState<Set<string>>(new Set())
   const [waveParties, setWaveParties] = useState<EnemyParty[]>([])
+  const [encounterSpotting, setEncounterSpotting] = useState(false)
   const [encounterFlashing, setEncounterFlashing] = useState(false)
   const [partyLeader, setPartyLeader]   = useState<{ name: string; hp: number; maxHp: number } | null>(null)
   const [tilesetError, setTilesetError] = useState<string | null>(null)
@@ -96,6 +102,9 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
   const partyRef       = useRef({ x: 0, y: 0 })
   const entityPosRef   = useRef<Record<string, { x: number; y: number }>>({})
   const defeatedRef    = useRef<Set<string>>(new Set())
+  // Waypoint each patroller is currently walking toward, by entityId. Patrols
+  // move one tile per turn, so the target has to survive between turns.
+  const patrolTargetRef = useRef<Record<string, number>>({})
 
   function setOpenChest(chest: InteractableEntityDef | null) {
     openChestRef.current = chest
@@ -265,6 +274,11 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
       checkTriggers(nx, ny)
       advanceEnemyPatrols(() => {
         clearTimeout(watchdog)
+        // Re-run against post-patrol positions. Visibility computed before the
+        // patrols move is a turn stale: an enemy that walks into range stays
+        // invisible, and checkWavePhase then launches an encounter against a
+        // sprite the player never saw.
+        updateEntityVisibility(nx, ny)
         // Brief pause so patrols visually settle before encounter check fires.
         // checkWavePhase owns the lock from here: it releases it if clear,
         // or keeps it held through the entire spotted→flash→battle sequence.
@@ -305,9 +319,8 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
       if (defeatedRef.current.has(e.entityId)) continue
       const pos = entityPosRef.current[e.entityId]
       if (!pos) continue
-      const dx    = Math.abs(pos.x - partyX)
-      const dy    = Math.abs(pos.y - partyY)
-      const inRange = Math.max(dx, dy) <= DUNGEON_REVEAL_RADIUS
+      // Must match the fog reveal shape, or an entity renders on a black tile.
+      const inRange = isWithinSight(pos.x - partyX, pos.y - partyY, DUNGEON_REVEAL_RADIUS)
       arenaRef.current?.setEntityVisible(e.entityId, inRange)
       if (!inRange) arenaRef.current?.setEntityGreyscale(e.entityId, true)
       else          arenaRef.current?.setEntityGreyscale(e.entityId, false)
@@ -363,38 +376,52 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
     const newPositions = { ...entityPosRef.current }
 
     for (const enemy of enemies) {
-      const patrol = enemy.patrol
-      if (!patrol || patrol.length === 0) { pending--; if (pending === 0) finish(); continue }
-
-      const cur     = newPositions[enemy.entityId] ?? { x: enemy.x, y: enemy.y }
-      const curIdx  = patrol.findIndex((p) => p.x === cur.x && p.y === cur.y)
-      const nextIdx = (curIdx + 1) % patrol.length
-      const next    = patrol[nextIdx]
-
-      const tileBlocked    = !isTilePassable(map, next.x, next.y)
-      const partyBlocking  = partyRef.current?.x === next.x && partyRef.current?.y === next.y
-      const entityBlocking = Object.entries(newPositions).some(
-        ([id, pos]) => id !== enemy.entityId && pos.x === next.x && pos.y === next.y,
-      )
-
-      if (tileBlocked || partyBlocking || entityBlocking) {
-        pending--
-        if (pending === 0) finish()
-        continue
-      }
+      const next = nextPatrolTile(map, enemy, newPositions)
+      if (!next) { settle(); continue }
 
       newPositions[enemy.entityId] = next
-      arenaRef.current?.setEntityPosition(enemy.entityId, next.x, next.y, true, () => {
-        pending--
-        if (pending === 0) finish()
-      })
+      arenaRef.current?.setEntityPosition(enemy.entityId, next.x, next.y, true, settle)
     }
 
-    function finish() {
-      entityPosRef.current = newPositions
-      setEntityPositions({ ...newPositions })
-      onDone()
+    function settle() {
+      pending--
+      if (pending === 0) {
+        entityPosRef.current = newPositions
+        setEntityPositions({ ...newPositions })
+        onDone()
+      }
     }
+  }
+
+  /**
+   * The tile `enemy` walks to this turn, or null if it holds position.
+   *
+   * Patrol routes are waypoint lists, so the enemy steps one tile toward its
+   * current waypoint rather than jumping to it — a route like (5,17)→(9,17)
+   * used to move the enemy four tiles in a single turn.
+   */
+  function nextPatrolTile(
+    map: MapDef,
+    enemy: EnemyEntityDef,
+    positions: Record<string, { x: number; y: number }>,
+  ): { x: number; y: number } | null {
+    const route = enemy.patrol
+    if (!route || route.length === 0) return null
+
+    const cur  = positions[enemy.entityId] ?? { x: enemy.x, y: enemy.y }
+    const step = advancePatrol(cur, route, patrolTargetRef.current[enemy.entityId] ?? 0)
+    // Keep the target even when the step is blocked, so the patrol resumes
+    // toward the same waypoint once the obstruction clears.
+    patrolTargetRef.current[enemy.entityId] = step.targetIndex
+
+    const { next } = step
+    if (next.x === cur.x && next.y === cur.y) return null
+    if (!isTilePassable(map, next.x, next.y)) return null
+    if (partyRef.current.x === next.x && partyRef.current.y === next.y) return null
+    const occupied = Object.entries(positions).some(
+      ([id, pos]) => id !== enemy.entityId && pos.x === next.x && pos.y === next.y,
+    )
+    return occupied ? null : next
   }
 
   // ── Wave phase ─────────────────────────────────────────────────────────────
@@ -439,8 +466,10 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
       const party = visibleParties[0]
       // moveQueueRef stays true — locked through the entire spotted→flash→battle sequence.
       arenaRef.current?.spotEntity(party.spotted.entityId)
+      setEncounterSpotting(true)
       setTimeout(() => {
         arenaRef.current?.unspotEntity(party.spotted.entityId)
+        setEncounterSpotting(false)
         setEncounterFlashing(true)
         setTimeout(() => {
           setEncounterFlashing(false)
@@ -519,7 +548,7 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
 
   const value: DungeonContextValue = {
     stageDef, mapDef, phase, partyTile, entityPositions,
-    defeatedEntityIds, waveParties, partyLeader, encounterFlashing, tilesetError, bgColor,
+    defeatedEntityIds, waveParties, partyLeader, encounterSpotting, encounterFlashing, tilesetError, bgColor,
     openChest, arenaRef, moveParty, selectWaveParty, collectChest,
   }
 

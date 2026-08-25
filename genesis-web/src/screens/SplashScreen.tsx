@@ -79,7 +79,9 @@ export function SplashScreen() {
 
         <div className={styles.logoZone}>
           <div className={`${styles.logoMark} ${done ? styles.logoDone : ''}`}>G</div>
-          <h1 className={styles.title}>G E N E S I S</h1>
+          {/* Spacing is CSS. Real spaces are legal break points — spelled out,
+              the wordmark wrapped to "G E N E S I" / "S" under ~300 px. */}
+          <h1 className={styles.title}>GENESIS</h1>
           <p className={styles.tagline}>
             {error
               ? <span className={styles.errorText}>{error} — tap to retry</span>

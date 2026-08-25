@@ -4,7 +4,7 @@
 
 import { describe, it, expect } from 'vitest'
 import { forecastOutcomes, forecastApGain, rangedChanceBonus, isApRegenFrozen } from '../OutcomeForecast'
-import { calculateFinalChance, shiftProbabilities } from '../HitChanceEvaluator'
+import { calculateFinalChance, shiftProbabilities, tuAccuracyFactor } from '../HitChanceEvaluator'
 import type { Unit } from '../../types'
 import type { SkillDef } from '../../effects/types'
 
@@ -31,10 +31,23 @@ describe('forecastOutcomes', () => {
     }
   })
 
-  it('matches the resolver’s own math exactly at the baseline', () => {
-    // precision 50 + baseChance 1.0 is the balanced case.
-    const expected = shiftProbabilities(calculateFinalChance(50, 1.0))
+  it('matches the resolver’s own math exactly', () => {
+    // precision 50 + baseChance 1.0, scaled by the skill's tick investment.
+    // The forecast and the roll must never disagree — that is this module's
+    // entire reason to exist — so the expectation mirrors the full formula.
+    const expected = shiftProbabilities(
+      calculateFinalChance(50, 1.0) * tuAccuracyFactor(skill().tuCost),
+    )
     expect(forecastOutcomes(unit(), skill())).toEqual(expected)
+  })
+
+  it('lands a heavy skill more often than a jab for the same unit', () => {
+    // Tick investment buys accuracy: TU is the currency the game is about, and
+    // it previously had no bearing on whether an action connected.
+    const jab   = forecastOutcomes(unit(), { ...skill(), tuCost: 5 })
+    const heavy = forecastOutcomes(unit(), { ...skill(), tuCost: 20 })
+    expect(heavy.Boosted + heavy.Hit).toBeGreaterThan(jab.Boosted + jab.Hit)
+    expect(heavy.Evade + heavy.Fail).toBeLessThan(jab.Evade + jab.Fail)
   })
 
   it('tips toward good outcomes as precision rises', () => {

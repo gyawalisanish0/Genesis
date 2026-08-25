@@ -145,10 +145,12 @@
 
   /* ── Typography ──────────────────────────────────────────────────────── */
   /* Chrome uses the pixel face; prose (descriptions, log) stays sans.
-   * Neither face is bundled yet — both degrade to system stacks. Drop the
-   * files in assets/fonts and add @font-face to activate. docs/ui § 4. */
-  --font-pixel: 'Silkscreen', 'Pixelify Sans', var(--font-sans);
-  --font-sans:  'Nunito', system-ui, -apple-system, sans-serif;
+   * Silkscreen is bundled and declared in styles/fonts.css. docs/ui § 4. */
+  --font-pixel: 'Silkscreen', var(--font-sans);
+  /* No webfont here on purpose: body copy falls to the platform UI font, which
+     is already installed and legible at 12 dp. 'Nunito' used to lead this list
+     but was never bundled or linked, so it resolved to nothing. */
+  --font-sans:  system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
   /* Display — 32dp / Bold 700 / lh 40dp */
   --t-display-size:   2rem;
@@ -198,6 +200,23 @@
    * only survivor, for functional circles/pills. */
   --r-pill: 999px;
 
+  /* ── Dungeon torchlight ramp ────────────────────────────────────────── */
+  /* Flat steps, not a gradient (docs/ui § 2 rule 2). A tile's shade is its
+     distance from the party, so the light pool has hard banded edges the way
+     a GBA lighting ramp does — and remembered tiles read as remembered. */
+  --fog-unlit:   #000;                /* never revealed          */
+  --fog-lit-1:   rgb(0 0 0 / 0);      /* under the party's feet  */
+  --fog-lit-2:   rgb(0 0 0 / 0.24);
+  --fog-lit-3:   rgb(0 0 0 / 0.52);
+  --fog-memory:  rgb(0 0 0 / 0.80);   /* explored, out of sight  */
+
+  /* ── Depth — drop shadows and pixel outlines ────────────────────────── */
+  --shadow-drop:    rgb(0 0 0 / 0.38); /* contact shadow under a token */
+  --shadow-outline: #000;              /* 1-px pixel outline on glyphs */
+  --shadow-halo:    rgb(0 0 0 / 0.9);  /* soft halo behind bright glyphs */
+  --bevel-light:    rgb(255 255 255 / 0.07);
+  --bevel-dark:     rgb(0 0 0 / 0.28);
+
   /* ── Touch target (minimum 48 × 48 dp) ──────────────────────────────── */
   --touch-min: 3rem;  /* 48 dp */
 
@@ -208,6 +227,8 @@
   --motion-bar:        400ms steps(16);     /* HP / AP bar tween        */
   --motion-button:      80ms;               /* button press offset      */
   --motion-timeline:   200ms steps(4);      /* timeline marker move     */
+  --motion-step:       180ms steps(4);      /* dungeon tile-to-tile step */
+  --motion-idle:      2400ms steps(2);      /* dungeon token idle bob    */
 
   /* ── Scale factor set by App.tsx useViewportScale ───────────────────── */
   /* Divide env() insets by --app-scale so they read correctly inside the  */
@@ -229,4 +250,6 @@
   --motion-bar:       0ms;
   --motion-button:    0ms;
   --motion-timeline:  0ms;
+  --motion-step:      0ms;
+  --motion-idle:      0ms;
 }

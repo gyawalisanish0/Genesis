@@ -66,7 +66,48 @@
 .front .frame { transform: none; }
 .back  .frame { transform: scaleX(-1); }
 
+/* ── Whose turn it is ──────────────────────────────────────────────────────
+   This used to be `.acting .body { animation-play-state: paused }` and nothing
+   else: the only signal that a unit was acting was its 1-art-px idle bob
+   stopping. Invisible in motion, and completely absent for the letter fallback,
+   which does not bob. The cue is now three redundant ones — a caret, a lit
+   platform, and the opponent receding — so it reads with or without sprite art. */
+
 .acting .body { animation-play-state: paused; }
+
+/* Caret above the slot. Steps, not ease — it is made of pixels. */
+.marker {
+  position: absolute;
+  bottom: 6rem;                 /* clears the 96 dp slot */
+  left: 50%;
+  margin-left: -0.5rem;
+  font-family: var(--font-pixel);
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--accent-genesis);
+  text-shadow: var(--px) var(--px) 0 var(--bg-deep);
+  filter: drop-shadow(0 0 var(--px) var(--accent-genesis));
+  animation: markerBob 720ms steps(2) infinite alternate;
+  pointer-events: none;
+  z-index: 2;
+}
+
+@keyframes markerBob {
+  from { transform: translateY(0); }
+  to   { transform: translateY(calc(var(--px) * 2)); }
+}
+
+/* The pad under the actor lights up — glow is licensed on chrome. */
+.acting .platform {
+  background: var(--panel-active-inner);
+  box-shadow: var(--glow-genesis);
+}
+
+/* The combatant who is not acting recedes rather than competing for attention. */
+.dimmed .body {
+  opacity: 0.55;
+  filter: saturate(0.6) brightness(0.75);
+}
 
 .dead {
   filter: grayscale(1);

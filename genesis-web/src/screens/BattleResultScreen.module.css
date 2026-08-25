@@ -32,9 +32,12 @@
 }
 
 .bannerText {
-  font-size: var(--t-display-size);
+  font-size: var(--t-heading-size);
   font-weight: var(--t-display-weight);
-  letter-spacing: 0.375rem;
+  letter-spacing: 0.25rem;
+  /* The banner is one line or it is broken — never let it wrap between the
+     two star icons. */
+  white-space: nowrap;
   margin: 0;
   color: var(--accent-gold);
 }
@@ -114,7 +117,16 @@
   gap: var(--s-sm);
 }
 
-.unitName  { font-size: var(--t-subheading-size); font-weight: var(--t-subheading-weight); color: var(--text-primary); }
+.unitName  {
+  font-size: var(--t-subheading-size);
+  font-weight: var(--t-subheading-weight);
+  color: var(--text-primary);
+  /* Long names wrapped mid-row and pushed the level and XP out of alignment. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
 .unitLevel { font-size: var(--t-label-size); color: var(--text-secondary); }
 .unitXp    { font-size: var(--t-label-size); color: var(--accent-genesis); margin-left: auto; }
 

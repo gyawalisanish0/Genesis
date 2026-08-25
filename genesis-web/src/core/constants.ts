@@ -1,5 +1,3 @@
-import type { AppSettings } from './types'
-
 // Starting tick range per class — [min, max]
 // Higher Speed compresses the random ceiling toward class_min.
 export const CLASS_TICK_RANGES: Readonly<Record<string, [number, number]>> = {
@@ -20,6 +18,30 @@ export const DICE_BASE_PROBABILITIES = {
 } as const
 
 export const BOOSTED_MULTIPLIER = 1.5    // damage × 1.5 on Boosted
+
+// A Fail grazes rather than whiffing. At the base table 30% of every action
+// produced literally nothing, and because the roll happens after the cost is
+// committed, the most expensive skills were punished hardest — the opposite of
+// the risk/reward a 50 AP skill should carry.
+export const FAIL_CHIP_MULTIPLIER = 0.25
+
+// …and it refunds most of its AP. A miss costs the tick, which is the currency
+// this game is actually about; it should not also erase the bank.
+export const FAIL_AP_REFUND = 0.8
+
+// The dice must never switch off. finalChance = precision/50 is unbounded, so
+// a Precision-100 unit reached a 100% positive pool and literally could not
+// miss or be evaded — the whole resolution system silently stopped applying at
+// one end of a stat. Both pools keep a floor so every roll stays a roll.
+export const MIN_OUTCOME_POOL = 0.05
+
+// Tick investment buys accuracy. TU is the currency this game is about, and it
+// had no relationship to whether an action landed: a 5 TU jab and a 23 TU
+// wind-up rolled identically. Committing more of the timeline to a swing now
+// makes it more likely to connect, which turns the dice from a flat tax into a
+// dial the player operates through skill choice.
+export const TU_ACCURACY_BASELINE = 10    // TU that neither helps nor hurts
+export const TU_ACCURACY_PER_TICK = 0.02  // finalChance shift per TU either side
 
 
 // Counter chain — diminishing probability per recursion depth
@@ -80,66 +102,8 @@ export const QUALITY_MED_FPS_THRESHOLD   = 40     // ≥40 fps → Medium tier (
 export const QUALITY_STEP_UP_FPS         = 58     // sustained fps required for live step-up
 export const QUALITY_STEP_UP_CHECKS      = 10     // consecutive 1-s checks at ≥STEP_UP_FPS to trigger step-up
 
-// Dungeon exploration
-export const DUNGEON_DEFAULT_MOVE_RANGE    = 1    // tiles the party can move per turn
-export const DUNGEON_DEFAULT_VISUAL_RANGE  = 1    // Chebyshev detection radius for entities
-export const DUNGEON_REVEAL_RADIUS         = 2    // fog-of-war reveal radius around party
-export const DUNGEON_MOVE_ANIM_MS          = 180  // ms per tile movement tween
-export const DUNGEON_PATROL_ANIM_MS        = 200  // ms per tile for enemy patrol step
-export const DUNGEON_WAVE_VIGNETTE_OPACITY = 0.65 // overlay opacity during wave phase
-export const DUNGEON_ENCOUNTER_PAUSE_MS    = 350   // pause after patrols settle before encounter check fires
-export const DUNGEON_SPOT_FLASH_MS         = 2000  // ms enemy shakes on-grid (spotted phase)
-export const DUNGEON_ENCOUNTER_FLASH_MS    = 1000  // ms rapid white-flash overlay before navigating to battle
-export const DUNGEON_ENCOUNTER_BANNER_MS   = 1200  // ms encounter telegraph banner (wave phase)
-
-// Battle arena — GBA duel frame geometry (dp; all multiples of 2 dp = 1 art px)
-export const SPRITE_BOX_DP        = 96    // 48 art px at 2x — the GBA 26.7%-of-width ratio
-export const PLATFORM_W_DP        = 96    // shadow disc under a combatant
-export const PLATFORM_H_DP        = 16
-export const SPRITE_BOB_PERIOD_MS = 1600  // idle breathing cycle
-export const SPRITE_BOB_DIP_DP    = 2     // 1 art px
-export const SHOVE_STEP_DP        = 8     // contact step toward the target
-export const SHOVE_OUT_MS         = 190
-export const SHAKE_AMPLITUDE_DP   = 4
-export const SHAKE_HIT_MS         = 160
-export const SHAKE_BOOSTED_MS     = 320
-export const EVADE_DODGE_DX_DP    = 16    // sidestep distance on an evade
-export const EVADE_DODGE_MS       = 170
-export const FLASH_HOLD_MS        = 96    // impact silhouette flash
-export const DEATH_FADE_MS        = 480
-export const SEQUENCE_BUDGET_MS   = 1400  // must fit inside ANIM_TIMEOUT_MS
-
-// Dice roll — the needle sweeps the odds band, then settles in the rolled zone.
-// Sweep + settle must fit inside DICE_RESULT_DISMISS_MS (1200) or the roll is
-// cut off before the player reads it.
-export const DICE_SWEEP_MS  = 720   // needle travel before it locks on
-export const DICE_SETTLE_MS = 380   // hold on the result after landing
-
-// Resource bar segmentation — HP/AP/XP fill draws as this many discrete
-// blocks rather than a continuous width, so it "ticks down" instead of sliding.
-export const RESOURCE_BAR_SEGMENT_COUNT      = 20    // blocks the fill divides into
-export const RESOURCE_BAR_LOW_THRESHOLD      = 0.5   // HP fill shifts to flare-3 below this
-export const RESOURCE_BAR_CRITICAL_THRESHOLD = 0.25  // HP fill shifts to blood-2 below this
-
-// First-time hint toaster
-export const HINT_TOASTER_DURATION_MS = 5000  // ms the hint stays visible before auto-dismiss
-
-// Battle error toast
-export const BATTLE_ERROR_TOAST_MS = 15000  // ms error toast is shown before auto-navigating away
-
-// Insufficient-AP feedback
-export const AP_WARN_SHAKE_MS   = 380   // shake animation duration on tapped AP-short button
-export const AP_WARN_DISMISS_MS = 3000  // ms the insufficient-AP toast stays visible
-export const HINT_STORAGE_PREFIX      = 'genesis-hint-'
-
-// Default app settings
-export const DEFAULT_SETTINGS: AppSettings = {
-  musicVolume:       0.75,
-  sfxVolume:         0.80,
-  muteAll:           false,
-  reduceAnimations:  false,
-  showDamageNumbers: true,
-  timelineZoom:      5,
-  battleReminders:   false,
-  newContentAlerts:  true,
-}
+// ── Re-exports ───────────────────────────────────────────────────────────────
+// Split for the module-line limit; every consumer still imports from
+// './constants' so the seam is invisible outside this directory.
+export * from './constants.dungeon'
+export * from './constants.presentation'

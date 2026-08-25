@@ -8,9 +8,13 @@ const hustyBasicJson = hustySkills[0]
 
 describe('skillDefSchema', () => {
   it('accepts Hugo basic attack skill', () => {
+    // Deliberately not asserting an effect count: this is a schema test, and
+    // pinning it to the shipped content meant every balance tweak broke it.
+    // What matters is that a real authored skill parses and keeps its shape.
     const parsed = skillDefSchema.parse(hugoBasicJson)
     expect(parsed.id).toBe('hugo_001_basic_attack')
-    expect(parsed.effects).toHaveLength(1)
+    expect(parsed.effects.length).toBeGreaterThan(0)
+    expect(parsed.effects.every(e => typeof e.type === 'string')).toBe(true)
     expect(parsed.levelUpgrades).toHaveLength(0)
   })
 
