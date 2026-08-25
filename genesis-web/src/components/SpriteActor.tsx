@@ -19,6 +19,8 @@ interface Props {
   dead?:      boolean
   /** Highlights the combatant whose turn is resolving. */
   acting?:    boolean
+  /** Someone else holds the tick — this combatant recedes. */
+  dimmed?:    boolean
   /** Sequence-driven motion — see components/useAnimSequence.ts. */
   shoving?:      boolean
   dodging?:      boolean
@@ -29,6 +31,7 @@ interface Props {
 
 export function SpriteActor({
   defId, name, facing, manifest = null, isDamaged = false, dead = false, acting = false,
+  dimmed = false,
   shoving = false, dodging = false, flashColour = null, stateOverride,
 }: Props) {
   const idle = manifest ? withFacing(resolveIdleAnimation(manifest, isDamaged), manifest, facing) : null
@@ -50,6 +53,7 @@ export function SpriteActor({
       className={[
         styles.actor, styles[facing],
         dead ? styles.dead : '', acting ? styles.acting : '',
+        dimmed ? styles.dimmed : '',
         shoving ? styles.shoving : '', dodging ? styles.dodging : '',
       ].filter(Boolean).join(' ')}
       aria-label={name}
@@ -72,6 +76,10 @@ export function SpriteActor({
           ? <img className={styles.frame} src={frameUrl} alt="" />
           : <span className={styles.fallback}>{name.charAt(0).toUpperCase()}</span>}
       </div>
+      {/* Whose turn it is has to survive having no sprite at all — most of the
+          roster still renders the letter fallback — so the cue is chrome around
+          the slot, not a change to the figure. */}
+      {acting && !dead && <span className={styles.marker} aria-hidden>▼</span>}
       <div className={styles.platform} />
     </div>
   )

@@ -12,13 +12,18 @@ import styles from './CombatantPlate.module.css'
 interface Props {
   info:      TurnDisplayUnitData
   side:      'ally' | 'enemy'
+  /** This combatant holds the current tick — takes Panel's active variant. */
+  active?:   boolean
   chips?:    StatusChipData[]
   onChipTap?: (chip: StatusChipData) => void
 }
 
-export function CombatantPlate({ info, side, chips = [], onChipTap }: Props) {
+export function CombatantPlate({ info, side, active = false, chips = [], onChipTap }: Props) {
   return (
-    <div className={`${panelClass('default')} ${styles.plate} ${styles[side]}`}>
+    <div className={[
+      panelClass(active ? 'active' : 'default'),
+      styles.plate, styles[side], active ? styles.active : '',
+    ].filter(Boolean).join(' ')}>
       <div className={styles.head}>
         <span className={styles.name}>{info.name}</span>
         <span className={styles.hp}>{info.hp}/{info.maxHp}</span>

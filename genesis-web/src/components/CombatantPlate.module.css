@@ -37,3 +37,9 @@
 /* Plates sit opposite their sprite — the GBA crossed layout. */
 .enemy { justify-self: start; }
 .ally  { justify-self: end; }
+
+/* The acting combatant's plate. Panel supplies the active border; the glow and
+   the lift are what make it findable at a glance mid-battle. */
+.active {
+  box-shadow: var(--glow-genesis);
+}
