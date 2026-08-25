@@ -3,20 +3,54 @@
     "type": "skill",
     "id": "hugo_001_basic_attack",
     "name": "Basic Attack",
-    "tuCost": 11,
+    "tuCost": 7,
     "apCost": 0,
-    "tags": ["physical", "melee", "basic"],
+    "tags": [
+      "physical",
+      "melee",
+      "basic"
+    ],
     "maxLevel": 1,
-    "targeting": { "selector": "enemy", "range": "melee" },
-    "resolution": { "baseChance": 1.0 },
+    "targeting": {
+      "selector": "enemy",
+      "range": "melee"
+    },
+    "resolution": {
+      "baseChance": 1.0
+    },
     "effects": [
       {
-        "when": { "event": "onHit" },
+        "when": {
+          "event": "onHit"
+        },
         "type": "damage",
-        "amount": { "stat": "strength", "percent": 45 }
+        "amount": {
+          "stat": "strength",
+          "percent": 28
+        }
+      },
+      {
+        "id": "hugo_001_basic_attack_jab_shove",
+        "when": {
+          "event": "onCast"
+        },
+        "type": "tickShove",
+        "amount": 1
+      },
+      {
+        "id": "hugo_001_basic_attack_jab_shove_boosted",
+        "when": {
+          "event": "onCast"
+        },
+        "condition": {
+          "diceOutcome": "Boosted"
+        },
+        "type": "tickShove",
+        "amount": 2
       }
     ],
-    "levelUpgrades": []
+    "levelUpgrades": [],
+    "description": "ANBOT jabs with a nanite-hardened fist — light, fast, and enough to knock the target off its rhythm."
   },
   {
     "type": "skill",
@@ -25,7 +59,10 @@
     "description": "ANBOT reshapes its nanite mass into a blade and slashes the target.",
     "tuCost": 8,
     "apCost": 12,
-    "tags": ["physical", "melee"],
+    "tags": [
+      "physical",
+      "melee"
+    ],
     "maxLevel": 5,
     "targeting": {
       "selector": "enemy",
@@ -37,28 +74,56 @@
     "effects": [
       {
         "id": "hugo_001_nanites_slash_dmg",
-        "when": { "event": "onCast" },
+        "when": {
+          "event": "onCast"
+        },
         "type": "damage",
-        "amount": { "stat": "strength", "percent": 60 },
+        "amount": {
+          "stat": "strength",
+          "percent": 60
+        },
         "damageType": "physical"
       }
     ],
     "levelUpgrades": [
-      { "level": 2, "patch": { "effects.hugo_001_nanites_slash_dmg.amount.percent": 72  } },
-      { "level": 3, "patch": { "effects.hugo_001_nanites_slash_dmg.amount.percent": 85  } },
-      { "level": 4, "patch": { "effects.hugo_001_nanites_slash_dmg.amount.percent": 100 } },
-      { "level": 5, "patch": { "effects.hugo_001_nanites_slash_dmg.amount.percent": 115 } }
+      {
+        "level": 2,
+        "patch": {
+          "effects.hugo_001_nanites_slash_dmg.amount.percent": 72
+        }
+      },
+      {
+        "level": 3,
+        "patch": {
+          "effects.hugo_001_nanites_slash_dmg.amount.percent": 85
+        }
+      },
+      {
+        "level": 4,
+        "patch": {
+          "effects.hugo_001_nanites_slash_dmg.amount.percent": 100
+        }
+      },
+      {
+        "level": 5,
+        "patch": {
+          "effects.hugo_001_nanites_slash_dmg.amount.percent": 115
+        }
+      }
     ]
   },
   {
     "type": "skill",
     "id": "hugo_001_hammer_bash",
     "name": "Hammer Bash",
-    "description": "ANBOT consolidates its nanite mass into a crushing hammer limb and drives it into the target.",
+    "description": "ANBOT brings the hammer down. Heavy enough to put the target well back down the stream.",
     "tuCost": 13,
     "apCost": 25,
     "turnCooldown": 2,
-    "tags": ["physical", "melee"],
+    "tags": [
+      "physical",
+      "melee"
+    ],
     "maxLevel": 5,
     "targeting": {
       "selector": "enemy",
@@ -70,17 +135,50 @@
     "effects": [
       {
         "id": "hugo_001_hammer_bash_dmg",
-        "when": { "event": "onCast" },
+        "when": {
+          "event": "onCast"
+        },
         "type": "damage",
-        "amount": { "stat": "strength", "percent": 125 },
+        "amount": {
+          "stat": "strength",
+          "percent": 125
+        },
         "damageType": "physical"
+      },
+      {
+        "id": "hugo_001_hammer_bash_shove",
+        "when": {
+          "event": "onCast"
+        },
+        "type": "tickShove",
+        "amount": 4
       }
     ],
     "levelUpgrades": [
-      { "level": 2, "patch": { "effects.hugo_001_hammer_bash_dmg.amount.percent": 140 } },
-      { "level": 3, "patch": { "effects.hugo_001_hammer_bash_dmg.amount.percent": 158 } },
-      { "level": 4, "patch": { "effects.hugo_001_hammer_bash_dmg.amount.percent": 178 } },
-      { "level": 5, "patch": { "effects.hugo_001_hammer_bash_dmg.amount.percent": 200 } }
+      {
+        "level": 2,
+        "patch": {
+          "effects.hugo_001_hammer_bash_dmg.amount.percent": 140
+        }
+      },
+      {
+        "level": 3,
+        "patch": {
+          "effects.hugo_001_hammer_bash_dmg.amount.percent": 158
+        }
+      },
+      {
+        "level": 4,
+        "patch": {
+          "effects.hugo_001_hammer_bash_dmg.amount.percent": 178
+        }
+      },
+      {
+        "level": 5,
+        "patch": {
+          "effects.hugo_001_hammer_bash_dmg.amount.percent": 200
+        }
+      }
     ]
   },
   {
@@ -90,7 +188,9 @@
     "description": "ANBOT redistributes nanite density into a protective shell. Regenerates 4% max HP per 10 ticks while active. Shattering the shield deals 2x damage to Hugo from the breaking hit. 48-tick cooldown begins only on shield break.",
     "tuCost": 6,
     "apCost": 20,
-    "tags": ["utility"],
+    "tags": [
+      "utility"
+    ],
     "maxLevel": 1,
     "targeting": {
       "selector": "self",
@@ -102,14 +202,19 @@
     "effects": [
       {
         "id": "hugo_001_shelling_point_shield",
-        "when": { "event": "onCast" },
+        "when": {
+          "event": "onCast"
+        },
         "type": "applyStatus",
         "target": "self",
         "status": "hugo_001_shelling_point_active",
         "shieldPercent": 25,
         "companionStatus": "hugo_001_shelling_point_penalty_window",
         "companionDuration": 9,
-        "onBreakTickCooldown": { "skillId": "hugo_001_shelling_point", "ticks": 48 },
+        "onBreakTickCooldown": {
+          "skillId": "hugo_001_shelling_point",
+          "ticks": 48
+        },
         "blocksRecastOfSkill": "hugo_001_shelling_point"
       }
     ],
@@ -124,7 +229,11 @@
     "apCost": 10,
     "tickCooldown": 20,
     "hyperCooldown": 8,
-    "tags": ["utility", "unique", "hyper"],
+    "tags": [
+      "utility",
+      "unique",
+      "hyper"
+    ],
     "maxLevel": 1,
     "targeting": {
       "selector": "self",
@@ -136,8 +245,14 @@
     "effects": [
       {
         "id": "hugo_001_hyper_sense_normal",
-        "when": { "event": "onCast" },
-        "condition": { "not": { "selfHasStatus": "hugo_001_primal_awareness_dodge" } },
+        "when": {
+          "event": "onCast"
+        },
+        "condition": {
+          "not": {
+            "selfHasStatus": "hugo_001_primal_awareness_dodge"
+          }
+        },
         "type": "applyStatus",
         "target": "self",
         "status": "hugo_001_hyper_sense_ranged_dodge",
@@ -145,11 +260,24 @@
       },
       {
         "id": "hugo_001_hyper_sense_primal_boost",
-        "when": { "event": "onCast" },
-        "condition": { "all": [
-          { "selfHasStatus": "hugo_001_primal_awareness_dodge" },
-          { "not": { "selfStatusStacksBelow": { "id": "hugo_001_primal_awareness_dodge", "stacks": 3 } } }
-        ]},
+        "when": {
+          "event": "onCast"
+        },
+        "condition": {
+          "all": [
+            {
+              "selfHasStatus": "hugo_001_primal_awareness_dodge"
+            },
+            {
+              "not": {
+                "selfStatusStacksBelow": {
+                  "id": "hugo_001_primal_awareness_dodge",
+                  "stacks": 3
+                }
+              }
+            }
+          ]
+        },
         "type": "applyStatus",
         "target": "self",
         "status": "hugo_001_primal_awareness_dodge",
@@ -157,11 +285,22 @@
       },
       {
         "id": "hugo_001_hyper_sense_hyper",
-        "when": { "event": "onCast" },
-        "condition": { "all": [
-          { "selfHasStatus": "hugo_001_primal_awareness_dodge" },
-          { "selfStatusStacksBelow": { "id": "hugo_001_primal_awareness_dodge", "stacks": 3 } }
-        ]},
+        "when": {
+          "event": "onCast"
+        },
+        "condition": {
+          "all": [
+            {
+              "selfHasStatus": "hugo_001_primal_awareness_dodge"
+            },
+            {
+              "selfStatusStacksBelow": {
+                "id": "hugo_001_primal_awareness_dodge",
+                "stacks": 3
+              }
+            }
+          ]
+        },
         "type": "applyStatus",
         "target": "self",
         "status": "hugo_001_hyper_sense_hyper_active"

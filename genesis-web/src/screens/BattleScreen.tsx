@@ -26,7 +26,7 @@ import { ClashBanner } from './ClashBanner'
 import { TeamCollisionOverlay } from './TeamCollisionOverlay'
 import { SkillInfoOverlay } from './SkillInfoOverlay'
 import { isOnCooldown, ticksRemaining, turnsRemaining } from '../core/combat/CooldownResolver'
-import { BACK_DEBOUNCE_MS, AP_WARN_SHAKE_MS, AP_WARN_DISMISS_MS } from '../core/constants'
+import { BACK_DEBOUNCE_MS, AP_WARN_SHAKE_MS, AP_WARN_DISMISS_MS, MAX_SKILL_SLOTS } from '../core/constants'
 import { getCachedSkill } from '../core/engines/skill/SkillInstance'
 import { isAlive, isSkillTagBlocked } from '../core/unit'
 import { ResourceBar } from '../components/ResourceBar'
@@ -215,8 +215,10 @@ function ActionGrid() {
   const basicSkill    = playerSkills.find(s => s.baseDef.tags.includes('basic')) ?? null
   const activeSkills  = playerSkills.filter(s => !s.baseDef.tags.includes('basic'))
 
-  // Pad skill list to always show 4 slots.
-  const slots = Array.from({ length: 4 }, (_, i) => activeSkills[i] ?? null)
+  // Pad to a fixed slot count. This is the render cap: any skill authored past
+  // it is silently invisible, which is why engineInvariants asserts no
+  // character exceeds it.
+  const slots = Array.from({ length: MAX_SKILL_SLOTS }, (_, i) => activeSkills[i] ?? null)
 
   // Off-turn the grid has no unit to bind to, so every card renders as an em
   // dash. With AI allies that happens constantly and reads as a broken screen

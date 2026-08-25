@@ -22,7 +22,10 @@ export function runEnemyApplying(engine: BattleEngine): void {
   engine.playerUnits = engine.playerUnits.map(u => snap.get(u.id) ?? u)
   engine.enemies     = engine.enemies.map(e => snap.get(e.id) ?? e)
 
-  const fromTick = aiUnit.tickPosition
+  // Read the position back off the snapshot, not the pre-action unit: an effect
+  // that shoves the CASTER (a self-haste, a recoil, a passive) writes to the
+  // snapshot, and advancing from the stale reference silently discarded it.
+  const fromTick = snap.get(aiUnit.id)?.tickPosition ?? aiUnit.tickPosition
   engine.cb.onHistory(makeHistoryEntry(aiUnit.id, aiUnit.defId, aiUnit.name, fromTick, aiUnit.isAlly))
   engine.registerTickInternal(aiUnit.id, advanceTick(fromTick, effectiveTu))
   engine.globalBattleTick += effectiveTu
@@ -104,7 +107,9 @@ export function runPlayerApplying(engine: BattleEngine): void {
   })
   engine.enemies = engine.enemies.map(e => snap.get(e.id) ?? e)
 
-  const nextTick = advanceTick(actor.tickPosition, effectiveTu)
+  // Same as the AI path: a shove applied to the caster lives in the snapshot,
+  // so advancing from actor.tickPosition would throw it away.
+  const nextTick = advanceTick(snap.get(actor.id)?.tickPosition ?? actor.tickPosition, effectiveTu)
   engine.registerTickInternal(actor.id, nextTick)
   engine.globalBattleTick += effectiveTu
   fireBattleTickIntervalPassives(

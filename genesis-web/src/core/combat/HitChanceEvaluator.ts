@@ -35,6 +35,11 @@ export function tuAccuracyFactor(tuCost: number): number {
 // - finalChance < 1.0 → negative outcomes (Evade + Fail) scaled up
 // Probabilities always sum to 1.0.
 export function shiftProbabilities(finalChance: number): DiceProbabilities {
+  // Fall back to the neutral table on a non-finite input. A NaN here propagates
+  // into all four probabilities, and NaN weights make roll() fall through to
+  // its default while the odds band renders as four zero-width zones — wrong
+  // silently, in both the simulation and the thing the player is reading.
+  const chance = Number.isFinite(finalChance) ? finalChance : 1
   const base = { ...DICE_BASE_PROBABILITIES }
   const positivePool = base.Boosted + base.Hit
   const negativePool = base.Evade   + base.Fail
@@ -43,7 +48,7 @@ export function shiftProbabilities(finalChance: number): DiceProbabilities {
   // produced a unit that could not miss and low Precision one that could not
   // hit — in both cases the four-outcome table collapsed to a single result.
   const maxRatio    = positivePool > 0 ? 1.0 / positivePool : 1.0
-  const ratio       = Math.min(finalChance, maxRatio)
+  const ratio       = Math.min(chance, maxRatio)
   const rawPositive = positivePool * ratio
   const newPositive = Math.min(1 - MIN_OUTCOME_POOL, Math.max(MIN_OUTCOME_POOL, rawPositive))
   const newNegative = 1 - newPositive

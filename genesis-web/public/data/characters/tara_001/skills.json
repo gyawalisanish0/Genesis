@@ -3,10 +3,14 @@
     "type": "skill",
     "id": "tara_001_basic_attack",
     "name": "Orb Strike",
-    "description": "A focused pulse of Yellow Orb energy.",
-    "tuCost": 9,
+    "description": "A thrown mote of ordered light. Cheap, quick, and it costs the target a moment they wanted.",
+    "tuCost": 7,
     "apCost": 0,
-    "tags": ["basic", "energy", "ranged"],
+    "tags": [
+      "basic",
+      "energy",
+      "ranged"
+    ],
     "maxLevel": 1,
     "targeting": {
       "selector": "enemy",
@@ -17,10 +21,34 @@
     },
     "effects": [
       {
-        "when": { "event": "onCast" },
+        "when": {
+          "event": "onCast"
+        },
         "type": "damage",
-        "amount": { "stat": "power", "percent": 33 },
+        "amount": {
+          "stat": "power",
+          "percent": 22
+        },
         "damageType": "energy"
+      },
+      {
+        "id": "tara_001_basic_attack_jab_shove",
+        "when": {
+          "event": "onCast"
+        },
+        "type": "tickShove",
+        "amount": 1
+      },
+      {
+        "id": "tara_001_basic_attack_jab_shove_boosted",
+        "when": {
+          "event": "onCast"
+        },
+        "condition": {
+          "diceOutcome": "Boosted"
+        },
+        "type": "tickShove",
+        "amount": 2
       }
     ],
     "levelUpgrades": []
@@ -33,7 +61,10 @@
     "tuCost": 5,
     "apCost": 30,
     "tickCooldown": 40,
-    "tags": ["utility", "energy"],
+    "tags": [
+      "utility",
+      "energy"
+    ],
     "maxLevel": 1,
     "targeting": {
       "selector": "all-allies",
@@ -45,14 +76,22 @@
     "effects": [
       {
         "id": "tara_001_goddess_shield_effect",
-        "when": { "event": "onCast" },
+        "when": {
+          "event": "onCast"
+        },
         "type": "applyStatus",
         "status": "tara_001_goddess_shield",
-        "shieldValue": { "stat": "maxHp", "percent": 20, "of": "caster" }
+        "shieldValue": {
+          "stat": "maxHp",
+          "percent": 20,
+          "of": "caster"
+        }
       },
       {
         "id": "tara_001_goddess_dodge_effect",
-        "when": { "event": "onCast" },
+        "when": {
+          "event": "onCast"
+        },
         "type": "applyStatus",
         "target": "self",
         "status": "tara_001_goddess_dodge"
@@ -68,7 +107,10 @@
     "tuCost": 12,
     "apCost": 25,
     "turnCooldown": 8,
-    "tags": ["energy", "ranged"],
+    "tags": [
+      "energy",
+      "ranged"
+    ],
     "maxLevel": 1,
     "targeting": {
       "selector": "all-enemies",
@@ -80,16 +122,23 @@
     "effects": [
       {
         "id": "tara_001_vortex_shove",
-        "when": { "event": "onCast" },
+        "when": {
+          "event": "onCast"
+        },
         "type": "tickShove",
         "amount": 4
       },
       {
         "id": "tara_001_vortex_damage",
-        "when": { "event": "onCast" },
+        "when": {
+          "event": "onCast"
+        },
         "target": "random-enemy",
         "type": "damage",
-        "amount": { "stat": "power", "percent": 66 },
+        "amount": {
+          "stat": "power",
+          "percent": 66
+        },
         "damageType": "energy"
       }
     ],
@@ -103,7 +152,10 @@
     "tuCost": 12,
     "apCost": 18,
     "tickCooldown": 35,
-    "tags": ["utility", "energy"],
+    "tags": [
+      "utility",
+      "energy"
+    ],
     "maxLevel": 1,
     "targeting": {
       "selector": "all-enemies",
@@ -115,7 +167,9 @@
     "effects": [
       {
         "id": "tara_001_order_swap_effect",
-        "when": { "event": "onCast" },
+        "when": {
+          "event": "onCast"
+        },
         "type": "applyStatus",
         "status": "tara_001_order_swap"
       }
@@ -130,7 +184,11 @@
     "tuCost": 15,
     "apCost": 50,
     "turnCooldown": 12,
-    "tags": ["energy", "ranged", "special"],
+    "tags": [
+      "energy",
+      "ranged",
+      "special"
+    ],
     "maxLevel": 1,
     "targeting": {
       "selector": "enemy",
@@ -142,14 +200,21 @@
     "effects": [
       {
         "id": "tara_001_phoenix_burst_damage",
-        "when": { "event": "onHit" },
+        "when": {
+          "event": "onHit"
+        },
         "type": "damage",
-        "amount": { "stat": "power", "percent": 333 },
+        "amount": {
+          "stat": "power",
+          "percent": 333
+        },
         "damageType": "energy"
       },
       {
         "id": "tara_001_phoenix_burn_apply",
-        "when": { "event": "onCast" },
+        "when": {
+          "event": "onCast"
+        },
         "target": "all-enemies",
         "type": "applyStatus",
         "status": "tara_001_phoenix_burn"
