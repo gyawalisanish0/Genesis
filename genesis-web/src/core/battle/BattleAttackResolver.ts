@@ -3,7 +3,7 @@
 // and the counter-reaction chain.
 
 import type { Unit }                          from '../types'
-import type { SkillInstance, EffectContext }  from '../effects/types'
+import type { SkillInstance, EffectContext, TargetSelector } from '../effects/types'
 import type { DiceOutcome }                   from '../combat/DiceResolver'
 import type { BattleEngine }                  from './BattleEngine'
 import {
@@ -34,6 +34,11 @@ const GRAZEABLE_EFFECTS = new Set<string>(['damage', 'heal'])
 /** Selectors that aim at the caster's own side — these never roll. */
 const SELF_SELECTORS = new Set<string>(['self', 'ally', 'all-allies'])
 
+/** TargetSelector also has a `{ tag }` form, which is never self-targeted. */
+function isSelfTargeted(selector: TargetSelector): boolean {
+  return typeof selector === 'string' && SELF_SELECTORS.has(selector)
+}
+
 export function runAttack(
   engine:    BattleEngine,
   caster:    Unit,
@@ -61,7 +66,7 @@ export function runAttack(
   // Aiming at yourself cannot miss. Paying 20 AP to fail at buffing your own
   // unit was the least defensible roll in the game — there is no opposed party
   // to evade it, and the variance only ever read as the game cheating.
-  const selfCast    = SELF_SELECTORS.has(skill.targeting.selector)
+  const selfCast    = isSelfTargeted(skill.targeting.selector)
   const diceOutcome = selfCast ? 'Hit' : dodged ? 'Evade' : roll(probabilities)
 
   // Only an Evade removes the target outright. A Fail now grazes, so it keeps
