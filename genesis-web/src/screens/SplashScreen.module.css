@@ -71,7 +71,9 @@
   font-weight: var(--t-display-weight);
   line-height: var(--t-display-lh);
   color: var(--text-primary);
-  letter-spacing: 0.5rem;
+  letter-spacing: 0.375rem;
+  /* The wordmark is one line at every supported width or it is broken. */
+  white-space: nowrap;
   margin: 0;
 }
 
