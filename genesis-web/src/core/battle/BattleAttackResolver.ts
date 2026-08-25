@@ -76,7 +76,11 @@ export function runAttack(
   const noDamage = evaded
   const scale    = outcomeScale(diceOutcome)
 
-  engine.showDiceResult(diceOutcome, buildOutcomeMessage(diceOutcome, caster.name, target.name))
+  engine.showDiceResult(
+    diceOutcome,
+    buildOutcomeMessage(diceOutcome, caster.name, target.name),
+    probabilities,
+  )
   const targetHpBefore = snap.get(target.id)?.hp ?? target.hp
   const casterHpBefore = snap.get(caster.id)?.hp ?? caster.hp
 

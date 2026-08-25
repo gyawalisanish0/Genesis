@@ -34,7 +34,6 @@ import type { BattleEngineSnapshot, BattleEngineCallbacks, LogEntry, DiceResult,
 import type { TurnPhase } from '../core/battle/EngineTypes'
 import type { BattleStep } from '../core/battle/BattleStepMachine'
 import type { DiceProbabilities } from '../core/combat/HitChanceEvaluator'
-import { forecastOutcomes } from '../core/combat/OutcomeForecast'
 import { SoundService } from '../services/SoundService'
 
 /** A unit shoved off its requested tick by the occupancy cap. */
@@ -257,18 +256,31 @@ export function BattleProvider({ children }: Props) {
   }, [reportError])
 
   // ── Dice result overlay ────────────────────────────────────────────────────
-  const showDiceResult = useCallback((outcome: import('../core/combat/DiceResolver').DiceOutcome, message: string) => {
+  const showDiceResult = useCallback((
+    outcome: import('../core/combat/DiceResolver').DiceOutcome,
+    message: string,
+    probabilities?: DiceProbabilities,
+  ) => {
     if (diceTimerRef.current) clearTimeout(diceTimerRef.current)
     diceKeyRef.current += 1
     diceShowTimeRef.current = Date.now()
     setDiceResult({ outcome, message, animKey: diceKeyRef.current })
-    diceTimerRef.current = setTimeout(() => setDiceResult(null), DICE_RESULT_DISMISS_MS)
+    // The band belongs to whoever is rolling. It used to be set only when the
+    // player picked a skill and never cleared, so an enemy roll drew no band at
+    // all until the player had acted, and the player's stale odds ever after.
+    // A roll with no table (the counter announce) shows the callout alone.
+    setDiceForecast(probabilities ?? null)
+    diceTimerRef.current = setTimeout(() => {
+      setDiceResult(null)
+      setDiceForecast(null)
+    }, DICE_RESULT_DISMISS_MS)
   }, [])
 
   const skipDice = useCallback(() => {
     if (!diceResultRef.current) return
     if (diceTimerRef.current) { clearTimeout(diceTimerRef.current); diceTimerRef.current = null }
     setDiceResult(null)
+    setDiceForecast(null)
     arenaRef.current?.skipActiveDice()
     engineRef.current?.skipDiceAnim()
   }, [])
@@ -305,8 +317,8 @@ export function BattleProvider({ children }: Props) {
           setTurnDisplay(null)
         })
       },
-      onShowDiceResult(outcome, message) {
-        safe(() => showDiceResult(outcome, message))
+      onShowDiceResult(outcome, message, probabilities) {
+        safe(() => showDiceResult(outcome, message, probabilities))
       },
       onClearDiceResult() {
         safe(() => { if (diceTimerRef.current) clearTimeout(diceTimerRef.current); setDiceResult(null) })
@@ -569,7 +581,6 @@ export function BattleProvider({ children }: Props) {
     // Snapshot the odds the player is committing to. Captured here rather than
     // recomputed at reveal time so a later selection change cannot rewrite
     // history — the band must show the table the roll was actually made against.
-    if (activePlayerUnit) setDiceForecast(forecastOutcomes(activePlayerUnit, skill.baseDef))
     safeEngineCall(() => engineRef.current?.executeSkill(skill, selectedTarget))
   }, [selectedTarget, safeEngineCall, activePlayerUnit])
 

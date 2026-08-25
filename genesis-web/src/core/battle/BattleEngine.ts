@@ -5,6 +5,7 @@
 import type { Unit, AnimationManifest, AnimationProjectileDef, AnimSequenceManifest, AnimPhase } from '../types'
 import type { SkillInstance, EffectContext, PassiveDef, StatusDef } from '../effects/types'
 import type { DiceOutcome } from '../combat/DiceResolver'
+import type { DiceProbabilities } from '../combat/HitChanceEvaluator'
 import type {
   BattleEngineConfig, BattleEngineCallbacks, BattleEngineSnapshot,
   PendingPlayerTurnData, PendingAITurnData, CounterDecision, ClashState, TeamCollisionState,
@@ -487,12 +488,12 @@ export class BattleEngine {
 
   // ── Dice / turn display helpers ───────────────────────────────────────────────
 
-  showDiceResult(outcome: DiceOutcome, message: string): void {
+  showDiceResult(outcome: DiceOutcome, message: string, probabilities?: DiceProbabilities): void {
     if (this.diceTimer) clearTimeout(this.diceTimer)
     this.diceKey += 1
     this.diceShowTime = Date.now()
     this.diceActive   = true
-    this.cb.onShowDiceResult(outcome, message)
+    this.cb.onShowDiceResult(outcome, message, probabilities)
     this.diceTimer = setTimeout(() => {
       this.diceActive = false
       this.cb.onClearDiceResult()

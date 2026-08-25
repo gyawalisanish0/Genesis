@@ -2,6 +2,7 @@
 
 import type { Unit, AnimationManifest, AnimationProjectileDef, AnimPhase, AnimSequenceManifest } from '../types'
 import type { SkillInstance, PassiveDef, StatusDef } from '../effects/types'
+import type { DiceProbabilities } from '../combat/HitChanceEvaluator'
 import type { DiceOutcome } from '../combat/DiceResolver'
 import type { HistoryEntry } from '../battleHistory'
 import type { BattleStep } from './BattleStepMachine'
@@ -137,7 +138,13 @@ export interface BattleEngineCallbacks {
   onShowTurnDisplay(data: TurnDisplayData, dismissAfter?: number): void
   onHideTurnDisplay(): void
   // Dice overlay
-  onShowDiceResult(outcome: DiceOutcome, message: string): void
+  /**
+   * `probabilities` is the exact table this roll was resolved against. It is
+   * per-roll because the roller changes: the UI used to draw the band from a
+   * forecast the player set when picking a skill, so an enemy roll had no band
+   * at all until the player had acted once, and the player's stale odds after.
+   */
+  onShowDiceResult(outcome: DiceOutcome, message: string, probabilities?: DiceProbabilities): void
   /** A unit's requested tick was taken, so D8 displacement moved it elsewhere.
    *  Optional: absent implementations simply do not visualise displacement. */
   onTickDisplaced?(unitId: string, fromTick: number, toTick: number): void
