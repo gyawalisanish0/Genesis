@@ -114,7 +114,7 @@ The tick stream is a 40 dp spine that feeds a single glowing gate, and everythin
 
 ### ActionGrid (360 × 192 dp)
 
-`8 + 84 + 8 + 84 + 8`. Cards 168 × 84 dp inside a `PagedGrid` (2×2, pages when a unit has >4 skills). Card anatomy: name (16) · `TU 8 · AP 20 · +5 AP` (16) · **odds strip** (8) · badge row (16).
+`8 + 84 + 8 + 84 + 8`. Cards 168 × 84 dp in a fixed 2×2 grid — exactly `MAX_SKILL_SLOTS`, never paged. A unit equips **up to 4 active skills** (CONCEPT.md § Unit Anatomy), so a fifth is not content the grid should scroll to; it is content that should not exist. An earlier draft of this line specified paging "when a unit has >4 skills", which contradicts that cap and reads as licence to author a fifth. Card anatomy: name (16) · `TU 8 · AP 20 · +5 AP` (16) · **odds strip** (8) · badge row (16).
 
 The **odds strip** is one 8 dp horizontal `ResourceBar`-style segmented bar split into four proportional widths in `--accent-gold` / `--text-primary` / `--accent-evasion` / `--text-muted`. No numbers, no legend. The widths *are* the probabilities for this caster and this skill after the `precision/50` multiplier. It is a shape, not an explanation — which is the only form `docs/design/design-philosophy.md:121-125` permits.
 
