@@ -92,8 +92,10 @@
 }
 
 .dpadBtn {
-  width: 2.75rem;
-  height: 2.75rem;
+  /* The d-pad is the primary control in the dungeon; it was 44 dp, under the
+     48 dp minimum. */
+  width: var(--touch-min);
+  height: var(--touch-min);
   background: var(--bg-elevated);
   border: 1px solid var(--bg-card);
   color: var(--text-primary);
@@ -102,7 +104,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  active-opacity: 0.7;
 }
 
 .dpadBtn:active {

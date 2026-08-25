@@ -66,21 +66,40 @@
 
 /* ── Floating damage number ──────────────────────────────────────────────── */
 
+/* Anchored over the combatant's sprite, not the centre of the row. Centring on
+   the row put the number on top of the CombatantPlate, so a hit covered the
+   target's name and remaining HP at the exact moment the player wants to read
+   them ("Netrolume Grunt−29 0/280"). 3rem is half the 96 dp sprite box, which
+   sits at the row's outer edge — right for the enemy, left for the ally. */
 .damage {
   position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
   color: var(--accent-danger);
   font-family: var(--font-pixel);
   font-size: var(--t-subheading-size);
   font-weight: 700;
   text-shadow: var(--glow-danger);
   pointer-events: none;
-  animation: damageRise 600ms steps(4) both;
+  white-space: nowrap;
 }
 
-@keyframes damageRise {
+.enemyRow .damage {
+  top: 1.5rem;
+  right: 3rem;
+  animation: damageRiseEnemy 600ms steps(4) both;
+}
+
+.allyRow .damage {
+  bottom: 1.5rem;
+  left: 3rem;
+  animation: damageRiseAlly 600ms steps(4) both;
+}
+
+@keyframes damageRiseEnemy {
+  from { transform: translate(50%, 0.75rem); }
+  to   { transform: translate(50%, -0.75rem); }
+}
+
+@keyframes damageRiseAlly {
   from { transform: translate(-50%, 0.75rem); }
   to   { transform: translate(-50%, -0.75rem); }
 }

@@ -11,6 +11,26 @@
   -webkit-touch-callout: none;
 }
 
+/* Base typeface. Nothing set a font-family on body, so every element that did
+   not explicitly reach for a --font-* token inherited the browser default —
+   which is a serif. Screen titles, unit names and stat values all rendered in
+   Times New Roman in a pixel-art game. */
+body {
+  font-family: var(--font-pixel);
+  color: var(--text-primary);
+  /* Pixel faces are bitmap-derived; smoothing them muddies the 2 dp grid. */
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+}
+
+/* Prose keeps the platform UI font — Silkscreen is a display face and becomes
+   hard to read for descriptions and log lines at body sizes. */
+p,
+li {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
 /* Re-enable selection inside text inputs so typing still works. */
 input,
 textarea {

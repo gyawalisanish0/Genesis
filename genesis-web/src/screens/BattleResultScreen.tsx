@@ -65,9 +65,10 @@ export function BattleResultScreen() {
         {/* Result banner */}
         <div className={`${styles.banner} ${victory ? styles.bannerVictory : styles.bannerDefeat}`}>
           <span className={styles.bannerIcon}>{victory ? '★' : '✕'}</span>
-          <h1 className={styles.bannerText}>
-            {victory ? 'V I C T O R Y' : 'D E F E A T'}
-          </h1>
+          {/* Letter spacing belongs to CSS. Spelling it with real spaces gave
+              the browser legal break points, and the banner wrapped to
+              "V I C T O" / "R Y" at 360 dp. */}
+          <h1 className={styles.bannerText}>{victory ? 'VICTORY' : 'DEFEAT'}</h1>
           <p className={styles.bannerSub}>Story Mode</p>
           {victory && <span className={styles.bannerIconRight}>★</span>}
         </div>

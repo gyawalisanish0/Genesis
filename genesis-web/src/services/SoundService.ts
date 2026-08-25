@@ -1,6 +1,12 @@
-// SoundService — Phaser WebAudio sound engine, no canvas.
+// SoundService — Phaser WebAudio sound engine, audio only.
 // Phaser.HEADLESS creates a game with no renderer; the WebAudio manager
 // is fully functional. Audio files live in public/audio/{key}.webm|mp3.
+//
+// HEADLESS still builds a canvas and appends it to <body> at its default
+// 1024x768. Nothing ever draws to it, but a 1024 px element in the document
+// made every screen scroll horizontally and cost a graphics context on mobile.
+// We hand Phaser a detached 1x1 canvas so it has the object it wants and the
+// document stays clean — see the config below.
 //
 // Usage:
 //   SoundService.init()                     — call once in App.tsx on mount
@@ -81,7 +87,13 @@ export const SoundService = {
     try {
       const Phaser = (await import('phaser')).default
       _game = new Phaser.Game({
-        type:  Phaser.HEADLESS,
+        type:   Phaser.HEADLESS,
+        // Detached and never appended: Phaser gets its canvas object, the
+        // document does not get a 1024 px wide child of <body>.
+        canvas: document.createElement('canvas'),
+        parent: undefined,
+        width:  1,
+        height: 1,
         audio: { disableWebAudio: !Capacitor.isNativePlatform() && !window.AudioContext },
         scene: makeSoundScene(Phaser),
         callbacks: {
@@ -89,6 +101,9 @@ export const SoundService = {
           postBoot: () => {},
         },
       })
+      // Belt and braces: if a future Phaser still injects the canvas, evict it.
+      // A stray canvas is invisible, so this would otherwise regress unnoticed.
+      _game.canvas?.parentNode?.removeChild(_game.canvas)
     } catch (err) {
       console.warn('[SoundService] audio unavailable:', err)
     } finally {
