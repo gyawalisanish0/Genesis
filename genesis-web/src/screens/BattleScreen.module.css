@@ -39,9 +39,6 @@
   align-items: center;
   justify-content: center;
   gap: var(--s-sm);
-  /* Centred, not bottom-anchored: at the arena's bottom edge the hint sat
-     directly on top of the ally's CombatantPlate. The centre band is the
-     one region both plates leave clear. */
   z-index: 10;
   font-family: var(--font-sans);
   animation: diceSkipFadeIn 200ms ease-out both;
@@ -49,7 +46,13 @@
 
 .diceSkipHotzone:active { transform: none; }
 
+/* The hint has two things to avoid. Bottom-anchored it sat on the ally's
+   CombatantPlate; centred it sat on the dice band and the outcome callout,
+   which is what it is asking you to skip. The ally row is bottom-aligned, so
+   the upper part of it is clear — park the hint there, between the two. */
 .diceSkipHint {
+  position: absolute;
+  top: 68%;
   background: var(--bg-elevated);
   color: var(--text-secondary);
   font-size: var(--t-micro-size);
