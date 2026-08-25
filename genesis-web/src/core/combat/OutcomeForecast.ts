@@ -9,7 +9,7 @@ import type { Unit } from '../types'
 // The effects-layer SkillDef — the one carrying `resolution`, and the shape the
 // resolver actually holds. `core/types.ts` exports a narrower JSON-facing SkillDef.
 import type { SkillDef } from '../effects/types'
-import { calculateFinalChance, shiftProbabilities } from './HitChanceEvaluator'
+import { calculateFinalChance, shiftProbabilities, tuAccuracyFactor } from './HitChanceEvaluator'
 import type { DiceProbabilities } from './HitChanceEvaluator'
 import { calculateApGained } from './TickCalculator'
 
@@ -24,15 +24,16 @@ export function rangedChanceBonus(caster: Unit, skill: Readonly<SkillDef>): numb
 
 /**
  * The four-outcome probability table for this caster using this skill.
- * Differs per caster: finalChance = (precision / 50) x baseChance, so the same
- * skill genuinely reads differently in different hands.
+ * Differs per caster and per skill: finalChance is (precision / 50) x baseChance
+ * scaled by the skill's tick investment, so the same skill reads differently in
+ * different hands and a heavier skill lands more reliably than a jab.
  */
 export function forecastOutcomes(caster: Unit, skill: Readonly<SkillDef>): DiceProbabilities {
   const baseChance = skill.resolution?.baseChance ?? 1.0
   const finalChance = calculateFinalChance(
     caster.stats.precision,
     baseChance + rangedChanceBonus(caster, skill),
-  )
+  ) * tuAccuracyFactor(skill.tuCost)
   return shiftProbabilities(finalChance)
 }
 

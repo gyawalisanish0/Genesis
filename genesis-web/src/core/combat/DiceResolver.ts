@@ -2,6 +2,7 @@
 
 import {
   BOOSTED_MULTIPLIER,
+  FAIL_CHIP_MULTIPLIER,
   COUNTER_BASE,
   COUNTER_STEP,
   COUNTER_MIN,
@@ -26,17 +27,28 @@ export function roll(probs: DiceProbabilities): DiceOutcome {
   return 'Hit'
 }
 
+/**
+ * How much of a skill's output an outcome delivers.
+ *
+ * This is the single source of truth for outcome magnitude. It used to live
+ * only inside applyOutcome, which nothing in the battle pipeline called — so
+ * BOOSTED_MULTIPLIER never fired and a Boosted hit dealt exactly as much as a
+ * plain Hit. The dice had four names but two behaviours.
+ */
+export function outcomeScale(outcome: DiceOutcome): number {
+  switch (outcome) {
+    case 'Boosted': return BOOSTED_MULTIPLIER
+    case 'Hit':     return 1
+    case 'Fail':    return FAIL_CHIP_MULTIPLIER
+    case 'Evade':   return 0
+  }
+}
+
 // Apply a dice outcome to a raw output value and produce the full result.
 export function applyOutcome(outcome: DiceOutcome, rawOutput: number): OutcomeResult {
-  switch (outcome) {
-    case 'Boosted':
-      return { output: Math.round(rawOutput * BOOSTED_MULTIPLIER), evaded: false }
-    case 'Evade':
-      return { output: 0, evaded: true }
-    case 'Fail':
-      return { output: 0, evaded: false }
-    default: // 'Hit'
-      return { output: rawOutput, evaded: false }
+  return {
+    output: Math.round(rawOutput * outcomeScale(outcome)),
+    evaded: outcome === 'Evade',
   }
 }
 

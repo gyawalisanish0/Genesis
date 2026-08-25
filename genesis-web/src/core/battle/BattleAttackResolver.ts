@@ -8,12 +8,12 @@ import type { DiceOutcome }                   from '../combat/DiceResolver'
 import type { BattleEngine }                  from './BattleEngine'
 import {
   COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE,
-  DICE_RESULT_DISMISS_MS,
+  DICE_RESULT_DISMISS_MS, FAIL_AP_REFUND,
 } from '../constants'
 import { tickStatusDurations, updateStatusIntervalTick, takeDamage } from '../unit'
 import { calculateApGained }                            from '../combat/TickCalculator'
 import { forecastOutcomes }                              from '../combat/OutcomeForecast'
-import { roll, resolveCounterRoll }                     from '../combat/DiceResolver'
+import { roll, outcomeScale, resolveCounterRoll }                     from '../combat/DiceResolver'
 import { findCounterSkill, canCounter, isSingleTarget } from '../combat/CounterResolver'
 import { applyTickCooldown }                            from '../combat/CooldownResolver'
 import { applyEffect }                                  from '../effects/applyEffect'
@@ -27,6 +27,12 @@ import {
   fireCounterTriggerEffects, fireCounterCastEffects,
 } from './BattlePassive'
 import { outcomeColour, buildOutcomeMessage } from './BattleResolution'
+
+/** Effect types whose magnitude scales, so they still fire on a graze. */
+const GRAZEABLE_EFFECTS = new Set<string>(['damage', 'heal'])
+
+/** Selectors that aim at the caster's own side — these never roll. */
+const SELF_SELECTORS = new Set<string>(['self', 'ally', 'all-allies'])
 
 export function runAttack(
   engine:    BattleEngine,
@@ -52,8 +58,18 @@ export function runAttack(
     { ...casterForDice, stats: caster.stats },
     skill,
   )
-  const diceOutcome = dodged ? 'Evade' : roll(probabilities)
-  const noDamage    = diceOutcome === 'Evade' || diceOutcome === 'Fail'
+  // Aiming at yourself cannot miss. Paying 20 AP to fail at buffing your own
+  // unit was the least defensible roll in the game — there is no opposed party
+  // to evade it, and the variance only ever read as the game cheating.
+  const selfCast    = SELF_SELECTORS.has(skill.targeting.selector)
+  const diceOutcome = selfCast ? 'Hit' : dodged ? 'Evade' : roll(probabilities)
+
+  // Only an Evade removes the target outright. A Fail now grazes, so it keeps
+  // its target and scales magnitude down instead of erasing the action.
+  const evaded   = diceOutcome === 'Evade'
+  const grazed   = diceOutcome === 'Fail'
+  const noDamage = evaded
+  const scale    = outcomeScale(diceOutcome)
 
   engine.showDiceResult(diceOutcome, buildOutcomeMessage(diceOutcome, caster.name, target.name))
   const targetHpBefore = snap.get(target.id)?.hp ?? target.hp
@@ -73,13 +89,19 @@ export function runAttack(
   const apFrozen     = casterSnap?.statusSlots.some(s => s.payload?.freezesApRegen === true) ?? false
   const ticksElapsed = currentTick > 0 ? skill.tuCost : 0
   const apGained     = apFrozen ? 0 : calculateApGained(ticksElapsed, caster.apRegenRate)
-  if (apGained > 0 && casterSnap) {
-    snap.set(caster.id, { ...casterSnap, ap: Math.min(casterSnap.maxAp, casterSnap.ap + apGained) })
+  // A graze hands most of the AP back. The cost was committed before the roll,
+  // so without this the roll punishes the biggest investments hardest — a 50 AP
+  // skill lost ~100 ticks of banking to one die. The tick is still spent.
+  const apRefund = grazed ? Math.round(skill.apCost * FAIL_AP_REFUND) : 0
+  const apCredit = apGained + apRefund
+  if (apCredit > 0 && casterSnap) {
+    snap.set(caster.id, { ...casterSnap, ap: Math.min(casterSnap.maxAp, casterSnap.ap + apCredit) })
   }
 
   const ctx: EffectContext = {
     caster,
     target:      noDamage ? undefined : target,
+    outcomeScale: scale,
     battle,
     source:      'skill',
     event:       { event: 'onCast' },
@@ -88,7 +110,12 @@ export function runAttack(
   }
 
   for (const effect of skillInst.cachedEffects) {
-    if (effect.when.event === 'onCast') applyEffect(effect, ctx)
+    if (effect.when.event !== 'onCast') continue
+    // A graze delivers reduced output, not a reduced version of everything —
+    // a missed strike should not still land its debuff. This is an outcome-level
+    // rule like Evade suppressing the whole cast, not a per-skill exception.
+    if (grazed && !GRAZEABLE_EFFECTS.has(effect.type)) continue
+    applyEffect(effect, ctx)
   }
 
   if (!noDamage) {
