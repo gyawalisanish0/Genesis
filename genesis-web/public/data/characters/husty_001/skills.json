@@ -3,55 +3,21 @@
     "type": "skill",
     "id": "husty_001_basic_attack",
     "name": "Basic Attack",
-    "tuCost": 7,
+    "tuCost": 11,
     "apCost": 0,
-    "tags": [
-      "energy",
-      "ranged",
-      "basic"
-    ],
+    "tags": ["energy", "ranged", "basic"],
     "maxLevel": 1,
-    "targeting": {
-      "selector": "enemy",
-      "range": "ranged"
-    },
-    "resolution": {
-      "baseChance": 1.0
-    },
+    "targeting": { "selector": "enemy", "range": "ranged" },
+    "resolution": { "baseChance": 1.0 },
     "effects": [
       {
-        "when": {
-          "event": "onHit"
-        },
+        "when": { "event": "onHit" },
         "type": "damage",
-        "amount": {
-          "stat": "power",
-          "percent": 25
-        },
+        "amount": { "stat": "power", "percent": 40 },
         "damageType": "energy"
-      },
-      {
-        "id": "husty_001_basic_attack_jab_shove",
-        "when": {
-          "event": "onCast"
-        },
-        "type": "tickShove",
-        "amount": 1
-      },
-      {
-        "id": "husty_001_basic_attack_jab_shove_boosted",
-        "when": {
-          "event": "onCast"
-        },
-        "condition": {
-          "diceOutcome": "Boosted"
-        },
-        "type": "tickShove",
-        "amount": 2
       }
     ],
-    "levelUpgrades": [],
-    "description": "A snap discharge. Little raw force, but the interference sets the target back on the stream."
+    "levelUpgrades": []
   },
   {
     "type": "skill",
@@ -60,11 +26,7 @@
     "description": "A focused psychic burst that scrambles motor-nerve signals. Deals 15 flat + 20% Power energy damage. On hit, locks all movement-tagged skills on the target team for 15 ticks.",
     "tuCost": 12,
     "apCost": 16,
-    "tags": [
-      "utility",
-      "ranged",
-      "energy"
-    ],
+    "tags": ["utility", "ranged", "energy"],
     "maxLevel": 5,
     "targeting": {
       "selector": "all-enemies",
@@ -76,56 +38,24 @@
     "effects": [
       {
         "id": "husty_001_disruption_dmg",
-        "when": {
-          "event": "onHit"
-        },
+        "when": { "event": "onHit" },
         "type": "damage",
-        "amount": {
-          "sum": [
-            15,
-            {
-              "stat": "power",
-              "percent": 20
-            }
-          ]
-        },
+        "amount": { "sum": [15, { "stat": "power", "percent": 20 }] },
         "damageType": "energy"
       },
       {
         "id": "husty_001_disruption_block",
-        "when": {
-          "event": "onHit"
-        },
+        "when": { "event": "onHit" },
         "type": "applyStatus",
         "status": "husty_001_movement_block",
         "duration": 15
       }
     ],
     "levelUpgrades": [
-      {
-        "level": 2,
-        "patch": {
-          "effects.husty_001_disruption_dmg.amount.sum.1.percent": 28
-        }
-      },
-      {
-        "level": 3,
-        "patch": {
-          "effects.husty_001_disruption_dmg.amount.sum.1.percent": 36
-        }
-      },
-      {
-        "level": 4,
-        "patch": {
-          "effects.husty_001_disruption_dmg.amount.sum.1.percent": 46
-        }
-      },
-      {
-        "level": 5,
-        "patch": {
-          "effects.husty_001_disruption_dmg.amount.sum.1.percent": 58
-        }
-      }
+      { "level": 2, "patch": { "effects.husty_001_disruption_dmg.amount.sum.1.percent": 28 } },
+      { "level": 3, "patch": { "effects.husty_001_disruption_dmg.amount.sum.1.percent": 36 } },
+      { "level": 4, "patch": { "effects.husty_001_disruption_dmg.amount.sum.1.percent": 46 } },
+      { "level": 5, "patch": { "effects.husty_001_disruption_dmg.amount.sum.1.percent": 58 } }
     ]
   },
   {
@@ -136,10 +66,7 @@
     "tuCost": 16,
     "apCost": 25,
     "tickCooldown": 25,
-    "tags": [
-      "ranged",
-      "energy"
-    ],
+    "tags": ["ranged", "energy"],
     "maxLevel": 1,
     "targeting": {
       "selector": "enemy",
@@ -150,55 +77,27 @@
     },
     "effects": [
       {
-        "when": {
-          "event": "onCast"
-        },
+        "when": { "event": "onCast" },
         "type": "applyStatus",
         "target": "self",
         "status": "husty_001_power_surge"
       },
       {
         "id": "husty_001_cached_shockwave_dmg_hit",
-        "when": {
-          "event": "onHit"
-        },
+        "when": { "event": "onHit" },
         "type": "damage",
-        "amount": {
-          "sum": [
-            {
-              "secondary": 2.5
-            },
-            {
-              "stat": "power",
-              "percent": 15
-            }
-          ]
-        },
+        "amount": { "sum": [{ "secondary": 2.5 }, { "stat": "power", "percent": 15 }] },
         "damageType": "energy"
       },
       {
         "id": "husty_001_cached_shockwave_dmg_evade",
-        "when": {
-          "event": "onEvade"
-        },
+        "when": { "event": "onEvade" },
         "type": "damage",
-        "amount": {
-          "sum": [
-            {
-              "secondary": 1.25
-            },
-            {
-              "stat": "power",
-              "percent": 15
-            }
-          ]
-        },
+        "amount": { "sum": [{ "secondary": 1.25 }, { "stat": "power", "percent": 15 }] },
         "damageType": "energy"
       },
       {
-        "when": {
-          "event": "onCast"
-        },
+        "when": { "event": "onCast" },
         "type": "secondaryResource",
         "set": 0
       }
@@ -213,11 +112,7 @@
     "tuCost": 12,
     "apCost": 14,
     "turnCooldown": 5,
-    "tags": [
-      "utility",
-      "ranged",
-      "energy"
-    ],
+    "tags": ["utility", "ranged", "energy"],
     "maxLevel": 5,
     "targeting": {
       "selector": "enemy",
@@ -229,9 +124,7 @@
     "effects": [
       {
         "id": "husty_001_neural_barrier_shield",
-        "when": {
-          "event": "onHit"
-        },
+        "when": { "event": "onHit" },
         "type": "applyStatus",
         "target": "self",
         "status": "husty_001_neural_barrier",
@@ -239,85 +132,17 @@
       },
       {
         "id": "husty_001_neural_barrier_debuff",
-        "when": {
-          "event": "onHit"
-        },
+        "when": { "event": "onHit" },
         "type": "applyStatus",
         "target": "all-enemies",
         "status": "husty_001_neural_disruption"
       }
     ],
     "levelUpgrades": [
-      {
-        "level": 2,
-        "patch": {
-          "effects.husty_001_neural_barrier_shield.shieldFlat": 30
-        }
-      },
-      {
-        "level": 3,
-        "patch": {
-          "effects.husty_001_neural_barrier_shield.shieldFlat": 45
-        }
-      },
-      {
-        "level": 4,
-        "patch": {
-          "effects.husty_001_neural_barrier_shield.shieldFlat": 60
-        }
-      },
-      {
-        "level": 5,
-        "patch": {
-          "effects.husty_001_neural_barrier_shield.shieldFlat": 80
-        }
-      }
-    ]
-  },
-  {
-    "type": "skill",
-    "id": "husty_001_phase_lag",
-    "name": "Phase Lag",
-    "description": "Husty desynchronises the target from the stream. No damage — it simply costs them their place in line.",
-    "tuCost": 11,
-    "apCost": 18,
-    "turnCooldown": 4,
-    "tags": [
-      "utility",
-      "ranged",
-      "energy"
-    ],
-    "maxLevel": 3,
-    "targeting": {
-      "selector": "enemy",
-      "range": "ranged"
-    },
-    "resolution": {
-      "baseChance": 1.0
-    },
-    "effects": [
-      {
-        "id": "husty_001_phase_lag_shove",
-        "when": {
-          "event": "onCast"
-        },
-        "type": "tickShove",
-        "amount": 9
-      }
-    ],
-    "levelUpgrades": [
-      {
-        "level": 2,
-        "patch": {
-          "effects.husty_001_phase_lag_shove.amount": 11
-        }
-      },
-      {
-        "level": 3,
-        "patch": {
-          "effects.husty_001_phase_lag_shove.amount": 13
-        }
-      }
+      { "level": 2, "patch": { "effects.husty_001_neural_barrier_shield.shieldFlat": 30 } },
+      { "level": 3, "patch": { "effects.husty_001_neural_barrier_shield.shieldFlat": 45 } },
+      { "level": 4, "patch": { "effects.husty_001_neural_barrier_shield.shieldFlat": 60 } },
+      { "level": 5, "patch": { "effects.husty_001_neural_barrier_shield.shieldFlat": 80 } }
     ]
   }
 ]

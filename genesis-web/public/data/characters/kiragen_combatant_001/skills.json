@@ -6,39 +6,24 @@
     "description": "Focused energy discharge. 10% chance to stun the target for 2 turns — stunned units may only skip.",
     "tuCost": 15,
     "apCost": 18,
-    "tags": [
-      "energy",
-      "ranged"
-    ],
+    "tags": ["energy", "ranged"],
     "maxLevel": 1,
-    "targeting": {
-      "selector": "enemy",
-      "range": "ranged"
-    },
-    "resolution": {
-      "baseChance": 0.89
-    },
+    "targeting": { "selector": "enemy", "range": "ranged" },
+    "resolution": { "baseChance": 0.89 },
     "effects": [
       {
-        "when": {
-          "event": "onHit"
-        },
+        "when": { "event": "onHit" },
         "type": "damage",
-        "amount": {
-          "stat": "power",
-          "percent": 70
-        },
+        "amount": { "stat": "power", "percent": 70 },
         "damageType": "energy"
       },
       {
-        "when": {
-          "event": "onHit"
-        },
+        "when": { "event": "onHit" },
         "type": "applyStatus",
         "target": "enemy",
         "status": "kiragen_plasma_stun",
         "duration": 2,
-        "chance": 0.1
+        "chance": 0.10
       }
     ],
     "levelUpgrades": []
@@ -51,87 +36,18 @@
     "tuCost": 20,
     "apCost": 12,
     "turnCooldown": 8,
-    "tags": [
-      "buff",
-      "self"
-    ],
+    "tags": ["buff", "self"],
     "maxLevel": 1,
-    "targeting": {
-      "selector": "self",
-      "range": "global"
-    },
-    "resolution": {
-      "baseChance": 1.0
-    },
+    "targeting": { "selector": "self", "range": "global" },
+    "resolution": { "baseChance": 1.0 },
     "effects": [
       {
-        "when": {
-          "event": "onCast"
-        },
+        "when": { "event": "onCast" },
         "type": "applyStatus",
         "target": "self",
         "status": "kiragen_rescan_sync"
       }
     ],
     "levelUpgrades": []
-  },
-  {
-    "type": "skill",
-    "id": "kiragen_combatant_001_suppressing_fire",
-    "name": "Suppressing Fire",
-    "description": "A sweeping barrage. Light damage across the enemy line, and every one of them loses a step.",
-    "tuCost": 16,
-    "apCost": 24,
-    "turnCooldown": 3,
-    "tags": [
-      "energy",
-      "ranged",
-      "aoe"
-    ],
-    "maxLevel": 3,
-    "targeting": {
-      "selector": "all-enemies",
-      "range": "ranged"
-    },
-    "resolution": {
-      "baseChance": 1.0
-    },
-    "effects": [
-      {
-        "id": "kiragen_combatant_001_suppress_dmg",
-        "when": {
-          "event": "onCast"
-        },
-        "type": "damage",
-        "amount": {
-          "stat": "power",
-          "percent": 32
-        },
-        "damageType": "energy"
-      },
-      {
-        "id": "kiragen_combatant_001_suppress_shove",
-        "when": {
-          "event": "onCast"
-        },
-        "type": "tickShove",
-        "amount": 3
-      }
-    ],
-    "levelUpgrades": [
-      {
-        "level": 2,
-        "patch": {
-          "effects.kiragen_combatant_001_suppress_dmg.amount.percent": 40
-        }
-      },
-      {
-        "level": 3,
-        "patch": {
-          "effects.kiragen_combatant_001_suppress_dmg.amount.percent": 48,
-          "effects.kiragen_combatant_001_suppress_shove.amount": 4
-        }
-      }
-    ]
   }
 ]
