@@ -1,0 +1,62 @@
+{
+  "type": "animations",
+  "defId": "hugo_001",
+  "display": {
+    "sourceWidth": 48,
+    "sourceHeight": 48,
+    "scale": 1,
+    "anchorX": 0.5,
+    "anchorY": 1.0
+  },
+  "idleSwapBelowHpPercent": 0.3,
+  "meleeDashDx": 50,
+  "tagMap": {
+    "melee": "attack",
+    "ranged": "attack",
+    "energy": "attack",
+    "physical": "attack"
+  },
+  "animations": {
+    "idle": {
+      "frames": 2,
+      "frameRate": 1.25,
+      "repeat": -1
+    },
+    "idle_back": {
+      "frames": 2,
+      "frameRate": 1.25,
+      "repeat": -1
+    },
+    "attack": {
+      "frames": 3,
+      "frameRate": 12,
+      "repeat": 0
+    },
+    "attack_back": {
+      "frames": 3,
+      "frameRate": 12,
+      "repeat": 0
+    },
+    "hurt": {
+      "frames": 2,
+      "frameRate": 8,
+      "repeat": 0
+    },
+    "hurt_back": {
+      "frames": 2,
+      "frameRate": 8,
+      "repeat": 0
+    },
+    "death": {
+      "frames": 4,
+      "frameRate": 8,
+      "repeat": 0
+    },
+    "death_back": {
+      "frames": 4,
+      "frameRate": 8,
+      "repeat": 0
+    }
+  },
+  "projectile": null
+}
