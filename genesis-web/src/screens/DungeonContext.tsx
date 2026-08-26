@@ -12,6 +12,9 @@ import { createUnit }       from '../core/unit'
 import { advancePatrol }    from '../core/dungeon/patrol'
 import { isWithinSight }    from '../core/dungeon/sight'
 import {
+  DEMO_FINAL_STAGE_ID, DEMO_RECRUIT_DEF_IDS, DUNGEON_EXIT_HOLD_MS,
+} from '../core/demoFlow'
+import {
   DUNGEON_DEFAULT_VISUAL_RANGE,
   DUNGEON_REVEAL_RADIUS,
   DUNGEON_ENCOUNTER_PAUSE_MS,
@@ -77,7 +80,7 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
     setSelectedMode, setSelectedTeamIds,
     setCurrentEncounterEnemies, setCurrentEncounterEntityIds,
     setReturnScreen, setDungeonState,
-    dungeonState,
+    dungeonState, recruitUnits, completeStage,
   } = useGameStore()
 
   const [stageDef,  setStageDef]  = useState<StageDef | null>(null)
@@ -355,9 +358,21 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
     setOpenChest(null)
   }
 
+  // Reaching the exit clears the stage. On the demo's final stage that is also
+  // the end of the deployment, so it routes to the fleet update rather than
+  // back to the campaign list — the recruitment is the payoff the run is for.
   function handleExit(_e: { leadsTo?: string }) {
+    const stageId = stageDefRef.current?.id
     setPhase('transitioning')
-    setTimeout(() => navigateTo(SCREEN_IDS.CAMPAIGN), 1200)
+    if (stageId) completeStage(stageId)
+
+    const isFinalStage = stageId === DEMO_FINAL_STAGE_ID
+    if (isFinalStage) recruitUnits([...DEMO_RECRUIT_DEF_IDS])
+
+    setTimeout(
+      () => navigateTo(isFinalStage ? SCREEN_IDS.UNLOCK : SCREEN_IDS.CAMPAIGN),
+      DUNGEON_EXIT_HOLD_MS,
+    )
   }
 
   // ── Enemy patrol advancement ───────────────────────────────────────────────

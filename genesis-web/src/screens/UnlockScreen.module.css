@@ -1,0 +1,124 @@
+/* Fleet Update. The arrival is the beat — recruits enter one at a time, and
+   the layout is built so an arrival adds a row rather than revealing a hidden
+   one, which would shift everything already on screen. */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: var(--s-md);
+  gap: var(--s-lg);
+  background: var(--bg-deep);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-xs);
+  align-items: center;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.eyebrow {
+  font-family: var(--font-pixel);
+  font-size: var(--t-label-size);
+  letter-spacing: 0.25rem;
+  color: var(--accent-genesis);
+  white-space: nowrap;
+  margin: 0;
+}
+
+.title {
+  font-family: var(--font-pixel);
+  /* Heading size overflowed 360 dp at this string length and clipped on both
+     edges. nowrap text that runs past the frame is still one line, so the
+     layout wrap check could not see it — hence the overflow assertion there. */
+  font-size: var(--t-subheading-size);
+  font-weight: var(--t-display-weight);
+  letter-spacing: 0.0625rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  margin: 0;
+}
+
+.org {
+  font-family: var(--font-pixel);
+  font-size: var(--t-micro-size);
+  letter-spacing: 0.125rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  margin: 0;
+}
+
+/* ── Recruits ──────────────────────────────────────────────────────────── */
+
+.roster {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-sm);
+}
+
+/* Steps in from the side rather than fading: a fade reads as a UI transition,
+   a slide reads as someone arriving. */
+.recruit {
+  display: flex;
+  align-items: center;
+  gap: var(--s-md);
+  padding: var(--s-sm);
+  background: var(--bg-card);
+  border: var(--px) solid var(--panel-active-outer);
+  box-shadow: var(--glow-genesis);
+  animation: recruitArrive var(--motion-screen) both;
+}
+
+@keyframes recruitArrive {
+  from { transform: translateX(calc(var(--px) * -8)); opacity: 0; }
+  to   { transform: translateX(0);                    opacity: 1; }
+}
+
+.recruitInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-xs);
+  min-width: 0;
+  flex: 1;
+}
+
+.recruitName {
+  font-family: var(--font-pixel);
+  font-size: var(--t-subheading-size);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recruitClass {
+  font-family: var(--font-pixel);
+  font-size: var(--t-micro-size);
+  letter-spacing: 0.0625rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.recruitStatus {
+  font-family: var(--font-pixel);
+  font-size: var(--t-micro-size);
+  letter-spacing: 0.125rem;
+  color: var(--accent-heal);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Actions ───────────────────────────────────────────────────────────── */
+
+/* Reserves its height from the start so the button appearing does not push
+   the roster upward at the end of the sequence. */
+.actions {
+  flex-shrink: 0;
+  min-height: var(--touch-min);
+  display: flex;
+  align-items: flex-end;
+}

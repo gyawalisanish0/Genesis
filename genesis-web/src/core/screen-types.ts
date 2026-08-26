@@ -11,6 +11,8 @@ export type ScreenId =
   | 'settings'
   | 'campaign'
   | 'dungeon'
+  | 'unlock'
+  | 'coming-soon'
 
 // Controls which device-edge insets get applied as padding.
 // 'full'     — all 4 sides: menus, roster, settings

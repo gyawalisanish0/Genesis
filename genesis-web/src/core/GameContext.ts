@@ -5,6 +5,7 @@ import { create } from 'zustand'
 import type { Unit, ModeDef, BattleResult, AppSettings, DungeonState } from './types'
 import type { ScreenId } from './screen-types'
 import { DEFAULT_SETTINGS } from './constants'
+import { loadFleet, saveFleet, type FleetSave } from './fleetStorage'
 
 interface GameStore {
   // Pre-battle selections
@@ -26,6 +27,10 @@ interface GameStore {
   commanderName:  string
   organisationName: string
 
+  // The Commander's fleet — the only state that survives a page load.
+  // recruitedIds are defIds; completedStages are stageIds. See fleetStorage.ts.
+  fleet: FleetSave
+
   // Persisted preferences
   settings: AppSettings
 
@@ -42,6 +47,10 @@ interface GameStore {
   setCommanderName(name: string): void
   setOrganisationName(name: string): void
   updateSetting<K extends keyof AppSettings>(key: K, value: AppSettings[K]): void
+  /** Add units to the fleet and persist. Idempotent — re-recruiting is a no-op. */
+  recruitUnits(defIds: string[]): void
+  /** Mark a stage cleared and persist. Idempotent. */
+  completeStage(stageId: string): void
   resetBattle(): void
 }
 
@@ -57,6 +66,7 @@ export const useGameStore = create<GameStore>((set) => ({
   returnScreen:              null,
   commanderName:            '',
   organisationName:         '',
+  fleet:                    loadFleet(),
   settings:                 { ...DEFAULT_SETTINGS },
 
   setSelectedMode:    (mode)    => set({ selectedMode: mode }),
@@ -74,6 +84,26 @@ export const useGameStore = create<GameStore>((set) => ({
 
   updateSetting: (key, value) =>
     set((s) => ({ settings: { ...s.settings, [key]: value } })),
+
+  // Fleet mutations write through to storage immediately rather than on a
+  // later flush. Recruitment is the moment the demo exists to deliver, and a
+  // player who closes the tab straight after seeing it must keep it.
+  recruitUnits: (defIds) =>
+    set((s) => {
+      const merged = [...new Set([...s.fleet.recruitedIds, ...defIds])]
+      if (merged.length === s.fleet.recruitedIds.length) return s
+      const fleet = { ...s.fleet, recruitedIds: merged }
+      saveFleet(fleet)
+      return { fleet }
+    }),
+
+  completeStage: (stageId) =>
+    set((s) => {
+      if (s.fleet.completedStages.includes(stageId)) return s
+      const fleet = { ...s.fleet, completedStages: [...s.fleet.completedStages, stageId] }
+      saveFleet(fleet)
+      return { fleet }
+    }),
 
   resetBattle: () =>
     set({ selectedMode: null, selectedTeam: [], selectedTeamIds: [], enemies: [], battleResult: null }),

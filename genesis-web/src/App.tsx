@@ -14,6 +14,8 @@ import { BattleScreen }       from './screens/BattleScreen'
 import { BattleResultScreen } from './screens/BattleResultScreen'
 import { SettingsScreen }     from './screens/SettingsScreen'
 import { CampaignScreen }     from './screens/CampaignScreen'
+import { UnlockScreen } from './screens/UnlockScreen'
+import { ComingSoonScreen } from './screens/ComingSoonScreen'
 import { DungeonScreen }      from './screens/DungeonScreen'
 import styles from './App.module.css'
 
@@ -73,6 +75,8 @@ export default function App() {
               <Route path="/settings"      element={<SettingsScreen />} />
               <Route path="/campaign"      element={<CampaignScreen />} />
               <Route path="/dungeon"       element={<DungeonScreen />} />
+              <Route path="/unlock"        element={<UnlockScreen />} />
+              <Route path="/coming-soon"   element={<ComingSoonScreen />} />
               <Route path="*"              element={<Navigate to="/splash" replace />} />
             </Routes>
           </ScreenProvider>

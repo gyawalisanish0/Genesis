@@ -1,0 +1,63 @@
+/* Standby. The frame only — see ComingSoonScreen.tsx for why the middle is
+   empty and stays that way until the designer fills it. */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: var(--s-md);
+  gap: var(--s-md);
+  background: var(--bg-deep);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-xs);
+  align-items: center;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.org {
+  font-family: var(--font-pixel);
+  font-size: var(--t-micro-size);
+  letter-spacing: 0.125rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  margin: 0;
+}
+
+.title {
+  font-family: var(--font-pixel);
+  font-size: var(--t-heading-size);
+  font-weight: var(--t-display-weight);
+  letter-spacing: 0.25rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  margin: 0;
+}
+
+/* The designer's canvas. Takes all remaining height so whatever lands here has
+   room, and holds that space open while it is empty. */
+.canvas {
+  flex: 1;
+  min-height: 0;
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-sm);
+  flex-shrink: 0;
+}
+
+.fleetLine {
+  font-family: var(--font-pixel);
+  font-size: var(--t-micro-size);
+  letter-spacing: 0.125rem;
+  color: var(--text-secondary);
+  text-align: center;
+  white-space: nowrap;
+  margin: 0;
+}

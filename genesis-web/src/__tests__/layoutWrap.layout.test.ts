@@ -38,6 +38,7 @@ const PORT = 51731
 const ROUTES = [
   '/', '/main-menu', '/campaign', '/roster',
   '/settings', '/pre-battle', '/dungeon', '/battle-result',
+  '/unlock', '/coming-soon',
 ]
 
 /** Narrowest supported, the design width, and the widest phone. */
@@ -48,6 +49,15 @@ const VIEWPORTS: Array<[number, number, string]> = [
 ]
 
 interface Wrap { route: string; viewport: string; detail: string }
+
+/**
+ * Text can fail two ways and only one of them is a wrap.
+ *
+ * A `white-space: nowrap` title that is simply too wide for 360 dp stays on one
+ * line and runs off both edges — the line count is 1, so the wrap check reports
+ * nothing while the player sees "ERSONNEL ASSIGNE". Both are "text does not fit
+ * its frame", so both are checked here.
+ */
 
 let server: ViteDevServer
 let browser: Browser
@@ -105,6 +115,26 @@ async function findWraps(route: string, w: number, h: number, label: string): Pr
         const cls = (el?.className ?? '').toString().replace(/_[a-z0-9]{5,}/g, '').trim()
         out.push(`<${el?.tagName.toLowerCase()} class="${cls || '-'}"> "${text}" on ${lines} lines`)
       }
+
+      // Second pass: short text that overruns the viewport horizontally.
+      const frameW = document.documentElement.clientWidth
+      const walk2 = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+      let n2: Node | null
+      while ((n2 = walk2.nextNode())) {
+        const text = n2.textContent?.trim() ?? ''
+        if (!text || text.length > maxLen) continue
+        const range = document.createRange()
+        range.selectNodeContents(n2)
+        const r = range.getBoundingClientRect()
+        if (r.width === 0) continue
+        // 1 px of tolerance for sub-pixel rounding at fractional scales.
+        if (r.left >= -1 && r.right <= frameW + 1) continue
+        const el  = n2.parentElement
+        const cls = (el?.className ?? '').toString().replace(/_[a-z0-9]{5,}/g, '').trim()
+        out.push(
+          `<${el?.tagName.toLowerCase()} class="${cls || '-'}"> "${text}" ` +
+          `overflows the frame (${Math.round(r.left)}…${Math.round(r.right)} of ${frameW})`)
+      }
       return [...new Set(out)]
     }, SHORT_STRING_MAX)
 
@@ -115,7 +145,7 @@ async function findWraps(route: string, w: number, h: number, label: string): Pr
 }
 
 describe('text layout', () => {
-  it('never wraps a short string on any supported viewport', async () => {
+  it('never wraps or overflows a short string on any supported viewport', async () => {
     const wraps: Wrap[] = []
     for (const [w, h, label] of VIEWPORTS) {
       for (const route of ROUTES) {
@@ -126,7 +156,7 @@ describe('text layout', () => {
     const report = wraps.map((v) => `  ${v.viewport.padEnd(13)} ${v.route.padEnd(15)} ${v.detail}`)
     expect(
       report,
-      `Short strings wrapped onto multiple lines.\n\n${report.join('\n')}\n\n` +
+      `Short strings did not fit their frame.\n\n${report.join('\n')}\n\n` +
       `Give the element white-space: nowrap (plus overflow/text-overflow if it can\n` +
       `genuinely run long), or reduce its size or letter-spacing. If a string is\n` +
       `spelled with real spaces to fake tracking — "V I C T O R Y" — remove them and\n` +

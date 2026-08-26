@@ -15,6 +15,8 @@ export const SCREEN_IDS = {
   SETTINGS:      'settings',
   CAMPAIGN:      'campaign',
   DUNGEON:       'dungeon',
+  UNLOCK:        'unlock',
+  COMING_SOON:   'coming-soon',
 } as const satisfies Record<string, ScreenId>
 
 export const SCREEN_REGISTRY: Record<ScreenId, ScreenConfig> = {
@@ -27,4 +29,8 @@ export const SCREEN_REGISTRY: Record<ScreenId, ScreenConfig> = {
   'settings':      { id: 'settings',      path: '/settings',      title: 'Settings',     safeAreaMode: 'full' },
   'campaign':      { id: 'campaign',      path: '/campaign',      title: 'Campaign',     safeAreaMode: 'full' },
   'dungeon':       { id: 'dungeon',       path: '/dungeon',       title: 'Threat',       safeAreaMode: 'none' },
+  // canGoBack is deliberately absent on both: the deployment has ended, and
+  // walking back into a finished dungeon is not a state the fiction has.
+  'unlock':        { id: 'unlock',        path: '/unlock',        title: 'Fleet Update', safeAreaMode: 'full' },
+  'coming-soon':   { id: 'coming-soon',   path: '/coming-soon',   title: 'Standby',      safeAreaMode: 'full' },
 }
