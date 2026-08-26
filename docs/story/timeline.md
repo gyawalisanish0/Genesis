@@ -83,7 +83,7 @@ Locked: Celan, Zorin, Luka, Dyson, Morter, Arina, Husty, Lisa, Voltas.
 
 ---
 
-### 2109 — Arc 03: Unknown Relay *(demo / first stage)*
+### 2109 — Arc 02: Unknown Relay *(demo / first stage)*
 *Hugo is 31. Mars deployment under the Commander.*
 
 **What's locked:**
