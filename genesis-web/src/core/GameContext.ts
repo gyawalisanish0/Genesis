@@ -7,6 +7,18 @@ import type { ScreenId } from './screen-types'
 import { DEFAULT_SETTINGS } from './constants'
 import { loadFleet, saveFleet, clearFleet, EMPTY_FLEET, type FleetSave } from './fleetStorage'
 
+/**
+ * Write the fleet to disk and hand it back as a store patch.
+ *
+ * Every fleet mutation persists immediately rather than on a later flush.
+ * Recruiting a unit and naming yourself are both moments the demo exists to
+ * deliver, and a player who closes the tab straight after one must keep it.
+ */
+function persistFleet(fleet: FleetSave): { fleet: FleetSave } {
+  saveFleet(fleet)
+  return { fleet }
+}
+
 interface GameStore {
   // Pre-battle selections
   selectedMode:    ModeDef | null
@@ -25,12 +37,9 @@ interface GameStore {
   currentEncounterEntityIds: string[]  // entityIds — consumed by DungeonContext to mark party defeated
   returnScreen:              ScreenId | null  // screen to return to after BattleResultScreen
 
-  // Commander identity — set in dream sequence, used by KALI and briefing screens
-  commanderName:  string
-  organisationName: string
-
-  // The Commander's fleet — the only state that survives a page load.
-  // recruitedIds are defIds; completedStages are stageIds. See fleetStorage.ts.
+  // The Commander's fleet — the only state that survives a page load. Holds
+  // their identity (named in the opening) as well as recruitedIds (defIds) and
+  // completedStages (stageIds). See fleetStorage.ts.
   fleet: FleetSave
 
   // Persisted preferences
@@ -70,8 +79,6 @@ export const useGameStore = create<GameStore>((set) => ({
   currentEncounterEnemies:   [],
   currentEncounterEntityIds: [],
   returnScreen:              null,
-  commanderName:            '',
-  organisationName:         '',
   fleet:                    loadFleet(),
   settings:                 { ...DEFAULT_SETTINGS },
 
@@ -86,30 +93,25 @@ export const useGameStore = create<GameStore>((set) => ({
   setCurrentEncounterEnemies:    (ids)    => set({ currentEncounterEnemies: ids }),
   setCurrentEncounterEntityIds:  (ids)    => set({ currentEncounterEntityIds: ids }),
   setReturnScreen:               (screen) => set({ returnScreen: screen }),
-  setCommanderName:           (name)   => set({ commanderName: name }),
-  setOrganisationName:        (name)   => set({ organisationName: name }),
+  // Identity writes through for the same reason recruitment does: the player
+  // types their name once, and a refresh must not ask them again.
+  setCommanderName:    (name) => set((s) => persistFleet({ ...s.fleet, commanderName: name })),
+  setOrganisationName: (name) => set((s) => persistFleet({ ...s.fleet, organisationName: name })),
 
   updateSetting: (key, value) =>
     set((s) => ({ settings: { ...s.settings, [key]: value } })),
 
-  // Fleet mutations write through to storage immediately rather than on a
-  // later flush. Recruitment is the moment the demo exists to deliver, and a
-  // player who closes the tab straight after seeing it must keep it.
   recruitUnits: (defIds) =>
     set((s) => {
       const merged = [...new Set([...s.fleet.recruitedIds, ...defIds])]
       if (merged.length === s.fleet.recruitedIds.length) return s
-      const fleet = { ...s.fleet, recruitedIds: merged }
-      saveFleet(fleet)
-      return { fleet }
+      return persistFleet({ ...s.fleet, recruitedIds: merged })
     }),
 
   completeStage: (stageId) =>
     set((s) => {
       if (s.fleet.completedStages.includes(stageId)) return s
-      const fleet = { ...s.fleet, completedStages: [...s.fleet.completedStages, stageId] }
-      saveFleet(fleet)
-      return { fleet }
+      return persistFleet({ ...s.fleet, completedStages: [...s.fleet.completedStages, stageId] })
     }),
 
   // Replay wipes the save as well as the session. A returning player who chose
@@ -122,7 +124,6 @@ export const useGameStore = create<GameStore>((set) => ({
       selectedStageId: null, dungeonState: null, battleResult: null,
       selectedMode: null, selectedTeam: [], selectedTeamIds: [], enemies: [],
       currentEncounterEnemies: [], currentEncounterEntityIds: [], returnScreen: null,
-      commanderName: '', organisationName: '',
     })
   },
 

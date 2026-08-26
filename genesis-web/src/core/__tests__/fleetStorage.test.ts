@@ -15,8 +15,12 @@ afterEach(() => vi.restoreAllMocks())
 
 describe('fleet persistence', () => {
   it('round-trips a fleet', () => {
-    saveFleet({ recruitedIds: ['hugo_001', 'husty_001'], completedStages: ['stage_003'] })
+    saveFleet({
+      commanderName: 'SANISH', organisationName: 'ORION',
+      recruitedIds: ['hugo_001', 'husty_001'], completedStages: ['stage_003'],
+    })
     expect(loadFleet()).toEqual({
+      commanderName: 'SANISH', organisationName: 'ORION',
       recruitedIds: ['hugo_001', 'husty_001'],
       completedStages: ['stage_003'],
     })
@@ -27,7 +31,7 @@ describe('fleet persistence', () => {
   })
 
   it('clears', () => {
-    saveFleet({ recruitedIds: ['hugo_001'], completedStages: [] })
+    saveFleet({ ...EMPTY_FLEET, recruitedIds: ['hugo_001'] })
     clearFleet()
     expect(loadFleet()).toEqual(EMPTY_FLEET)
   })
@@ -63,6 +67,22 @@ describe('a broken save never breaks the game', () => {
     expect(fleet.completedStages).toEqual(['s1'])
   })
 
+  it('reads a save written before the Commander had a name', () => {
+    // The identity fields were added after the fleet shipped. An older save is
+    // a player who has not been through the opening, not a broken one.
+    localStorage.setItem(KEY, JSON.stringify({
+      recruitedIds: ['hugo_001'], completedStages: ['stage_001'],
+    }))
+    const fleet = loadFleet()
+    expect(fleet.commanderName).toBe('')
+    expect(fleet.recruitedIds).toEqual(['hugo_001'])
+  })
+
+  it('drops a non-string name rather than rendering it into the script', () => {
+    localStorage.setItem(KEY, JSON.stringify({ commanderName: 42 }))
+    expect(loadFleet().commanderName).toBe('')
+  })
+
   it('survives storage that throws on read', () => {
     // Private browsing and WebViews with site data disabled both throw here
     // rather than returning null.
@@ -72,6 +92,6 @@ describe('a broken save never breaks the game', () => {
 
   it('survives storage that throws on write', () => {
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('quota') })
-    expect(() => saveFleet({ recruitedIds: ['hugo_001'], completedStages: [] })).not.toThrow()
+    expect(() => saveFleet({ ...EMPTY_FLEET, recruitedIds: ['hugo_001'] })).not.toThrow()
   })
 })

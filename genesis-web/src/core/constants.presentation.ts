@@ -37,6 +37,10 @@ export const RESOURCE_BAR_CRITICAL_THRESHOLD = 0.25  // HP fill shifts to blood-
 // that each reads as its own event rather than a list appearing at once.
 export const UNLOCK_ARRIVAL_STAGGER_MS = 900
 
+// Script playback — the opening sequence.
+export const SCRIPT_TYPE_MS       = 28   // ms per character in the typewriter
+export const SCRIPT_TRANSITION_MS = 900  // ms a transition beat holds before advancing
+
 // First-time hint toaster
 export const HINT_TOASTER_DURATION_MS = 5000  // ms the hint stays visible before auto-dismiss
 

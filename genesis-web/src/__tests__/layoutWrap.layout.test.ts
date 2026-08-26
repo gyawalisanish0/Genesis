@@ -38,7 +38,7 @@ const PORT = 51731
 const ROUTES = [
   '/', '/main-menu', '/campaign', '/roster',
   '/settings', '/pre-battle', '/dungeon', '/battle-result',
-  '/unlock', '/coming-soon',
+  '/unlock', '/coming-soon', '/dream',
 ]
 
 /** Narrowest supported, the design width, and the widest phone. */

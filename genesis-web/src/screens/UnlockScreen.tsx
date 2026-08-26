@@ -23,7 +23,7 @@ import styles from './UnlockScreen.module.css'
 export function UnlockScreen() {
   const { navigateTo } = useScreen()
   const fleet     = useGameStore((s) => s.fleet)
-  const orgName   = useGameStore((s) => s.organisationName)
+  const orgName   = useGameStore((s) => s.fleet.organisationName)
   const { characters } = useRosterData()
 
   // Reveal one recruit per tick. The count drives CSS, so a recruit that has

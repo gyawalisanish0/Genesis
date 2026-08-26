@@ -28,7 +28,7 @@ import styles from './ComingSoonScreen.module.css'
 
 export function ComingSoonScreen() {
   const { navigateTo } = useScreen()
-  const orgName = useGameStore((s) => s.organisationName)
+  const orgName = useGameStore((s) => s.fleet.organisationName)
   const fleet    = useGameStore((s) => s.fleet)
   const resetRun = useGameStore((s) => s.resetRun)
 

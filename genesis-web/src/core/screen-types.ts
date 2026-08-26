@@ -11,6 +11,7 @@ export type ScreenId =
   | 'settings'
   | 'campaign'
   | 'dungeon'
+  | 'dream'
   | 'unlock'
   | 'coming-soon'
 
