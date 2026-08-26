@@ -5,7 +5,7 @@ import { create } from 'zustand'
 import type { Unit, ModeDef, BattleResult, AppSettings, DungeonState } from './types'
 import type { ScreenId } from './screen-types'
 import { DEFAULT_SETTINGS } from './constants'
-import { loadFleet, saveFleet, type FleetSave } from './fleetStorage'
+import { loadFleet, saveFleet, clearFleet, EMPTY_FLEET, type FleetSave } from './fleetStorage'
 
 interface GameStore {
   // Pre-battle selections
@@ -18,6 +18,8 @@ interface GameStore {
   battleResult:  BattleResult | null
 
   // Campaign / dungeon
+  /** Stage the player chose on the campaign screen; the dungeon loads it. */
+  selectedStageId:           string | null
   dungeonState:              DungeonState | null
   currentEncounterEnemies:   string[]  // defIds — consumed by BattleContext to load characters
   currentEncounterEntityIds: string[]  // entityIds — consumed by DungeonContext to mark party defeated
@@ -40,6 +42,7 @@ interface GameStore {
   setSelectedTeamIds(ids: string[]): void
   setEnemies(enemies: Unit[]): void
   setBattleResult(result: BattleResult): void
+  setSelectedStageId(id: string | null): void
   setDungeonState(state: DungeonState | null): void
   setCurrentEncounterEnemies(ids: string[]): void
   setCurrentEncounterEntityIds(ids: string[]): void
@@ -51,6 +54,8 @@ interface GameStore {
   recruitUnits(defIds: string[]): void
   /** Mark a stage cleared and persist. Idempotent. */
   completeStage(stageId: string): void
+  /** Wipe the run — fleet, progress, identity — for a fresh playthrough. */
+  resetRun(): void
   resetBattle(): void
 }
 
@@ -60,6 +65,7 @@ export const useGameStore = create<GameStore>((set) => ({
   selectedTeamIds:           [],
   enemies:                   [],
   battleResult:              null,
+  selectedStageId:           null,
   dungeonState:              null,
   currentEncounterEnemies:   [],
   currentEncounterEntityIds: [],
@@ -75,6 +81,7 @@ export const useGameStore = create<GameStore>((set) => ({
   setEnemies:         (enemies) => set({ enemies }),
   setBattleResult:    (result)  => set({ battleResult: result }),
 
+  setSelectedStageId:            (id)     => set({ selectedStageId: id }),
   setDungeonState:               (state)  => set({ dungeonState: state }),
   setCurrentEncounterEnemies:    (ids)    => set({ currentEncounterEnemies: ids }),
   setCurrentEncounterEntityIds:  (ids)    => set({ currentEncounterEntityIds: ids }),
@@ -104,6 +111,20 @@ export const useGameStore = create<GameStore>((set) => ({
       saveFleet(fleet)
       return { fleet }
     }),
+
+  // Replay wipes the save as well as the session. A returning player who chose
+  // to run it again should get the same first-time experience, including the
+  // recruitment landing as news rather than as a roster they already have.
+  resetRun: () => {
+    clearFleet()
+    set({
+      fleet: EMPTY_FLEET,
+      selectedStageId: null, dungeonState: null, battleResult: null,
+      selectedMode: null, selectedTeam: [], selectedTeamIds: [], enemies: [],
+      currentEncounterEnemies: [], currentEncounterEntityIds: [], returnScreen: null,
+      commanderName: '', organisationName: '',
+    })
+  },
 
   resetBattle: () =>
     set({ selectedMode: null, selectedTeam: [], selectedTeamIds: [], enemies: [], battleResult: null }),

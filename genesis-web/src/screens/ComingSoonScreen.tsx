@@ -15,7 +15,9 @@
 // presented is most of the felt quality.
 //
 // The one thing already decided: the run does not end by ejecting the player.
-// Leaving is a choice they make, not something the screen does to them.
+// There is deliberately no main menu here — the demo is the whole product, and
+// offering a menu implies modes and content that do not exist. A player who
+// reaches the end either runs it again or reads who made it.
 
 import { ScreenShell }  from '../navigation/ScreenShell'
 import { useScreen }    from '../navigation/useScreen'
@@ -27,7 +29,8 @@ import styles from './ComingSoonScreen.module.css'
 export function ComingSoonScreen() {
   const { navigateTo } = useScreen()
   const orgName = useGameStore((s) => s.organisationName)
-  const fleet   = useGameStore((s) => s.fleet)
+  const fleet    = useGameStore((s) => s.fleet)
+  const resetRun = useGameStore((s) => s.resetRun)
 
   return (
     <ScreenShell>
@@ -49,9 +52,13 @@ export function ComingSoonScreen() {
           <p className={styles.fleetLine}>
             FLEET · {fleet.recruitedIds.length} ASSIGNED
           </p>
-          <PixelButton variant="ghost" onPress={() => navigateTo(SCREEN_IDS.MAIN_MENU)}>
-            STAND DOWN
+          <PixelButton
+            variant="ghost"
+            onPress={() => { resetRun(); navigateTo(SCREEN_IDS.SPLASH) }}
+          >
+            RUN IT AGAIN
           </PixelButton>
+          <p className={styles.credit}>GENESIS · A PROOF OF CONCEPT</p>
         </footer>
       </div>
     </ScreenShell>

@@ -7,7 +7,9 @@ import type { DungeonArenaHandle } from '../components/DungeonArena'
 import { useGameStore }     from '../core/GameContext'
 import { useScreen }        from '../navigation/useScreen'
 import { SCREEN_IDS }       from '../navigation/screenRegistry'
-import { loadStageDef, loadMapDef, loadTilesetDef, loadCharacterWithSkills } from '../services/DataService'
+import {
+  loadStageDef, loadMapDef, loadTilesetDef, loadCharacterWithSkills, loadCampaignIndex,
+} from '../services/DataService'
 import { createUnit }       from '../core/unit'
 import { advancePatrol }    from '../core/dungeon/patrol'
 import { isWithinSight }    from '../core/dungeon/sight'
@@ -80,7 +82,7 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
     setSelectedMode, setSelectedTeamIds,
     setCurrentEncounterEnemies, setCurrentEncounterEntityIds,
     setReturnScreen, setDungeonState,
-    dungeonState, recruitUnits, completeStage,
+    dungeonState, recruitUnits, completeStage, selectedStageId,
   } = useGameStore()
 
   const [stageDef,  setStageDef]  = useState<StageDef | null>(null)
@@ -121,7 +123,11 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   async function loadStage() {
-    const stageId = 'stage_001'
+    // The campaign screen picks the stage. Falling back to the first authored
+    // one keeps /dungeon reachable directly — used by the layout checks and by
+    // anyone deep-linking — rather than rendering an empty arena.
+    const order   = await loadCampaignIndex().catch(() => [] as string[])
+    const stageId = selectedStageId ?? order[0] ?? 'stage_001'
     const [stage, map] = await Promise.all([loadStageDef(stageId), loadMapDef(stageId)])
     if (!stage || !map) return
 
