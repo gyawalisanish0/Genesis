@@ -15,6 +15,7 @@ import {
   characterDefSchema, modeDefSchema, stageDefSchema, mapDefSchema,
   tilesetDefSchema, animationManifestSchema, animSequenceManifestSchema,
 } from '../../core/schemas'
+import { vnScriptSchema } from '../../core/script/types'
 
 const DATA_ROOT = join(fileURLToPath(import.meta.url), '../../../../public/data')
 
@@ -35,7 +36,6 @@ const ORPHANED_PATTERNS = [
   /^campaign\/[^/]+\/narrative\.json$/,
   /^characters\/[^/]+\/dialogue\.json$/,
   /^levels\//,
-  /^scripts\//,
 ]
 
 // Known work-in-progress content: not listed in characters/index.json, so no
@@ -76,6 +76,9 @@ function classify(relPath: string): { schema: ZodType; label: string } | null | 
   }
   if (seg[0] === 'statuses' && seg.length === 2) {
     return { schema: statusDefSchema, label: 'status' }
+  }
+  if (seg[0] === 'scripts' && seg.length === 2) {
+    return { schema: vnScriptSchema, label: 'script' }
   }
   return undefined
 }

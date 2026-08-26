@@ -2,13 +2,34 @@
  * Imported once in main.tsx; applies to the entire document.
  */
 
+/* This is a game, not a document. Every browser affordance that implies
+   otherwise is turned off here; the ones CSS cannot reach are events, handled
+   in input/suppressWebGestures.ts. */
 *,
 *::before,
 *::after {
   user-select: none;
   -webkit-user-select: none;
-  /* Suppress iOS long-press callout (copy / share / look-up menu) */
+  /* iOS long-press callout — copy / share / look-up. */
   -webkit-touch-callout: none;
+  /* The blue flash on tap. It was set on four components; everything else in
+     the game still flashed like a hyperlink. */
+  -webkit-tap-highlight-color: transparent;
+  /* Nothing is draggable out of the page — not a portrait, not a sprite. */
+  -webkit-user-drag: none;
+}
+
+/* iOS inflates text in portrait unless told not to, which breaks a layout
+   built on a fixed 360 dp column. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Art is never a draggable object. pointer-events stays default: a portrait
+   inside a card must let the tap reach the card, not swallow it. */
+img {
+  -webkit-user-drag: none;
 }
 
 /* Base typeface. Nothing set a font-family on body, so every element that did

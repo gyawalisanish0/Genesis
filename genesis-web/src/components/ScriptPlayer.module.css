@@ -1,0 +1,140 @@
+/* Script playback. The dream is meant to be black and empty — the box is the
+   only lit thing on screen, and it sits low so the space above stays void. */
+
+.root {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: var(--s-md);
+  background: var(--bg-deep);
+  cursor: pointer;
+}
+
+.box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-sm);
+  position: relative;
+  padding: var(--s-md);
+  min-height: 9rem;
+  background: var(--panel-sunken-fill);
+  border: var(--px) solid var(--panel-default-outer);
+}
+
+.name {
+  font-family: var(--font-pixel);
+  font-size: var(--t-label-size);
+  letter-spacing: 0.125rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* Speaker colours. The Creator gets the void ramp — he is the only thing here
+   that is not a person. */
+.creator   { color: var(--void-3); }
+.kali      { color: var(--accent-info); }
+.celan     { color: var(--accent-warn); }
+.player    { color: var(--text-primary); }
+.commander { color: var(--text-primary); }
+.narration { color: var(--text-muted); }
+
+.text {
+  font-family: var(--font-sans);
+  font-size: var(--t-body-size);
+  line-height: var(--t-body-lh);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+/* Block caret while typing — a pixel cursor, not a blinking I-beam. */
+.caret {
+  display: inline-block;
+  width: calc(var(--px) * 4);
+  height: var(--t-body-size);
+  margin-left: var(--px);
+  vertical-align: text-bottom;
+  background: var(--text-secondary);
+  animation: caretBlink 0.6s steps(1) infinite;
+}
+
+@keyframes caretBlink {
+  0%, 49%   { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+/* Advance hint. Only appears once the line is complete, so it doubles as the
+   signal that a tap will move on rather than finish the text. */
+.more {
+  position: absolute;
+  right: var(--s-sm);
+  bottom: var(--s-xs);
+  font-family: var(--font-pixel);
+  font-size: var(--t-micro-size);
+  color: var(--text-muted);
+  animation: moreBob 0.9s steps(2) infinite alternate;
+}
+
+@keyframes moreBob {
+  from { transform: translateY(0); }
+  to   { transform: translateY(calc(var(--px) * 2)); }
+}
+
+/* ── Name entry ────────────────────────────────────────────────────────── */
+
+.inputRow {
+  display: flex;
+  gap: var(--s-sm);
+  align-items: stretch;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--touch-min);
+  padding: 0 var(--s-sm);
+  font-family: var(--font-pixel);
+  font-size: var(--t-subheading-size);
+  color: var(--text-primary);
+  background: var(--bg-deep);
+  border: var(--px) solid var(--panel-active-outer);
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--text-muted);
+}
+
+.confirm {
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  padding: 0 var(--s-md);
+  font-family: var(--font-pixel);
+  font-size: var(--t-label-size);
+  letter-spacing: 0.125rem;
+  color: var(--text-on-accent);
+  background: var(--accent-genesis);
+  border: none;
+  cursor: pointer;
+}
+
+.confirm:disabled {
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  cursor: default;
+}
+
+/* ── Transition ────────────────────────────────────────────────────────── */
+
+/* white_flash. The wake beat: the dream ends and the world arrives. */
+.flashing {
+  animation: whiteFlash var(--script-flash, 900ms) steps(1, end) forwards;
+}
+
+@keyframes whiteFlash {
+  0%   { background: var(--bg-deep); }
+  35%  { background: var(--bone-5); }
+  55%  { background: var(--bone-5); }
+  100% { background: var(--bg-deep); }
+}

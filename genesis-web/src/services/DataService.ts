@@ -11,6 +11,7 @@ import type { CharacterDef, ModeDef, StageDef, MapDef, TilesetDef, AnimationMani
 import type { SkillDef, PassiveDef, StatusDef } from '../core/effects/types'
 import { prettifyError, z, type ZodType } from 'zod'
 import { skillDefSchema, passiveDefSchema, statusDefSchema } from '../core/effects/schemas'
+import { vnScriptSchema, type VnScript } from '../core/script/types'
 import {
   characterDefSchema, modeDefSchema, stageDefSchema, mapDefSchema,
   tilesetDefSchema, animationManifestSchema, animSequenceManifestSchema,
@@ -29,6 +30,7 @@ const cache = {
   stages:              new Map<string, StageDef>(),
   maps:                new Map<string, MapDef>(),
   tilesets:            new Map<string, TilesetDef>(),
+  scripts:             new Map<string, VnScript>(),
   animationManifests:  new Map<string, AnimationManifest>(),
   animSequences:       new Map<string, AnimSequenceManifest | null>(),
 }
@@ -191,6 +193,20 @@ export async function loadMapDef(stageId: string): Promise<MapDef | null> {
 }
 
 /** Load tileset visual definition. Returns null silently when absent. */
+/**
+ * Load a VN script. Required content, not optional: the opening is the demo's
+ * first sixty seconds, and a missing or malformed script should fail loudly
+ * here rather than present the player with an empty black screen.
+ */
+export async function loadScript(scriptId: string): Promise<VnScript> {
+  const cached = cache.scripts.get(scriptId)
+  if (cached) return cached
+  const path   = `data/scripts/${scriptId}.json`
+  const parsed = parseOrThrow(vnScriptSchema, await fetchJson(path), path)
+  cache.scripts.set(scriptId, parsed)
+  return parsed
+}
+
 export async function loadTilesetDef(key: string): Promise<TilesetDef | null> {
   const cached = cache.tilesets.get(key)
   if (cached) return cached

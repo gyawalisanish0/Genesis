@@ -8,6 +8,7 @@ import { Capacitor } from '@capacitor/core'
 import { ScreenShell } from '../navigation/ScreenShell'
 import { useScreen } from '../navigation/useScreen'
 import { SCREEN_IDS } from '../navigation/screenRegistry'
+import { useGameStore } from '../core/GameContext'
 import {
   loadCharacterIndex, loadCharacter,
   loadCampaignIndex, loadStageDef,
@@ -43,6 +44,13 @@ function isBrowserTab(): boolean {
 
 export function SplashScreen() {
   const { navigateTo } = useScreen()
+  // A player who has never named themselves has not seen the opening. The dream
+  // is the first thing that happens on a first run; a returning player goes
+  // straight to the campaign rather than sitting through it again.
+  const named     = useGameStore((s) => s.fleet.commanderName)
+  const completed = useGameStore((s) => s.fleet.completedStages)
+  const firstRun  = !named && completed.length === 0
+  const entry         = firstRun ? SCREEN_IDS.DREAM : SCREEN_IDS.CAMPAIGN
   const [progress,     setProgress]     = useState(0)
   const [error,        setError]        = useState<string | null>(null)
   const [done,         setDone]         = useState(false)
@@ -60,7 +68,7 @@ export function SplashScreen() {
           // then navigates on the same gesture.
           setReadyToEnter(true)
         } else {
-          setTimeout(() => navigateTo(SCREEN_IDS.MAIN_MENU), 400)
+          setTimeout(() => navigateTo(entry), 400)
         }
       })
       .catch((err: unknown) => {
@@ -73,7 +81,7 @@ export function SplashScreen() {
     <ScreenShell>
       <div
         className={styles.root}
-        onPointerDown={readyToEnter ? () => navigateTo(SCREEN_IDS.MAIN_MENU) : undefined}
+        onPointerDown={readyToEnter ? () => navigateTo(entry) : undefined}
       >
         <div className={styles.stars} aria-hidden />
 

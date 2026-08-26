@@ -1,0 +1,9 @@
+/* Full black, no chrome. The dream has no UI in it — demo-flow.md Act 1 opens
+   on "full black, no UI", and the ScriptPlayer is the only lit element. */
+
+.root {
+  position: relative;
+  height: 100%;
+  background: var(--bg-deep);
+  overflow: hidden;
+}

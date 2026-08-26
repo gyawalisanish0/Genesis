@@ -7,10 +7,15 @@ import type { DungeonArenaHandle } from '../components/DungeonArena'
 import { useGameStore }     from '../core/GameContext'
 import { useScreen }        from '../navigation/useScreen'
 import { SCREEN_IDS }       from '../navigation/screenRegistry'
-import { loadStageDef, loadMapDef, loadTilesetDef, loadCharacterWithSkills } from '../services/DataService'
+import {
+  loadStageDef, loadMapDef, loadTilesetDef, loadCharacterWithSkills, loadCampaignIndex,
+} from '../services/DataService'
 import { createUnit }       from '../core/unit'
 import { advancePatrol }    from '../core/dungeon/patrol'
 import { isWithinSight }    from '../core/dungeon/sight'
+import {
+  DEMO_FINAL_STAGE_ID, DEMO_RECRUIT_DEF_IDS, DUNGEON_EXIT_HOLD_MS,
+} from '../core/demoFlow'
 import {
   DUNGEON_DEFAULT_VISUAL_RANGE,
   DUNGEON_REVEAL_RADIUS,
@@ -77,7 +82,7 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
     setSelectedMode, setSelectedTeamIds,
     setCurrentEncounterEnemies, setCurrentEncounterEntityIds,
     setReturnScreen, setDungeonState,
-    dungeonState,
+    dungeonState, recruitUnits, completeStage, selectedStageId,
   } = useGameStore()
 
   const [stageDef,  setStageDef]  = useState<StageDef | null>(null)
@@ -118,7 +123,11 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   async function loadStage() {
-    const stageId = 'stage_001'
+    // The campaign screen picks the stage. Falling back to the first authored
+    // one keeps /dungeon reachable directly — used by the layout checks and by
+    // anyone deep-linking — rather than rendering an empty arena.
+    const order   = await loadCampaignIndex().catch(() => [] as string[])
+    const stageId = selectedStageId ?? order[0] ?? 'stage_001'
     const [stage, map] = await Promise.all([loadStageDef(stageId), loadMapDef(stageId)])
     if (!stage || !map) return
 
@@ -355,9 +364,21 @@ export function DungeonProvider({ children }: { children: React.ReactNode }) {
     setOpenChest(null)
   }
 
+  // Reaching the exit clears the stage. On the demo's final stage that is also
+  // the end of the deployment, so it routes to the fleet update rather than
+  // back to the campaign list — the recruitment is the payoff the run is for.
   function handleExit(_e: { leadsTo?: string }) {
+    const stageId = stageDefRef.current?.id
     setPhase('transitioning')
-    setTimeout(() => navigateTo(SCREEN_IDS.CAMPAIGN), 1200)
+    if (stageId) completeStage(stageId)
+
+    const isFinalStage = stageId === DEMO_FINAL_STAGE_ID
+    if (isFinalStage) recruitUnits([...DEMO_RECRUIT_DEF_IDS])
+
+    setTimeout(
+      () => navigateTo(isFinalStage ? SCREEN_IDS.UNLOCK : SCREEN_IDS.CAMPAIGN),
+      DUNGEON_EXIT_HOLD_MS,
+    )
   }
 
   // ── Enemy patrol advancement ───────────────────────────────────────────────

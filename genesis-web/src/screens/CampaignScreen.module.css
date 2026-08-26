@@ -107,3 +107,19 @@
 .playBtn:active {
   opacity: 0.85;
 }
+
+/* Cleared deployments stay listed and re-enterable — a campaign that hides what
+   you finished is a list that shrinks as you play. */
+.cardCleared {
+  border-color: var(--panel-active-outer);
+}
+
+.clearedBadge {
+  align-self: flex-start;
+  flex-shrink: 0;
+  font-family: var(--font-pixel);
+  font-size: var(--t-micro-size);
+  letter-spacing: 0.125rem;
+  color: var(--accent-heal);
+  white-space: nowrap;
+}
