@@ -3,6 +3,11 @@
 How to produce Genesis battle sprites with Gemini's image model and land them
 on the 2 dp pixel grid the design system requires.
 
+> For the procedural alternative — Python drawing straight onto the grid, no
+> downsample, no remap, no colour count to verify — see
+> `tools/spritegen/README.md`. The roster table at the bottom of this file
+> (accent ramp per character) applies to both.
+
 Sizes and palette come from `docs/ui/00-design-system.md`; the sprite budget
 comes from the `genesis-ui` skill's `references/assets.md`. This file is the
 prompting procedure.

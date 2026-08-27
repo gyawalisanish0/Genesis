@@ -4,6 +4,16 @@ This is the working process for generating character animation spritesheets duri
 development. The goal is placeholder-quality art that slots directly into the engine
 without blocking development.
 
+> **There are two paths to character art, and this document covers one of them.**
+>
+> `tools/spritegen/` draws sprites, portraits and manifests procedurally from
+> Python. It satisfies the pixel grid and the ramp palette by construction, so
+> it needs none of the downsample-and-remap wrangling below, and it derives
+> frame sets that are exactly consistent with each other. What it does not give
+> you is an expressive hand-drawn face. See `tools/spritegen/README.md`.
+>
+> Art from either path lands on the same paths and in the same manifest format.
+
 ---
 
 ## Tool
@@ -81,6 +91,11 @@ the reference image covers that. Only describe the motion.
 ---
 
 ## Character model references
+
+> **Status below is about references and passes, not about the repository.**
+> No frames from this workflow are checked in: `public/images/characters/`
+> holds only what `tools/spritegen/` has generated. Anything marked done here
+> exists outside the repo and still has to be committed to reach the game.
 
 Finalised model references used as inputs to all spritesheet passes.
 
