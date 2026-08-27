@@ -316,6 +316,7 @@ Genesis/
 │       │   ├── screenRegistry.ts # SCREEN_IDS constants + SCREEN_REGISTRY map (9 screens: splash, main-menu, campaign, dungeon, pre-battle, battle, battle-result, roster, settings)
 │       │   ├── ScreenContext.tsx  # ScreenProvider: pathname→config, safe-area env() read, Capacitor + popstate back-button
 │       │   ├── ScreenShell.tsx   # Safe-area padding wrapper (full / top-only / none)
+│       │   ├── ScreenBoundary.tsx# Per-screen error boundary, keyed on pathname; recovers to main menu
 │       │   └── useScreen.ts      # Hook: { screen, safeInsets, navigateTo }; registers onEnter/onLeave hooks
 │       ├── input/                # Hardware + browser back-button coordination
 │       │   ├── backButtonRegistry.ts  # Module-level singleton: register/unregister/invoke one handler at a time
@@ -357,6 +358,7 @@ Genesis/
 │       │   ├── RosterScreen.tsx          # Character grid with class + rarity + name filters
 │       │   └── SettingsScreen.tsx        # Audio / display / notification / account settings
 │       ├── components/           # Reusable React widgets
+│       │   ├── ErrorBoundary.tsx         # Class boundary + fault panel; see § Error Handling
 │       │   ├── PrimaryButton.tsx         # Variants: primary / secondary / danger / ghost
 │       │   ├── ResourceBar.tsx           # Animated HP / AP / XP bar (400ms tween)
 │       │   ├── UnitPortrait.tsx          # Portrait circle: rarity-coloured border, 4 sizes, greyscale option
@@ -418,6 +420,62 @@ Each layer may only import from layers to its left.
 - One screen = one `.tsx` file in `screens/` + one `.module.css` alongside it
 - Screens read Zustand store and navigate via `useNavigate()`
 - No raw game logic — delegate to `core/` functions
+
+---
+
+## Error Handling
+
+Errors are contained at a **small number of named boundaries**. They are not
+handled everywhere, and `core/` does not defend itself.
+
+### Why not "wrap everything"
+
+A `try/catch` around every function converts a loud crash into silent wrong
+state. In a combat engine that is strictly worse: a stack trace names the bug,
+whereas a swallowed error leaves a unit at NaN HP, an AP total that never
+refunds, or a tick position that quietly corrupts the timeline for the rest of
+the battle. The bug still exists — it is now invisible and reproduces as
+"combat feels wrong sometimes".
+
+So the rule against error handling for scenarios that cannot happen (§ What
+Claude Should Never Do) stands. The boundaries below are not exceptions to it:
+each one contains a failure that **has a reachable trigger**, and each one has
+an answer for what the game does next.
+
+### The boundaries
+
+| Boundary | File | Contains | Player gets |
+|---|---|---|---|
+| Root | `main.tsx` | anything, including a failure in the router or the providers | fault panel, RELOAD |
+| Screen | `navigation/ScreenBoundary.tsx` | one screen's render | fault panel, BACK TO MENU (session intact) or RELOAD |
+| Engine call | `BattleContext.safeEngineCall` | a synchronous engine call from an event handler | `BattleErrorToast`, battle ends cleanly |
+| Content load | `services/DataService` | a missing or malformed JSON file | optional content returns `null`; required content throws to a boundary |
+| Persistence | `core/fleetStorage.ts` | storage unavailable, corrupt, or from an older schema | treated as a player with no save |
+
+`ErrorBoundary` is a React class component (the only kind that can catch a
+render error) and depends on nothing but `Panel` and `PixelButton` — **a
+boundary that needs the thing that just broke is not a boundary.**
+
+**Without a boundary an uncaught render throw does not show an error — it
+empties the DOM.** React unmounts the whole tree, and because routing is
+hash-based the player is left on a black screen whose only recovery is a manual
+reload. This is verified, not assumed:
+`components/__tests__/ErrorBoundary.test.tsx` opens with that negative control.
+
+### What must never be wrapped
+
+- **`core/` combat maths.** A bad number here is a content or engine bug and
+  must surface. Guard the *input* at the boundary that produced it instead.
+- **Effect handlers** (`core/effects/builtins/`). A handler that swallows its
+  own failure half-applies an effect, which is the corrupt-state case above.
+- **Anything whose catch block cannot say what the game does next.** If the
+  answer is "log it and carry on", the state is already wrong; let it throw.
+
+### Reaching a boundary is a bug
+
+The boundaries are a backstop, not a design. A failure that reaches one means
+something upstream lacked a guard it should have had. Fix the cause; do not
+add a catch nearer the symptom.
 
 ---
 
@@ -497,6 +555,7 @@ All screen routing, lifecycle, safe-area padding, and back-button behaviour flow
 | `src/navigation/ScreenContext.tsx` | React context + `ScreenProvider` |
 | `src/navigation/useScreen.ts` | Hook for all screens |
 | `src/navigation/ScreenShell.tsx` | Safe-area wrapper component |
+| `src/navigation/ScreenBoundary.tsx` | Per-screen error boundary — see § Error Handling |
 
 ### Rules
 
@@ -822,7 +881,9 @@ Use the `AskUserQuestion` tool with targeted multiple-choice options. Good quest
 - Call Capacitor display/native APIs outside `services/`
 - Write a function that does more than one thing — split it
 - Leave any module beyond ~150 lines without evaluating a split
-- Add error handling for scenarios that cannot happen
+- Add error handling for scenarios that cannot happen — and never widen this
+  into wrapping everything: see § Error Handling for the boundaries that do
+  exist, what they contain, and what must stay unwrapped
 - Introduce features beyond what was explicitly requested
 - Edit a skill, stat or cost in `public/data/` without first reading that
   unit's file in `docs/characters/in-game/`

@@ -1,0 +1,58 @@
+/* Fills whatever it was wrapping, so a failed screen does not leave a hole in
+   the layout. Centred rather than top-aligned: this replaces a whole surface,
+   it is not a banner on top of one. */
+
+.root {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s-md);
+  background: var(--bg-deep);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-sm);
+  width: 100%;
+  max-width: 20rem;
+  padding: var(--s-md);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-pixel);
+  font-size: var(--t-heading-size);
+  letter-spacing: 0.125rem;
+  color: var(--accent-danger);
+}
+
+.area {
+  margin: 0;
+  font-family: var(--font-pixel);
+  font-size: var(--t-micro-size);
+  letter-spacing: 0.125rem;
+  color: var(--text-muted);
+}
+
+/* Wraps and scrolls. An engine message can be long, and a message clipped to
+   one line is exactly the half of the sentence nobody needs. */
+.message {
+  margin: 0;
+  max-height: 8rem;
+  overflow-y: auto;
+  font-family: var(--font-sans);
+  font-size: var(--t-body-size);
+  line-height: var(--t-body-lh);
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-sm);
+  margin-top: var(--s-sm);
+}

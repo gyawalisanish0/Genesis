@@ -2,6 +2,7 @@ import { useEffect }                                        from 'react'
 import { suppressWebGestures } from './input/suppressWebGestures'
 import { HashRouter, Routes, Route, Navigate }             from 'react-router-dom'
 import { ScreenProvider }                                  from './navigation/ScreenContext'
+import { ScreenBoundary }                                  from './navigation/ScreenBoundary'
 import { useViewportScale }                                from './utils/useViewportScale'
 import { initFullScreen }                                  from './services/DisplayService'
 import { SoundService }                                    from './services/SoundService'
@@ -70,6 +71,9 @@ export default function App() {
       >
         <HashRouter>
           <ScreenProvider>
+            {/* Inside the router, so one broken screen costs that screen and
+                not the session — the store is in memory and survives. */}
+            <ScreenBoundary>
             <Routes>
               <Route path="/"              element={<Navigate to="/splash" replace />} />
               <Route path="/splash"        element={<SplashScreen />} />
@@ -86,6 +90,7 @@ export default function App() {
               <Route path="/coming-soon"   element={<ComingSoonScreen />} />
               <Route path="*"              element={<Navigate to="/splash" replace />} />
             </Routes>
+            </ScreenBoundary>
           </ScreenProvider>
         </HashRouter>
       </div>
