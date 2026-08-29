@@ -158,6 +158,14 @@ export interface BattleEngineCallbacks {
   // Log / history
   onLog(entry: Omit<LogEntry, 'id'>): void
   onHistory(entry: HistoryEntry): void
+  /**
+   * A throw that escaped one of the engine's own timers.
+   *
+   * Distinct from every other callback here: it reports a failure rather than
+   * an event. The engine has already stopped itself by the time this fires, so
+   * the handler's job is to tell the player and leave the battle.
+   */
+  onEngineError(err: unknown): void
 }
 
 // ── Engine snapshot (React observes this) ──────────────────────────────────────

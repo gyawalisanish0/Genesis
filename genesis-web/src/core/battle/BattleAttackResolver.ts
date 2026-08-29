@@ -246,7 +246,7 @@ export function scheduleCounterChain(
   engine.showDiceResult('Evade', `${defender.name} attempts a counter!`)
 
   const currentTick = engine.tickValue
-  setTimeout(() => {
+  engine.safeTimeout(() => {
     const succeeded     = resolveCounterRoll(depth)
     const chancePercent = Math.round(Math.max(COUNTER_MIN, COUNTER_BASE - depth * COUNTER_STEP) * 100)
     engine.showDiceResult(
@@ -267,7 +267,7 @@ export function scheduleCounterChain(
 
       if (shouldFire) {
         snap.set(defender.id, { ...defSnap, ap: defSnap.ap - counterSkill.cachedCosts.apCost })
-        setTimeout(() => {
+        engine.safeTimeout(() => {
           runAttack(engine, defender, originalCaster, counterSkill, snap, depth + 1)
           fireCounterCastEffects(defender, originalCaster, counterSkill, snap, currentTick)
           fireCounterTriggerEffects(defender, snap, engine.passiveDefs, currentTick)

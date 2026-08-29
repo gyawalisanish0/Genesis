@@ -81,7 +81,7 @@ export function runClashCheck(engine: BattleEngine): void {
     const clashWinActor = winner === 'player' ? (activeControlled[0] ?? null) : null
     engine.setStep('clash_announcing')
     engine.notify()
-    engine.clashAnnounceTimer = setTimeout(() => {
+    engine.clashAnnounceTimer = engine.safeTimeout(() => {
       const w = engine.clashAnnounceWinner
       if (w === 'player' && clashWinActor) engine.showPlayerTurnUnits(clashWinActor)
       engine.setStep(w === 'player' ? 'player_turn' : 'enemy_telegraph')

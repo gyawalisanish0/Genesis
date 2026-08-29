@@ -345,6 +345,13 @@ export function BattleProvider({ children }: Props) {
       onHistory(entry) {
         safe(() => setHistoryEntries(prev => [...prev, entry]))
       },
+      // A throw that escaped one of the engine's own timers. Deliberately NOT
+      // wrapped in `safe()` — that swallows and continues, which is exactly
+      // wrong here: the engine has already stopped, and the player needs to be
+      // told and taken out of a battle that can no longer advance.
+      onEngineError(err) {
+        reportError(err)
+      },
     }
   }, [showTurnDisplay, showDiceResult, reportError])
 

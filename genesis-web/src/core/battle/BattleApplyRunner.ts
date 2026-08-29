@@ -100,7 +100,7 @@ export function runEnemyApplying(engine: BattleEngine): void {
   if (primaryVictim) {
     engine.notify()
     engine.cb.onPlayDeath(primaryVictim.defId)
-    setTimeout(() => {
+    engine.safeTimeout(() => {
       engine.cb.onClearTurn()
       engine.playPendingExpiryAnims(snap)
       engine.playPendingActivationAnims()
@@ -184,7 +184,7 @@ export function runPlayerApplying(engine: BattleEngine): void {
   if (firstDead) {
     engine.notify()
     engine.cb.onPlayDeath(firstDead.defId)
-    setTimeout(() => {
+    engine.safeTimeout(() => {
       engine.cb.onClearTurn()
       engine.playPendingExpiryAnims(snap)
       engine.playPendingActivationAnims()

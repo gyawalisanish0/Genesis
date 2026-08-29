@@ -22,6 +22,18 @@ export function registerEffect<T extends Effect['type']>(
   handlers.set(type, handler as EffectHandler)
 }
 
+/**
+ * Whether a handler exists, without throwing.
+ *
+ * `getHandler` fails loudly by design, which is right at dispatch and wrong
+ * when something wants to *survey* the registry. The content invariant test
+ * used `!getHandler(type)` to collect orphaned effect types and could never
+ * produce that list: the first orphan threw and took the check with it.
+ */
+export function hasHandler(type: EffectType): boolean {
+  return handlers.has(type)
+}
+
 export function getHandler(type: EffectType): EffectHandler {
   const handler = handlers.get(type)
   if (!handler) {
