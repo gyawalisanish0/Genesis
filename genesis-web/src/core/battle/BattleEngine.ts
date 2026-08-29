@@ -88,6 +88,22 @@ export class BattleEngine {
   diceTimer:           ReturnType<typeof setTimeout> | null
   dismissTimer:        ReturnType<typeof setTimeout> | null
 
+  /**
+   * Every timer the engine has armed and not yet seen fire.
+   *
+   * Six of the engine's timers were never stored anywhere — `destroy()` could
+   * only clear the seven kept in named fields, so the rest outlived it. The
+   * engine was not stopped by `destroy()`, only orphaned: a surviving callback
+   * called `drive()`, the loop resumed against a screen that no longer existed,
+   * and it could reach `endBattle` -> `onBattleEnd`, which writes the result to
+   * the global store and navigates. Quitting a battle could drop the player on
+   * a victory screen for the fight they abandoned.
+   */
+  private readonly timers = new Set<ReturnType<typeof setTimeout>>()
+
+  /** Set by `destroy()`. A callback already dequeued must not restart the loop. */
+  destroyed: boolean
+
   // ── Callbacks ────────────────────────────────────────────────────────────────
   readonly cb: BattleEngineCallbacks
 
@@ -138,6 +154,7 @@ export class BattleEngine {
     this.clashAnnounceTimer = null
     this.diceTimer          = null
     this.dismissTimer       = null
+    this.destroyed          = false
 
     this.cb = callbacks
   }
@@ -173,7 +190,12 @@ export class BattleEngine {
    * cleanly through `BattleErrorToast`.
    */
   safeTimeout(fn: () => void, ms: number): ReturnType<typeof setTimeout> {
-    return setTimeout(() => {
+    const handle = setTimeout(() => {
+      this.timers.delete(handle)
+      // Already dequeued when the engine was destroyed: the handle is gone from
+      // the set and clearTimeout can no longer reach it, so the check has to be
+      // here.
+      if (this.destroyed) return
       try {
         fn()
       } catch (err) {
@@ -189,9 +211,17 @@ export class BattleEngine {
         this.cb.onEngineError(err)
       }
     }, ms)
+    this.timers.add(handle)
+    return handle
   }
 
   destroy(): void {
+    this.destroyed = true
+    // The set is the authority — every engine timer is armed through
+    // safeTimeout. The named fields are cleared too because they are read
+    // elsewhere to cancel-and-rearm, and a stale handle there is confusing.
+    for (const handle of this.timers) clearTimeout(handle)
+    this.timers.clear()
     if (this.dismissTimer)        clearTimeout(this.dismissTimer)
     if (this.diceTimer)           clearTimeout(this.diceTimer)
     if (this.applyTimer)          clearTimeout(this.applyTimer)
@@ -348,6 +378,8 @@ export class BattleEngine {
   }
 
   drive(): void {
+    // A callback that was mid-flight when destroy() ran can still reach here.
+    if (this.destroyed) return
     if (YIELDED_STEPS.has(this.step)) return
     if (
       (this.step === 'advance_tick' || this.step === 'clash_check' || this.step === 'enemy_telegraph') &&

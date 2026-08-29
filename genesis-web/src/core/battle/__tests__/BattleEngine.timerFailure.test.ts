@@ -103,4 +103,44 @@ describe('a throw inside an engine-armed timer', () => {
 
     expect(vi.getTimerCount()).toBe(0)
   })
+
+  it('cancels timers whose handle nobody kept', async () => {
+    // Six of the engine's own timers were never stored in a field, so destroy()
+    // could not reach them. It did not stop the engine, it orphaned it: a
+    // surviving callback called drive(), the loop resumed against a screen that
+    // no longer existed, and it could reach endBattle -> onBattleEnd, which
+    // writes the result to the global store and navigates. Quitting a battle
+    // could land the player on a victory screen for the fight they left.
+    const { engine } = battleWhereTheEnemyActsFirst()
+    let ran = false
+    engine.safeTimeout(() => { ran = true }, 1500)
+
+    expect(vi.getTimerCount()).toBeGreaterThan(0)
+    engine.destroy()
+
+    // Immediately, before advancing. Checking after advancing is vacuous: an
+    // uncancelled timer FIRES during the advance and the count reaches 0 either
+    // way, which is how the first version of this test passed against the bug.
+    expect(vi.getTimerCount()).toBe(0)
+
+    await vi.advanceTimersByTimeAsync(5_000)
+    expect(ran).toBe(false)
+  })
+
+  it('will not resume the loop after being destroyed', async () => {
+    const { engine, cb } = battleWhereTheEnemyActsFirst()
+    engine.start()
+    engine.destroy()
+
+    // A callback already dequeued when destroy() ran can still call drive().
+    // Put the engine on a step drive() would actually advance, or the yielded
+    // -step guard short-circuits and the test proves nothing.
+    engine.step = 'advance_tick'
+    engine.drive()
+
+    // Nothing rearmed, and the loop did not resume.
+    expect(vi.getTimerCount()).toBe(0)
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(cb.onBattleEnd).not.toHaveBeenCalled()
+  })
 })
