@@ -675,3 +675,21 @@ targetSelector.ts:46-51 vs BattleResolution.ts:23-25/36. Content: public/data/ch
 
 ---
 
+
+---
+
+## Addendum — found while fixing, not by the audit
+
+### The `onMiss` branch is unreachable
+
+`BattleAttackResolver.runAttack` dispatches `onHit` / `onEvade` / `onMiss` as
+`if (!noDamage) … else if (diceOutcome === 'Evade') … else …`. `noDamage` is
+assigned `evaded`, which is `diceOutcome === 'Evade'` — so the final `else`
+requires `noDamage` to be true while the outcome is *not* Evade, which cannot
+happen. Every `onMiss` effect is dead.
+
+Nothing in `public/data/` uses `onMiss` today, so no shipped skill is affected.
+Left alone deliberately: making it fire means deciding *when* a miss is not an
+evade, and that is a rules decision for the design docs, not something to infer
+from the code. It is the same shape as the five declared-but-unimplemented
+effect types — a surface the contract offers and the engine does not honour.
