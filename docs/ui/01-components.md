@@ -489,3 +489,34 @@ Outermost element of every screen. Applies safe-area padding per the screen's
 Back affordance + title + optional right action, 48 dp tall. Used by roster,
 settings, campaign, pre-battle. Battle and dungeon do **not** use it (they own
 their full canvas).
+
+### `ErrorBoundary`
+
+The last line of defence. A React class component — the only kind that can
+catch a render error — wrapping a subtree so a throw inside it replaces that
+subtree with a recoverable panel instead of unmounting the app.
+
+| Prop | Type | Default |
+|---|---|---|
+| `children` | `ReactNode` | — |
+| `area` | `string` | — · named in the panel and the console line, so a report says *where* |
+| `onRecover` | `() => void` | — · second action beside RELOAD; omit for reload-only |
+| `recoverLabel` | `string` | `'BACK TO MENU'` |
+
+Composes `Panel` + `PixelButton` (rung 3). It deliberately depends on **nothing
+else** — no router, no screen context, no store. A boundary that needs the
+thing that just broke is not a boundary.
+
+Mounted at two levels, which do different jobs:
+
+| Level | Where | Catches | Recovery |
+|---|---|---|---|
+| Root | `main.tsx`, around `<App />` | anything, including a failure in the router or providers | reload |
+| Screen | `App.tsx`, inside `<Routes>` | one screen's render | reload **or** back to the menu, session intact |
+
+> **This is not the engine's error path.** `BattleContext.safeEngineCall`
+> already wraps synchronous engine calls and surfaces failures through
+> `BattleErrorToast`, which is better UX because the battle can end cleanly.
+> The boundary catches what that cannot: a throw during render, and anything
+> escaping the engine's own async timers. Reaching the boundary means a bug got
+> past the engine's own handling — it is a backstop, not a design.

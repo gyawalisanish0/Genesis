@@ -133,7 +133,19 @@ export function runAttack(
       if (effect.when.event === 'onHit') applyEffect(effect, hitCtx)
     }
   } else if (diceOutcome === 'Evade') {
-    const evadeCtx = { ...ctx, target, event: { event: 'onEvade' } as const }
+    // Neutral magnitude, not the Evade scale. `ctx.outcomeScale` is 0 here, and
+    // inheriting it multiplied every onEvade payload to nothing — the event
+    // existed and could never do anything.
+    //
+    // An onEvade value is already the author's statement of what happens when
+    // the attack is dodged, so scaling it by the dodge applies the penalty
+    // twice. Husty's Cached Shockwave is the case: docs/characters/in-game/
+    // husty.md documents 250% surge on hit and 125% on evade, and the JSON
+    // carries exactly that halving. The engine then zeroed it, so an evaded
+    // Shockwave dealt nothing while still spending 25 AP, a 25-tick cooldown
+    // and the whole Power Surge pool — against a doc that says in as many
+    // words that "a shockwave can't be fully dodged".
+    const evadeCtx = { ...ctx, target, outcomeScale: 1, event: { event: 'onEvade' } as const }
     for (const effect of skillInst.cachedEffects) {
       if (effect.when.event === 'onEvade') applyEffect(effect, evadeCtx)
     }
@@ -246,7 +258,7 @@ export function scheduleCounterChain(
   engine.showDiceResult('Evade', `${defender.name} attempts a counter!`)
 
   const currentTick = engine.tickValue
-  setTimeout(() => {
+  engine.safeTimeout(() => {
     const succeeded     = resolveCounterRoll(depth)
     const chancePercent = Math.round(Math.max(COUNTER_MIN, COUNTER_BASE - depth * COUNTER_STEP) * 100)
     engine.showDiceResult(
@@ -267,7 +279,7 @@ export function scheduleCounterChain(
 
       if (shouldFire) {
         snap.set(defender.id, { ...defSnap, ap: defSnap.ap - counterSkill.cachedCosts.apCost })
-        setTimeout(() => {
+        engine.safeTimeout(() => {
           runAttack(engine, defender, originalCaster, counterSkill, snap, depth + 1)
           fireCounterCastEffects(defender, originalCaster, counterSkill, snap, currentTick)
           fireCounterTriggerEffects(defender, snap, engine.passiveDefs, currentTick)

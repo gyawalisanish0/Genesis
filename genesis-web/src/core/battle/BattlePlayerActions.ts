@@ -114,12 +114,12 @@ export function executeSkill(engine: BattleEngine, skillInst: SkillInstance, sel
       customSequence,
     )
     if (engine.playerApplyTimer) clearTimeout(engine.playerApplyTimer)
-    engine.playerApplyTimer = setTimeout(() => {
+    engine.playerApplyTimer = engine.safeTimeout(() => {
       engine.setStep('player_applying')
       engine.drive()
     }, ANIM_TIMEOUT_MS)
   }
-  engine.attackTimer = setTimeout(engine.pendingAttackCb, DICE_RESULT_DISMISS_MS)
+  engine.attackTimer = engine.safeTimeout(engine.pendingAttackCb, DICE_RESULT_DISMISS_MS)
 }
 
 export function skipTurn(engine: BattleEngine): void {

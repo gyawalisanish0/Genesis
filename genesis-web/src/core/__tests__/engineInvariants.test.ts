@@ -23,7 +23,8 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { registerBuiltins } from '../effects/builtins'
-import { getHandler } from '../effects/registry'
+import { hasHandler } from '../effects/registry'
+import { effectSchema } from '../effects/schemas'
 import { shiftProbabilities, calculateFinalChance, tuAccuracyFactor } from '../combat/HitChanceEvaluator'
 import { applyOutcome, outcomeScale, type DiceOutcome } from '../combat/DiceResolver'
 import { MAX_SKILL_SLOTS, DICE_BASE_PROBABILITIES } from '../constants'
@@ -73,9 +74,37 @@ describe('content is reachable by the engine', () => {
   it('only uses effect types that have a registered handler', () => {
     const orphans = SKILLS.flatMap(s =>
       s.effects
-        .filter(e => !getHandler(e.type as never))
+        .filter(e => !hasHandler(e.type as never))
         .map(e => `${s.char}/${s.id}: "${e.type}"`))
     expect(orphans, 'effect types with no builtin handler — these do nothing at runtime').toEqual([])
+  })
+
+  it('declares no effect type the engine cannot actually run', () => {
+    // `effectSchema` is what content is validated against, so anything in it is
+    // something an author is invited to write. Five entries have no handler:
+    // they pass validation, load, and then throw at dispatch. Before the engine
+    // guarded its own timers, an authored `removeStatus` on an enemy skill
+    // froze the battle permanently the first time that enemy cast it.
+    //
+    // Listed rather than removed because CLAUDE.md § Game Design Principles 1
+    // requires exactly these hooks — "the dice resolver must expose alteration
+    // hooks (probability shifts, rerolls, outcome overrides)". They are
+    // declared and unbuilt, not mistakes.
+    //
+    // This is a ratchet in both directions. Implement one and this fails until
+    // it is struck off; declare a sixth and it fails until that is a deliberate
+    // entry here.
+    const DECLARED_BUT_UNIMPLEMENTED = [
+      'forceOutcome', 'removeStatus', 'rerollDice', 'shiftProbability', 'triggerSkill',
+    ].sort()
+
+    const declared = new Set<string>()
+    for (const option of (effectSchema as unknown as { options: Array<{ shape: { type: { value: string } } }> }).options) {
+      declared.add(option.shape.type.value)
+    }
+    const missing = [...declared].filter(t => !hasHandler(t as never)).sort()
+
+    expect(missing).toEqual(DECLARED_BUT_UNIMPLEMENTED)
   })
 
   it('only references statuses that exist on disk', () => {

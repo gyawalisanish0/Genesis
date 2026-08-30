@@ -88,6 +88,22 @@ export class BattleEngine {
   diceTimer:           ReturnType<typeof setTimeout> | null
   dismissTimer:        ReturnType<typeof setTimeout> | null
 
+  /**
+   * Every timer the engine has armed and not yet seen fire.
+   *
+   * Six of the engine's timers were never stored anywhere — `destroy()` could
+   * only clear the seven kept in named fields, so the rest outlived it. The
+   * engine was not stopped by `destroy()`, only orphaned: a surviving callback
+   * called `drive()`, the loop resumed against a screen that no longer existed,
+   * and it could reach `endBattle` -> `onBattleEnd`, which writes the result to
+   * the global store and navigates. Quitting a battle could drop the player on
+   * a victory screen for the fight they abandoned.
+   */
+  private readonly timers = new Set<ReturnType<typeof setTimeout>>()
+
+  /** Set by `destroy()`. A callback already dequeued must not restart the loop. */
+  destroyed: boolean
+
   // ── Callbacks ────────────────────────────────────────────────────────────────
   readonly cb: BattleEngineCallbacks
 
@@ -138,6 +154,7 @@ export class BattleEngine {
     this.clashAnnounceTimer = null
     this.diceTimer          = null
     this.dismissTimer       = null
+    this.destroyed          = false
 
     this.cb = callbacks
   }
@@ -149,7 +166,62 @@ export class BattleEngine {
     this.drive()
   }
 
+  /**
+   * A timer the engine arms for itself, whose body cannot escape.
+   *
+   * Nothing else catches these. `BattleContext.safeEngineCall` wraps the
+   * synchronous calls React makes *into* the engine, and the React error
+   * boundaries catch renders — a throw raised inside a `setTimeout` the engine
+   * armed passes both and reaches `window.onerror`.
+   *
+   * The consequence is the worst available. The callback dies before arming the
+   * next timer, and the step machine is left on `enemy_acting`, which is in
+   * YIELDED_STEPS, so `drive()` refuses to advance it. No timer remains and no
+   * player action re-enters. The battle is frozen for good, with no error
+   * shown; the only way out is the pause menu.
+   *
+   * Reproduced with a single content edit: five effect types pass Zod but have
+   * no registered handler, so an authored `removeStatus` on an enemy skill
+   * throws the first time that enemy casts.
+   *
+   * This is not a wrapper for its own sake — CLAUDE.md § Error Handling forbids
+   * those. It has an answer for what the game does next, and it is the same
+   * answer `safeEngineCall` already gives: report, and let the battle end
+   * cleanly through `BattleErrorToast`.
+   */
+  safeTimeout(fn: () => void, ms: number): ReturnType<typeof setTimeout> {
+    const handle = setTimeout(() => {
+      this.timers.delete(handle)
+      // Already dequeued when the engine was destroyed: the handle is gone from
+      // the set and clearTimeout can no longer reach it, so the check has to be
+      // here.
+      if (this.destroyed) return
+      try {
+        fn()
+      } catch (err) {
+        this.destroy()
+        this.setStep('battle_over')
+        // Publish the terminal step before reporting. `setStep` only mutates
+        // the engine; observers read the snapshot, and leaving those two
+        // disagreeing is the same shape as the bugs this audit has already
+        // turned up twice. Guarded because notifying runs React: if that is
+        // what threw, the report below still has to happen, and it carries the
+        // original error rather than this one.
+        try { this.notify() } catch { /* reported below regardless */ }
+        this.cb.onEngineError(err)
+      }
+    }, ms)
+    this.timers.add(handle)
+    return handle
+  }
+
   destroy(): void {
+    this.destroyed = true
+    // The set is the authority — every engine timer is armed through
+    // safeTimeout. The named fields are cleared too because they are read
+    // elsewhere to cancel-and-rearm, and a stale handle there is confusing.
+    for (const handle of this.timers) clearTimeout(handle)
+    this.timers.clear()
     if (this.dismissTimer)        clearTimeout(this.dismissTimer)
     if (this.diceTimer)           clearTimeout(this.diceTimer)
     if (this.applyTimer)          clearTimeout(this.applyTimer)
@@ -210,7 +282,7 @@ export class BattleEngine {
     snap.set(defender.id, { ...defSnap, ap: defSnap.ap - counterSkill.cachedCosts.apCost })
 
     const currentTick = this.tickValue
-    setTimeout(() => {
+    this.safeTimeout(() => {
       runAttack(this, defender, originalCaster, counterSkill, snap, depth + 1)
       fireCounterCastEffects(defender, originalCaster, counterSkill, snap, currentTick)
       fireCounterTriggerEffects(defender, snap, this.passiveDefs, currentTick)
@@ -306,6 +378,8 @@ export class BattleEngine {
   }
 
   drive(): void {
+    // A callback that was mid-flight when destroy() ran can still reach here.
+    if (this.destroyed) return
     if (YIELDED_STEPS.has(this.step)) return
     if (
       (this.step === 'advance_tick' || this.step === 'clash_check' || this.step === 'enemy_telegraph') &&
@@ -455,7 +529,7 @@ export class BattleEngine {
       if (!seq) { release(); continue }
       this.cb.onSetTurnState(ownerDefId, ownerDefId, null, null, { acting: false, target: false })
       this.cb.onPlayAttack(ownerDefId, ownerDefId, 'Hit', 0, false, 0, null, '', '', seq)
-      setTimeout(release, ANIM_TIMEOUT_MS)
+      this.safeTimeout(release, ANIM_TIMEOUT_MS)
     }
   }
 
@@ -494,7 +568,7 @@ export class BattleEngine {
     this.diceShowTime = Date.now()
     this.diceActive   = true
     this.cb.onShowDiceResult(outcome, message, probabilities)
-    this.diceTimer = setTimeout(() => {
+    this.diceTimer = this.safeTimeout(() => {
       this.diceActive = false
       this.cb.onClearDiceResult()
     }, DICE_RESULT_DISMISS_MS)
@@ -503,7 +577,7 @@ export class BattleEngine {
   showTurnDisplay(d: TurnDisplayData, dismissAfter = TURN_DISPLAY_DISMISS_MS): void {
     if (this.dismissTimer) clearTimeout(this.dismissTimer)
     this.cb.onShowTurnDisplay(d, dismissAfter)
-    this.dismissTimer = setTimeout(() => this.cb.onHideTurnDisplay(), dismissAfter)
+    this.dismissTimer = this.safeTimeout(() => this.cb.onHideTurnDisplay(), dismissAfter)
   }
 
   // Show the acting player + default target in the Phaser arena as soon as player_turn

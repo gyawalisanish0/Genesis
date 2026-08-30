@@ -90,6 +90,7 @@ export function makeCallbacks(): CallbackHarness {
     onLog:             vi.fn((e) => { logs.push(e.text) }),
     onHistory:         vi.fn(),
     onTickDisplaced:   vi.fn(),
+    onEngineError:     vi.fn(),
   }
   return { cb, snapshots, logs, latest: () => snapshots[snapshots.length - 1] }
 }

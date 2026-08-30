@@ -3,11 +3,41 @@
 // any death animation before returning to advance_tick.
 
 import type { BattleEngine } from './BattleEngine'
+import type { Unit }                      from '../types'
 import { ANIM_TIMEOUT_MS }                from '../constants'
 import { isAlive, incrementActionCount }  from '../unit'
 import { advanceTick }                    from '../combat/TickCalculator'
 import { makeHistoryEntry }               from '../battleHistory'
 import { fireBattleTickIntervalPassives } from './BattlePassive'
+
+/**
+ * Re-register anyone the effects moved on the timeline.
+ *
+ * A unit's tick lives in two places: `registeredTicks`, which the engine
+ * schedules from, and `unit.tickPosition`, which the timeline draws from.
+ * Effects write through `battle.setUnit`, and that only reaches the snapshot's
+ * Unit objects — so a `tickShove` landing on anyone but the actor moved the
+ * marker and nothing else. Tara's Chaotic Vortex drew every enemy sliding four
+ * ticks forward and then acted them all exactly on time.
+ *
+ * The actor is excluded because their tick is set from `advanceTick` just
+ * above, which already reads the shoved position back off the snapshot — the
+ * same bug, caught earlier for the caster alone.
+ *
+ * Goes through `registerTickInternal` rather than writing the map directly, so
+ * a shove into an occupied tick still gets displaced and still announces it.
+ */
+function reRegisterMovedUnits(
+  engine: BattleEngine, snap: ReadonlyMap<string, Unit>, actorId: string,
+): void {
+  for (const [id, unit] of snap) {
+    if (id === actorId) continue
+    const registered = engine.registeredTicks.get(id)
+    // Absent = not on the timeline: already dead, or never registered.
+    if (registered === undefined || registered === unit.tickPosition) continue
+    engine.registerTickInternal(id, unit.tickPosition)
+  }
+}
 
 export function runEnemyApplying(engine: BattleEngine): void {
   const pending = engine.pendingAITurn
@@ -28,6 +58,7 @@ export function runEnemyApplying(engine: BattleEngine): void {
   const fromTick = snap.get(aiUnit.id)?.tickPosition ?? aiUnit.tickPosition
   engine.cb.onHistory(makeHistoryEntry(aiUnit.id, aiUnit.defId, aiUnit.name, fromTick, aiUnit.isAlly))
   engine.registerTickInternal(aiUnit.id, advanceTick(fromTick, effectiveTu))
+  reRegisterMovedUnits(engine, snap, aiUnit.id)
   engine.globalBattleTick += effectiveTu
   fireBattleTickIntervalPassives(
     engine.globalBattleTick, snap,
@@ -69,7 +100,7 @@ export function runEnemyApplying(engine: BattleEngine): void {
   if (primaryVictim) {
     engine.notify()
     engine.cb.onPlayDeath(primaryVictim.defId)
-    setTimeout(() => {
+    engine.safeTimeout(() => {
       engine.cb.onClearTurn()
       engine.playPendingExpiryAnims(snap)
       engine.playPendingActivationAnims()
@@ -111,6 +142,7 @@ export function runPlayerApplying(engine: BattleEngine): void {
   // so advancing from actor.tickPosition would throw it away.
   const nextTick = advanceTick(snap.get(actor.id)?.tickPosition ?? actor.tickPosition, effectiveTu)
   engine.registerTickInternal(actor.id, nextTick)
+  reRegisterMovedUnits(engine, snap, actor.id)
   engine.globalBattleTick += effectiveTu
   fireBattleTickIntervalPassives(
     engine.globalBattleTick, snap,
@@ -152,7 +184,7 @@ export function runPlayerApplying(engine: BattleEngine): void {
   if (firstDead) {
     engine.notify()
     engine.cb.onPlayDeath(firstDead.defId)
-    setTimeout(() => {
+    engine.safeTimeout(() => {
       engine.cb.onClearTurn()
       engine.playPendingExpiryAnims(snap)
       engine.playPendingActivationAnims()

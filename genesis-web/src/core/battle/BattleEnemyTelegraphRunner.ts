@@ -67,7 +67,7 @@ export function runEnemyTelegraph(engine: BattleEngine): void {
   engine.setStep('enemy_acting')
   engine.notify()
 
-  engine.telegraphTimer = setTimeout(() => {
+  engine.telegraphTimer = engine.safeTimeout(() => {
     if (engine.step !== 'enemy_acting') return
     const thinkPlayers = engine.playerUnits
     const thinkEnemies = engine.enemies
@@ -135,7 +135,7 @@ export function runEnemyTelegraph(engine: BattleEngine): void {
     )
 
     if (engine.applyTimer) clearTimeout(engine.applyTimer)
-    engine.applyTimer = setTimeout(() => {
+    engine.applyTimer = engine.safeTimeout(() => {
       if (engine.step !== 'enemy_acting') return
       const execPlayers = engine.playerUnits
       const execEnemies = engine.enemies
@@ -188,7 +188,7 @@ export function runEnemyTelegraph(engine: BattleEngine): void {
           aiSequence,
         )
         if (engine.applyTimer) clearTimeout(engine.applyTimer)
-        engine.applyTimer = setTimeout(() => {
+        engine.applyTimer = engine.safeTimeout(() => {
           if (engine.step === 'enemy_acting') {
             engine.setStep('enemy_applying')
             engine.notify()
@@ -196,7 +196,7 @@ export function runEnemyTelegraph(engine: BattleEngine): void {
           }
         }, ANIM_TIMEOUT_MS)
       }
-      engine.attackTimer = setTimeout(engine.pendingAttackCb, DICE_RESULT_DISMISS_MS)
+      engine.attackTimer = engine.safeTimeout(engine.pendingAttackCb, DICE_RESULT_DISMISS_MS)
     }, inputMs)
 
   }, remainingDice + thinkDelay)
