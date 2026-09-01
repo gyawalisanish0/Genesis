@@ -3,7 +3,7 @@
 
 import type { BattleEngine } from './BattleEngine'
 import {
-  DICE_RESULT_DISMISS_MS, ANIM_TIMEOUT_MS, BETWEEN_TURN_PAUSE_MS,
+  ANIM_TIMEOUT_MS, BETWEEN_TURN_PAUSE_MS, diceDismissMs,
   AI_THINKING_MIN_MS, AI_THINKING_MAX_MS, AI_INPUT_MIN_MS, AI_INPUT_MAX_MS,
 } from '../constants'
 import { isAlive }                   from '../unit'
@@ -13,7 +13,7 @@ import { makeSnapshot }              from './BattleSnapshot'
 import { getEffectiveTuCost }        from './BattleDamage'
 import { unitIsDamaged, outcomeColour, buildOutcomeLabel } from './BattleResolution'
 import { computeAITurn }             from './BattleAIRunner'
-import { runAttack }                 from './BattleAttackResolver'
+import { runAttack, rollsTwoPhaseDice } from './BattleAttackResolver'
 import { fireAITurnStart, handleAISkip } from './BattleAITurnHelpers'
 
 const randomMs = (min: number, max: number): number =>
@@ -52,7 +52,7 @@ export function runEnemyTelegraph(engine: BattleEngine): void {
 
   const firstAIUnit = allAIUnits[0]
   const remainingDice = engine.diceActive
-    ? Math.max(0, DICE_RESULT_DISMISS_MS - (Date.now() - engine.diceShowTime))
+    ? Math.max(0, engine.diceDismissMs - (Date.now() - engine.diceShowTime))
     : 0
 
   // Pre-check to use short delay for skip/no_targets.
@@ -131,7 +131,10 @@ export function runEnemyTelegraph(engine: BattleEngine): void {
         },
         isAlly: freshAIUnit.isAlly,
       },
-      inputMs + DICE_RESULT_DISMISS_MS + ANIM_TIMEOUT_MS,
+      // This unit's own roll hasn't happened yet, so predict its duration from
+      // the skill rather than reading engine.diceDismissMs — that field still
+      // holds whatever the *previous* roll set it to.
+      inputMs + diceDismissMs(rollsTwoPhaseDice(skill)) + ANIM_TIMEOUT_MS,
     )
 
     if (engine.applyTimer) clearTimeout(engine.applyTimer)
@@ -147,7 +150,7 @@ export function runEnemyTelegraph(engine: BattleEngine): void {
 
       engine.applySkillAPCost(firstAIUnit.id, skill.apCost, snap, thisTick)
 
-      const { outcome, damage: primaryDamage } = runAttack(engine, freshAIUnit, target, skillInst, snap)
+      const { outcome, damage: primaryDamage, hasPhases } = runAttack(engine, freshAIUnit, target, skillInst, snap)
 
       if (allTargets.length > 1) {
         engine.applySplashEffects(freshAIUnit, skillInst, allTargets.slice(1), snap, outcome, thisTick)
@@ -178,7 +181,7 @@ export function runEnemyTelegraph(engine: BattleEngine): void {
       const { isMelee: aiIsMelee, dashDx: aiDashDx, projectile: aiProjectile, customSequence: aiSequence } =
         engine.buildAttackAnimConfig(firstAIUnit.defId, skill.id, skill.tags, aiDamaged)
 
-      engine.cb.onPlayDice(outcome)
+      engine.playDiceInSync(outcome, hasPhases)
       if (engine.attackTimer) clearTimeout(engine.attackTimer)
       engine.pendingAttackCb = () => {
         engine.pendingAttackCb = null
@@ -196,7 +199,7 @@ export function runEnemyTelegraph(engine: BattleEngine): void {
           }
         }, ANIM_TIMEOUT_MS)
       }
-      engine.attackTimer = engine.safeTimeout(engine.pendingAttackCb, DICE_RESULT_DISMISS_MS)
+      engine.attackTimer = engine.safeTimeout(engine.pendingAttackCb, engine.diceDismissMs)
     }, inputMs)
 
   }, remainingDice + thinkDelay)

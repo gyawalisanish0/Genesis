@@ -7,7 +7,7 @@ import { __resetRegistry } from '../../effects/registry'
 import { registerBuiltins } from '../../effects/builtins'
 import { BattleEngine } from '../BattleEngine'
 import {
-  makeUnit, makeDamageSkillDef, makeSkillInstance, makeCallbacks, makeConfig,
+  makeUnit, makeDamageSkillDef, makeSkillInstance, makeCallbacks, makeConfig, rollFor,
 } from './_testHelpers'
 
 function makeCounterSkillDef() {
@@ -20,16 +20,21 @@ function makeCounterSkillDef() {
 }
 
 // The AI telegraph path calls Math.random() twice for delay jitter (think
-// delay, then input delay) before the attack's dice roll — so the roll
-// itself is the 3rd call. The counter roll after COUNTER_ANNOUNCE_MS is the
-// 4th. Everything else (jitter, any later roll) gets a harmless 'Hit' value.
+// delay, then input delay) before the attack resolves. Resolution then rolls
+// twice — the actor's strike, then the target's reaction — so those are calls
+// 3 and 4, and the counter roll after COUNTER_ANNOUNCE_MS is the 5th.
+// Everything else (jitter, any later roll) gets a harmless connecting value.
 function mockDeterministicRandom(): void {
+  const evade = rollFor('Evade')
+  const hit   = rollFor('Hit')
   let call = 0
   vi.spyOn(Math, 'random').mockImplementation(() => {
     call += 1
-    if (call === 3) return 0.6   // attack dice roll → Evade
-    if (call === 4) return 0.05  // counter roll → succeeds
-    return 0.3                   // jitter delays / any later roll → Hit
+    if (call <= 2) return 0                     // jitter delays → shortest, so the
+                                                //   decision window is deterministic
+    if (call === 3 || call === 4) return evade  // strike, then reaction → Evade
+    if (call === 5) return 0.05                 // counter roll → succeeds
+    return hit                                  // any later roll connects
   })
 }
 

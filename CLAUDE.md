@@ -296,8 +296,9 @@ Genesis/
 │       │   ├── GameContext.ts    # Zustand store: selectedMode, selectedTeam, selectedTeamIds, enemies, battleResult, settings
 │       │   ├── combat/
 │       │   │   ├── TickCalculator.ts     # calculateStartingTick, advanceTick, calculateApGained
-│       │   │   ├── HitChanceEvaluator.ts # calculateFinalChance, shiftProbabilities (4-outcome table)
-│       │   │   ├── DiceResolver.ts       # roll, applyOutcome, resolveCounterRoll
+│       │   │   ├── HitChanceEvaluator.ts # calculateStrikeChance, tickFactor (phase 1 inputs)
+│       │   │   ├── PhaseResolver.ts      # strikeTable, reactionTable, reactionChance, combineOutcome, combinedForecast
+│       │   │   ├── DiceResolver.ts       # rollTable, roll, outcomeScale, applyOutcome, resolveCounterRoll
 │       │   │   ├── CounterResolver.ts    # findCounterSkill, canCounter, isSingleTarget
 │       │   │   ├── CooldownResolver.ts   # isOnCooldown, ticksRemaining, turnsRemaining, applyCooldown
 │       │   │   ├── TickDisplacer.ts      # rollD8Displacement, resolveTickDisplacement (tick occupancy cap)

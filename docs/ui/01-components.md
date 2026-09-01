@@ -427,10 +427,41 @@ Dice result. Slams in, holds, cuts out — `steps(8)`, no fade.
 | Boosted | `BOOSTED!` | `--accent-gold` |
 | Hit | `HIT!` | `--text-primary` |
 | Evade | `EVADED!` | `--accent-evasion` |
-| Fail | `MISS!` | `--text-muted` |
+| Graze | `GRAZE!` | `--text-muted` |
 
 Tap anywhere in the arena hotzone skips to the attack
 (`skipActiveDice` → `skipDiceAnim`).
+
+---
+
+### `PhaseBeat` / `TwoPhaseDiceRoll`
+
+Two-phase resolution (CONCEPT.md § Skill Resolution) gets two on-screen beats
+before the outcome burst above, not one settle standing in for both rolls.
+
+`TwoPhaseDiceRoll` sequences three states — `strike` → `reaction` → `outcome`
+— rendering one `PhaseBeat` for each phase, then handing off to the existing
+`DiceRoll`/`OutcomeBurst` for the combined result:
+
+| Beat | Label | Bands (best → worst) | Tone |
+|---|---|---|---|
+| Strike (actor) | `STRIKE` | Clean / Solid / Loose | `--accent-info` |
+| Reaction (target) | `REACTION` | Read / Deflect / Caught | `--accent-genesis` |
+
+Each `PhaseBeat` is a smaller `DiceRoll` — needle sweeps a `PhaseBand`
+(`PHASE_SWEEP_MS`), settles, holds (`PHASE_GAP_MS`) so the zone and result word
+are actually readable, then hands off. Neither band is outcome-coloured — a
+Loose strike isn't itself bad, it can still land as a Graze — so zones are
+toned per phase rather than per zone the way the 4-outcome band is.
+
+A roll with no opposed party (a self-cast, or the counter chain's plain
+success/fail announcement) carries no `DicePhaseData` and skips straight to
+`DiceRoll` — same behaviour as before this existed. `diceDismissMs()` in
+`constants.presentation.ts` is what tells the engine how long to hold a roll
+on screen: the short single-beat duration with no phases, the longer
+`TWO_PHASE_DICE_RESULT_DISMISS_MS` with them. Both the engine's own commit
+timer and the UI's independent clear-after timer call it, rather than each
+assuming the other's number.
 
 ---
 

@@ -144,57 +144,182 @@ Speed compresses the ceiling of the random roll toward the class minimum:
 
 ---
 
-## Skill Resolution (Dice System)
+## Skill Resolution (Two-Phase Dice)
 
-Every action triggers a single dice roll. The roll determines the full outcome — both the nature of the result and its magnitude.
+Every action resolves in **two phases**. The actor rolls how well the blow was
+delivered; the target rolls what they managed to do about it. The final outcome
+is the meeting of the two.
 
-### Resolution Table
+Neither side is ever safe. A perfect strike can still be read, and a clumsy one
+can still land — that uncertainty is the point, and it is what a single roll
+could not express.
 
-| Outcome | Base % | Effect |
+### Why two phases
+
+A single roll made *avoidance* an outcome on the attacker's table, which put the
+wrong verb on the wrong unit: the attacker rolled, and the result said the
+defender dodged. The defender was inert — a number the attack was measured
+against, never a participant.
+
+Splitting the roll gives the defender a real moment. It also gives the attacker
+something to play for beyond "did it land": a Clean strike is worth pursuing
+because it *closes the defender's window*, not because it does more damage.
+
+### Phase 1 — the Strike (actor)
+
+The actor's Precision, the skill's base chance, and the skill's tick cost
+decide how well the blow is delivered. There is no miss here.
+
+| Strike | Base % | Meaning |
 |---|---|---|
-| **Boosted** | 10% | 1.5× output |
-| **Hit**     | 40% | 1.0× output |
-| **Evade**   | 20% | No output — target evades; counter chain check fires |
-| **Fail**    | 30% | No output — miss; no counter opportunity |
+| **Clean** | 20% | Precisely placed; almost nothing to read |
+| **Solid** | 50% | Ordinary delivery |
+| **Loose** | 30% | Telegraphed; the defender gets a wide window |
 
-Base probabilities at `finalChance = 1.0` (Precision 100, baseChance 1.0). The table always sums to 1.0.
+Base percentages at `strikeChance = 1.0`. See § Strike Chance below.
 
-### Outcome Notes
+### Phase 2 — the Reaction (target)
 
-**Boosted** — a critical hit; 50% output bonus (`BOOSTED_MULTIPLIER = 1.5`).
+The target then rolls against the strike they are facing. The window they get
+is set by the strike band — this is the whole reason strike quality matters.
 
-**Hit** — baseline; the skill lands at full intended output.
+| | **Read** | **Deflect** | **Caught** |
+|---|---|---|---|
+| vs Clean | 5% | 35% | 60% |
+| vs Solid | 20% | 30% | 50% |
+| vs Loose | 40% | 35% | 25% |
 
-**Evade** — the action fails entirely. The target then has a **15% chance to counter** (see Counter Chain). Unlike Fail, Evade gives the target the counter window.
+**Read** — fully avoided. **Deflect** — partially avoided. **Caught** — takes it
+as delivered.
 
-**Fail** — clean miss; no output, no counter window.
+The window is then scaled by the defender's **Endurance** — the defensive stat.
 
-### Probability Shifting
+```
+reactionChance = (Endurance / 50) × kit modifiers
+```
 
-`finalChance = (Precision / 100) × baseChance`
+`Endurance 50` is the balanced baseline and leaves the table above unchanged.
+Read and Deflect form the defender's positive pool, Caught the negative one,
+and `reactionChance` scales one against the other exactly as `strikeChance`
+does on the strike table. The same 5% floor applies to both pools: no unit is
+unhittable, and no unit is defenceless.
 
-Probabilities are split into two pools — positive (`Boosted + Hit = 50%`) and negative (`Evade + Fail = 50%`). `finalChance` scales one pool up and the other down proportionally, always summing to 1.0. The ratio between outcomes within each pool stays fixed.
+Kit modifiers layer on top. A guard stance, a dodge status or a passive shifts
+this table further, so a character can be hard to hit both because of what they
+are and because of what they carry.
 
-| Final Chance | Effect on Table |
+### The combined outcome
+
+| | Caught | Deflect | Read |
+|---|---|---|---|
+| **Clean** | **Boosted** ×1.5 | **Hit** ×1.0 | **Evade** ×0 |
+| **Solid** | **Hit** ×1.0 | **Graze** ×0.25 | **Evade** ×0 |
+| **Loose** | **Graze** ×0.25 | **Graze** ×0.25 | **Evade** ×0 |
+
+Four outcomes, unchanged in name and magnitude from the single-roll system, so
+every `onHit` / `onEvade` payload and every documented per-outcome number keeps
+its meaning.
+
+At `strikeChance = 1.0` the combined distribution is:
+
+| Outcome | Chance |
 |---|---|
-| 1.0 (100%) | Base probabilities as above |
-| > 1.0 | Positive pool (Boosted, Hit) grows; negative pool (Evade, Fail) shrinks |
-| < 1.0 | Negative pool grows; positive pool shrinks |
+| Boosted | 12% |
+| Hit | 32% |
+| Graze | 33% |
+| Evade | 23% |
+
+**Evade** is the only outcome that opens the counter window (see § Counter
+Chain). It is now something the defender *earned* on their own roll, rather
+than something the attacker's bad luck handed them.
+
+### What this does to the current roster
+
+Measured against the shipped stats, not estimated. Full-value rate is
+Boosted + Hit, using each attacker's real Precision and each defender's real
+Endurance on an 11 TU skill:
+
+| Exchange | Full value today | Full value two-phase |
+|---|---|---|
+| Hugo → Netrolume grunt (END 30) | 51% | 55% |
+| Netrolume grunt → Hugo (END 75) | 41% | 25% |
+| Husty → Netrolume elite | 66% | 58% |
+| Tara → Hugo | 59% | 37% |
+
+Endurance currently spans 30–75 across the roster, so the defensive pool swings
+by about 2.5× end to end. That is the intended consequence of making Endurance
+matter, and it lands well on Hugo — his character doc describes ANBOT
+"rerouting nanite density into an evasion configuration" *before* a blow
+arrives, which is precisely a strong reaction roll.
+
+It also means **fights get longer**, and the damage calibration in
+`docs/mechanics/stat-guidelines.md` — "a unit should survive 3–4 hard hits" —
+should be re-checked once this is live.
+
+**Tuning dial.** If the 2.5× spread proves too wide, compress it without
+touching any character's stats by softening the divisor:
+`reactionChance = 0.5 + (Endurance / 100)`, which maps 30–75 onto 0.8–1.25
+instead of 0.6–1.5.
+
+**Graze** delivers 25% output and refunds 80% of the skill's AP cost. The tick
+is still spent. A partial result is not a wasted turn.
+
+> **Naming.** The engine currently calls this outcome `Fail`, from when it meant
+> a clean miss. It has delivered chip damage and an AP refund since, so the name
+> misdescribes it; the spec uses **Graze** and the literal is renamed on
+> implementation. `Boosted`, `Hit` and `Evade` are unchanged, and `onEvade`
+> keeps its meaning.
+
+### Strike Chance
+
+```
+strikeChance = (Precision / 50) × baseChance × tickFactor
+```
+
+`Precision 50` is the balanced baseline — `strikeChance = 1.0` and the base
+strike table above. Above 50 tips toward Clean; below 50 tips toward Loose.
+
+**`baseChance`** is the skill's own multiplier, `0.01` to `1.50`.
+
+**`tickFactor`** is the tempo trade: a heavier commitment on the timeline is a
+more deliberate blow.
+
+```
+tickFactor = max(0, 1 + (tuCost - 10) × 0.02)
+```
+
+A 10 TU skill is neutral. A 20 TU wind-up gets `1.2`; a 5 TU jab gets `0.9`.
+This is what stops the dice being a flat tax and makes them a dial the player
+operates through skill choice.
+
+Shifting works as before: Clean and Solid form the positive pool, Loose the
+negative one, and `strikeChance` scales one against the other, always summing
+to 1.0. Neither pool may fall below 5% — without that floor a high-Precision
+unit could not be read and a low-Precision one could not connect, and in both
+cases the table collapses to a single result.
 
 ### Dice Alteration
-The base roll is pure RNG — no system-level mitigation. However, **any skill or passive can alter the dice roll if its definition allows it**:
 
-- A passive might shift outcome probabilities (`shiftProbability` effect)
-- A skill might guarantee the next roll (`forceOutcome` effect)
-- A relic might trigger a reroll (`rerollDice` effect)
+The base rolls are pure RNG — no system-level mitigation. But **any skill,
+passive or item may alter either phase**, and the phase is named explicitly:
 
-Dice alteration is declared on the skill or passive itself — the framework provides the hook, the content provides the effect.
+- `shiftProbability` — move probability within the strike table or the
+  reaction table
+- `rerollDice` — reroll either phase
+- `forceOutcome` — pin a strike band or a reaction band
+
+Two phases means a defensive kit finally has somewhere to attach. A guard
+stance shifts the reaction table; a feint shifts the strike table; a passive
+can reroll the phase its character is meant to be good at.
+
+Dice alteration is declared on the skill or passive itself — the framework
+provides the hook, the content provides the effect.
 
 ---
 
 ## Counter Chain
 
-When a single-target skill is **Evaded**, the defending unit may counter-attack.
+When a single-target skill resolves as **Evade**, the defending unit may counter-attack.
 
 ### Chain Formula
 
@@ -280,11 +405,11 @@ Every character has six core stats that define their identity and combat behavio
 | Stat | Role |
 |---|---|
 | **Strength** | Governs physical skill output |
-| **Endurance** | Governs HP pool and physical durability |
+| **Endurance** | Defensive stat — scales the phase-2 reaction roll (how much of an incoming blow a unit reads or deflects) and physical mitigation. It is **not** an HP multiplier; HP is a standalone design value (see `docs/mechanics/stat-guidelines.md`) |
 | **Power** | Governs magical / ability-based skill output |
 | **Resistance** | Governs damage mitigation and defensive capacity |
 | **Speed** | Determines starting Tick position — higher Speed biases toward the class minimum (acts sooner) |
-| **Precision** | Accuracy stat — multiplied by a skill's base chance to determine the final hit chance multiplier |
+| **Precision** | Strike stat — with base chance and tick cost, sets how well a blow is delivered (phase 1). It does not decide avoidance; the target's reaction roll does |
 
 ### Classes
 
@@ -357,7 +482,7 @@ Skills in Genesis are **self-defining** — there are no locked categories or ty
 - **TU cost** — how far the unit's marker advances after use
 - **AP cost** — what it costs to execute
 - **Base value** — a percentage of the relevant character stat used as the skill's output
-- **Base chance** — a multiplier from `0.01` to `1.50` applied against the user's Precision stat to calculate the skill's final hit chance multiplier
+- **Base chance** — a multiplier from `0.01` to `1.50` applied against the user's Precision stat to calculate the skill's strike chance (phase 1)
 - **Effect list** — one or more composable effects, each with its own `when` trigger, optional `condition`, and optional `target` override
 - **Tags** — 1 to 4 tags that describe the skill's nature (see below)
 - **Max level** — the highest level this skill can reach during a run
@@ -371,17 +496,23 @@ Raw Output = Relevant Stat × (Base Value / 100)
 
 **Example**: Power 88, Base Value 333 → `88 × 3.33 = 293`
 
-Raw output is then modified by the dice outcome (`Boosted` = ×1.5, `Hit` = ×1.0).
+Raw output is then modified by the combined outcome (`Boosted` ×1.5, `Hit` ×1.0, `Graze` ×0.25, `Evade` ×0).
 
-### Hit Chance Formula
+### Strike Chance Formula
 
 ```
-Final Chance = (Precision / 100) × Base Chance
+Strike Chance = (Precision / 50) × Base Chance × Tick Factor
 ```
 
-**Example**: Precision 58 × Base Chance 1.05 = **60.9% toward the positive pool**
+**Example**: Precision 58, Base Chance 1.05, 12 TU → `1.16 × 1.05 × 1.04 = 1.27`
+— the strike table tips toward Clean.
 
-Base chance `1.0` means the skill hits exactly as often as the character's raw Precision allows. Base chance `> 1.0` (up to `1.5`) pushes toward the positive pool more aggressively; base chance `< 1.0` favours the negative pool.
+`Precision 50` is the balanced baseline. Base chance `1.0` means the skill
+strikes exactly as well as the character's raw Precision allows; `> 1.0`
+(up to `1.5`) pushes toward Clean, `< 1.0` toward Loose.
+
+This decides **phase 1 only**. Whether the blow is avoided is the target's
+roll — see § Skill Resolution.
 
 ### Skill Tags
 
@@ -616,7 +747,7 @@ Enemies are **Tick-aware** — they evaluate the full Tick stream before making 
 - [x] Core loop → continuous Tick stream (Tick 0 → ∞), no rounds
 - [x] TU = Tick = initiative + action cost + resource regen rhythm
 - [x] Timeline manipulation → skill-only via `tickShove` effect primitive
-- [x] Skill resolution → 4-outcome dice table (Boosted 10% / Hit 40% / Evade 20% / Fail 30%); pure RNG; no outcome modifies the Tick stream directly
+- [x] Skill resolution → two-phase: strike table (Clean 20 / Solid 50 / Loose 30) then reaction table (Read / Deflect / Caught, window set by strike band), combining to Boosted 12 / Hit 32 / Graze 33 / Evade 23 at strikeChance 1.0; pure RNG both phases; no outcome modifies the Tick stream directly
 - [x] Roster source → mix of pre-built, in-combat draft, and mode-assigned depending on mode
 - [x] Resources → AP per-unit; regenerates on Tick rhythm (`ticks × apRegenRate`); can be frozen via status payload
 - [x] Enemy Tick manipulation → confirmed; `tickShove` effect can delay enemies on the stream
@@ -627,11 +758,11 @@ Enemies are **Tick-aware** — they evaluate the full Tick stream before making 
 - [x] Classes → Warrior, Caster, Ranger, Hunter, Enchanter, Guardian
 - [x] Rarity → 7 tiers: Normal → Advance → Super → Epic → Master → Legend → OMEGA
 - [x] Speed → starting Tick formula: `class_min + randint(0, round((class_max - class_min) × (1 - Speed/100)))`; class ranges defined per class
-- [x] Final chance → `(Precision / 100) × baseChance`; probability shift redistributes positive pool (Boosted + Hit) and negative pool (Evade + Fail) proportionally; always sums to 1.0
+- [x] Strike chance → `(Precision / 50) × baseChance × tickFactor`; shifts the phase-1 strike table (positive pool Clean + Solid against negative pool Loose), always sums to 1.0, neither pool below 5%
 - [x] AP regen rate → character-defined `apRegenRate`; unique per unit; can be frozen via status payload flag `freezesApRegen`
 - [x] Skill types → no locked categories; each skill is self-defining (TU cost + AP cost + base value + base chance + effect list + 1–4 tags)
 - [x] Combat actions → Basic Attack (tagged `basic`), 4 active skill slots, unique passive (always active), Skip/End Turn, in-game options
-- [x] Precision → multiplied by skill base chance (0.01–1.50) to produce final hit chance multiplier
+- [x] Precision → multiplied by skill base chance (0.01–1.50) and tick factor to produce the phase-1 strike chance
 - [x] Unit anatomy → HP and AP universal; secondary resource and status slots situational per character/mode
 - [x] Win condition → mode-dependent
 - [x] Loss state → mode-dependent

@@ -22,7 +22,7 @@
 .boosted { background: var(--accent-gold); }
 .hit     { background: var(--accent-heal); }
 .evade   { background: var(--accent-evasion); }
-.fail    { background: var(--accent-danger); }
+.graze   { background: var(--text-muted); }
 
 .dimmed { opacity: 0.25; }
 

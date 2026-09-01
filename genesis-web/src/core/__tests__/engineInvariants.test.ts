@@ -25,9 +25,10 @@ import { fileURLToPath } from 'node:url'
 import { registerBuiltins } from '../effects/builtins'
 import { hasHandler } from '../effects/registry'
 import { effectSchema } from '../effects/schemas'
-import { shiftProbabilities, calculateFinalChance, tuAccuracyFactor } from '../combat/HitChanceEvaluator'
+import { calculateStrikeChance, tickFactor } from '../combat/HitChanceEvaluator'
+import { combinedForecast } from '../combat/PhaseResolver'
 import { applyOutcome, outcomeScale, type DiceOutcome } from '../combat/DiceResolver'
-import { MAX_SKILL_SLOTS, DICE_BASE_PROBABILITIES } from '../constants'
+import { MAX_SKILL_SLOTS } from '../constants'
 
 registerBuiltins()
 
@@ -35,7 +36,7 @@ const ROOT       = join(fileURLToPath(import.meta.url), '../../../..')
 const CHARACTERS = join(ROOT, 'public/data/characters')
 const STATUSES   = join(ROOT, 'public/data/statuses')
 
-const OUTCOMES: DiceOutcome[] = ['Boosted', 'Hit', 'Evade', 'Fail']
+const OUTCOMES: DiceOutcome[] = ['Boosted', 'Hit', 'Evade', 'Graze']
 
 interface AuthoredSkill {
   char: string
@@ -155,20 +156,24 @@ describe('content is reachable by the engine', () => {
 describe('the dice table can never degenerate', () => {
   it('produces a finite distribution summing to 1 for any input', () => {
     const inputs = [0, 0.001, 0.5, 1, 1.37, 2, 10, 1e6, -1, NaN, Infinity]
-    for (const fc of inputs) {
-      const p = shiftProbabilities(fc)
-      const values = Object.values(p)
-      for (const v of values) {
-        expect(Number.isFinite(v), `non-finite probability at finalChance=${fc}`).toBe(true)
-        expect(v, `negative probability at finalChance=${fc}`).toBeGreaterThanOrEqual(0)
+    // Both phases, in every pairing — a table is only safe if the other phase
+    // cannot poison it.
+    for (const strike of inputs) {
+      for (const reaction of inputs) {
+        const where = `strike=${strike} reaction=${reaction}`
+        const values = Object.values(combinedForecast(strike, reaction))
+        for (const v of values) {
+          expect(Number.isFinite(v), `non-finite probability at ${where}`).toBe(true)
+          expect(v, `negative probability at ${where}`).toBeGreaterThanOrEqual(0)
+        }
+        expect(values.reduce((a, b) => a + b, 0), `sum at ${where}`).toBeCloseTo(1, 9)
       }
-      expect(values.reduce((a, b) => a + b, 0), `sum at finalChance=${fc}`).toBeCloseTo(1, 9)
     }
   })
 
   it('keeps every outcome reachable across the whole precision range', () => {
     for (let precision = 0; precision <= 200; precision += 10) {
-      const p = shiftProbabilities(calculateFinalChance(precision, 1))
+      const p = combinedForecast(calculateStrikeChance(precision, 1), 1)
       for (const o of OUTCOMES) {
         expect(p[o], `${o} unreachable at precision ${precision}`).toBeGreaterThan(0)
       }
@@ -179,7 +184,7 @@ describe('the dice table can never degenerate', () => {
     // The NaN that produced an empty odds band came from a real skill shape,
     // not a synthetic one — so sweep the actual content.
     for (const s of SKILLS) {
-      const p = shiftProbabilities(calculateFinalChance(50, 1) * tuAccuracyFactor(s.tuCost))
+      const p = combinedForecast(calculateStrikeChance(50, 1) * tickFactor(s.tuCost), 1)
       for (const o of OUTCOMES) {
         expect(Number.isFinite(p[o]), `${s.char}/${s.id} → ${o}`).toBe(true)
       }
@@ -190,8 +195,8 @@ describe('the dice table can never degenerate', () => {
 describe('outcome magnitude is wired end to end', () => {
   it('gives the four outcomes four distinct magnitudes', () => {
     // OUTCOMES is declaration order, not magnitude order — Evade sits between
-    // Hit and Fail in the table but delivers the least.
-    const byMagnitude: DiceOutcome[] = ['Boosted', 'Hit', 'Fail', 'Evade']
+    // Hit and Graze in the table but delivers the least.
+    const byMagnitude: DiceOutcome[] = ['Boosted', 'Hit', 'Graze', 'Evade']
     const magnitudes = byMagnitude.map(outcomeScale)
     expect(magnitudes).toEqual([...magnitudes].sort((a, b) => b - a))
     expect(new Set(magnitudes).size, 'two outcomes share a magnitude — one is decorative').toBe(4)
@@ -205,8 +210,8 @@ describe('outcome magnitude is wired end to end', () => {
 
   it('rewards a hit more than a miss for every base probability entry', () => {
     // Guards the specific regression where Boosted collapsed onto Hit.
-    expect(Object.keys(DICE_BASE_PROBABILITIES).sort()).toEqual([...OUTCOMES].sort())
+    expect(Object.keys(combinedForecast(1, 1)).sort()).toEqual([...OUTCOMES].sort())
     expect(outcomeScale('Boosted')).toBeGreaterThan(outcomeScale('Hit'))
-    expect(outcomeScale('Fail')).toBeGreaterThan(outcomeScale('Evade'))
+    expect(outcomeScale('Graze')).toBeGreaterThan(outcomeScale('Evade'))
   })
 })

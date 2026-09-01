@@ -4,6 +4,7 @@ import type { Unit, AnimationManifest, AnimationProjectileDef, AnimPhase, AnimSe
 import type { SkillInstance, PassiveDef, StatusDef } from '../effects/types'
 import type { DiceProbabilities } from '../combat/HitChanceEvaluator'
 import type { DiceOutcome } from '../combat/DiceResolver'
+import type { StrikeBand, ReactionBand, StrikeProbabilities, ReactionProbabilities } from '../combat/PhaseResolver'
 import type { HistoryEntry } from '../battleHistory'
 import type { BattleStep } from './BattleStepMachine'
 
@@ -44,10 +45,26 @@ export interface LogEntry {
 
 // ── UI / decision state ────────────────────────────────────────────────────────
 
+/**
+ * The two rolled phases behind a combined outcome, so the UI can give the
+ * reaction its own beat instead of folding both rolls under one settle.
+ *
+ * Absent for a self-cast (no opposed party to react) and for the counter
+ * chain's plain success/fail roll, which was never phase-based — see
+ * `selfCastOutcome` and `resolveCounterRoll`.
+ */
+export interface DicePhaseData {
+  strike:                StrikeBand
+  strikeProbabilities:   StrikeProbabilities
+  reaction:              ReactionBand
+  reactionProbabilities: ReactionProbabilities
+}
+
 export interface DiceResult {
   outcome: DiceOutcome
   message: string
   animKey: number
+  phases?: DicePhaseData
 }
 
 export interface CounterDecision {
@@ -144,7 +161,10 @@ export interface BattleEngineCallbacks {
    * forecast the player set when picking a skill, so an enemy roll had no band
    * at all until the player had acted once, and the player's stale odds after.
    */
-  onShowDiceResult(outcome: DiceOutcome, message: string, probabilities?: DiceProbabilities): void
+  onShowDiceResult(
+    outcome: DiceOutcome, message: string,
+    probabilities?: DiceProbabilities, phases?: DicePhaseData,
+  ): void
   /** A unit's requested tick was taken, so D8 displacement moved it elsewhere.
    *  Optional: absent implementations simply do not visualise displacement. */
   onTickDisplaced?(unitId: string, fromTick: number, toTick: number): void

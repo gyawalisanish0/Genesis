@@ -9,30 +9,54 @@ export const CLASS_TICK_RANGES: Readonly<Record<string, [number, number]>> = {
   Guardian:  [10, 20],
 }
 
-// Base outcome probabilities at 100% final hit chance
-export const DICE_BASE_PROBABILITIES = {
-  Boosted: 0.10,
-  Hit:     0.40,
-  Evade:   0.20,
-  Fail:    0.30,
+// ── Two-phase resolution ──────────────────────────────────────────────────
+// CONCEPT.md § Skill Resolution. Phase 1 is the actor's strike quality; phase 2
+// is the target's reaction to it. Neither phase alone decides the outcome.
+
+/** Phase 1, at strikeChance 1.0. None of these is a miss. */
+export const STRIKE_BASE_PROBABILITIES = {
+  Clean: 0.20,
+  Solid: 0.50,
+  Loose: 0.30,
 } as const
+
+/**
+ * Phase 2, at reactionChance 1.0, keyed by the strike being reacted to.
+ *
+ * This is the whole reason strike quality matters: a Clean blow leaves almost
+ * nothing to read, a Loose one leaves a wide window. The attacker plays for
+ * Clean to *close the defender's options*, not to hit harder.
+ */
+export const REACTION_BASE_TABLES = {
+  Clean: { Read: 0.05, Deflect: 0.35, Caught: 0.60 },
+  Solid: { Read: 0.20, Deflect: 0.30, Caught: 0.50 },
+  Loose: { Read: 0.40, Deflect: 0.35, Caught: 0.25 },
+} as const
+
+/** Endurance that leaves the reaction table unchanged. The shipped roster's
+ *  mean Endurance is exactly this, so the baseline is measured, not chosen. */
+export const REACTION_BASELINE_ENDURANCE = 50
+
+/** Precision that leaves the strike table unchanged. */
+export const STRIKE_BASELINE_PRECISION = 50
 
 export const BOOSTED_MULTIPLIER = 1.5    // damage × 1.5 on Boosted
 
-// A Fail grazes rather than whiffing. At the base table 30% of every action
-// produced literally nothing, and because the roll happens after the cost is
-// committed, the most expensive skills were punished hardest — the opposite of
-// the risk/reward a 50 AP skill should carry.
-export const FAIL_CHIP_MULTIPLIER = 0.25
+// A Graze delivers a quarter rather than whiffing. Under the old single-roll
+// table 30% of every action produced literally nothing, and because the roll
+// happens after the cost is committed, the most expensive skills were punished
+// hardest — the opposite of the risk/reward a 50 AP skill should carry.
+export const GRAZE_CHIP_MULTIPLIER = 0.25
 
-// …and it refunds most of its AP. A miss costs the tick, which is the currency
-// this game is actually about; it should not also erase the bank.
-export const FAIL_AP_REFUND = 0.8
+// …and it refunds most of its AP. A partial result costs the tick, which is the
+// currency this game is actually about; it should not also erase the bank.
+export const GRAZE_AP_REFUND = 0.8
 
-// The dice must never switch off. finalChance = precision/50 is unbounded, so
-// a Precision-100 unit reached a 100% positive pool and literally could not
-// miss or be evaded — the whole resolution system silently stopped applying at
-// one end of a stat. Both pools keep a floor so every roll stays a roll.
+// The dice must never switch off. Both strikeChance and reactionChance are
+// unbounded, so without a floor a Precision-100 attacker could not be read and
+// an Endurance-100 defender could not be touched — the resolution system
+// silently stops applying at one end of a stat. Every pool in both phases keeps
+// this floor, so every roll stays a roll.
 export const MIN_OUTCOME_POOL = 0.05
 
 // Tick investment buys accuracy. TU is the currency this game is about, and it
@@ -76,7 +100,8 @@ export const TIMELINE_FUTURE_RANGE     = 300   // ticks always kept visible ahea
 export const TIMELINE_NOW_FRACTION     = 0.75  // now-line sits at 75% from the strip top
 export const TIMELINE_RECENTER_DELAY_MS  = 1500 // ms of scroll-idle before auto-recenter fires
 export const TURN_DISPLAY_DISMISS_MS     = 2000 // ms after action resolves before turn panel auto-clears
-export const DICE_RESULT_DISMISS_MS      = 1200 // ms from dice signal to attack fire: 800ms roll + 400ms hold; tap-to-skip cuts this short
+// DICE_RESULT_DISMISS_MS moved to constants.presentation.ts, next to the two-
+// phase beat timing it now shares a derivation with — still re-exported here.
 export const CLASH_ANNOUNCE_MS           = 1500 // ms clash-winner log is shown before phase advances
 export const AI_THINKING_MIN_MS          = 1500 // min ms AI "deliberates" before revealing target
 export const AI_THINKING_MAX_MS          = 2000 // max ms AI "deliberates" before revealing target
