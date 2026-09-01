@@ -15,6 +15,7 @@ import { HintQueue } from '../components/HintQueue'
 import { PromptOverlay } from '../components/PromptOverlay'
 import { Sheet } from '../components/Sheet'
 import { DiceRoll } from '../components/DiceRoll'
+import { TwoPhaseDiceRoll } from '../components/TwoPhaseDiceRoll'
 import { OutcomeBand } from '../components/OutcomeBand'
 import { forecastOutcomes, forecastApGain } from '../core/combat/OutcomeForecast'
 import { BattleProvider, useBattleScreen } from './BattleContext'
@@ -616,13 +617,27 @@ function BattleLayout() {
               aria-label="Skip dice roll"
             >
               {/* The band is the player's own committed odds. Enemy rolls have no
-                  forecast (the player chose nothing), so they get the callout only. */}
+                  forecast (the player chose nothing), so they get the callout only.
+                  A roll that carried both phases plays the strike and reaction
+                  beats first; a self-cast or the counter announce (no phases)
+                  goes straight to the combined-outcome reveal as before. */}
               {diceForecast && (
-                <DiceRoll
-                  key={diceResult.animKey}
-                  probabilities={diceForecast}
-                  outcome={diceResult.outcome}
-                />
+                diceResult.phases
+                  ? (
+                    <TwoPhaseDiceRoll
+                      key={diceResult.animKey}
+                      phases={diceResult.phases}
+                      probabilities={diceForecast}
+                      outcome={diceResult.outcome}
+                    />
+                  )
+                  : (
+                    <DiceRoll
+                      key={diceResult.animKey}
+                      probabilities={diceForecast}
+                      outcome={diceResult.outcome}
+                    />
+                  )
               )}
               <span className={styles.diceSkipHint}>TAP TO SKIP</span>
             </button>

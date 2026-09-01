@@ -331,11 +331,18 @@ combat pipeline for a single player action:
 6. Apply each effect where effect.when.event === 'onCast' via applyEffect()
 7. pushHistory(…) — ghost appears at old position immediately
 8. showTurnDisplay(…) — confirmation panel shows immediately using snap values
-9. Defer via playerApplyTimerRef (DICE_RESULT_DISMISS_MS = 4s):
-   a. setPlayerUnit with incrementActionCount(snap player)
-   b. setEnemies from snap
-   c. registerTick(player.id, fromTick + skill.tuCost + tumbleDelay)
-   d. victory check → log if all enemies dead
+9. showDiceResult(diceOutcome, message, probabilities, phases) — phases is the
+   strike/reaction pair from step 3, absent for a self-cast; the UI plays a
+   beat per phase before the combined outcome when present (see docs/ui/
+   01-components.md § PhaseBeat / TwoPhaseDiceRoll)
+10. Defer via playerApplyTimerRef, held for diceDismissMs(phases !== undefined)
+    — DICE_RESULT_DISMISS_MS (1.2s) with no phases, TWO_PHASE_DICE_RESULT_
+    DISMISS_MS (2.34s) with them, so the hold always matches what the UI has
+    to play:
+    a. setPlayerUnit with incrementActionCount(snap player)
+    b. setEnemies from snap
+    c. registerTick(player.id, fromTick + skill.tuCost + tumbleDelay)
+    d. victory check → log if all enemies dead
 ```
 
 HP bars, tick numerals, turn counter, and timeline marker all update together

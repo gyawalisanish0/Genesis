@@ -27,6 +27,44 @@ export const SEQUENCE_BUDGET_MS   = 1400  // must fit inside ANIM_TIMEOUT_MS
 export const DICE_SWEEP_MS  = 720   // needle travel before it locks on
 export const DICE_SETTLE_MS = 380   // hold on the result after landing
 
+export const DICE_RESULT_DISMISS_MS = 1200 // ms from dice signal to attack fire: 800ms roll + 400ms hold; tap-to-skip cuts this short
+
+// Two-phase dice roll — the strike beat and the reaction beat each get their
+// own sweep before the combined outcome (DICE_SWEEP_MS/DICE_SETTLE_MS above)
+// is revealed. CONCEPT.md § Skill Resolution: phase 1 is the actor's blow,
+// phase 2 is the target's answer to it, and showing only the combined result
+// put both rolls under one settle — the reaction never read as the target
+// doing anything. Shorter than the outcome beat: these two are the build, not
+// the payoff.
+export const PHASE_SWEEP_MS = 360   // needle travel per strike/reaction beat
+export const PHASE_GAP_MS   = 260   // hold on a phase's settled zone before the next beat
+
+/** How long the strike and reaction beats occupy before the final outcome
+ *  reveal begins — also how long the arena's own outcome badge must wait
+ *  before it shows the answer, or it spoils both beats at once. */
+export const TWO_PHASE_BEATS_MS = 2 * (PHASE_SWEEP_MS + PHASE_GAP_MS)
+
+// Total hold before the engine commits the attack, for a roll that plays the
+// strike and reaction beats first. Computed, not hand-set, so it cannot drift
+// from the beat durations above the way DICE_RESULT_DISMISS_MS's own comment
+// once could have.
+export const TWO_PHASE_DICE_RESULT_DISMISS_MS =
+  TWO_PHASE_BEATS_MS + DICE_SWEEP_MS + DICE_SETTLE_MS
+
+/**
+ * How long a dice reveal holds before the engine commits the attack.
+ *
+ * A self-cast or the counter chain's plain success/fail roll never carries
+ * `phases` (see DicePhaseData) and keeps the original single-beat timing;
+ * anything that rolled both phases needs the longer budget above. Both the
+ * engine's own commit timer and the UI's redundant clear-after timer call
+ * this rather than each hand-deriving the same number — the two drifting
+ * apart is exactly the class of bug this session kept finding.
+ */
+export function diceDismissMs(hasPhases: boolean): number {
+  return hasPhases ? TWO_PHASE_DICE_RESULT_DISMISS_MS : DICE_RESULT_DISMISS_MS
+}
+
 // Resource bar segmentation — HP/AP/XP fill draws as this many discrete
 // blocks rather than a continuous width, so it "ticks down" instead of sliding.
 export const RESOURCE_BAR_SEGMENT_COUNT      = 20    // blocks the fill divides into

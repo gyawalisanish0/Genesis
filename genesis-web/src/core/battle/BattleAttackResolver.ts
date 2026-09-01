@@ -8,13 +8,14 @@ import type { DiceOutcome }                   from '../combat/DiceResolver'
 import type { BattleEngine }                  from './BattleEngine'
 import {
   COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE,
-  DICE_RESULT_DISMISS_MS, GRAZE_AP_REFUND,
+  GRAZE_AP_REFUND,
 } from '../constants'
 import { tickStatusDurations, updateStatusIntervalTick, takeDamage } from '../unit'
 import { calculateApGained }                            from '../combat/TickCalculator'
 import { forecastOutcomes, strikeChanceFor }             from '../combat/OutcomeForecast'
 import {
   strikeTable, reactionTable, reactionChance, combineOutcome,
+  type ReactionBand,
 } from '../combat/PhaseResolver'
 import { rollTable, outcomeScale, resolveCounterRoll }                from '../combat/DiceResolver'
 import { findCounterSkill, canCounter, isSingleTarget } from '../combat/CounterResolver'
@@ -53,6 +54,17 @@ function selfCastOutcome(skill: { targeting: { selector: TargetSelector } }) {
   return isSelfTargeted(skill.targeting.selector) ? ('Hit' as const) : null
 }
 
+/**
+ * Whether this skill's roll carries strike/reaction phase data at all.
+ *
+ * Exported so a caller scheduling ahead of the actual roll (the AI telegraph's
+ * turn-panel dismiss timer) can pick the right dismiss duration without
+ * waiting for runAttack to tell it — see diceDismissMs in constants.presentation.
+ */
+export function rollsTwoPhaseDice(skill: { targeting: { selector: TargetSelector } }): boolean {
+  return selfCastOutcome(skill) === null
+}
+
 export function runAttack(
   engine:    BattleEngine,
   caster:    Unit,
@@ -60,7 +72,7 @@ export function runAttack(
   skillInst: SkillInstance,
   snap:      Map<string, Unit>,
   chainDepth = 0,
-): { outcome: DiceOutcome; damage: number } {
+): { outcome: DiceOutcome; damage: number; hasPhases: boolean } {
   const skill = getCachedSkill(skillInst)
   const currentTick = engine.tickValue
 
@@ -82,18 +94,19 @@ export function runAttack(
   // ── Phase 1: the strike ──────────────────────────────────────────────────
   // Same derivation the forecast above used, so the band rolled here is drawn
   // from the same table the player was shown.
-  const strike = rollTable(strikeTable(strikeChanceFor(casterForRoll, skill)), 'Solid')
+  const strikeProbabilities = strikeTable(strikeChanceFor(casterForRoll, skill))
+  const strike = rollTable(strikeProbabilities, 'Solid')
 
   // ── Phase 2: the reaction ────────────────────────────────────────────────
   // A dodge status still forces a full read, but it is now expressed as the
   // reaction band it always meant rather than as an outcome reached around the
   // dice. Aiming at yourself skips both phases: there is no opposed party to
   // read the blow, and rolling one only ever read as the game cheating.
-  const reaction = dodged
-    ? 'Read'
-    : rollTable(reactionTable(strike, reactionChance(targetForRoll.stats.endurance)), 'Caught')
+  const reactionProbabilities = reactionTable(strike, reactionChance(targetForRoll.stats.endurance))
+  const reaction: ReactionBand = dodged ? 'Read' : rollTable(reactionProbabilities, 'Caught')
 
-  const diceOutcome = selfCastOutcome(skill) ?? combineOutcome(strike, reaction)
+  const selfCast     = selfCastOutcome(skill)
+  const diceOutcome  = selfCast ?? combineOutcome(strike, reaction)
 
   // Only an Evade removes the target outright. A Graze keeps its target and
   // scales magnitude down instead of erasing the action.
@@ -102,10 +115,18 @@ export function runAttack(
   const noDamage = evaded
   const scale    = outcomeScale(diceOutcome)
 
+  // The UI gives the reaction its own on-screen beat when there was one to
+  // show — a self-cast rolled neither phase, so there is nothing for a second
+  // beat to reveal.
+  const phases = selfCast === null
+    ? { strike, strikeProbabilities, reaction, reactionProbabilities }
+    : undefined
+
   engine.showDiceResult(
     diceOutcome,
     buildOutcomeMessage(diceOutcome, caster.name, target.name),
     probabilities,
+    phases,
   )
   const targetHpBefore = snap.get(target.id)?.hp ?? target.hp
   const casterHpBefore = snap.get(caster.id)?.hp ?? caster.hp
@@ -270,7 +291,7 @@ export function runAttack(
   }
 
   const damage = Math.max(0, targetHpBefore - (snap.get(target.id)?.hp ?? targetHpBefore))
-  return { outcome: diceOutcome, damage }
+  return { outcome: diceOutcome, damage, hasPhases: phases !== undefined }
 }
 
 export function scheduleCounterChain(
@@ -305,13 +326,15 @@ export function scheduleCounterChain(
 
       if (shouldFire) {
         snap.set(defender.id, { ...defSnap, ap: defSnap.ap - counterSkill.cachedCosts.apCost })
+        // The success/fail reveal just above carried no phases, so
+        // engine.diceDismissMs is that short single-beat duration here.
         engine.safeTimeout(() => {
           runAttack(engine, defender, originalCaster, counterSkill, snap, depth + 1)
           fireCounterCastEffects(defender, originalCaster, counterSkill, snap, currentTick)
           fireCounterTriggerEffects(defender, snap, engine.passiveDefs, currentTick)
           // snap is the same reference as pendingAITurn.snap — runEnemyApplying
           // will apply it at the correct time; no delayed re-apply here.
-        }, DICE_RESULT_DISMISS_MS)
+        }, engine.diceDismissMs)
       }
     }
   }, COUNTER_ANNOUNCE_MS)

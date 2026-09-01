@@ -61,9 +61,12 @@ describe('BattleEngine — player turn', () => {
     vi.spyOn(Math, 'random').mockReturnValue(rollFor('Hit'))
 
     engine.executeSkill(skillInst, enemy)
-    expect(cb.onPlayDice).toHaveBeenCalledWith('Hit')
 
+    // The arena badge waits for the strike and reaction beats to finish
+    // playing before it names the outcome — see BattleEngine.playDiceInSync —
+    // so it isn't asserted synchronously here the way onShowDiceResult is.
     await vi.advanceTimersByTimeAsync(5000)
+    expect(cb.onPlayDice).toHaveBeenCalledWith('Hit')
 
     const finalEnemy = latest().enemies.find(e => e.id === enemy.id)!
     expect(finalEnemy.hp).toBe(50)  // 100 − round(strength 50 × 100%)

@@ -1,0 +1,30 @@
+/* PhaseBand — the strike/reaction odds strip.
+ * Sunken groove matches OutcomeBand's own track. Spec: docs/ui/01-components.md
+ * § PhaseBeat. */
+
+.band {
+  display: flex;
+  width: 100%;
+  height: 0.75rem;   /* 12 dp — a preview beat, shorter than the 40 dp outcome band */
+  overflow: hidden;
+  background: var(--panel-sunken-fill);
+  border: var(--px) solid var(--panel-sunken-outer);
+}
+
+.zone {
+  min-width: var(--px);
+  transition: opacity var(--motion-button);
+}
+
+/* A phase band's zones share one colour (a phase result isn't itself good or
+   bad), so without a seam between them the whole strip reads as one flat
+   block and the proportions — the actual point of drawing it as a bar — are
+   invisible until something dims. */
+.zone + .zone {
+  border-left: var(--px) solid var(--bg-deep);
+}
+
+.strike .zone   { background: var(--accent-info); }
+.reaction .zone { background: var(--accent-genesis); }
+
+.dimmed { opacity: 0.25; }

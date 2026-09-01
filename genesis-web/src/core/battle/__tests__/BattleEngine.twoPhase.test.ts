@@ -15,6 +15,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { __resetRegistry } from '../../effects/registry'
 import { registerBuiltins } from '../../effects/builtins'
 import { BattleEngine } from '../BattleEngine'
+import { TWO_PHASE_BEATS_MS } from '../../constants'
 import {
   makeUnit, makeDamageSkillDef, makeSkillInstance, makeCallbacks, makeConfig,
 } from './_testHelpers'
@@ -43,6 +44,10 @@ async function evadeRate(endurance: number, precision = 50): Promise<number> {
 
     engine.start()
     engine.executeSkill(skill, foe)
+    // The arena badge is deliberately held back until the phase beats finish
+    // playing — see BattleEngine.playDiceInSync — so it isn't fired yet
+    // immediately after executeSkill returns.
+    vi.advanceTimersByTime(TWO_PHASE_BEATS_MS)
     if (vi.mocked(cb.onPlayDice).mock.calls.some(c => c[0] === 'Evade')) evades += 1
     engine.destroy()
   }
@@ -88,7 +93,11 @@ describe('the engine rolls both phases', () => {
 
     engine.start()
     engine.executeSkill(skill, foe)
+    vi.advanceTimersByTime(TWO_PHASE_BEATS_MS)
 
+    // Not vacuous: onPlayDice has actually fired by now (see the delay
+    // asserted in BattleEngine.dicePhaseBeat.test.ts), so this loop runs.
+    expect(vi.mocked(cb.onPlayDice).mock.calls.length).toBeGreaterThan(0)
     const valid = new Set(['Boosted', 'Hit', 'Evade', 'Graze'])
     for (const [outcome] of vi.mocked(cb.onPlayDice).mock.calls) {
       expect(valid.has(outcome as string), String(outcome)).toBe(true)

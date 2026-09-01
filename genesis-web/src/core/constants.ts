@@ -100,7 +100,8 @@ export const TIMELINE_FUTURE_RANGE     = 300   // ticks always kept visible ahea
 export const TIMELINE_NOW_FRACTION     = 0.75  // now-line sits at 75% from the strip top
 export const TIMELINE_RECENTER_DELAY_MS  = 1500 // ms of scroll-idle before auto-recenter fires
 export const TURN_DISPLAY_DISMISS_MS     = 2000 // ms after action resolves before turn panel auto-clears
-export const DICE_RESULT_DISMISS_MS      = 1200 // ms from dice signal to attack fire: 800ms roll + 400ms hold; tap-to-skip cuts this short
+// DICE_RESULT_DISMISS_MS moved to constants.presentation.ts, next to the two-
+// phase beat timing it now shares a derivation with — still re-exported here.
 export const CLASH_ANNOUNCE_MS           = 1500 // ms clash-winner log is shown before phase advances
 export const AI_THINKING_MIN_MS          = 1500 // min ms AI "deliberates" before revealing target
 export const AI_THINKING_MAX_MS          = 2000 // max ms AI "deliberates" before revealing target

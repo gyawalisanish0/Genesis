@@ -9,11 +9,13 @@ import type { DiceProbabilities } from '../combat/HitChanceEvaluator'
 import type {
   BattleEngineConfig, BattleEngineCallbacks, BattleEngineSnapshot,
   PendingPlayerTurnData, PendingAITurnData, CounterDecision, ClashState, TeamCollisionState,
-  TurnDisplayData,
+  TurnDisplayData, DicePhaseData,
 } from './EngineTypes'
 import type { BattleStep } from './BattleStepMachine'
 import { YIELDED_STEPS } from './BattleStepMachine'
-import { DICE_RESULT_DISMISS_MS, TURN_DISPLAY_DISMISS_MS, ANIM_TIMEOUT_MS } from '../constants'
+import {
+  DICE_RESULT_DISMISS_MS, TURN_DISPLAY_DISMISS_MS, ANIM_TIMEOUT_MS, diceDismissMs, TWO_PHASE_BEATS_MS,
+} from '../constants'
 import { resolveTickDisplacement } from '../combat/TickDisplacer'
 import { isAlive, addApSpent } from '../unit'
 import { applyEffect } from '../effects/applyEffect'
@@ -73,6 +75,9 @@ export class BattleEngine {
   diceShowTime: number
   diceKey:      number
   diceActive:   boolean
+  /** How long the most recent showDiceResult() call chose to hold — a plain
+   *  roll or the longer two-phase one. See constants.presentation.diceDismissMs. */
+  diceDismissMs: number
 
   // ── Pause flags ──────────────────────────────────────────────────────────────
   narrativePaused: boolean
@@ -139,9 +144,10 @@ export class BattleEngine {
     this.pendingExpiryAnims     = []
     this.pendingActivationAnims = []
 
-    this.diceShowTime = 0
-    this.diceKey      = 0
-    this.diceActive   = false
+    this.diceShowTime  = 0
+    this.diceKey       = 0
+    this.diceActive    = false
+    this.diceDismissMs = DICE_RESULT_DISMISS_MS
 
     this.narrativePaused = false
     this.inspectingSkill = false
@@ -562,16 +568,36 @@ export class BattleEngine {
 
   // ── Dice / turn display helpers ───────────────────────────────────────────────
 
-  showDiceResult(outcome: DiceOutcome, message: string, probabilities?: DiceProbabilities): void {
+  showDiceResult(
+    outcome: DiceOutcome, message: string,
+    probabilities?: DiceProbabilities, phases?: DicePhaseData,
+  ): void {
     if (this.diceTimer) clearTimeout(this.diceTimer)
     this.diceKey += 1
-    this.diceShowTime = Date.now()
-    this.diceActive   = true
-    this.cb.onShowDiceResult(outcome, message, probabilities)
+    this.diceShowTime  = Date.now()
+    this.diceActive    = true
+    this.diceDismissMs = diceDismissMs(phases !== undefined)
+    this.cb.onShowDiceResult(outcome, message, probabilities, phases)
     this.diceTimer = this.safeTimeout(() => {
       this.diceActive = false
       this.cb.onClearDiceResult()
-    }, DICE_RESULT_DISMISS_MS)
+    }, this.diceDismissMs)
+  }
+
+  /**
+   * Fires onPlayDice — the arena's own outcome badge — in step with the
+   * overlay rather than at roll start.
+   *
+   * The badge and the overlay both name the caster's own answer, so they must
+   * reveal it at the same moment. Firing onPlayDice immediately used to cost
+   * nothing: the single-beat overlay revealed the same outcome barely a
+   * second later anyway. Once a roll plays a strike beat and a reaction beat
+   * first, an immediate badge answers both before either has played.
+   */
+  playDiceInSync(outcome: DiceOutcome, hasPhases: boolean): void {
+    const delay = hasPhases ? TWO_PHASE_BEATS_MS : 0
+    if (delay <= 0) { this.cb.onPlayDice(outcome); return }
+    this.safeTimeout(() => this.cb.onPlayDice(outcome), delay)
   }
 
   showTurnDisplay(d: TurnDisplayData, dismissAfter = TURN_DISPLAY_DISMISS_MS): void {
