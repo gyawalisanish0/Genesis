@@ -320,11 +320,14 @@ combat pipeline for a single player action:
 ```
 1. Guard: phase === 'player', playerUnit alive, at least one living enemy
 2. Build a mutable unit snapshot (Map<id, Unit>) — the engine's BattleState
-3. Roll dice:
-     finalChance = calculateFinalChance(caster.stats.precision, skill.resolution?.baseChance ?? 1.0)
-     diceOutcome = roll(shiftProbabilities(finalChance))
+3. Roll both resolution phases (CONCEPT.md § Skill Resolution):
+     strikeChance = strikeChanceFor(caster, skill)   // Precision x baseChance x tickFactor
+     strike       = rollTable(strikeTable(strikeChance))               // Clean | Solid | Loose
+     reaction     = rollTable(reactionTable(strike,
+                      reactionChance(target.stats.endurance)))         // Read | Deflect | Caught
+     diceOutcome  = combineOutcome(strike, reaction)
 4. Compute AP regen: calculateApGained(skill.tuCost, caster.apRegenRate) → add to caster
-5. Build EffectContext; set ctx.target = undefined on Evasion or Fail (no damage dealt)
+5. Build EffectContext; set ctx.target = undefined on Evade only (a Graze keeps its target)
 6. Apply each effect where effect.when.event === 'onCast' via applyEffect()
 7. pushHistory(…) — ghost appears at old position immediately
 8. showTurnDisplay(…) — confirmation panel shows immediately using snap values
@@ -352,14 +355,40 @@ are immediate:
 6. appendLog('You skipped your turn.')
 ```
 
-**Dice outcomes** — four outcomes, always summing to 1.0 after `shiftProbabilities`:
+**Dice outcomes** — the same four the single-roll system had, now reached
+through the pairing of a strike band and a reaction band. The percentages below
+are the *combined* baseline: an average actor (Precision 50, TU 10) against an
+average defender (Endurance 50). They always sum to 1.0.
 
-| Outcome | Base % | Log colour | Notes |
+| Outcome | Base % | Reached by | Log colour | Notes |
+|---|---|---|---|---|
+| Boosted | 12% | Clean / Caught | `accent-gold`    | 1.5× damage |
+| Hit     | 32% | Clean / Deflect, Solid / Caught | `text-primary`   | Normal hit |
+| Graze   | 33% | Solid / Deflect, Loose / Deflect, Loose / Caught | `text-muted` | 0.25× damage, 80% AP refund; keeps its target; no counter trigger |
+| Evade   | 23% | any strike / Read | `accent-evasion` | Target read the blow; counter-eligible; no damage |
+
+`Graze` was called `Fail` while the single roll was in place. It has delivered
+chip damage and an AP refund since well before the two-phase change; the rename
+closed a name that misdescribed its behaviour.
+
+**Phase tables** — the base distributions, before Precision and Endurance shift
+them. Every pool keeps a `MIN_OUTCOME_POOL` floor, so no stat value can collapse
+either table to a single result.
+
+| Strike (actor) | Base % |
+|---|---|
+| Clean | 20% |
+| Solid | 50% |
+| Loose | 30% |
+
+| Reaction (target) | Read | Deflect | Caught |
 |---|---|---|---|
-| Boosted | 10% | `accent-gold`    | 1.5× damage |
-| Hit     | 40% | `text-primary`   | Normal hit |
-| Evade   | 20% | `accent-evasion` | Target evaded; counter-eligible; no damage |
-| Fail    | 30% | `text-muted`     | Caster misses; no counter trigger; no damage |
+| vs Clean | 5% | 35% | 60% |
+| vs Solid | 20% | 30% | 50% |
+| vs Loose | 40% | 35% | 25% |
+
+A self-targeted skill skips both phases and resolves as `Hit` — there is no
+opposed party for a reaction roll to belong to.
 
 `DiceResult` carries three fields: `outcome`, `message` (flavour text built by
 `buildOutcomeMessage(outcome, actorName, targetName)`), and
@@ -564,8 +593,11 @@ src/
 │   │   └── SkillInstance.ts       # createSkillInstance, getCachedSkill, levelUpSkill
 │   └── combat/
 │       ├── TickCalculator.ts      # calculateStartingTick, advanceTick, calculateApGained
-│       ├── HitChanceEvaluator.ts  # calculateFinalChance, shiftProbabilities
-│       └── DiceResolver.ts        # roll, applyOutcome, resolveCounterRoll
+│       ├── HitChanceEvaluator.ts  # calculateStrikeChance, tickFactor
+│       ├── PhaseResolver.ts        # strikeTable, reactionTable, reactionChance,
+│       │                           #   combineOutcome, combinedForecast, shiftPools
+│       └── DiceResolver.ts        # rollTable, roll, outcomeScale, applyOutcome,
+│                                  #   resolveCounterRoll
 ├── services/
 │   └── DataService.ts             # loadCharacterIndex, loadCharacter, loadCharacterSkillDefs,
 │                                  #   loadCharacterWithSkills, loadMode, loadAnimSequenceManifest(defId)

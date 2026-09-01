@@ -427,7 +427,7 @@ Dice result. Slams in, holds, cuts out — `steps(8)`, no fade.
 | Boosted | `BOOSTED!` | `--accent-gold` |
 | Hit | `HIT!` | `--text-primary` |
 | Evade | `EVADED!` | `--accent-evasion` |
-| Fail | `MISS!` | `--text-muted` |
+| Graze | `GRAZE!` | `--text-muted` |
 
 Tap anywhere in the arena hotzone skips to the attack
 (`skipActiveDice` → `skipDiceAnim`).
