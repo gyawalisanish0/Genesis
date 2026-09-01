@@ -4,14 +4,15 @@
 
 import { describe, it, expect } from 'vitest'
 import { forecastOutcomes, forecastApGain, rangedChanceBonus, isApRegenFrozen } from '../OutcomeForecast'
-import { calculateFinalChance, shiftProbabilities, tuAccuracyFactor } from '../HitChanceEvaluator'
+import { calculateStrikeChance, tickFactor } from '../HitChanceEvaluator'
+import { combinedForecast, reactionChance } from '../PhaseResolver'
 import type { Unit } from '../../types'
 import type { SkillDef } from '../../effects/types'
 
 const unit = (over: Partial<Unit> = {}): Unit => ({
   id: 'u1', defId: 'hugo_001', name: 'Hugo', className: 'Warrior', rarity: 3,
   hp: 100, maxHp: 100, ap: 50, maxAp: 100, apRegenRate: 0.6,
-  stats: { attack: 10, defense: 10, speed: 10, precision: 50, evasion: 10, luck: 10 },
+  stats: { attack: 10, defense: 10, speed: 10, precision: 50, endurance: 50, evasion: 10, luck: 10 },
   tickPosition: 10, actionCount: 0, isAlly: true, statusSlots: [], skills: [],
   ...over,
 } as unknown as Unit)
@@ -26,7 +27,7 @@ describe('forecastOutcomes', () => {
   it('always returns a table summing to 1', () => {
     for (const precision of [1, 25, 50, 75, 100, 200]) {
       const p = forecastOutcomes(unit({ stats: { precision } as never }), skill())
-      const sum = p.Boosted + p.Hit + p.Evade + p.Fail
+      const sum = p.Boosted + p.Hit + p.Evade + p.Graze
       expect(sum).toBeCloseTo(1, 10)
     }
   })
@@ -35,8 +36,9 @@ describe('forecastOutcomes', () => {
     // precision 50 + baseChance 1.0, scaled by the skill's tick investment.
     // The forecast and the roll must never disagree — that is this module's
     // entire reason to exist — so the expectation mirrors the full formula.
-    const expected = shiftProbabilities(
-      calculateFinalChance(50, 1.0) * tuAccuracyFactor(skill().tuCost),
+    const expected = combinedForecast(
+      calculateStrikeChance(50, 1.0) * tickFactor(skill().tuCost),
+      reactionChance(undefined),
     )
     expect(forecastOutcomes(unit(), skill())).toEqual(expected)
   })
@@ -47,14 +49,14 @@ describe('forecastOutcomes', () => {
     const jab   = forecastOutcomes(unit(), { ...skill(), tuCost: 5 })
     const heavy = forecastOutcomes(unit(), { ...skill(), tuCost: 20 })
     expect(heavy.Boosted + heavy.Hit).toBeGreaterThan(jab.Boosted + jab.Hit)
-    expect(heavy.Evade + heavy.Fail).toBeLessThan(jab.Evade + jab.Fail)
+    expect(heavy.Evade + heavy.Graze).toBeLessThan(jab.Evade + jab.Graze)
   })
 
   it('tips toward good outcomes as precision rises', () => {
     const low  = forecastOutcomes(unit({ stats: { precision: 25 } as never }), skill())
     const high = forecastOutcomes(unit({ stats: { precision: 90 } as never }), skill())
     expect(high.Boosted + high.Hit).toBeGreaterThan(low.Boosted + low.Hit)
-    expect(high.Evade + high.Fail).toBeLessThan(low.Evade + low.Fail)
+    expect(high.Evade + high.Graze).toBeLessThan(low.Evade + low.Graze)
   })
 
   it('reads differently for the same skill in different hands', () => {
@@ -68,6 +70,27 @@ describe('forecastOutcomes', () => {
     const weak   = forecastOutcomes(unit(), skill({ resolution: { baseChance: 0.5 } } as never))
     const normal = forecastOutcomes(unit(), skill())
     expect(weak.Hit).toBeLessThan(normal.Hit)
+  })
+
+  it('reads the defender, not just the actor', () => {
+    // Phase 2 is the point of the rewrite. If the forecast ignored the target,
+    // the second roll would be decoration and the odds strip would say the same
+    // thing about a glass cannon and a bulwark.
+    const soft = unit({ id: 'e1', isAlly: false, stats: { precision: 50, endurance: 20 } as never })
+    const hard = unit({ id: 'e2', isAlly: false, stats: { precision: 50, endurance: 90 } as never })
+
+    const vsSoft = forecastOutcomes(unit(), skill(), soft)
+    const vsHard = forecastOutcomes(unit(), skill(), hard)
+
+    expect(vsHard.Evade).toBeGreaterThan(vsSoft.Evade)
+    expect(vsSoft.Boosted).toBeGreaterThan(vsHard.Boosted)
+  })
+
+  it('falls back to an average defender when no target is chosen', () => {
+    // The action grid shows odds before the player picks anyone. Absent must
+    // mean "the baseline table", not "nobody resists".
+    const average = unit({ id: 'e1', isAlly: false, stats: { precision: 50, endurance: 50 } as never })
+    expect(forecastOutcomes(unit(), skill())).toEqual(forecastOutcomes(unit(), skill(), average))
   })
 
   it('never returns a negative probability even at precision 0', () => {

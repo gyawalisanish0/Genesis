@@ -30,7 +30,7 @@ describe('conditionText', () => {
       [{ selfSecondaryAbove: 3 },           /surge > 3/],
       [{ selfSecondaryBelow: 2 },           /surge < 2/],
       [{ selfStatusStacksBelow: { id: 'rage', stacks: 3 } }, /rage < 3 stacks/],
-      [{ not: { diceOutcome: 'Fail' } },    /not on Fail/],
+      [{ not: { diceOutcome: 'Graze' } },    /not on Graze/],
       [{ all: [{ chance: 0.5 }, { hasTag: 'boss' }] }, /and/],
       [{ any: [{ chance: 0.5 }, { hasTag: 'boss' }] }, /or/],
     ]

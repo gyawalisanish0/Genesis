@@ -14,19 +14,19 @@ import type { SkillDef } from '../../core/effects/types'
 
 afterEach(cleanup)
 
-const BASELINE = { Boosted: 0.10, Hit: 0.40, Evade: 0.20, Fail: 0.30 }
+const BASELINE = { Boosted: 0.12, Hit: 0.32, Evade: 0.23, Graze: 0.33 }
 const zones = (c: HTMLElement) => Array.from(c.querySelectorAll('span[style*="width"]'))
 
 describe('OutcomeBand', () => {
   it('sizes each zone to its probability', () => {
     const { container } = render(<OutcomeBand probabilities={BASELINE} />)
     const widths = zones(container).map(z => (z as HTMLElement).style.width)
-    expect(widths).toEqual(['10%', '40%', '20%', '30%'])
+    expect(widths).toEqual(['12%', '32%', '23%', '33%'])
   })
 
   it('orders zones best to worst', () => {
     const { container } = render(<OutcomeBand probabilities={BASELINE} size="roll" />)
-    expect(container.textContent).toMatch(/HIT.*EVADE.*FAIL/s)
+    expect(container.textContent).toMatch(/HIT.*EVADE.*GRAZE/s)
   })
 
   it('omits a zone with zero probability rather than drawing a sliver', () => {
@@ -35,14 +35,14 @@ describe('OutcomeBand', () => {
   })
 
   it('drops the name of a zone too narrow to hold it, keeping the percentage', () => {
-    // Boosted is 10% at baseline — the word would clip mid-render.
+    // Boosted is 12% at baseline — the word would clip mid-render.
     const { container } = render(<OutcomeBand probabilities={BASELINE} size="roll" />)
-    expect(container.textContent).toContain('10%')
+    expect(container.textContent).toContain('12%')
     expect(container.textContent).not.toContain('BOOSTED')
   })
 
   it('shows the name once the zone is wide enough', () => {
-    const wide = { Boosted: 0.5, Hit: 0.2, Evade: 0.15, Fail: 0.15 }
+    const wide = { Boosted: 0.5, Hit: 0.2, Evade: 0.15, Graze: 0.15 }
     const { container } = render(<OutcomeBand probabilities={wide} size="roll" />)
     expect(container.textContent).toContain('BOOSTED')
   })
@@ -70,7 +70,7 @@ describe('DiceRoll', () => {
     // The needle reveals a decided result; it must never appear to decide one.
     // Asserted on the callout element specifically, since zone labels legitimately
     // print other outcome names inside the band.
-    for (const outcome of ['Boosted', 'Hit', 'Evade', 'Fail'] as const) {
+    for (const outcome of ['Boosted', 'Hit', 'Evade', 'Graze'] as const) {
       cleanup()
       const { container } = render(<DiceRoll probabilities={BASELINE} outcome={outcome} />)
       const callout = container.querySelector('[class*="result"]')!

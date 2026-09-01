@@ -8,12 +8,15 @@ import type { DiceOutcome }                   from '../combat/DiceResolver'
 import type { BattleEngine }                  from './BattleEngine'
 import {
   COUNTER_BASE, COUNTER_STEP, COUNTER_MIN, COUNTER_ANNOUNCE_MS, AI_COUNTER_AP_RESERVE,
-  DICE_RESULT_DISMISS_MS, FAIL_AP_REFUND,
+  DICE_RESULT_DISMISS_MS, GRAZE_AP_REFUND,
 } from '../constants'
 import { tickStatusDurations, updateStatusIntervalTick, takeDamage } from '../unit'
 import { calculateApGained }                            from '../combat/TickCalculator'
-import { forecastOutcomes }                              from '../combat/OutcomeForecast'
-import { roll, outcomeScale, resolveCounterRoll }                     from '../combat/DiceResolver'
+import { forecastOutcomes, strikeChanceFor }             from '../combat/OutcomeForecast'
+import {
+  strikeTable, reactionTable, reactionChance, combineOutcome,
+} from '../combat/PhaseResolver'
+import { rollTable, outcomeScale, resolveCounterRoll }                from '../combat/DiceResolver'
 import { findCounterSkill, canCounter, isSingleTarget } from '../combat/CounterResolver'
 import { applyTickCooldown }                            from '../combat/CooldownResolver'
 import { applyEffect }                                  from '../effects/applyEffect'
@@ -39,6 +42,17 @@ function isSelfTargeted(selector: TargetSelector): boolean {
   return typeof selector === 'string' && SELF_SELECTORS.has(selector)
 }
 
+/**
+ * Aiming at yourself skips both phases.
+ *
+ * There is no opposed party to read the blow, so a reaction roll has nobody to
+ * belong to. Paying 20 AP to fail at buffing your own unit was the least
+ * defensible roll in the game, and the variance only ever read as cheating.
+ */
+function selfCastOutcome(skill: { targeting: { selector: TargetSelector } }) {
+  return isSelfTargeted(skill.targeting.selector) ? ('Hit' as const) : null
+}
+
 export function runAttack(
   engine:    BattleEngine,
   caster:    Unit,
@@ -59,20 +73,32 @@ export function runAttack(
   // snapshot — forecastOutcomes reads both off the unit it is given, so it is
   // handed a caster carrying the snapshot's statuses.
   const casterForDice = snap.get(caster.id) ?? caster
-  const probabilities = forecastOutcomes(
-    { ...casterForDice, stats: caster.stats },
-    skill,
-  )
-  // Aiming at yourself cannot miss. Paying 20 AP to fail at buffing your own
-  // unit was the least defensible roll in the game — there is no opposed party
-  // to evade it, and the variance only ever read as the game cheating.
-  const selfCast    = isSelfTargeted(skill.targeting.selector)
-  const diceOutcome = selfCast ? 'Hit' : dodged ? 'Evade' : roll(probabilities)
+  const casterForRoll = { ...casterForDice, stats: caster.stats }
+  // The defender rolls from their live snapshot state, so a status applied
+  // earlier this turn is already reflected in what they can do about this blow.
+  const targetForRoll = snap.get(target.id) ?? target
+  const probabilities = forecastOutcomes(casterForRoll, skill, targetForRoll)
 
-  // Only an Evade removes the target outright. A Fail now grazes, so it keeps
-  // its target and scales magnitude down instead of erasing the action.
+  // ── Phase 1: the strike ──────────────────────────────────────────────────
+  // Same derivation the forecast above used, so the band rolled here is drawn
+  // from the same table the player was shown.
+  const strike = rollTable(strikeTable(strikeChanceFor(casterForRoll, skill)), 'Solid')
+
+  // ── Phase 2: the reaction ────────────────────────────────────────────────
+  // A dodge status still forces a full read, but it is now expressed as the
+  // reaction band it always meant rather than as an outcome reached around the
+  // dice. Aiming at yourself skips both phases: there is no opposed party to
+  // read the blow, and rolling one only ever read as the game cheating.
+  const reaction = dodged
+    ? 'Read'
+    : rollTable(reactionTable(strike, reactionChance(targetForRoll.stats.endurance)), 'Caught')
+
+  const diceOutcome = selfCastOutcome(skill) ?? combineOutcome(strike, reaction)
+
+  // Only an Evade removes the target outright. A Graze keeps its target and
+  // scales magnitude down instead of erasing the action.
   const evaded   = diceOutcome === 'Evade'
-  const grazed   = diceOutcome === 'Fail'
+  const grazed   = diceOutcome === 'Graze'
   const noDamage = evaded
   const scale    = outcomeScale(diceOutcome)
 
@@ -101,7 +127,7 @@ export function runAttack(
   // A graze hands most of the AP back. The cost was committed before the roll,
   // so without this the roll punishes the biggest investments hardest — a 50 AP
   // skill lost ~100 ticks of banking to one die. The tick is still spent.
-  const apRefund = grazed ? Math.round(skill.apCost * FAIL_AP_REFUND) : 0
+  const apRefund = grazed ? Math.round(skill.apCost * GRAZE_AP_REFUND) : 0
   const apCredit = apGained + apRefund
   if (apCredit > 0 && casterSnap) {
     snap.set(caster.id, { ...casterSnap, ap: Math.min(casterSnap.maxAp, casterSnap.ap + apCredit) })
@@ -176,7 +202,7 @@ export function runAttack(
 
   const logMsg =
     diceOutcome === 'Evade' ? `${target.name} evaded ${skill.name}!` :
-    diceOutcome === 'Fail'  ? `${caster.name} missed with ${skill.name}!` :
+    diceOutcome === 'Graze' ? `${caster.name} grazed with ${skill.name}!` :
     `${caster.name} → ${skill.name} on ${target.name} [${diceOutcome}]`
   engine.appendLog({ text: logMsg, colour: outcomeColour(diceOutcome) })
 
@@ -262,7 +288,7 @@ export function scheduleCounterChain(
     const succeeded     = resolveCounterRoll(depth)
     const chancePercent = Math.round(Math.max(COUNTER_MIN, COUNTER_BASE - depth * COUNTER_STEP) * 100)
     engine.showDiceResult(
-      succeeded ? 'Hit' : 'Fail',
+      succeeded ? 'Hit' : 'Graze',
       succeeded ? `Counter! (${chancePercent}% chance)` : 'Counter blocked!',
     )
 

@@ -437,7 +437,7 @@ export class BattleEngine {
     currentTick: number,
   ): void {
     if (!extraTargets.length) return
-    const noDamage = outcome === 'Evade' || outcome === 'Fail'
+    const noDamage = outcome === 'Evade' || outcome === 'Graze'
     const skill = getCachedSkill(skillInst)
     for (const extra of extraTargets) {
       const extraSnap = snap.get(extra.id) ?? extra

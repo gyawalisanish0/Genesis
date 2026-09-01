@@ -63,7 +63,7 @@ export function outcomeColour(outcome: DiceOutcome): string {
   switch (outcome) {
     case 'Boosted': return 'var(--accent-gold)'
     case 'Evade':   return 'var(--accent-evasion)'
-    case 'Fail':    return 'var(--text-muted)'
+    case 'Graze':   return 'var(--text-muted)'
     default:        return 'var(--text-primary)'
   }
 }
@@ -77,13 +77,13 @@ export function buildOutcomeMessage(
     case 'Boosted': return `${actorName} lands a boosted hit`
     case 'Hit':     return `${actorName} hits`
     case 'Evade':   return `${targetName} evades`
-    case 'Fail':    return `${actorName} misses`
+    case 'Graze':   return `${actorName} grazes`
   }
 }
 
 export function buildFeedbackText(outcome: DiceOutcome, damage: number): string {
   if (outcome === 'Evade') return 'EVADED!'
-  if (outcome === 'Fail')  return 'MISS!'
+  if (outcome === 'Graze') return 'GRAZE!'
   if (damage <= 0)         return outcome.toUpperCase()
   return `${outcome === 'Boosted' ? '★ ' : ''}−${damage} HP`
 }
@@ -94,6 +94,6 @@ export function buildOutcomeLabel(outcome: DiceOutcome): string {
     case 'Boosted': return 'BOOSTED!'
     case 'Hit':     return 'HIT!'
     case 'Evade':   return 'EVADED!'
-    case 'Fail':    return 'MISS!'
+    case 'Graze':   return 'GRAZE!'
   }
 }
