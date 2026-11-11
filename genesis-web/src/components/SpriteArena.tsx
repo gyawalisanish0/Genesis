@@ -62,7 +62,7 @@ export const SpriteArena = forwardRef<BattleArenaHandle, Props>(
 function SpriteArena({ playerFigureInfo, allyDefIds, resolveChip, onChipTap }, ref) {
   const s = useArenaStage(ref)
   // Replays the attack's authored choreography, or the built-in default whose
-  // branch makes Evade and Fail read differently.
+  // branch makes Evade and Graze read differently.
   const fx = useAnimSequence(s.attack && {
     sequence: s.attack.sequence,
     outcome:  s.attack.outcome,

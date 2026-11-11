@@ -67,7 +67,7 @@ describe('planSequence — branch', () => {
 
   it('produces nothing when neither the outcome nor a default is listed', () => {
     const bare: AnimPhase[] = [{ type: 'branch', cases: { Hit: [{ type: 'impact' }] } }]
-    expect(planSequence(bare, 'Fail')).toEqual([])
+    expect(planSequence(bare, 'Graze')).toEqual([])
   })
 })
 
@@ -107,13 +107,13 @@ describe('defaultSequence', () => {
     expect(planSequence(defaultSequence(false), 'Hit')[0].phase.type).toBe('projectile')
   })
 
-  it('makes Evade and Fail visually distinct — the defender moves on an evade', () => {
+  it('makes Evade and Graze visually distinct — the defender moves on an evade', () => {
     // Both used to print a word and nothing else, so they read identically.
     const evade = planSequence(defaultSequence(true), 'Evade').map(s => s.phase.type)
-    const fail  = planSequence(defaultSequence(true), 'Fail').map(s => s.phase.type)
+    const graze = planSequence(defaultSequence(true), 'Graze').map(s => s.phase.type)
     expect(evade).toContain('evasionDodge')
-    expect(fail).not.toContain('evasionDodge')
-    expect(evade).not.toEqual(fail)
+    expect(graze).not.toContain('evasionDodge')
+    expect(evade).not.toEqual(graze)
   })
 
   it('shakes harder on a boosted hit than a normal one', () => {
@@ -124,7 +124,7 @@ describe('defaultSequence', () => {
   })
 
   it('every outcome yields a plan inside the budget', () => {
-    for (const outcome of ['Boosted', 'Hit', 'Evade', 'Fail'] as const) {
+    for (const outcome of ['Boosted', 'Hit', 'Evade', 'Graze'] as const) {
       for (const melee of [true, false]) {
         const steps = planSequence(defaultSequence(melee), outcome)
         expect(steps.length).toBeGreaterThan(0)

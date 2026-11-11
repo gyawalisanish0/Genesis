@@ -9,7 +9,8 @@ import type { Unit } from '../types'
 // The effects-layer SkillDef — the one carrying `resolution`, and the shape the
 // resolver actually holds. `core/types.ts` exports a narrower JSON-facing SkillDef.
 import type { SkillDef } from '../effects/types'
-import { calculateFinalChance, shiftProbabilities, tuAccuracyFactor } from './HitChanceEvaluator'
+import { calculateStrikeChance, tickFactor } from './HitChanceEvaluator'
+import { combinedForecast, reactionChance } from './PhaseResolver'
 import type { DiceProbabilities } from './HitChanceEvaluator'
 import { calculateApGained } from './TickCalculator'
 
@@ -23,18 +24,43 @@ export function rangedChanceBonus(caster: Unit, skill: Readonly<SkillDef>): numb
 }
 
 /**
- * The four-outcome probability table for this caster using this skill.
- * Differs per caster and per skill: finalChance is (precision / 50) x baseChance
- * scaled by the skill's tick investment, so the same skill reads differently in
- * different hands and a heavier skill lands more reliably than a jab.
+ * Phase 1's chance for this caster and this skill.
+ *
+ * Exported because the resolver needs the strike table itself, not the combined
+ * forecast — it has to know *which* band it rolled to pick the reaction table.
+ * Deriving it twice is how the displayed odds and the rolled ones drift apart,
+ * which is the failure this module exists to prevent.
  */
-export function forecastOutcomes(caster: Unit, skill: Readonly<SkillDef>): DiceProbabilities {
+export function strikeChanceFor(caster: Unit, skill: Readonly<SkillDef>): number {
   const baseChance = skill.resolution?.baseChance ?? 1.0
-  const finalChance = calculateFinalChance(
+  return calculateStrikeChance(
     caster.stats.precision,
     baseChance + rangedChanceBonus(caster, skill),
-  ) * tuAccuracyFactor(skill.tuCost)
-  return shiftProbabilities(finalChance)
+  ) * tickFactor(skill.tuCost)
+}
+
+/**
+ * The four-outcome table for this caster, this skill, and this defender.
+ *
+ * Both phases fold into one distribution here, because the player is never
+ * shown two tables — they are shown what can happen to this action. The
+ * resolver rolls the same two tables this sums over, so the strip cannot
+ * disagree with the result.
+ *
+ * `defender` is optional: the action grid shows odds before a target is
+ * chosen. Absent means the baseline reaction table, which is the honest answer
+ * to "against an average opponent" — and the odds sharpen once the player
+ * picks someone.
+ */
+export function forecastOutcomes(
+  caster: Unit,
+  skill: Readonly<SkillDef>,
+  defender?: Unit | null,
+): DiceProbabilities {
+  return combinedForecast(
+    strikeChanceFor(caster, skill),
+    reactionChance(defender?.stats.endurance),
+  )
 }
 
 /** True when a status is currently suppressing this unit's AP regeneration. */

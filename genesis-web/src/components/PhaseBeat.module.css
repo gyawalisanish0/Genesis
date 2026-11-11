@@ -1,0 +1,75 @@
+/* PhaseBeat — needle over a strike/reaction band, at preview scale.
+ * Same needle-sweep mechanics as DiceRoll, smaller and toned per phase rather
+ * than per outcome. Spec: docs/ui/01-components.md § PhaseBeat. */
+
+.beat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-xs);
+  width: 100%;
+  max-width: 17rem;
+}
+
+.label {
+  font-family: var(--font-pixel);
+  font-size: var(--t-micro-size);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.bandWrap {
+  position: relative;
+  width: 100%;
+}
+
+.needle {
+  position: absolute;
+  top: -0.125rem;
+  bottom: -0.125rem;
+  width: var(--px);
+  margin-left: calc(var(--px) * -0.5);
+  background: var(--text-primary);
+  pointer-events: none;
+}
+
+.needleSweeping {
+  animation: sweep var(--phase-sweep, 360ms) steps(12) infinite alternate;
+}
+
+/* Landing is a hard cut to the rolled zone — no easing into the answer. */
+.needleSettled {
+  transition: left var(--motion-button);
+}
+
+@keyframes sweep {
+  from { left: 2%; }
+  to   { left: 98%; }
+}
+
+/* ── Result label ─────────────────────────────────────────────────────────── */
+
+.result {
+  font-family: var(--font-pixel);
+  font-size: var(--t-label-size);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  opacity: 0;
+}
+
+.resultIn {
+  opacity: 1;
+  animation: slam var(--motion-modal-in) steps(3) both;
+}
+
+@keyframes slam {
+  from { transform: scale(1.4); }
+  to   { transform: scale(1); }
+}
+
+.strike   { color: var(--accent-info); }
+.reaction { color: var(--accent-genesis); }
+
+:root[data-reduce-animations='true'] .needleSweeping,
+:root[data-reduce-animations='true'] .resultIn { animation: none; }
+:root[data-reduce-animations='true'] .result   { opacity: 1; }

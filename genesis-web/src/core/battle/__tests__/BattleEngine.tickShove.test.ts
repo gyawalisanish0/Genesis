@@ -20,11 +20,11 @@ import { __resetRegistry } from '../../effects/registry'
 import { registerBuiltins } from '../../effects/builtins'
 import { BattleEngine } from '../BattleEngine'
 import {
-  makeUnit, makeDamageSkillDef, makeSkillInstance, makeCallbacks, makeConfig,
+  makeUnit, makeDamageSkillDef, makeSkillInstance, makeCallbacks, makeConfig, rollFor,
 } from './_testHelpers'
 
-/** Low enough to land a Hit rather than an Evade; an evaded cast shoves nobody. */
-const ROLL_HIT = 0.01
+/** The cast must connect — an evaded cast shoves nobody, which passes vacuously. */
+const ROLL_HIT = rollFor('Hit')
 
 const SHOVE = 4
 
@@ -100,7 +100,7 @@ describe('tickShove keeps both tick representations in step', () => {
   it('an evaded cast shoves nobody', async () => {
     // Guards the fix against over-reach: reconciliation must not invent a move
     // the effects never made.
-    vi.spyOn(Math, 'random').mockReturnValue(0.99)
+    vi.spyOn(Math, 'random').mockReturnValue(rollFor('Evade'))
     const skill = vortex()
     const hero  = makeUnit({ id: 'p1', tickPosition: 0, ap: 100 })
     const foe   = makeUnit({ id: 'e1', tickPosition: 100, isAlly: false, hp: 500 })

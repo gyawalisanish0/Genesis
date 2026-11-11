@@ -64,7 +64,7 @@
 .boosted { color: var(--accent-gold);    text-shadow: var(--glow-gold); }
 .hit     { color: var(--accent-heal);    text-shadow: var(--glow-heal); }
 .evade   { color: var(--accent-evasion); }
-.fail    { color: var(--accent-danger);  text-shadow: var(--glow-danger); }
+.graze   { color: var(--text-muted); }
 
 :root[data-reduce-animations='true'] .needleSweeping,
 :root[data-reduce-animations='true'] .resultIn { animation: none; }

@@ -24,7 +24,7 @@ export const statKeySchema = z.enum([
 // (see Tag in effects/types.ts); every other value is content-defined.
 export const tagSchema = z.string().min(1)
 
-export const diceOutcomeSchema = z.enum(['Boosted', 'Hit', 'Evade', 'Fail'])
+export const diceOutcomeSchema = z.enum(['Boosted', 'Hit', 'Evade', 'Graze'])
 
 // ── ValueExpr (recursive) ────────────────────────────────────────────────────
 

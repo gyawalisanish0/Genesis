@@ -6,7 +6,7 @@ import { __resetRegistry } from '../../effects/registry'
 import { registerBuiltins } from '../../effects/builtins'
 import { BattleEngine } from '../BattleEngine'
 import {
-  makeUnit, makeDamageSkillDef, makeSkillInstance, makeCallbacks, makeConfig,
+  makeUnit, makeDamageSkillDef, makeSkillInstance, makeCallbacks, makeConfig, rollFor,
 } from './_testHelpers'
 
 describe('BattleEngine — player turn', () => {
@@ -56,14 +56,17 @@ describe('BattleEngine — player turn', () => {
     engine.start()
     expect(latest().battleStep).toBe('player_turn')
 
-    // Force the dice roll to land on 'Hit' (precision 50, baseChance 1.0 → finalChance 1.0;
-    // cumulative table is Boosted .10 | Hit .50 | Evade .70 | Fail 1.0).
-    vi.spyOn(Math, 'random').mockReturnValue(0.3)
+    // Both resolution phases roll from this one value: a Solid strike the
+    // defender fails to answer. Derived, not pinned — see rollFor.
+    vi.spyOn(Math, 'random').mockReturnValue(rollFor('Hit'))
 
     engine.executeSkill(skillInst, enemy)
-    expect(cb.onPlayDice).toHaveBeenCalledWith('Hit')
 
+    // The arena badge waits for the strike and reaction beats to finish
+    // playing before it names the outcome — see BattleEngine.playDiceInSync —
+    // so it isn't asserted synchronously here the way onShowDiceResult is.
     await vi.advanceTimersByTimeAsync(5000)
+    expect(cb.onPlayDice).toHaveBeenCalledWith('Hit')
 
     const finalEnemy = latest().enemies.find(e => e.id === enemy.id)!
     expect(finalEnemy.hp).toBe(50)  // 100 − round(strength 50 × 100%)
@@ -109,7 +112,7 @@ describe('BattleEngine — player turn', () => {
     }), cb)
 
     engine.start()
-    vi.spyOn(Math, 'random').mockReturnValue(0.3)  // guaranteed Hit
+    vi.spyOn(Math, 'random').mockReturnValue(rollFor('Hit'))
     engine.executeSkill(skillInst, enemy)
 
     await vi.advanceTimersByTimeAsync(5000)

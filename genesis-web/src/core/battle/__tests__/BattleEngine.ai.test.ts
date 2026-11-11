@@ -9,7 +9,7 @@ import {
   AI_THINKING_MAX_MS, AI_INPUT_MAX_MS, DICE_RESULT_DISMISS_MS, ANIM_TIMEOUT_MS,
 } from '../../constants'
 import {
-  makeUnit, makeDamageSkillDef, makeSkillInstance, makeCallbacks, makeConfig,
+  makeUnit, makeDamageSkillDef, makeSkillInstance, makeCallbacks, makeConfig, rollFor,
 } from './_testHelpers'
 
 const FULL_AI_TURN_MS = AI_THINKING_MAX_MS + AI_INPUT_MAX_MS + DICE_RESULT_DISMISS_MS + ANIM_TIMEOUT_MS + 1000
@@ -41,7 +41,7 @@ describe('BattleEngine — AI turn', () => {
       controlledIds:   new Set([player.id]),
     }), cb)
 
-    vi.spyOn(Math, 'random').mockReturnValue(0.3)  // guaranteed Hit
+    vi.spyOn(Math, 'random').mockReturnValue(rollFor('Hit'))
     engine.start()
 
     expect(latest().battleStep).toBe('enemy_acting')
@@ -68,7 +68,7 @@ describe('BattleEngine — AI turn', () => {
       controlledIds:   new Set([player.id]),
     }), cb)
 
-    vi.spyOn(Math, 'random').mockReturnValue(0.3)  // guaranteed Hit; strength-100% deals 50 > 20 hp
+    vi.spyOn(Math, 'random').mockReturnValue(rollFor('Hit'))  // strength-100% deals 50 > 20 hp
     engine.start()
 
     await vi.advanceTimersByTimeAsync(FULL_AI_TURN_MS)

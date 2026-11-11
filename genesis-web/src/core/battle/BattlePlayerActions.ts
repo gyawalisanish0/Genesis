@@ -4,7 +4,7 @@
 import type { Unit }          from '../types'
 import type { SkillInstance } from '../effects/types'
 import type { BattleEngine }  from './BattleEngine'
-import { DICE_RESULT_DISMISS_MS, ANIM_TIMEOUT_MS, SKIP_TU_COST } from '../constants'
+import { ANIM_TIMEOUT_MS, SKIP_TU_COST } from '../constants'
 import { isAlive, incrementActionCount, tickStatusDurations, isSkillTagBlocked } from '../unit'
 import { calculateApGained } from '../combat/TickCalculator'
 import { isOnCooldown, applyCooldown, applyTurnCooldown, isBeforeMinTurns } from '../combat/CooldownResolver'
@@ -43,7 +43,7 @@ export function executeSkill(engine: BattleEngine, skillInst: SkillInstance, sel
   engine.applySkillAPCost(actor.id, skill.apCost, snap, currentTick)
 
   const primaryTarget = allTargets[0]
-  const { outcome, damage: primaryDamage } = runAttack(engine, actor, primaryTarget, skillInst, snap)
+  const { outcome, damage: primaryDamage, hasPhases } = runAttack(engine, actor, primaryTarget, skillInst, snap)
 
   if (allTargets.length > 1) {
     engine.applySplashEffects(actor, skillInst, allTargets.slice(1), snap, outcome, currentTick)
@@ -85,7 +85,7 @@ export function executeSkill(engine: BattleEngine, skillInst: SkillInstance, sel
       shieldHp:          engine.sumShieldHp(postTarget.statusSlots),
     },
     isAlly: true,
-  }, DICE_RESULT_DISMISS_MS + ANIM_TIMEOUT_MS)
+  }, engine.diceDismissMs + ANIM_TIMEOUT_MS)
 
   engine.pendingPlayerTurn = {
     snap,
@@ -104,7 +104,7 @@ export function executeSkill(engine: BattleEngine, skillInst: SkillInstance, sel
   const { isMelee, dashDx, projectile, customSequence } =
     engine.buildAttackAnimConfig(actor.defId, skill.id, skill.tags, actorDamaged)
 
-  engine.cb.onPlayDice(outcome)
+  engine.playDiceInSync(outcome, hasPhases)
   if (engine.attackTimer) clearTimeout(engine.attackTimer)
   engine.pendingAttackCb = () => {
     engine.pendingAttackCb = null
@@ -119,7 +119,7 @@ export function executeSkill(engine: BattleEngine, skillInst: SkillInstance, sel
       engine.drive()
     }, ANIM_TIMEOUT_MS)
   }
-  engine.attackTimer = engine.safeTimeout(engine.pendingAttackCb, DICE_RESULT_DISMISS_MS)
+  engine.attackTimer = engine.safeTimeout(engine.pendingAttackCb, engine.diceDismissMs)
 }
 
 export function skipTurn(engine: BattleEngine): void {

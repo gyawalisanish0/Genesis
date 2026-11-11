@@ -94,8 +94,8 @@ export function planDuration(steps: AnimStep[]): number {
  * The sequence used when a skill authors none.
  *
  * Outcome is expressed through *who moves*: the attacker commits on a hit, the
- * defender slips aside on an evade, and the attacker's swing lands on nothing
- * when it fails. That distinction is the whole reason Evade and Fail were
+ * defender slips aside on an evade, and a graze glances off without either
+ * committing. That distinction is the whole reason Evade and Graze were
  * previously indistinguishable on screen — both simply printed a word.
  */
 export function defaultSequence(isMelee: boolean): AnimPhase[] {
@@ -128,8 +128,8 @@ export function defaultSequence(isMelee: boolean): AnimPhase[] {
           { type: 'evasionDodge' },
           { type: 'feedback' },
         ],
-        // Nobody reacts — the swing simply finds nothing.
-        Fail: [
+        // Neither commits — the blow glances off for chip damage.
+        Graze: [
           ...approach,
           { type: 'wait', ms: 120 },
           { type: 'feedback' },

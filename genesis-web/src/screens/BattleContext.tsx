@@ -9,7 +9,7 @@ import {
 import { useNavigate } from 'react-router-dom'
 import type { Unit, AnimationManifest, AnimSequenceManifest } from '../core/types'
 import type { SkillInstance, EffectContext } from '../core/effects/types'
-import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, DICE_RESULT_DISMISS_MS } from '../core/constants'
+import { TIMELINE_BUFFER_TICKS, TIMELINE_FUTURE_RANGE, diceDismissMs } from '../core/constants'
 import { resolveTickDisplacement } from '../core/combat/TickDisplacer'
 import { createUnit, isAlive, setTickPosition } from '../core/unit'
 import { calculateStartingTick } from '../core/combat/TickCalculator'
@@ -30,7 +30,7 @@ import { isHyperModeActive } from '../core/battle/BattleDamage'
 import { getCachedSkill } from '../core/engines/skill/SkillInstance'
 import { unitIsDamaged } from '../core/battle/BattleResolution'
 import { BattleEngine } from '../core/battle/BattleEngine'
-import type { BattleEngineSnapshot, BattleEngineCallbacks, LogEntry, DiceResult, CounterDecision, ClashState, TeamCollisionState, TurnDisplayData } from '../core/battle/EngineTypes'
+import type { BattleEngineSnapshot, BattleEngineCallbacks, LogEntry, DiceResult, DicePhaseData, CounterDecision, ClashState, TeamCollisionState, TurnDisplayData } from '../core/battle/EngineTypes'
 import type { TurnPhase } from '../core/battle/EngineTypes'
 import type { BattleStep } from '../core/battle/BattleStepMachine'
 import type { DiceProbabilities } from '../core/combat/HitChanceEvaluator'
@@ -46,7 +46,7 @@ export interface TickDisplacement {
 }
 
 // ── Re-exports for child components ───────────────────────────────────────────
-export type { TurnPhase, LogEntry, DiceResult, CounterDecision, ClashState, TeamCollisionState }
+export type { TurnPhase, LogEntry, DiceResult, DicePhaseData, CounterDecision, ClashState, TeamCollisionState }
 
 // ── Context value shape — must stay identical to what child components expect ──
 
@@ -260,20 +260,26 @@ export function BattleProvider({ children }: Props) {
     outcome: import('../core/combat/DiceResolver').DiceOutcome,
     message: string,
     probabilities?: DiceProbabilities,
+    phases?: DicePhaseData,
   ) => {
     if (diceTimerRef.current) clearTimeout(diceTimerRef.current)
     diceKeyRef.current += 1
     diceShowTimeRef.current = Date.now()
-    setDiceResult({ outcome, message, animKey: diceKeyRef.current })
+    setDiceResult({ outcome, message, animKey: diceKeyRef.current, phases })
     // The band belongs to whoever is rolling. It used to be set only when the
     // player picked a skill and never cleared, so an enemy roll drew no band at
     // all until the player had acted, and the player's stale odds ever after.
     // A roll with no table (the counter announce) shows the callout alone.
     setDiceForecast(probabilities ?? null)
+    // A roll that carries phases plays the strike and reaction beats before
+    // the combined outcome — this timer must hold exactly as long as the
+    // engine's own commit timer does, or the overlay clears out from under a
+    // beat still playing. Both call the same diceDismissMs() rather than each
+    // hand-deriving the number.
     diceTimerRef.current = setTimeout(() => {
       setDiceResult(null)
       setDiceForecast(null)
-    }, DICE_RESULT_DISMISS_MS)
+    }, diceDismissMs(phases !== undefined))
   }, [])
 
   const skipDice = useCallback(() => {
@@ -317,8 +323,8 @@ export function BattleProvider({ children }: Props) {
           setTurnDisplay(null)
         })
       },
-      onShowDiceResult(outcome, message, probabilities) {
-        safe(() => showDiceResult(outcome, message, probabilities))
+      onShowDiceResult(outcome, message, probabilities, phases) {
+        safe(() => showDiceResult(outcome, message, probabilities, phases))
       },
       onClearDiceResult() {
         safe(() => { if (diceTimerRef.current) clearTimeout(diceTimerRef.current); setDiceResult(null) })

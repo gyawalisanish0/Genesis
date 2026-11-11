@@ -18,7 +18,7 @@ const OUTCOME_SFX: Record<OutcomeKey, string> = {
   Boosted: 'dice_boosted',
   Hit:     'dice_hit',
   Evade:   'dice_evade',
-  Fail:    'dice_fail',
+  Graze:   'dice_fail',
 }
 
 interface Props {

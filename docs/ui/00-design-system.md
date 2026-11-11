@@ -176,7 +176,7 @@ step** rather than a free-floating hex.
 | Boosted | `--accent-gold` |
 | Hit | `--text-primary` |
 | Evade | `--accent-evasion` |
-| Fail | `--text-muted` |
+| Graze | `--text-muted` |
 
 ### Rarity
 

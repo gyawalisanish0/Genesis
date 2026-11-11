@@ -2,29 +2,52 @@
 
 import {
   BOOSTED_MULTIPLIER,
-  FAIL_CHIP_MULTIPLIER,
+  GRAZE_CHIP_MULTIPLIER,
   COUNTER_BASE,
   COUNTER_STEP,
   COUNTER_MIN,
 } from '../constants'
 import type { DiceProbabilities } from './HitChanceEvaluator'
 
-export type DiceOutcome = 'Boosted' | 'Hit' | 'Evade' | 'Fail'
+/**
+ * The four outcomes, unchanged in name and magnitude by the move to two phases.
+ *
+ * `Graze` was called `Fail` when it meant a clean miss. It has delivered chip
+ * damage and an AP refund since, so the old name misdescribed it — and a name
+ * that lies about behaviour is how the spec and the engine drifted apart in the
+ * first place.
+ */
+export type DiceOutcome = 'Boosted' | 'Hit' | 'Evade' | 'Graze'
 
 export interface OutcomeResult {
   output:  number   // final damage or healing value
   evaded:  boolean  // true when the attack was fully evaded
 }
 
-// Weighted random selection from a probability table.
-export function roll(probs: DiceProbabilities): DiceOutcome {
+/**
+ * Weighted random selection from any probability table.
+ *
+ * Generic over the band type so both phases roll through one implementation:
+ * phase 1 picks a StrikeBand, phase 2 a ReactionBand, and the outcome is their
+ * pairing. `fallback` is returned only if the weights never reach the roll,
+ * which a table summing to 1 cannot do.
+ */
+export function rollTable<K extends string>(
+  probs: Readonly<Record<K, number>>,
+  fallback: K,
+): K {
   const rand = Math.random()
   let cumulative = 0
-  for (const [outcome, prob] of Object.entries(probs) as [DiceOutcome, number][]) {
+  for (const [band, prob] of Object.entries(probs) as [K, number][]) {
     cumulative += prob
-    if (rand < cumulative) return outcome
+    if (rand < cumulative) return band
   }
-  return 'Hit'
+  return fallback
+}
+
+/** The combined four-outcome table, for callers that already hold one. */
+export function roll(probs: DiceProbabilities): DiceOutcome {
+  return rollTable(probs, 'Hit')
 }
 
 /**
@@ -39,7 +62,7 @@ export function outcomeScale(outcome: DiceOutcome): number {
   switch (outcome) {
     case 'Boosted': return BOOSTED_MULTIPLIER
     case 'Hit':     return 1
-    case 'Fail':    return FAIL_CHIP_MULTIPLIER
+    case 'Graze':   return GRAZE_CHIP_MULTIPLIER
     case 'Evade':   return 0
   }
 }

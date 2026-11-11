@@ -239,7 +239,7 @@ A `when` clause is always an object keyed on `event`, with optional
 parameters specific to that event.
 
 ```ts
-type DiceOutcome = 'Boosted' | 'Hit' | 'Evade' | 'Fail'
+type DiceOutcome = 'Boosted' | 'Hit' | 'Evade' | 'Graze'
 
 type WhenClause =
   | { event: "onCast" }

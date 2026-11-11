@@ -9,7 +9,7 @@ import type { DiceProbabilities } from '../core/combat/HitChanceEvaluator'
 import styles from './OutcomeBand.module.css'
 
 /** Draw order is best → worst, so the bar always reads left-to-right as odds decay. */
-export const OUTCOME_ORDER = ['Boosted', 'Hit', 'Evade', 'Fail'] as const
+export const OUTCOME_ORDER = ['Boosted', 'Hit', 'Evade', 'Graze'] as const
 export type OutcomeKey = typeof OUTCOME_ORDER[number]
 
 /** Below this share of the band a zone is too narrow for its label to fit. */
